@@ -1,0 +1,136 @@
+"""Root orchestration agent for the travel concierge."""
+
+import os
+
+from google.adk.agents import Agent, LlmAgent, SequentialAgent, LoopAgent
+from google.adk.tools import FunctionTool, ToolContext
+from google.adk.runners import Runner
+from google.adk.sessions import InMemorySessionService
+from google.genai import types
+from google.adk.tools import agent_tool
+from google.adk.models.lite_llm import LiteLlm
+from orchestration_agent import prompt
+from pydantic import BaseModel, Field
+from orchestration_agent.prompt import ROOT_AGENT_INSTR, CUSTOMER_INSTR, FINANCIAL_INSTR, SALES_INSTR, INVENTORY_INSTR, OUTPUT_INSTR, EXIT_INSTR
+
+from orchestration_agent.tools.customer_behaviour import analyze_customer_behavior
+from orchestration_agent.tools.financial_tool import cash_flow_analysis, revenue_forecast
+from orchestration_agent.tools.customer_segmentation import identify_customer_segments
+from orchestration_agent.tools.customer_lifetime_value import predict_customer_ltv
+from orchestration_agent.tools.churn_prediction import predict_churn_risk
+from orchestration_agent.tools.performance_deviation import analyze_performance_deviations
+from orchestration_agent.tools.next_purchase import predict_next_purchases
+from orchestration_agent.tools.transaction_patterns import analyze_transaction_patterns
+from orchestration_agent.tools.anomaly_detection import detect_anomalies
+from orchestration_agent.tools.purchase_frequency import analyze_purchase_frequency
+from orchestration_agent.tools.engagement_classifier import analyze_customer_engagement
+from orchestration_agent.tools.retention_planner import plan_retention_actions
+from orchestration_agent.tools.sales_analyst import register_tools as register_sales_analyst_tools
+from orchestration_agent.tools.sales_analyst.tools.RegionalSalesAnalyzer import analyze_regional_sales
+from orchestration_agent.tools.inventory_manager.InventoryHoldingCostAnalyzer import analyze_holding_costs
+from orchestration_agent.tools.inventory_manager.InventoryLevelAnalyzer import analyze_inventory_levels
+# from orchestration_agent.tools.inventory_manager.InventoryOptimizationAnalyzer import analyze_inventory_optimization
+from orchestration_agent.tools.inventory_manager.SlowMovingInventoryAnalyzer import analyze_slow_moving_inventory
+from orchestration_agent.tools.inventory_manager.StockOptimizationRecommender import optimize_stock_levels
+
+
+class OutputSchema(BaseModel):
+    text: str = Field(description="The text output should be what you want to convey to the user in a chat interface.")
+    speak: str = Field(description="The speak output should be what you want to convey to the user in a voice interface keeping it interactive and engaging.")
+
+
+
+envModel = os.getenv("MODEL", "gemini-2.5-flash")
+modelProvider = os.getenv("MODEL_PROVIDER", "gemini")
+model = envModel
+if modelProvider == "groq":
+        model = LiteLlm(model=f"groq/{envModel}")
+elif modelProvider == "cerebras":
+        model = LiteLlm(model=f"cerebras/{envModel}")
+
+print(f"Using model: {model}")
+
+# Get sales analyst tools
+sales_analyst_tools = register_sales_analyst_tools()
+print("\nRegistered Sales Analyst Tools:")
+for tool in sales_analyst_tools:
+    print(f"- {tool['name']}: {tool['description']}")
+
+# Inventory Manager
+
+# Initialize agents with their respective tools
+inventory_agent = Agent(
+        name="inventory_agent",
+        model=model,
+        instruction=INVENTORY_INSTR,
+        tools=[analyze_holding_costs, analyze_inventory_levels, analyze_slow_moving_inventory, optimize_stock_levels]
+)
+
+# Initialize sales agent with tools
+sales_agent = Agent(
+        name="sales_agent",
+        model=model,
+        instruction=SALES_INSTR,
+        output_key="sales_analysis",
+        description="Handles any sales analytics and insights including demand forecast, product performance, sales trends, sales performance",
+        tools=[tool["function"] for tool in sales_analyst_tools]
+ )
+
+customer_agent = Agent(
+        name="customer_insights_agent",
+        model=model,
+        instruction=CUSTOMER_INSTR,
+        # Crucial for delegation: Clear description of capability
+        description="Handles customer analytics and insights including segmentation, behavior analysis, lifetime value prediction, churn risk prediction, performance deviations, next likely purchases, transaction patterns, anomaly detection, purchase frequency analysis, engagement classification, and retention action planning",
+        tools=[analyze_customer_behavior, identify_customer_segments, predict_customer_ltv, predict_churn_risk, analyze_performance_deviations, predict_next_purchases, analyze_transaction_patterns, detect_anomalies, analyze_purchase_frequency, analyze_customer_engagement, plan_retention_actions]
+ )
+
+
+
+financial_agent = Agent(
+        name="financial_agent",
+        model=model,
+        instruction=FINANCIAL_INSTR,
+        # Crucial for delegation: Clear description of capability
+        description="Handles financial analytics and insights including cash flow, revenue forecasting, and performance tracking",
+        tools=[cash_flow_analysis, revenue_forecast]
+)
+
+root_agent = Agent(
+        name="orchestration_agent", 
+        model=model,
+        description=ROOT_AGENT_INSTR,
+        output_key="orchestration",
+        # sub_agents=[customer_agent, financial_agent, sales_agent, inventory_agent],
+        tools=[agent_tool.AgentTool(customer_agent), agent_tool.AgentTool(financial_agent), agent_tool.AgentTool(sales_agent), agent_tool.AgentTool(inventory_agent)]
+)
+
+# output_agent = Agent(
+#         name="output_agent",
+#         model=model,
+#         description=OUTPUT_INSTR,
+#         output_key="output",
+#         output_schema=OutputSchema,
+# )
+
+# def exit_tool(tool_context: ToolContext):
+#         tool_context.actions.escalate = True
+#         return {}
+
+# exit_agent = Agent(
+#         name="exit_agent",
+#         model=model,
+#         instruction=EXIT_INSTR,
+#         description="This agent is used to exit the loop and end the conversation.",
+#         tools=[exit_tool]
+# )
+
+# root_agent = LoopAgent(
+#         name="root_agent",
+#         sub_agents=[orchestration_agent, output_agent, exit_agent]
+# )
+
+# from visualization_agent.agent import create_sequential_pipeline
+
+# root_agent = create_sequential_pipeline(orchestration_agent)
+# print("\\nVisualization pipeline created successfully!")

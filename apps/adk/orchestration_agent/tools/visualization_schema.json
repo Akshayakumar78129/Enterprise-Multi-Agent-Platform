@@ -1,0 +1,122 @@
+{
+    "spawnableComponents": {
+        "purchase-frequency (dictionary)": {
+            "components (str)": "Type of visualization to create (eg: histogram, heatmap, quadrant, regularity, treemap)",
+            "parameters (dictionary)": {
+                "dateRange (dictionary)": {
+                    "start (str)": "start data of the data in YYYY-MM-DD format (eg:2020-01-01)",
+                    "end (str)": "end data of the data in YYYY-MM-DD format (eg:2021-12-31)"
+                }
+            }
+        },
+        "product-performance (dictionary)": {
+            "components (str)": "Type of visualization to create (eg: salesExplorer, marginAnalysis, priceBandDistribution, growthMatrix)",
+            "parameters (dictionary)": {
+                "start_date (str)": "start data of the data in YYYY-MM-DD format (eg:2020-01-01)",
+                "end_date (str)": "end data of the data in YYYY-MM-DD format (eg:2020-12-31)",
+                "metrics (str)": "metrics to visualize (eg: sales, units, margin, price_bands)",
+                "category_level (str)": "category level to visualize (eg: product)"
+            }
+        },
+        "sales-performance (dictionary)": {
+            "components (str)": "Type of visualization to create (eg: overview, timeSeries, distribution, comparativeGrid, correlationMatrix, driverAnalysis)",
+            "parameters (dictionary)": {
+                "start_date (str)": "start data of the data in YYYY-MM-DD format (eg:2020-01-23)",
+                "end_date (str)": "end data of the data in YYYY-MM-DD format (eg:2020-07-16)",
+                "dimension (str)": "region",
+                "metric (str)": "revenue",
+                "time_granularity (str)": "daily"
+            }
+        },
+        "customer-segmentation (dictionary)": {
+            "components (str)": "Type of visualization to create (eg: dashboard, distributionMap, profileCards, metricComparison, kpiTiles)",
+            "parameters (dictionary)": "None"
+        },
+        "customer-behaviour (dictionary)": {
+            "components (str)": "Type of visualization to create (eg: dashboard, radar, histogram, treemap, donut)",
+            "parameters (dictionary)": "None"
+        },
+        "churn-prediction (dictionary)": {
+            "components (str)": "Type of visualization to create (eg: dashboard, riskPyramid, featureImportance, probabilityHistogram, temporalRisk, segmentMatrix)",
+            "parameters (dictionary)": "None"
+        },
+        "anomaly-detection (dictionary)": {
+            "components (str)": "Type of visualization to create (eg: dashboard, severityDistribution, featureContribution, anomalyTable, kpiTiles)",
+            "parameters (dictionary)": "None"
+        },
+        "transaction-patterns (dictionary)": {
+            "components (str)": "Type of visualization to create (eg: dashboard, kpiTiles, temporalHeatmap, timeSeriesChart)",
+            "parameters (dictionary)": {
+                "dateRange (dictionary)": {
+                    "start (str)": "start data of the data in YYYY-MM-DD format (eg:2017-01-01)",
+                    "end (str)": "end data of the data in YYYY-MM-DD format (eg:2021-12-31)"
+                }
+            }
+        },
+        "customer-lifetime-value (dictionary)": {
+            "components (str)": "Type of visualization to create (eg: dashboard, kpiTiles, ltvDistribution, predictionAccuracy, geographicMap, customerExplorer, valueContribution, timeProjection, filterPanel)",
+            "parameters (dictionary)": {
+                "dateRange (dictionary)": {
+                    "start (str)": "start data of the data in YYYY-MM-DD format (eg:2017-01-01)",
+                    "end (str)": "end data of the data in YYYY-MM-DD format (eg:2021-12-31)"
+                }
+            }
+        },
+        "engagement-classifier (dictionary)": {
+            "components (str)": "Type of visualization to create (eg: dashboard, kpiTiles, pyramid, timeline, opportunityFinder)",
+            "parameters (dictionary)": {
+                "dateRange (dictionary)": {
+                    "start (str)": "start data of the data in YYYY-MM-DD format (eg:2017-01-01)",
+                    "end (str)": "end data of the data in YYYY-MM-DD format (eg:2021-12-31)"
+                }
+            }
+        },
+        "next-purchase (dictionary)": {
+            "components (str)": "Type of visualization to create (eg: dashboard, kpiTiles, confidenceMatrix, customerJourney, affinityNetwork)",
+            "parameters (dictionary)": {
+                "timeframe (str)": "Timeframe to visualize (eg: 3months)",
+                "confidenceThreshold (float)": "Confidence threshold to visualize (eg: 0.7)"
+            }
+        },
+        "sales-trends (dictionary)": {
+            "components (str)": "Type of visualization to create (eg: dashboard, timeSeriesExplorer, seasonalPatternAnalyzer, growthRateVisualizer, kpiTiles)",
+            "parameters (dictionary)": {
+                "startDate (str)": "start data of the data in YYYY-MM-DD format (eg:2017-01-01)",
+                "endDate (str)": "end data of the data in YYYY-MM-DD format (eg:2021-12-31)",
+                "timePeriod (str)": "Time period to visualize (eg: monthly)",
+                "metric (str)": "metric to visualize (eg: revenue)",
+                "dimension (str)": "dimension to visualize (eg: region, null)"
+            }
+        },
+        "regional-sales (dictionary)": {
+            "components (str)": "Type of visualization to create (eg: dashboard, kpiTiles, performanceMap, timeSeriesExplorer)",
+            "parameters (dictionary)": "None"
+        },
+        "performance-deviation (dictionary)": {
+            "components (str)": "Type of visualization to create (eg: dashboard, kpiTiles, performanceExplorer, featureImportance, varianceDecomposition, deviationPatterns)",
+            "parameters (dictionary)": "Not specified"
+        },
+        "retention-planner (dictionary)": {
+            "components (str)": "Type of visualization to create (eg: dashboard, kpiTiles, churnRiskGauge, valueRiskMatrix, actionSankey, roiWaterfall)",
+            "parameters (dictionary)": "Not specified"
+        },
+        "inventory-level-analyzer (dictionary)": {
+            "components (str)": "Type of visualization to create (eg: dashboard, healthMatrix, itemAnalyzer, kpiTiles)",
+            "parameters (dictionary)": {
+                "time_period (str)": "Time period to visualize (eg: last_quarter)",
+                "category (str)": "Category to visualize (eg: null)",
+                "warehouse_id (str)": "Warehouse ID to visualize (eg: null)",
+                "min_stock_threshold (float)": "Minimum stock threshold to visualize (eg: 0.1)"
+            }
+        },
+        "inventory-holding-cost-analyzer (dictionary)": {
+            "components (str)": "Type of visualization to create (eg: dashboard, kpiTiles, costBreakdown, excessiveCostGrid, costTrend, warehouseComparison)",
+            "parameters (dictionary)": {
+                "category (str)": "Category to visualize (eg: null)",
+                "warehouseId (str)": "Warehouse ID to visualize (eg: null)",
+                "annualHoldingCostPercentage (float)": "Annual holding cost percentage to visualize (eg: 0.25)",
+                "opportunityCostRate (float)": "Opportunity cost rate to visualize (eg: 0.08)"
+            }
+        }
+    }
+}
