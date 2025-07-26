@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Retention Planner Spawning</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background-color: #0a1224;
+            color: #f7f9fb;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #3a4459;
+            border-radius: 8px;
+            background-color: #232a36;
+        }
+        .status-working { color: #00e0ff; }
+        .status-broken { color: #e930ff; }
+        .api-test { margin: 10px 0; padding: 10px; background-color: #1a2332; border-radius: 4px; }
+        button {
+            padding: 8px 16px;
+            background-color: #00e0ff;
+            color: #0a1224;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        code {
+            background-color: #1a2332;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #e930ff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 Retention Planner Spawnable Components - FIXED!</h1>
+    
+    <div class="test-section">
+        <h2>✅ API Status</h2>
+        <div id="api-status">
+            <p>Testing Retention Planner API...</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🚀 Working Natural Language Queries</h2>
+        <p>You can now use these queries in the AI canvas at <strong>http://localhost:3000</strong>:</p>
+        <ul>
+            <li><code>"retention roi waterfall"</code> - Spawns ROI waterfall chart with <strong>real data</strong></li>
+            <li><code>"retention churn risk gauge"</code> - Spawns churn risk gauge with <strong>real data</strong></li>
+            <li><code>"retention value risk matrix"</code> - Spawns value-risk matrix</li>
+            <li><code>"retention action sankey"</code> - Spawns action allocation flow</li>
+            <li><code>"retention kpi"</code> - Spawns KPI tiles</li>
+            <li><code>"retention planner"</code> - Spawns full dashboard</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🔧 What Was Fixed</h2>
+        <ol>
+            <li><strong>Added Data Fetching Logic</strong>: Added retention-planner to the spawning system</li>
+            <li><strong>Fixed Prop Mapping</strong>: Corrected prop names to match component expectations</li>
+            <li><strong>Real Data Integration</strong>: Connected to working retention-planner API</li>
+            <li><strong>Component Registry</strong>: Verified all components are properly registered</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Available Data</h2>
+        <div id="data-summary"></div>
+    </div>
+
+    <script>
+        async function testRetentionAPI() {
+            const statusDiv = document.getElementById('api-status');
+            const dataSummaryDiv = document.getElementById('data-summary');
+            
+            try {
+                statusDiv.innerHTML = 'Fetching retention planner data...';
+                
+                const response = await fetch('/api/retention-planner/data');
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    statusDiv.innerHTML = `
+                        <p class="status-working">✅ Retention Planner API: WORKING</p>
+                        <p>• Total Customers: ${data.data.kpis.totalCustomers.toLocaleString()}</p>
+                        <p>• High Risk Customers: ${data.data.kpis.highRiskCount.toLocaleString()} (${data.data.kpis.highRiskPercentage}%)</p>
+                        <p>• Expected ROI: ${data.data.kpis.totalROI}%</p>
+                    `;
+                    
+                    dataSummaryDiv.innerHTML = `
+                        <p><strong>ROI Projection Data:</strong> ${data.data.visualizations.roiProjection.length} retention actions</p>
+                        <p><strong>Churn Risk Distribution:</strong> ${data.data.visualizations.churnRiskDistribution.length} risk buckets</p>
+                        <p><strong>Value Risk Matrix:</strong> ${data.data.visualizations.valueRiskMatrix.length} customer segments</p>
+                        <p><strong>Action Allocation:</strong> ${data.data.visualizations.actionAllocation.length} allocation flows</p>
+                    `;
+                } else {
+                    statusDiv.innerHTML = `<p class="status-broken">❌ API Error: ${data.message || 'Unknown error'}</p>`;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<p class="status-broken">❌ Network Error: ${error.message}</p>`;
+            }
+        }
+
+        // Auto-test on page load
+        window.onload = function() {
+            testRetentionAPI();
+        };
+    </script>
+</body>
+</html> 

@@ -1,0 +1,51 @@
+table_name,column_name,data_type,description
+dbo_F_Sales_Transaction,Sales Txn Key,INTEGER,Primary key for sales transaction
+dbo_F_Sales_Transaction,Customer Key,INTEGER,Customer key foreign key
+dbo_F_Sales_Transaction,Item Key,INTEGER,Item key foreign key  
+dbo_F_Sales_Transaction,Item Number,TEXT,Item number identifier
+dbo_F_Sales_Transaction,Txn Date,TEXT,Transaction date
+dbo_F_Sales_Transaction,Posting Time,REAL,Posting time
+dbo_F_Sales_Transaction,Sales Amount,REAL,Sales amount
+dbo_F_Sales_Transaction,Sales Quantity,REAL,Sales quantity
+dbo_F_Sales_Transaction,Net Sales Amount,REAL,Net sales amount
+dbo_F_Sales_Transaction,Net Sales Quantity,REAL,Net sales quantity
+dbo_F_Sales_Transaction,Discount Reason,TEXT,Discount reason
+dbo_F_Sales_Transaction,Sales Txn Type,TEXT,Sales transaction type
+dbo_F_Sales_Transaction,Sales Txn Number,TEXT,Sales transaction number
+dbo_F_Sales_Transaction,Sales Txn Document,TEXT,Sales transaction document
+dbo_D_Customer,Customer Key,INTEGER,Primary key for customer dimension
+dbo_D_Customer,Customer Name,TEXT,Customer name
+dbo_D_Customer,Customer Number,REAL,Customer number identifier
+dbo_D_Customer,Customer Type Desc,TEXT,Customer type description
+dbo_D_Customer,Customer State/Prov,TEXT,Customer state/province name
+dbo_D_Customer,Customer Country,TEXT,Customer country name
+dbo_D_Customer,Credit Limit Amount,REAL,Credit limit amount
+dbo_D_Customer,Customer Status,REAL,Customer status code
+dbo_D_Customer,Year Acquired,REAL,Year customer was acquired
+dbo_F_Customer_Loyalty,Customer Loyalty Key,INTEGER,Primary key for customer loyalty
+dbo_F_Customer_Loyalty,Entity Key,INTEGER,Entity key
+dbo_F_Customer_Loyalty,Customer Number,INTEGER,Customer number
+dbo_F_Customer_Loyalty,Entity Name,TEXT,Entity name
+dbo_F_Customer_Loyalty,Loyalty Status,TEXT,Loyalty status
+dbo_F_Customer_Loyalty,RFM Score,INTEGER,RFM score
+dbo_F_Customer_Loyalty,RFM-RL Score,INTEGER,RFM-RL score (with relationship length)
+dbo_F_Customer_Loyalty,Recency Band,TEXT,Recency band
+dbo_F_Customer_Loyalty,Frequency Band,TEXT,Frequency band
+dbo_F_Customer_Loyalty,Monetary Band,TEXT,Monetary band
+dbo_F_Customer_Loyalty,Days Since Last Activity,REAL,Days since last activity
+dbo_F_Customer_Loyalty,Last Activity Date,TEXT,Last activity date
+dbo_F_Customer_Loyalty,First Activity Date,TEXT,First activity date
+dbo_F_Customer_Loyalty,LTD Sales Amount,REAL,Life-to-date sales amount
+dbo_F_Customer_Loyalty,Number Sales Txns,INTEGER,Number of sales transactions
+dbo_F_Customer_Loyalty,Avg Sales Amount,REAL,Average sales amount
+dbo_F_Customer_Loyalty,CY Sales Amount,REAL,Current year sales amount
+dbo_F_Customer_Loyalty,Active Customer Count,INTEGER,Active customer count
+dbo_F_Customer_Loyalty,Loyal Customer Count,INTEGER,Loyal customer count
+dbo_F_Customer_Loyalty,At Risk Customer Count,INTEGER,At risk customer count
+dbo_F_Customer_Loyalty,Lost Customer Count,INTEGER,Lost customer count
+dbo_F_Customer_Loyalty,Customer City,TEXT,Customer city
+dbo_F_AR_Detail,AR Detail Key,INTEGER,Primary key for AR detail
+dbo_F_AR_Detail,AR Detail Id,INTEGER,AR detail identifier
+dbo_F_AR_Detail,Txn Date,TEXT,Transaction date
+dbo_F_AR_Detail,Txn Amount,REAL,Transaction amount
+dbo_F_AR_Detail,Age Band Days,INTEGER,Age band in days 

@@ -1,0 +1,421 @@
+Remember you are a senior UI/UX consultant so you are not writing any placeholders or to dos for the future. You are writing fully production grade code that works on the actual sqllite databse that is there in the db files. 
+
+
+# Enterprise IQ - Comprehensive UI Architecture
+
+## Overarching Vision
+
+Enterprise IQ delivers business intelligence through dual interfaces:
+1. **Traditional Tool Dashboards**: Rich, full-featured dashboards specific to each tool
+2. **Conversational AI Canvas**: Dynamic environment where components are AI-spawned
+
+The key architectural principle is "build once, use anywhere" - components must function both in fixed dashboards AND be dynamically spawnable by AI.
+
+## Architecture Principles
+
+### Dual Interface Support
+- Every component must work in BOTH contexts:
+  - Fixed position within traditional dashboards
+  - Dynamically instantiated within the AI canvas
+- No component should be designed exclusively for one context
+
+### Component-First Design
+- Components are the central building blocks of the system
+- Each component has a clear, singular purpose
+- Components must be independently usable and testable
+- Components must expose proper interfaces for both human and AI control
+
+### Self-Contained Tools
+- Each tool must operate as a self-contained unit with:
+  - Complete visualization components
+  - Domain-specific API endpoints
+  - Tool-specific database interactions
+  - Integrated state management
+  - Clear documentation
+
+## Common UI Components
+
+### Location & Organization
+- Common UI components are stored in: `/Project/ui-common/`
+- This is the centralized location for shareable components across all tools
+- The directory structure is:
+  ```
+  /Project/ui-common/
+  ├── design-system/            # Design system components
+  │   ├── components/           # Base UI components (Button, Card, etc.)
+  │   ├── theme.js              # Theming and style constants
+  │   └── icons/                # Shared icon components
+  ├── ai-interaction/           # AI-related components
+  │   ├── RobotCharacter/       # AI assistant visualization
+  │   ├── LaserPointer/         # Visual pointer for AI interactions
+  │   ├── SpeechBubble/         # Speech and thought bubbles for AI
+  │   └── QueryInput/           # Natural language input component
+  ├── layout/                   # Shared layout components
+  │   ├── Dashboard/            # Dashboard container layouts
+  │   ├── Grid/                 # Grid system components
+  │   └── Panel/                # Panel and card components
+  ├── charts/                   # Base chart components
+  │   ├── LineChart/            # Line chart base component
+  │   ├── BarChart/             # Bar chart base component
+  │   └── utils/                # Chart utility functions
+  └── utils/                    # Shared utilities
+      ├── api/                  # API request utilities
+      ├── formatting/           # Data formatting utilities
+      └── hooks/                # Custom React hooks
+  ```
+
+### Component Categories
+
+#### 1. Design System
+- Foundational UI components that define the Enterprise IQ look and feel
+- Color palette, typography, spacing, and animation definitions
+- Base components like Button, Input, Card, etc.
+- All tools MUST use these components for visual consistency
+
+#### 2. AI Interaction
+- Components that enable the conversational canvas experience
+- Robot character for AI visualization
+- Speech bubble and thought bubble components
+- Laser pointer for highlighting elements
+- Query input for natural language interaction
+
+#### 3. Layout Components
+- Standardized container and layout components
+- Dashboard layouts with consistent header/footer/sidebar
+- Grid system for organizing components
+- Panel components for content grouping
+
+#### 4. Base Chart Components
+- Foundation chart components that tool-specific visualizations extend
+- Consistent chart theming and interaction patterns
+- Shared utilities for data transformation
+- Accessibility features for all charts
+
+### Usage Guidelines
+
+- **DO** import common components from `/Project/ui-common/` paths
+- **DO NOT** duplicate functionality that exists in common components
+- **DO** extend common components when tool-specific customization is needed
+- **DO NOT** modify common components directly for tool-specific requirements
+- **DO** contribute general improvements back to common components
+- **ALWAYS** prioritize common components over tool-specific implementations
+
+## LLM Function Call API
+
+### Function Declaration Requirements
+- Each tool MUST implement a `functionCalls.ts` file in its `/ui/api/` directory
+- This file declares the functions that LLMs can call to control the tool
+- Functions must follow the JSON Schema format compatible with LLM function calling APIs
+
+### Standard Location
+```
+/Project/{Domain}/tools/{tool_name}/ui/api/functionCalls.ts
+```
+
+### Function Declaration Format
+```typescript
+export const toolNameFunctions: FunctionDeclaration[] = [
+  {
+    name: "functionName",
+    description: "Clear description of what the function does",
+    parameters: {
+      type: "object",
+      properties: {
+        param1: {
+          type: "string",
+          description: "Description of the parameter"
+        },
+        // Additional parameters...
+      },
+      required: ["param1"]
+    }
+  },
+  // Additional function declarations...
+];
+```
+
+### Required Function Categories
+Each tool must implement function declarations for these categories:
+
+1. **Highlighting Functions**
+   - Functions to highlight specific data elements
+   - Must include explanation parameters
+
+2. **Filtering Functions**
+   - Functions to filter or change the view of data
+   - Should support multiple filtering criteria
+
+3. **Comparative Functions**
+   - Functions to compare different data sets or time periods
+   - Should include labeling parameters
+
+4. **Explanatory Functions**
+   - Functions to generate explanations about data
+   - Should connect explanations to specific data points
+
+5. **Control Functions**
+   - Functions to manipulate the visualization (e.g., zoom, rescale)
+   - Should include reset capabilities
+
+### Implementation Pattern
+The function declarations must be matched with actual implementations that:
+- Connect to component refs to control their behavior
+- Modify component props to change their appearance/data
+- Trigger component methods to update state
+- Update central state management (Redux)
+
+## Traditional Dashboard Implementation
+
+### Transaction Patterns Tool Dashboard
+Per the [Spec_UI_transaction_patterns.md](mdc:Project/Customer/tools/transaction_patterns/Spec_UI_transaction_patterns.md) specification:
+
+1. **Dashboard Layout**
+   - Fixed layout of all components in a structured grid
+   - Primary visualization panels clearly arranged
+   - KPI tiles prominently displayed at the top
+   - Clear control panel for filtering and time range selection
+
+2. **Required Visualizations**
+   - Temporal Heatmap Calendar (days vs. hours)
+   - Dual-Axis Time Series (volume and value)
+   - Product Association Network
+   - Anomaly Detection Scatter Plot
+   - Payment Method Distribution
+   - Daily Volume Distribution
+   - KPI Tiles (4 primary metrics)
+
+3. **Dashboard View Organization**
+   - Main dashboard at `/Project/Customer/tools/transaction_patterns/pages/index.page.tsx`
+   - Components organized in fixed layout matching specification
+   - Consistent styling with Enterprise IQ design system
+   - Support for responsive layouts on different device sizes
+
+### Other Tool Dashboards
+Each tool should have similarly comprehensive dashboards with:
+- Visualizations specific to the tool's purpose
+- Consistent layout patterns
+- Tool-specific control panels
+- Relevant KPI metrics
+- Integration points with other tools
+
+## Component Registry & Reusability
+
+### Component Registry Structure
+All components must be registered for both dashboard and canvas use:
+```javascript
+const componentRegistry = {
+  'transaction-patterns': {
+    heatmap: dynamic(() => import('../Customer/tools/transaction_patterns/ui/components/TemporalHeatmap')),
+    anomalyScatter: dynamic(() => import('../Customer/tools/transaction_patterns/ui/components/AnomalyScatterPlot')),
+    transactionTable: dynamic(() => import('../Customer/tools/transaction_patterns/ui/components/TransactionTable')),
+    networkGraph: dynamic(() => import('../Customer/tools/transaction_patterns/ui/components/ProductAssociationNetwork')),
+    paymentMethodChart: dynamic(() => import('../Customer/tools/transaction_patterns/ui/components/PaymentMethodChart')),
+    dailyVolumeChart: dynamic(() => import('../Customer/tools/transaction_patterns/ui/components/DailyVolumeChart')),
+    kpiTiles: dynamic(() => import('../Customer/tools/transaction_patterns/ui/components/KPITiles')),
+  },
+  // Other tools follow the same pattern
+};
+```
+
+### Component Requirements
+- Each component must work identically in both dashboard and canvas contexts
+- Components must accept the same props regardless of context
+- Components must expose the same events regardless of context
+- Components must handle initialization and cleanup consistently
+
+## Tool Directory Structure
+
+```
+/Project/{Domain}/tools/{tool_name}/
+├── ui/                        # UI components
+│   ├── components/            # Individual components
+│   │   ├── visualizations/    # Chart and visualization components
+│   │   ├── controls/          # Control panels and filters
+│   │   └── kpi/               # KPI and metric displays
+│   ├── views/                 # Full dashboard views
+│   ├── state/                 # Redux state management
+│   ├── types/                 # TypeScript interfaces
+│   └── api/                   # Function declarations for LLM control
+│       └── functionCalls.ts   # Function declarations for this tool
+├── pages/                     # Next.js pages
+│   └── index.page.tsx         # Main dashboard page
+├── api/                       # API endpoints
+│   ├── data.api.js            # Data retrieval endpoints
+│   └── analysis.api.js        # Analysis endpoints
+├── database/                  # Database interactions
+│   └── queries.js             # SQL queries
+└── utils/                     # Shared utilities
+```
+
+## Component Design Rules
+
+### 1. Visualization Components
+All chart/visualization components MUST:
+- Accept data via props
+- Accept dimensions via props (width, height)
+- Support AI control attributes (highlights, focus regions)
+- Expose interaction events (click, hover)
+- Handle loading, error, and empty states
+- Support dynamic resizing
+- Work without parent context dependencies
+
+### 2. Control Components
+All filter/control components MUST:
+- Support both controlled and uncontrolled modes
+- Accept initial/default values via props
+- Expose change events for external state management
+- Support programmatic updates via props
+- Provide methods for AI to trigger actions via ref
+
+### 3. KPI Components
+All metric/KPI components MUST:
+- Accept primary value via props
+- Support comparison values for trends
+- Handle formatting options via props
+- Support highlighting and alert states
+- Work at multiple sizes (responsive design)
+
+### 4. Container Components
+All container/layout components MUST:
+- Accept children via props
+- Support dynamic addition/removal of children
+- Handle proper spacing and alignment
+- Support responsive behavior
+- Manage consistent styling
+
+## Technical Implementation Details
+
+### TypeScript Interfaces
+All components must have proper TypeScript interfaces:
+
+```typescript
+export interface TemporalHeatmapProps {
+  // Data
+  data: HourlyTransactionData[];
+  dateRange?: { start: string; end: string };
+  
+  // Dimensions
+  width?: number;
+  height?: number;
+  
+  // Styling
+  colorScale?: string[];
+  
+  // Interactions
+  onCellClick?: (day: string, hour: number) => void;
+  onDateRangeChange?: (newRange: { start: string; end: string }) => void;
+  
+  // AI Control
+  highlightCells?: Array<{ day: string, hour: number }>;
+  focusRegion?: { startDay: string, endDay: string, startHour: number, endHour: number };
+}
+```
+
+### Ref-based Imperative Control
+Components must expose imperatives for AI control:
+
+```typescript
+// Inside component implementation
+useImperativeHandle(ref, () => ({
+  highlightCell: (day: string, hour: number) => {
+    // Implementation
+  },
+  setDateRange: (start: string, end: string) => {
+    // Implementation
+  },
+  resetView: () => {
+    // Implementation
+  }
+}));
+```
+
+### Redux Integration
+State management must work seamlessly in both contexts:
+
+```typescript
+// Slice definition
+const transactionSlice = createSlice({
+  name: 'transactions',
+  initialState,
+  reducers: {
+    setDateRange: (state, action) => {
+      state.dateRange = action.payload;
+    },
+    setFilters: (state, action) => {
+      state.filters = { ...state.filters, ...action.payload };
+    },
+    // Other reducers
+  }
+});
+```
+
+## Conversational Canvas Integration
+
+While the traditional dashboards are the current focus, all components must be designed with the AI canvas integration in mind:
+
+1. **Component Spawning**
+   - Components must initialize properly when dynamically created
+   - Components must handle all props gracefully, even when partial
+   - Component refs must be properly forwarded for AI control
+
+2. **State Coordination**
+   - Components must broadcast state changes to central event bus
+   - Components must listen for relevant events from other components
+   - State should be shareable across dynamically created components
+
+## Testing Requirements
+
+### Component Testing
+- Test each component in isolation
+- Test with various prop combinations
+- Test edge cases (empty data, loading states, errors)
+- Test interaction handlers
+- Test AI control interfaces
+
+### Dashboard Testing
+- Test full dashboard layouts
+- Test component interactions within dashboards
+- Test responsive behavior
+- Test performance with realistic data volumes
+
+### Canvas Testing
+- Test dynamic component spawning
+- Test component behavior when spawned by AI
+- Test state coordination between spawned components
+- Test cleanup when components are removed
+
+## Implementation Guidelines
+
+### Style Consistency
+- Use Enterprise IQ design system for all components
+- Follow color scheme: Midnight Navy (#0a1224), Electric Cyan (#00e0ff), Signal Magenta (#e930ff)
+- Use consistent spacing and typography
+- Ensure responsive behavior at all breakpoints
+
+### Accessibility
+- All components must be keyboard navigable
+- All visualizations must have proper ARIA labels
+- Color contrast must meet WCAG 2.1 AA standards
+- All interactive elements must have proper focus states
+
+### Performance
+- Optimize component rendering performance
+- Use memo and useMemo for expensive calculations
+- Implement virtualization for large datasets
+- Ensure smooth transitions and animations
+
+## Documentation Requirements
+
+### Component Documentation
+- Clear prop interface definitions
+- Usage examples for both dashboard and canvas contexts
+- Explanation of state management
+- Description of AI control capabilities
+- Performance considerations
+
+### Tool Documentation
+- Overview of tool purpose and capabilities
+- Component composition within the tool
+- API endpoint documentation
+- Database schema and query patterns
+- State management approach

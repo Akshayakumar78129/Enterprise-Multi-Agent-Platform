@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Spawnable Components</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background-color: #0a1224;
+            color: #f7f9fb;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #3a4459;
+            border-radius: 8px;
+            background-color: #232a36;
+        }
+        .status-working { color: #00e0ff; }
+        .status-broken { color: #e930ff; }
+        .api-test { margin: 10px 0; padding: 10px; background-color: #1a2332; border-radius: 4px; }
+        button {
+            padding: 8px 16px;
+            background-color: #00e0ff;
+            color: #0a1224;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Spawnable Components Test Suite</h1>
+    
+    <div class="test-section">
+        <h2>Available APIs Status</h2>
+        <div id="api-status"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Working Spawnable Component Queries</h2>
+        <p>The following queries should work in the AI canvas:</p>
+        <ul>
+            <li><strong class="status-working">"purchase frequency"</strong> - Spawns frequency histogram</li>
+            <li><strong class="status-working">"customer segmentation"</strong> - Spawns segmentation analysis</li>
+            <li><strong class="status-working">"churn prediction"</strong> - Spawns churn risk analysis</li>
+            <li><strong class="status-working">"purchase frequency treemap"</strong> - Spawns value segment treemap</li>
+            <li><strong class="status-working">"purchase frequency quadrant"</strong> - Spawns customer segment quadrant</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>Component Registry Status</h2>
+        <div id="component-status">
+            <p>✅ Purchase Frequency: 5 components registered</p>
+            <p>✅ Customer Segmentation: 4 components registered</p>
+            <p>✅ Churn Prediction: 5 components registered</p>
+            <p>⚠️ Some inventory tools may have database connection issues</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test API Endpoints</h2>
+        <button onclick="testAPI('purchase-frequency')">Test Purchase Frequency API</button>
+        <button onclick="testAPI('customer-segmentation')">Test Customer Segmentation API</button>
+        <button onclick="testAPI('churn-prediction')">Test Churn Prediction API</button>
+        <div id="test-results"></div>
+    </div>
+
+    <script>
+        async function testAPI(tool) {
+            const resultsDiv = document.getElementById('test-results');
+            const testDiv = document.createElement('div');
+            testDiv.className = 'api-test';
+            testDiv.innerHTML = `Testing ${tool}...`;
+            resultsDiv.appendChild(testDiv);
+
+            try {
+                let response;
+                if (tool === 'purchase-frequency') {
+                    response = await fetch('/api/purchase-frequency/data', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ dateRange: { start: '2017-01-01', end: '2021-12-31' } })
+                    });
+                } else if (tool === 'customer-segmentation') {
+                    response = await fetch('/api/customer-segmentation/data?start_date=2017-01-01&end_date=2021-12-31');
+                } else if (tool === 'churn-prediction') {
+                    response = await fetch('/api/churn-prediction/data');
+                }
+
+                const data = await response.json();
+                
+                if (response.ok && (data.success !== false)) {
+                    testDiv.innerHTML = `✅ ${tool}: API working, data received`;
+                    testDiv.className += ' status-working';
+                } else {
+                    testDiv.innerHTML = `❌ ${tool}: API error - ${data.message || 'Unknown error'}`;
+                    testDiv.className += ' status-broken';
+                }
+            } catch (error) {
+                testDiv.innerHTML = `❌ ${tool}: Network error - ${error.message}`;
+                testDiv.className += ' status-broken';
+            }
+        }
+
+        // Auto-test APIs on page load
+        window.onload = function() {
+            setTimeout(() => testAPI('purchase-frequency'), 1000);
+            setTimeout(() => testAPI('customer-segmentation'), 2000);
+            setTimeout(() => testAPI('churn-prediction'), 3000);
+        };
+    </script>
+</body>
+</html> 

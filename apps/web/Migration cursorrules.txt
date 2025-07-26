@@ -1,0 +1,75 @@
+:// Cursor Automation Rules for Database Utility Migration
+
+// Project Structure Context:
+// - Each agent category has its own directory in Project/ (Customer, Sales, Inventory, Finance)
+// - Each category directory has two subdirectories:
+//   - tools/ - contains the tool implementation files
+//   - database/ - contains the respective database file
+
+// Iterative Processing Rule:
+// - Process tools strictly in the order they appear in tool_list.md
+// - Start from the top of the list, complete one tool fully, then move to the next
+// - Do not process multiple tools in parallel
+// - After completing a tool, mark it as checked in tool_list.md
+// - Proceed autonomously to the next unchecked tool without waiting for user confirmation
+// - Work independently through the entire list until all tools are processed
+
+// Process:
+// 1. Read tool_list.md and identify all unchecked tools
+// 2. For each unchecked tool (starting from the top of the list):
+//    a. Find the tool file in Project/{category}/tools/{tool_name}/
+//    b. Analyze its import statements to identify database-related dependencies
+//    c. Look for these utilities in /orchestration_agent/database/ or /orchestration_agent/tools/
+//    d. Copy the required utility files to Project/{category}/database/
+//    e. Update import statements in the tool to reference the new path
+//    f. Create a tests directory and write unit tests (see Testing section below)
+//    g. Mark the tool as checked in tool_list.md when complete
+//    h. Only then move on to the next unchecked tool
+
+// Specific Rules for File Copying:
+// - ONLY COPY existing files from /orchestration_agent/, never create new files
+// - Common files to check for:
+//   - connector.py - Database connection utilities
+//   - column_mapping.py - Maps database columns to application objects
+//   - Database initialization scripts
+//   - Any other database utility files referenced in imports
+
+// Import Path Transformation Rules:
+// - Original: from orchestration_agent.database.connector import X
+//   New: from ...database.connector import X
+// - Original: from orchestration_agent.tools.utils import Y
+//   New: from ...database.utils import Y
+
+// Testing Requirements:
+// - Create a "tests" directory inside each tool's directory (Project/{category}/tools/{tool_name}/tests/)
+// - Write appropriate unit test cases for each tool after fixing imports
+// - Tests MUST verify:
+//   - Database connections work correctly with new import paths using the ACTUAL database
+//   - Complete tool functionality works with real data (NEVER use mocks or dummy data)
+//   - All calculations, analysis, and insights generation work correctly with the ACTUAL database
+//   - All dependencies are correctly satisfied
+// - Run the tests to verify functionality with the actual database
+// - NEVER use dummy data, mocks, or fallbacks - tests MUST use the real production database
+// - Each test file should follow the naming convention: test_{tool_name}.py
+
+// Validation Steps:
+// 1. Verify each tool can be found in its category directory
+// 2. Verify each required utility file exists in orchestration_agent before copying
+// 3. Check that import statements are updated correctly
+// 4. Ensure no duplication of utility files across categories if not necessary
+// 5. Test that the tool can access its database with the new import paths
+
+// Logging:
+// - Log each tool being processed
+// - Log each utility file being copied and its source/destination
+// - Log each import statement being updated
+// - Log any issues encountered during processing
+
+// Progress Tracking:
+// - Update tool_list.md with [x] for each successfully processed tool
+// - Create a summary report of all changes made
+
+// Error Handling:
+// - If a tool file can't be found, log and continue to next tool
+// - If a utility file can't be found, log and continue to next tool
+// - If import statements can't be updated, log and mark for manual review
