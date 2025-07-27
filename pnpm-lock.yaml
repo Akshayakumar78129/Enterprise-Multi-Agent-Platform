@@ -20,6 +20,8 @@ importers:
 
   apps/adk: {}
 
+  apps/server: {}
+
   apps/web:
     dependencies:
       '@google/genai':
