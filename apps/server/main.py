@@ -47,7 +47,7 @@ async def run_sse(request: Request):
         session = session.json()
         if not session:
             print("Creating session")
-            session_response = await requests.post(f"{AGENT_BASE_URL}/apps/{app_name}/users/{user_id}/sessions/{session_id}")
+            session_response = requests.post(f"{AGENT_BASE_URL}/apps/{app_name}/users/{user_id}/sessions/{session_id}")
             if session_response.status_code != 200:
                 return JSONResponse(content={"error": "Failed to create session"}, status_code=400)
         else:
