@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
+import requests
 from dotenv import load_dotenv
 import uvicorn
 import httpx
@@ -32,11 +33,30 @@ async def run_sse(request: Request):
 
     new_message = data.get("user_query", "")
     app_name = data.get("app_name", "orchestration_agent")
-    session_id = data.get("session_id", "test123")
-    user_id = data.get("user_id", "ari")
+    session_id = data.get("session_id", "")
+    user_id = data.get("user_id", "")
 
-    if not new_message:
-        return JSONResponse(content={"error": "No new message"}, status_code=400)
+    # print(data)
+
+    if not new_message and not app_name and not session_id and not user_id:
+        return JSONResponse(content={"error": "No new message, app_name, session_id, or user_id"}, status_code=400)
+
+    try:
+        session = requests.get(f"{AGENT_BASE_URL}/apps/{app_name}/users/{user_id}/sessions/{session_id}")
+        print(session.json())
+        session = session.json()
+        if not session:
+            print("Creating session")
+            session_response = await requests.post(f"{AGENT_BASE_URL}/apps/{app_name}/users/{user_id}/sessions/{session_id}")
+            if session_response.status_code != 200:
+                return JSONResponse(content={"error": "Failed to create session"}, status_code=400)
+        else:
+            print("Session already exists")
+    except Exception as e:
+        print("Creating session")
+        response = requests.post(f"{AGENT_BASE_URL}/apps/{app_name}/users/{user_id}/sessions/{session_id}", json=data)
+        if response.status_code != 200:
+            return JSONResponse(content={"error": "Failed to create session"}, status_code=400)
 
     request = {
         "app_name": app_name,

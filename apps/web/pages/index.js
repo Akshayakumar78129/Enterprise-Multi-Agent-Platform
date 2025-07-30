@@ -8,6 +8,7 @@ import { QueryInput } from '../ui-common/QueryInput/QueryInput';
 import { RobotCharacter } from '../ui-common/ai-interaction/RobotCharacter/RobotCharacter';
 import DashboardNavigation from '../ui-common/design-system/components/Navigation/DashboardNavigation.jsx';
 import NavigationToggle from '../ui-common/design-system/components/Navigation/NavigationToggle.jsx';
+import { v4 as uuidv4 } from 'uuid';
 
 // Import reducers
 import purchaseFrequencyReducer from '../Customer/tools/purchase_frequency/ui/state/purchaseFrequencySlice';
@@ -185,6 +186,12 @@ export default function ConversationalCanvas() {
   const [audio, setAudio] = useState(null);
   // State for navigation
   const [isNavigationOpen, setIsNavigationOpen] = useState(false);
+  
+  const [session, setSession] = useState({
+    session_id: uuidv4(),
+    user_id: "ari",
+    app_name: "orchestration_agent",
+  });
 
   // State for drag and resize
   const [activeComponent, setActiveComponent] = useState(null);
@@ -2471,7 +2478,7 @@ export default function ConversationalCanvas() {
       const response = await fetch(`${backendAiUrl}/run_sse`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
-        body: JSON.stringify({ user_query: query })
+        body: JSON.stringify({ user_query: query, session_id: session.session_id, user_id: session.user_id, app_name: session.app_name })
       });
 
       setQuery('');
