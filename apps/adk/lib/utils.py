@@ -47,23 +47,23 @@ COMPONENT_SCHEMA = {
             }
         },
         "customer-segmentation": {
-            "components": ["dashboard", "distributionMap", "profileCards", "metricComparison", "kpiTiles"],
+            "components": ["distributionMap", "profileCards", "metricComparison", "kpiTiles"],
             "parameters": "None"
         },
         "customer-behaviour": {
-            "components": ["dashboard", "radar", "histogram", "treemap", "donut"],
+            "components": ["radar", "histogram", "treemap", "donut"],
             "parameters": "None"
         },
         "churn-prediction": {
-            "components": ["dashboard", "riskPyramid", "featureImportance", "probabilityHistogram", "temporalRisk", "segmentMatrix"],
+            "components": ["riskPyramid", "featureImportance", "probabilityHistogram", "temporalRisk", "segmentMatrix"],
             "parameters": "None"
         },
         "anomaly-detection": {
-            "components": ["dashboard", "severityDistribution", "featureContribution", "anomalyTable", "kpiTiles"],
+            "components": ["severityDistribution", "featureContribution", "anomalyTable", "kpiTiles"],
             "parameters": "None"
         },
         "transaction-patterns": {
-            "components": ["dashboard", "kpiTiles", "temporalHeatmap", "timeSeriesChart"],
+            "components": ["kpiTiles", "temporalHeatmap", "timeSeriesChart"],
             "parameters": {
                 "dateRange": {
                     "start": "date",
@@ -72,7 +72,7 @@ COMPONENT_SCHEMA = {
             }
         },
         "customer-lifetime-value": {
-            "components": ["dashboard", "kpiTiles", "ltvDistribution", "predictionAccuracy", "geographicMap", "customerExplorer", "valueContribution", "timeProjection", "filterPanel"],
+            "components": ["kpiTiles", "ltvDistribution", "predictionAccuracy", "geographicMap", "customerExplorer", "valueContribution", "timeProjection", "filterPanel"],
             "parameters": {
                 "dateRange": {
                     "start": "date",
@@ -81,7 +81,7 @@ COMPONENT_SCHEMA = {
             }
         },
         "engagement-classifier": {
-            "components": ["dashboard", "kpiTiles", "pyramid", "timeline", "opportunityFinder"],
+            "components": ["kpiTiles", "pyramid", "timeline", "opportunityFinder"],
             "parameters": {
                 "dateRange": {
                     "start": "date",
@@ -90,14 +90,14 @@ COMPONENT_SCHEMA = {
             }
         },
         "next-purchase": {
-            "components": ["dashboard", "kpiTiles", "confidenceMatrix", "customerJourney", "affinityNetwork"],
+            "components": ["kpiTiles", "confidenceMatrix", "customerJourney", "affinityNetwork"],
             "parameters": {
                 "timeframe": "string",
                 "confidenceThreshold": "number"
             }
         },
         "sales-trends": {
-            "components": ["dashboard", "timeSeriesExplorer", "seasonalPatternAnalyzer", "growthRateVisualizer", "kpiTiles"],
+            "components": ["timeSeriesExplorer", "seasonalPatternAnalyzer", "growthRateVisualizer", "kpiTiles"],
             "parameters": {
                 "startDate": "date",
                 "endDate": "date",
@@ -107,19 +107,19 @@ COMPONENT_SCHEMA = {
             }
         },
         "regional-sales": {
-            "components": ["dashboard", "kpiTiles", "performanceMap", "timeSeriesExplorer"],
+            "components": ["kpiTiles", "performanceMap", "timeSeriesExplorer"],
             "parameters": "None"
         },
         "performance-deviation": {
-            "components": ["dashboard", "kpiTiles", "performanceExplorer", "featureImportance", "varianceDecomposition", "deviationPatterns"],
+            "components": ["kpiTiles", "performanceExplorer", "featureImportance", "varianceDecomposition", "deviationPatterns"],
             "parameters": "Not specified"
         },
         "retention-planner": {
-            "components": ["dashboard", "kpiTiles", "churnRiskGauge", "valueRiskMatrix", "actionSankey", "roiWaterfall"],
+            "components": ["kpiTiles", "churnRiskGauge", "valueRiskMatrix", "actionSankey", "roiWaterfall"],
             "parameters": "Not specified"
         },
         "inventory-level-analyzer": {
-            "components": ["dashboard", "healthMatrix", "itemAnalyzer", "kpiTiles"],
+            "components": ["healthMatrix", "itemAnalyzer", "kpiTiles"],
             "parameters": {
                 "time_period": "string",
                 "category": "string",
@@ -128,7 +128,7 @@ COMPONENT_SCHEMA = {
             }
         },
         "inventory-holding-cost-analyzer": {
-            "components": ["dashboard", "kpiTiles", "costBreakdown", "excessiveCostGrid", "costTrend", "warehouseComparison"],
+            "components": ["kpiTiles", "costBreakdown", "excessiveCostGrid", "costTrend", "warehouseComparison"],
             "parameters": {
                 "category": "string|null",
                 "warehouseId": "string|null",

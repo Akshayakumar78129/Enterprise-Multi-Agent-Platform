@@ -11,7 +11,7 @@ from google.adk.tools import agent_tool
 from google.adk.models.lite_llm import LiteLlm
 from orchestration_agent import prompt
 from pydantic import BaseModel, Field
-from orchestration_agent.prompt import ROOT_AGENT_INSTR, CUSTOMER_INSTR, FINANCIAL_INSTR, SALES_INSTR, INVENTORY_INSTR, OUTPUT_INSTR, EXIT_INSTR
+from orchestration_agent.prompt import ROOT_AGENT_INSTR, CUSTOMER_INSTR, FINANCIAL_INSTR, SALES_INSTR, INVENTORY_INSTR, STANDARD_OUTPUT_INSTR
 
 from orchestration_agent.tools.customer_behaviour import analyze_customer_behavior
 from orchestration_agent.tools.financial_tool import cash_flow_analysis, revenue_forecast
@@ -50,20 +50,42 @@ elif modelProvider == "cerebras":
 
 print(f"Using model: {model}")
 
+class StandardOutputSchema(BaseModel):
+        text: str = Field(description="The text output should be what you want to convey to the user.")
+        is_visualisation: bool = Field(description="Whether the output uses visualisation or not.")
+
+
+def standard_output(text: str) -> Agent:
+        return Agent(
+                name=f"standard_output_{text}",
+                model=model,
+                instruction=STANDARD_OUTPUT_INSTR,
+                output_schema=StandardOutputSchema,
+                output_key="standard_output",
+                description="This agent is used to output the text to the user.",
+        )
+
 # Get sales analyst tools
 sales_analyst_tools = register_sales_analyst_tools()
 print("\nRegistered Sales Analyst Tools:")
 for tool in sales_analyst_tools:
     print(f"- {tool['name']}: {tool['description']}")
 
-# Inventory Manager
+
 
 # Initialize agents with their respective tools
 inventory_agent = Agent(
         name="inventory_agent",
         model=model,
         instruction=INVENTORY_INSTR,
+        output_key="agent_output",
         tools=[analyze_holding_costs, analyze_inventory_levels, analyze_slow_moving_inventory, optimize_stock_levels]
+)
+
+inventory_output_agent = SequentialAgent(
+        name="inventory_output_agent",
+        description="This agent is used to output the inventory analysis to the user.",
+        sub_agents=[inventory_agent, standard_output("inventory_analysis")]
 )
 
 # Initialize sales agent with tools
@@ -71,29 +93,47 @@ sales_agent = Agent(
         name="sales_agent",
         model=model,
         instruction=SALES_INSTR,
-        output_key="sales_analysis",
+        output_key="agent_output",
         description="Handles any sales analytics and insights including demand forecast, product performance, sales trends, sales performance",
         tools=[tool["function"] for tool in sales_analyst_tools]
  )
+
+sales_output_agent = SequentialAgent(
+        name="sales_output_agent",
+        description="This agent is used to output the sales analysis to the user.",
+        sub_agents=[sales_agent, standard_output("sales_analysis")]
+)
 
 customer_agent = Agent(
         name="customer_insights_agent",
         model=model,
         instruction=CUSTOMER_INSTR,
+        output_key="agent_output",
         # Crucial for delegation: Clear description of capability
         description="Handles customer analytics and insights including segmentation, behavior analysis, lifetime value prediction, churn risk prediction, performance deviations, next likely purchases, transaction patterns, anomaly detection, purchase frequency analysis, engagement classification, and retention action planning",
         tools=[analyze_customer_behavior, identify_customer_segments, predict_customer_ltv, predict_churn_risk, analyze_performance_deviations, predict_next_purchases, analyze_transaction_patterns, detect_anomalies, analyze_purchase_frequency, analyze_customer_engagement, plan_retention_actions]
  )
 
-
+customer_output_agent = SequentialAgent(
+        name="customer_output_agent",
+        description="This agent is used to output the customer analysis to the user.",
+        sub_agents=[customer_agent, standard_output("customer_analysis")]
+)
 
 financial_agent = Agent(
         name="financial_agent",
         model=model,
         instruction=FINANCIAL_INSTR,
+        output_key="agent_output",
         # Crucial for delegation: Clear description of capability
         description="Handles financial analytics and insights including cash flow, revenue forecasting, and performance tracking",
         tools=[cash_flow_analysis, revenue_forecast]
+)
+
+financial_output_agent = SequentialAgent(
+        name="financial_output_agent",
+        description="This agent is used to output the financial analysis to the user.",
+        sub_agents=[financial_agent, standard_output("financial_analysis")]
 )
 
 root_agent = Agent(
@@ -101,8 +141,8 @@ root_agent = Agent(
         model=model,
         description=ROOT_AGENT_INSTR,
         output_key="orchestration",
-        # sub_agents=[customer_agent, financial_agent, sales_agent, inventory_agent],
-        tools=[agent_tool.AgentTool(customer_agent), agent_tool.AgentTool(financial_agent), agent_tool.AgentTool(sales_agent), agent_tool.AgentTool(inventory_agent)]
+        sub_agents=[customer_output_agent, financial_output_agent, sales_output_agent, inventory_output_agent],
+        # tools=[agent_tool.AgentTool(customer_agent), agent_tool.AgentTool(financial_agent), agent_tool.AgentTool(sales_agent), agent_tool.AgentTool(inventory_agent)]
 )
 
 # output_agent = Agent(
