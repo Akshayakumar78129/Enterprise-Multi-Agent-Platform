@@ -8,10 +8,12 @@ import json
 from cartesia import AsyncCartesia
 import re
 import dotenv
+from groq import AsyncGroq
 dotenv.load_dotenv()
 from cartesia.tts import OutputFormat_Raw, TtsRequestIdSpecifier
 
 gemini_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY", ""))
+groq_client = AsyncGroq(api_key=os.getenv("GROQ_API_KEY", ""))
 cartesia_client = AsyncCartesia(
     api_key=os.getenv("CARTESIA_API_KEY", ""),
 )
@@ -452,6 +454,29 @@ def wave_file_memory(pcm, channels=1, rate=24000, sample_width=2):
     
     return buffer.getvalue()  # Return bytes instead of BytesIO
 
+async def get_audio_groq(text: str) -> str:
+  response = {
+    "mime_type": "audio/wav",
+    "data": ""
+  }
+
+  speech_file_path = "speech.wav" 
+  model = "playai-tts"
+  voice = "Arista-PlayAI"
+  response_format = "wav"
+
+  audio_response = await groq_client.audio.speech.create(
+    model=model,
+    voice=voice,
+    input=remove_markdown_characters_fast(text),
+    response_format=response_format
+  )
+
+  buffer = wave_file_memory(await audio_response.read(), channels=1, rate=44000, sample_width=2)
+  audio_base64 = base64.b64encode(buffer).decode('utf-8')
+  response["data"] = audio_base64
+  return response
+
 async def get_audio(text: str) -> str:
   
   response = {
@@ -459,43 +484,47 @@ async def get_audio(text: str) -> str:
     "data": ""
   }
 
-  audio_response = gemini_client.models.generate_content(
-      model="gemini-2.5-flash-preview-tts",
-      contents=remove_markdown_characters_fast(text),
-      config=types.GenerateContentConfig(
-          response_modalities=["AUDIO"],
-          speech_config=types.SpeechConfig(
-              voice_config=types.VoiceConfig(
-                  prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                      voice_name='Leda',
-                  )
-              )
-          ),
-      )
-  )
-  response["mime_type"] = "audio/wav"
-  buffer = wave_file_memory(audio_response.candidates[0].content.parts[0].inline_data.data)
+  print("\nGenerating audio\n")
 
-  # chunks = []
-  # async for output in cartesia_client.tts.bytes(
-  #     model_id="sonic-2",
-  #     transcript=remove_markdown_characters_fast(text),
-  #     voice={"id": "bf0a246a-8642-498a-9950-80c35e9276b5"},
-  #     language="en",
-  #     output_format={
-  #         "container": "mp3",
-  #         "bit_rate": 64000,
-  #         "sample_rate": 44100,
-  #     },
-  # ):
-  #     chunks.append(output)
+#   audio_response = await gemini_client.aio.models.generate_content(
+#       model="gemini-2.5-flash-preview-tts",
+#       contents=remove_markdown_characters_fast(text),
+#       config=types.GenerateContentConfig(
+#           response_modalities=["AUDIO"],
+#           speech_config=types.SpeechConfig(
+#               voice_config=types.VoiceConfig(
+#                   prebuilt_voice_config=types.PrebuiltVoiceConfig(
+#                       voice_name='Leda',
+#                   )
+#               )
+#           ),
+#       )
+#   )
+#   response["mime_type"] = "audio/wav"
+#   buffer = wave_file_memory(audio_response.candidates[0].content.parts[0].inline_data.data)
 
-  # buffer = b''.join(chunks)
-  # response["mime_type"] = "audio/mp3"
+  chunks = []
+  async for output in cartesia_client.tts.bytes(
+      model_id="sonic-2",
+      transcript=remove_markdown_characters_fast(text),
+      voice={"id": "bf0a246a-8642-498a-9950-80c35e9276b5"},
+      language="en",
+      output_format={
+          "container": "mp3",
+          "bit_rate": 64000,
+          "sample_rate": 44100,
+      },
+  ):
+      chunks.append(output)
+
+  buffer = b''.join(chunks)
+  response["mime_type"] = "audio/mp3"
 
   audio_base64 = base64.b64encode(buffer).decode('utf-8')
 
   response["data"] = audio_base64
+
+  print("\naudio generated\n")
 
   return response
 
@@ -508,7 +537,7 @@ def get_audio_from_file():
 def get_audio_from_base64(base64_data: str) -> str:
     return base64.b64decode(base64_data)
 
-def get_visualisation(user_query: str, adk_response: str) -> dict:
+async def get_visualisation(user_query: str, adk_response: str) -> dict:
     prompt = f"""
     {VIS_SCHEMA_PROMPT}
     
@@ -519,10 +548,11 @@ def get_visualisation(user_query: str, adk_response: str) -> dict:
     Please analyze the above input and return the appropriate visualization components as a JSON array.
     """
 
+    print("getting vis")
     
     try:
-        response = gemini_client.models.generate_content(
-            model="gemini-2.5-flash",
+        response = await gemini_client.aio.models.generate_content(
+            model="gemini-2.5-flash-lite",
             contents=prompt
         )
     except Exception as e:
@@ -536,7 +566,15 @@ def get_visualisation(user_query: str, adk_response: str) -> dict:
     # print("\n\nresponse_text\n\n", response_text)
 
     response_json = json.loads(response_text)
-
-    # print("\n\nresponse_json\n\n", response_json)
+    
+    print("\n\nresponse_json\n", response_json)
 
     return response_json
+
+def get_data():
+    jsonFile = os.path.join(os.path.dirname(__file__), "data.json")
+
+    with open(jsonFile, "r") as file:
+        data = json.load(file)
+
+    return data

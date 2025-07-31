@@ -8,6 +8,7 @@ import { QueryInput } from '../ui-common/QueryInput/QueryInput';
 import { RobotCharacter } from '../ui-common/ai-interaction/RobotCharacter/RobotCharacter';
 import DashboardNavigation from '../ui-common/design-system/components/Navigation/DashboardNavigation.jsx';
 import NavigationToggle from '../ui-common/design-system/components/Navigation/NavigationToggle.jsx';
+import { v4 as uuidv4 } from 'uuid';
 
 // Import reducers
 import purchaseFrequencyReducer from '../Customer/tools/purchase_frequency/ui/state/purchaseFrequencySlice';
@@ -185,6 +186,12 @@ export default function ConversationalCanvas() {
   const [audio, setAudio] = useState(null);
   // State for navigation
   const [isNavigationOpen, setIsNavigationOpen] = useState(false);
+  
+  const [session, setSession] = useState({
+    session_id: uuidv4(),
+    user_id: "ari",
+    app_name: "orchestration_agent",
+  });
 
   // State for drag and resize
   const [activeComponent, setActiveComponent] = useState(null);
@@ -324,7 +331,7 @@ export default function ConversationalCanvas() {
   };
 
   // Function to spawn a component on the canvas
-  const spawnComponent = async (componentType, props = {}, position = null, localComponentsTracker = null) => {
+  const spawnComponent = async (componentType, props = {}, position = null) => {
     setLoading(true);
     const id = `component-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     
@@ -349,9 +356,6 @@ export default function ConversationalCanvas() {
 
     // Helper: Find a non-overlapping position
     function findNonOverlappingPosition(size, padding = 30) {
-      // Use local tracker if available, otherwise use components state
-      const componentsToCheck = localComponentsTracker || components;
-      
       // Calculate the current visible area in canvas coordinates
       const visibleLeft = -pan.x / zoom;
       const visibleTop = -pan.y / zoom;
@@ -360,13 +364,10 @@ export default function ConversationalCanvas() {
       const step = 40; // Try every 40px
       const maxTries = 10000;
       let tries = 0;
-      
-      console.log(`[Anti-collision] Checking against ${componentsToCheck.length} existing components`);
-      
       for (let y = visibleTop + padding; y <= visibleBottom - size.height - padding; y += step) {
         for (let x = visibleLeft + padding; x <= visibleRight - size.width - padding; x += step) {
           const newRect = { x, y, width: size.width, height: size.height };
-          const overlap = componentsToCheck.some(comp =>
+          const overlap = components.some(comp =>
             isOverlapping(newRect, {
               x: comp.position.x,
               y: comp.position.y,
@@ -375,7 +376,6 @@ export default function ConversationalCanvas() {
             })
           );
           if (!overlap) {
-            console.log(`[Anti-collision] Found non-overlapping position: (${x}, ${y})`);
             return { x, y };
           }
           tries++;
@@ -383,7 +383,6 @@ export default function ConversationalCanvas() {
         }
         if (tries > maxTries) break;
       }
-      console.log(`[Anti-collision] No space found after ${tries} tries`);
       return null; // No space found
     }
 
@@ -453,32 +452,6 @@ export default function ConversationalCanvas() {
         return { x: newX, y: newY };
       }
     }
-
-    // Helper: Create and track component properly
-    function createAndTrackComponent(id, componentType, componentPosition, componentSize, mergedProps, toolName, componentName) {
-      const newComponent = {
-        id,
-        type: componentType,
-        position: componentPosition,
-        size: componentSize,
-        props: mergedProps,
-        Component: componentRegistry[toolName][componentName]
-      };
-
-      // Update local tracker immediately if it exists
-      if (localComponentsTracker) {
-        localComponentsTracker.push(newComponent);
-        console.log(`[Anti-collision] Added component to local tracker. Total: ${localComponentsTracker.length}`);
-      }
-
-      setComponents(prev => [
-        ...prev,
-        newComponent
-      ]);
-      
-      return newComponent;
-    }
-
     const [toolName, componentName] = componentType.split('.');
     if (!componentRegistry[toolName] || !componentRegistry[toolName][componentName]) {
       console.error(`Component not found in registry: ${componentType}`);
@@ -666,7 +639,17 @@ export default function ConversationalCanvas() {
           }
         }
 
-        createAndTrackComponent(id, componentType, componentPosition, componentSize, mergedProps, toolName, componentName);
+        setComponents(prev => [
+          ...prev,
+          {
+            id,
+            type: componentType,
+            position: componentPosition,
+            size: componentSize,
+            props: mergedProps,
+            Component: componentRegistry[toolName][componentName]
+          }
+        ]);
         setLoading(false);
         return id;
       } else if (toolName === 'customer-behaviour') {
@@ -729,7 +712,17 @@ export default function ConversationalCanvas() {
           }
         }
 
-        createAndTrackComponent(id, componentType, componentPosition, componentSize, mergedProps, toolName, componentName);
+        setComponents(prev => [
+          ...prev,
+          {
+            id,
+            type: componentType,
+            position: componentPosition,
+            size: componentSize,
+            props: mergedProps,
+            Component: componentRegistry[toolName][componentName]
+          }
+        ]);
         setLoading(false);
         return id;
       } else if (toolName === 'churn-prediction') {
@@ -802,7 +795,17 @@ export default function ConversationalCanvas() {
           }
         }
 
-        createAndTrackComponent(id, componentType, componentPosition, componentSize, mergedProps, toolName, componentName);
+        setComponents(prev => [
+          ...prev,
+          {
+            id,
+            type: componentType,
+            position: componentPosition,
+            size: componentSize,
+            props: mergedProps,
+            Component: componentRegistry[toolName][componentName]
+          }
+        ]);
         setLoading(false);
         return id;
       } else if (toolName === 'anomaly-detection') {
@@ -1959,9 +1962,19 @@ export default function ConversationalCanvas() {
           }
         }
         
-        // Use the calculated componentSize instead of hardcoded size
-        const actualComponentSize = componentSize || { width: 400, height: 300 };
-        createAndTrackComponent(id, componentType, componentPosition, actualComponentSize, mergedProps, toolName, componentName);
+        const newComponent = {
+          id,
+          type: componentType,
+          position: componentPosition,
+          size: { width: 400, height: 300 }, // Default size that can be resized
+          props: mergedProps,
+          Component: componentRegistry[toolName][componentName]
+        };
+
+        setComponents(prev => [
+          ...prev,
+          newComponent
+        ]);
         setLoading(false);
         return id;
       }
@@ -2271,11 +2284,6 @@ export default function ConversationalCanvas() {
     if (visualisation && Array.isArray(visualisation)) {
       console.log('Visualization data received from API:', visualisation);
       let spawnedComponents = [];
-      
-      // Create a local tracking array for components being spawned to ensure collision detection works
-      const localComponentsTracker = [...components];
-      
-      // Spawn components sequentially to ensure anti-collision logic works properly
       for (const componentSpec of visualisation) {
         const { toolname, componentName, body } = componentSpec;
         
@@ -2284,12 +2292,9 @@ export default function ConversationalCanvas() {
           console.log(`[QueryResolver] Spawning component: ${componentType} with props:`, body);
           
           try {
-            // Pass the local tracker so collision detection can see previously spawned components
-            const componentId = await spawnComponent(componentType, body || {}, null, localComponentsTracker);
+            const componentId = await spawnComponent(componentType, body || {});
             if (componentId) {
               spawnedComponents.push(componentName);
-              // Add a small delay to ensure the component is fully processed
-              await new Promise(resolve => setTimeout(resolve, 100));
             }
           } catch (error) {
             console.error(`Failed to spawn component ${componentType}:`, error);
@@ -2309,6 +2314,9 @@ export default function ConversationalCanvas() {
     setAudio(null);
     console.log("Audio finished")
   }
+
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   useEffect(() => {
     if (queue.length > 0) {
@@ -2333,10 +2341,14 @@ export default function ConversationalCanvas() {
 
           setQueue(prev => prev.slice(1));
 
+          sleep(500)
+
         } else {
+          sleep(500)
           return;
         }
       } else {
+        sleep(2000)
         const tempAudio = new Audio(`data:${queue[0].audio.mime_type};base64,${queue[0].audio.data}`);
         setRobotState({
           ...robotState,
@@ -2348,11 +2360,13 @@ export default function ConversationalCanvas() {
         tempAudio.play();
         tempAudio.onended = onAudioFinish;
         setQueue(prev => prev.slice(1));
+        sleep(500)
+
       }
     } else {
-      setAudio(null);
+      // setAudio(null);
     }
-  }, [queue, audio])
+  }, [queue, audio?.ended])
 
   const handQuerySubmit2 = async (query) => {
     console.log('Query from Robot:', query);
@@ -2473,7 +2487,7 @@ export default function ConversationalCanvas() {
       const response = await fetch(`${backendAiUrl}/run_sse`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
-        body: JSON.stringify({ user_query: query })
+        body: JSON.stringify({ user_query: query, session_id: session.session_id, user_id: session.user_id, app_name: session.app_name })
       });
 
       setQuery('');
@@ -2567,10 +2581,6 @@ export default function ConversationalCanvas() {
 
         // Spawn components from visualization_output
         if (resolveData.response.visualization_output && Array.isArray(resolveData.response.visualization_output)) {
-          // Create a local tracking array for components being spawned to ensure collision detection works
-          const localComponentsTracker = [...components];
-          
-          // Spawn components sequentially to ensure anti-collision logic works properly
           for (const componentSpec of resolveData.response.visualization_output) {
             const { toolname, componentName, body } = componentSpec;
             
@@ -2579,13 +2589,10 @@ export default function ConversationalCanvas() {
               console.log(`[QueryResolver] Spawning component: ${componentType} with props:`, body);
               
               try {
-                              // Pass the local tracker so collision detection can see previously spawned components
-              const componentId = await spawnComponent(componentType, body || {}, null, localComponentsTracker);
-              if (componentId) {
-                spawnedComponents.push(componentName);
-                // Add a small delay to ensure the component is fully processed
-                await new Promise(resolve => setTimeout(resolve, 100));
-              }
+                const componentId = await spawnComponent(componentType, body || {});
+                if (componentId) {
+                  spawnedComponents.push(componentName);
+                }
               } catch (error) {
                 console.error(`Failed to spawn component ${componentType}:`, error);
               }

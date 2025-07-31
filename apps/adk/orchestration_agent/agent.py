@@ -82,11 +82,11 @@ inventory_agent = Agent(
         tools=[analyze_holding_costs, analyze_inventory_levels, analyze_slow_moving_inventory, optimize_stock_levels]
 )
 
-inventory_output_agent = SequentialAgent(
-        name="inventory_output_agent",
-        description="This agent is used to output the inventory analysis to the user.",
-        sub_agents=[inventory_agent, standard_output("inventory_analysis")]
-)
+# inventory_output_agent = SequentialAgent(
+#         name="inventory_output_agent",
+#         description="This agent is used to output the inventory analysis to the user.",
+#         sub_agents=[inventory_agent, standard_output("inventory_analysis")]
+# )
 
 # Initialize sales agent with tools
 sales_agent = Agent(
@@ -98,11 +98,11 @@ sales_agent = Agent(
         tools=[tool["function"] for tool in sales_analyst_tools]
  )
 
-sales_output_agent = SequentialAgent(
-        name="sales_output_agent",
-        description="This agent is used to output the sales analysis to the user.",
-        sub_agents=[sales_agent, standard_output("sales_analysis")]
-)
+# sales_output_agent = SequentialAgent(
+#         name="sales_output_agent",
+#         description="This agent is used to output the sales analysis to the user.",
+#         sub_agents=[sales_agent, standard_output("sales_analysis")]
+# )
 
 customer_agent = Agent(
         name="customer_insights_agent",
@@ -114,11 +114,11 @@ customer_agent = Agent(
         tools=[analyze_customer_behavior, identify_customer_segments, predict_customer_ltv, predict_churn_risk, analyze_performance_deviations, predict_next_purchases, analyze_transaction_patterns, detect_anomalies, analyze_purchase_frequency, analyze_customer_engagement, plan_retention_actions]
  )
 
-customer_output_agent = SequentialAgent(
-        name="customer_output_agent",
-        description="This agent is used to output the customer analysis to the user.",
-        sub_agents=[customer_agent, standard_output("customer_analysis")]
-)
+# customer_output_agent = SequentialAgent(
+#         name="customer_output_agent",
+#         description="This agent is used to output the customer analysis to the user.",
+#         sub_agents=[customer_agent, standard_output("customer_analysis")]
+# )
 
 financial_agent = Agent(
         name="financial_agent",
@@ -130,18 +130,18 @@ financial_agent = Agent(
         tools=[cash_flow_analysis, revenue_forecast]
 )
 
-financial_output_agent = SequentialAgent(
-        name="financial_output_agent",
-        description="This agent is used to output the financial analysis to the user.",
-        sub_agents=[financial_agent, standard_output("financial_analysis")]
-)
+# financial_output_agent = SequentialAgent(
+#         name="financial_output_agent",
+#         description="This agent is used to output the financial analysis to the user.",
+#         sub_agents=[financial_agent, standard_output("financial_analysis")]
+# )
 
 root_agent = Agent(
         name="orchestration_agent", 
         model=model,
         description=ROOT_AGENT_INSTR,
         output_key="orchestration",
-        sub_agents=[customer_output_agent, financial_output_agent, sales_output_agent, inventory_output_agent],
+        sub_agents=[customer_agent, financial_agent, sales_agent, inventory_agent],
         # tools=[agent_tool.AgentTool(customer_agent), agent_tool.AgentTool(financial_agent), agent_tool.AgentTool(sales_agent), agent_tool.AgentTool(inventory_agent)]
 )
 

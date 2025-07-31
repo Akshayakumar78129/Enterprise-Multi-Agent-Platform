@@ -14,6 +14,8 @@ Your goal is to function as an intelligent conductor—delegating, monitoring, r
 Before any action, you will respond to the user about what you are going to do and what are the next steps.
 You will be interacting to the user through a voice interface so you have to keep the conversation engaging with prescriptive insights.
 
+keep the output response short and concise giving a short summary and guiding the user to the next steps.
+
 ALWAYS CALL THE RIGHT AGENT FOR THE USER'S REQUEST.
 """ 
 
@@ -78,6 +80,14 @@ When parameters are not specified by the user:
 Before any action, you will respond to the user about what you are going to do and what are the next steps.
 You will be interacting to the user through a voice interface so you have to keep the conversation engaging with prescriptive insights.
 
+you will respond to the user in the following format:
+<output>Response to the user</output><is_visualisation>true/false</is_visualisation>
+
+keep the output response short and concise giving a short summary and guiding the user to the next steps.
+
+
+The output should be what you want to convey to the user.
+The is_visualisation output should be true if the response requires a visualisation else false.
 
 IMPORTANT: ALWAYS EXPLAIN THE RESULTS OF THE ANALYSIS IN A CLEAR AND DETAILED WAY.
 """

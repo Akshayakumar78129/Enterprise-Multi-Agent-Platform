@@ -3,6 +3,8 @@ import json
 import re
 import io
 import importlib
+import asyncio
+from time import sleep
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -13,7 +15,7 @@ import logging
 from pydantic import BaseModel
 from typing import Optional, Any
 from pydantic import BaseModel, Field
-from lib.utils import get_audio, get_visualisation, get_audio_from_file
+from lib.utils import get_audio, get_visualisation, get_audio_from_file, get_audio_groq
 
 # ADK imports
 from google.adk.sessions import InMemorySessionService, Session
@@ -103,7 +105,7 @@ async def run_agent(req: AgentRunRequest) -> StreamingResponse:
                 runner = Runner(agent=root_agent, app_name=req.app_name, session_service=memory_session_service)
                 visualisation = None
                 visualisation_text = None
-                skip_response = False
+                is_visualisation = False
                 async for event in runner.run_async(
                     user_id=req.user_id,
                     session_id=req.session_id,
@@ -114,21 +116,39 @@ async def run_agent(req: AgentRunRequest) -> StreamingResponse:
                         logger.info("Generated event in agent run streaming: %s", event)
                         audio_base64 = None
                         if event.author in agents_list:
-
-                            if event.content.parts[0].text and not skip_response:
+                            
+                            if event.content.parts[0].text:
                                 agent_response = event.content.parts[0].text
-                                visualisation_text = agent_response if not visualisation_text else visualisation_text
-                                audio_base64 = await get_audio(agent_response)
+                                
+                                # Extract output and is_visualisation from agent response
+                                output_match = re.search(r'<output>(.*?)</output>', agent_response, re.DOTALL)
+                                is_vis_match = re.search(r'<is_visualisation>(.*?)</is_visualisation>', agent_response)
+                                
+                                output = output_match.group(1).strip() if output_match else agent_response
+                                is_visualisation = is_vis_match.group(1).strip().lower() == 'true' if is_vis_match else False
+                                
+                                visualisation_text = output if not visualisation_text else visualisation_text
                                 # audio_base64 = get_audio_from_file()
                                 # audio_base64 = {"mime_type": "audio/wav", "data": "test"}
 
-                            if event.content.parts[0].function_call:
-                                if event.content.parts[0].function_call.name != "transfer_to_agent":
-                                    visualisation_text = event.content.parts[0].function_call.arguments["text"]
-                                    skip_response = True
+                            # if event.content.parts[0].function_call:
+                            #     if event.content.parts[0].function_call.name != "transfer_to_agent":
+                            #         visualisation_text = event.content.parts[0].function_call.arguments["text"]
+
                                 # visualisation = get_visualisation(req.new_message.parts[0].text, visualisation_text)
                         if not visualisation_text:
                             continue
+
+                        # Run audio and visualisation tasks in parallel
+                        tasks = [get_audio(output)]
+                        # tasks = [get_audio_groq(output)]
+                        if is_visualisation:
+                            print("Generating visualisation")
+                            tasks.append(get_visualisation(req.new_message.parts[0].text, visualisation_text))
+                        
+                        results = await asyncio.gather(*tasks)
+                        audio_base64 = results[0]
+                        visualisation = results[1] if len(results) > 1 else None                        
 
                         response = {
                             "audio": audio_base64,
@@ -140,16 +160,17 @@ async def run_agent(req: AgentRunRequest) -> StreamingResponse:
                         yield f"data: {response_data}\n\n"
                         visualisation = None
                         visualisation_text = None
-                        skip_response = False
             except Exception as e:
                 logger.exception("Error in event_generator: %s", e)
 
                 # imported = importlib.import_module("lib.utils")
-                # response = imported.data
+                # response = imported.get_data()
 
                 # newResponse = imported.new_response
                 # You might want to yield an error event here
                 yield f'error: {str(e)}\n\n'
+                # yield f'data: {json.dumps(response)}\n\n'
+                # sleep(2)
                 # yield f'data: {json.dumps(response)}\n\n'
 
         return StreamingResponse(

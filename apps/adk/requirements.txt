@@ -37,3 +37,4 @@ litellm
 agentops
 google-genai
 cartesia
+groq
