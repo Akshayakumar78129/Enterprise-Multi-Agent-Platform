@@ -4,7 +4,8 @@
     "type": "module",
     "private": true,
     "scripts": {
-      "dev": "bash start.sh"
+      "dev": "bash dev.sh",
+      "start": "bash start.sh"
     }
   }
   
