@@ -11,7 +11,7 @@ from google.adk.tools import agent_tool
 from google.adk.models.lite_llm import LiteLlm
 from orchestration_agent import prompt
 from pydantic import BaseModel, Field
-from orchestration_agent.prompt import ROOT_AGENT_INSTR, CUSTOMER_INSTR, FINANCIAL_INSTR, SALES_INSTR, INVENTORY_INSTR, STANDARD_OUTPUT_INSTR
+from orchestration_agent.prompt import ROOT_AGENT_INSTR, CUSTOMER_INSTR, FINANCIAL_INSTR, SALES_INSTR, INVENTORY_INSTR
 
 from orchestration_agent.tools.customer_behaviour import analyze_customer_behavior
 from orchestration_agent.tools.financial_tool import cash_flow_analysis, revenue_forecast

@@ -60,7 +60,7 @@ app.add_middleware(
 memory_session_service = InMemorySessionService()
 
 
-agents_list = ["orchestration_agent", "inventory_agent", "inventory_output_agent", "sales_agent", "sales_output_agent", "customer_agent", "customer_output_agent", "financial_agent", "financial_output_agent"]
+agents_list = ["orchestration_agent", "inventory_agent", "sales_agent", "customer_insights_agent", "financial_agent"]
 
 
 
