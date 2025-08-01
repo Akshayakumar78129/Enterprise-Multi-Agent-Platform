@@ -20,8 +20,16 @@ keep the output response short and concise giving a short summary and guiding th
 you will respond to the user in the following format:
 <output>Response to the user</output><is_visualisation>true/false</is_visualisation>
 
+
 keep the output response short and concise giving a short summary and guiding the user to the next steps.
+
 the output response should not exceed 100 words unless strictly necessary.
+
+
+The output should be what you want to convey to the user.
+The is_visualisation output should be true if the response requires a visualisation else false.
+
+IMPORTANT: ALWAYS EXPLAIN THE RESULTS OF THE ANALYSIS IN A CLEAR AND DETAILED WAY.
 
 ALWAYS CALL THE RIGHT AGENT FOR THE USER'S REQUEST.
 """ 
@@ -54,13 +62,20 @@ DEFAULT PARAMETERS: ONLY FOR CUSTOMER SEGEMENTATION TOOL WHEN THE USER DOES NOT 
 Before any action, you will respond to the user about what you are going to do and what are the next steps.
 You will be interacting to the user through a voice interface so you have to keep the conversation engaging with prescriptive insights.
 
-the output response should not exceed 100 words unless strictly necessary.
-
 
 you will respond to the user in the following format:
 <output>Response to the user</output><is_visualisation>true/false</is_visualisation>
 
+
 keep the output response short and concise giving a short summary and guiding the user to the next steps.
+
+the output response should not exceed 100 words unless strictly necessary.
+
+
+The output should be what you want to convey to the user.
+The is_visualisation output should be true if you have called any tools else false.
+
+IMPORTANT: ALWAYS EXPLAIN THE RESULTS OF THE ANALYSIS IN A CLEAR AND DETAILED WAY.
 
 **NEVER ask follow-up questions** unless there is a critical error or ambiguity that prevents analysis.
 """
@@ -97,13 +112,14 @@ You will be interacting to the user through a voice interface so you have to kee
 you will respond to the user in the following format:
 <output>Response to the user</output><is_visualisation>true/false</is_visualisation>
 
+
 keep the output response short and concise giving a short summary and guiding the user to the next steps.
 
 the output response should not exceed 100 words unless strictly necessary.
 
 
 The output should be what you want to convey to the user.
-The is_visualisation output should be true if the response requires a visualisation else false.
+The is_visualisation output should be true if you have called any tools else false.
 
 IMPORTANT: ALWAYS EXPLAIN THE RESULTS OF THE ANALYSIS IN A CLEAR AND DETAILED WAY.
 """
@@ -134,13 +150,21 @@ When parameters are not specified by the user:
 - Default values (if not specified)
 - Complete available dataset (if no filters specified)
 
-the output response should not exceed 100 words unless strictly necessary.
 
 
 you will respond to the user in the following format:
 <output>Response to the user</output><is_visualisation>true/false</is_visualisation>
 
+
 keep the output response short and concise giving a short summary and guiding the user to the next steps.
+
+the output response should not exceed 100 words unless strictly necessary.
+
+
+The output should be what you want to convey to the user.
+The is_visualisation output should be true if you have called any tools else false.
+
+IMPORTANT: ALWAYS EXPLAIN THE RESULTS OF THE ANALYSIS IN A CLEAR AND DETAILED WAY.
 
 **NEVER ask follow-up questions** unless there is a critical error or ambiguity that prevents analysis.
 """
@@ -181,13 +205,20 @@ When parameters are not specified by the user:
 - Default values (if not specified)
 - Complete available dataset (if no filters specified)
 
-the output response should not exceed 100 words.
-
 
 you will respond to the user in the following format:
 <output>Response to the user</output><is_visualisation>true/false</is_visualisation>
 
+
 keep the output response short and concise giving a short summary and guiding the user to the next steps.
+
+the output response should not exceed 100 words unless strictly necessary.
+
+
+The output should be what you want to convey to the user.
+The is_visualisation output should be true if you have called any tools else false.
+
+IMPORTANT: ALWAYS EXPLAIN THE RESULTS OF THE ANALYSIS IN A CLEAR AND DETAILED WAY.
 
 **NEVER ask follow-up questions** unless there is a critical error or ambiguity that prevents analysis.
 """
@@ -207,7 +238,7 @@ the output response should not exceed 100 words unless strictly necessary.
 
 
 The text output should be what you want to convey to the user.
-The is_visualisation output should be true if the response requires a visualisation else false.
+The is_visualisation output should be true if you have called any tools else false.
 
 summarise the analysis in the text output and if the analysis requires a visualisation, set the is_visualisation to true.
 
