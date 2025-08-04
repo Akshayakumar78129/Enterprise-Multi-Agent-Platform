@@ -15,7 +15,7 @@ import logging
 from pydantic import BaseModel
 from typing import Optional, Any
 from pydantic import BaseModel, Field
-from lib.utils import get_audio, get_visualisation, get_audio_from_file, get_audio_groq
+from lib.utils import get_audio, get_visualisation, get_audio_from_file, get_audio_groq, get_audio_deepgram
 
 # ADK imports
 from google.adk.sessions import InMemorySessionService, Session
@@ -140,8 +140,10 @@ async def run_agent(req: AgentRunRequest) -> StreamingResponse:
                             continue
 
                         # Run audio and visualisation tasks in parallel
-                        tasks = [get_audio(output)]
+                        tasks = []
+                        # tasks.append(get_audio(output))
                         # tasks = [get_audio_groq(output)]
+                        tasks.append(get_audio_deepgram(output))
                         if is_visualisation:
                             print("Generating visualisation")
                             tasks.append(get_visualisation(req.new_message.parts[0].text, visualisation_text))
