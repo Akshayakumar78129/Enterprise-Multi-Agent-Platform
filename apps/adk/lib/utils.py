@@ -1,5 +1,6 @@
 import wave
 import io
+import requests
 from google import genai
 from google.genai import types
 import os
@@ -9,13 +10,14 @@ from cartesia import AsyncCartesia
 import re
 import dotenv
 from groq import AsyncGroq
+import aiohttp
+import asyncio
 dotenv.load_dotenv()
 from cartesia.tts import OutputFormat_Raw, TtsRequestIdSpecifier
-
-gemini_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY", ""))
-groq_client = AsyncGroq(api_key=os.getenv("GROQ_API_KEY", ""))
-cartesia_client = AsyncCartesia(
-    api_key=os.getenv("CARTESIA_API_KEY", ""),
+from deepgram import (
+    DeepgramClient,
+    ClientOptionsFromEnv,
+    SpeakOptions,
 )
 
 COMPONENT_SCHEMA = {
@@ -23,10 +25,11 @@ COMPONENT_SCHEMA = {
         "purchase-frequency": {
             "components": ["histogram", "heatmap", "quadrant", "regularity", "treemap"],
             "parameters": {
-                "dateRange": {
-                    "start": "date",
-                    "end": "date"
-                }
+                "start_date": "date",
+                "end_date": "date",
+                "segment": "string|null",
+                "frequency_threshold": "number|null",
+                "monetary_threshold": "number|null"
             }
         },
         "product-performance": {
@@ -35,7 +38,9 @@ COMPONENT_SCHEMA = {
                 "start_date": "date",
                 "end_date": "date",
                 "metrics": "array",
-                "category_level": "string"
+                "category_level": "string",
+                "min_sales_threshold": "number|null",
+                "time_granularity": "string"
             }
         },
         "sales-performance": {
@@ -49,60 +54,93 @@ COMPONENT_SCHEMA = {
             }
         },
         "customer-segmentation": {
-            "components": ["distributionMap", "profileCards", "metricComparison", "kpiTiles"],
-            "parameters": "None"
+            "components": ["distributionMap", "profileCards", "metricComparison", "kpiTiles", "evolutionTimeline", "attributeHeatmap"],
+            "parameters": {
+                "start_date": "date",
+                "end_date": "date",
+                "segmentType": "string",
+                "limit": "number",
+                "includeMetrics": "boolean"
+            }
         },
         "customer-behaviour": {
             "components": ["radar", "histogram", "treemap", "donut"],
-            "parameters": "None"
+            "parameters": {
+                "start_date": "date",
+                "end_date": "date",
+                "customerSegment": "string|null",
+                "limit": "number"
+            }
         },
         "churn-prediction": {
             "components": ["riskPyramid", "featureImportance", "probabilityHistogram", "temporalRisk", "segmentMatrix"],
-            "parameters": "None"
+            "parameters": {
+                "start_date": "date",
+                "end_date": "date",
+                "riskThreshold": "number",
+                "modelType": "string",
+                "customerSegment": "string|null",
+                "count": "number"
+            }
         },
         "anomaly-detection": {
             "components": ["severityDistribution", "featureContribution", "anomalyTable", "kpiTiles"],
-            "parameters": "None"
+            "parameters": {
+                "start_date": "date",
+                "end_date": "date",
+                "anomalyThreshold": "number",
+                "detectionMethod": "string",
+                "customerSegment": "string|null"
+            }
         },
         "transaction-patterns": {
             "components": ["kpiTiles", "temporalHeatmap", "timeSeriesChart"],
             "parameters": {
-                "dateRange": {
-                    "start": "date",
-                    "end": "date"
-                }
+                "start_date": "date",
+                "end_date": "date",
+                "patternType": "string",
+                "anomalyThreshold": "number",
+                "aggregationLevel": "string"
             }
         },
         "customer-lifetime-value": {
             "components": ["kpiTiles", "ltvDistribution", "predictionAccuracy", "geographicMap", "customerExplorer", "valueContribution", "timeProjection", "filterPanel"],
             "parameters": {
-                "dateRange": {
-                    "start": "date",
-                    "end": "date"
-                }
+                "start_date": "date",
+                "end_date": "date",
+                "predictionPeriod": "string",
+                "customerSegment": "string|null",
+                "valueType": "string",
+                "currency": "string"
             }
         },
         "engagement-classifier": {
             "components": ["kpiTiles", "pyramid", "timeline", "opportunityFinder"],
             "parameters": {
-                "dateRange": {
-                    "start": "date",
-                    "end": "date"
-                }
+                "start_date": "date",
+                "end_date": "date",
+                "engagementMetrics": "array",
+                "classificationThresholds": "object|null",
+                "customerSegment": "string|null",
+                "channel": "string|null"
             }
         },
         "next-purchase": {
             "components": ["kpiTiles", "confidenceMatrix", "customerJourney", "affinityNetwork"],
             "parameters": {
+                "start_date": "date",
+                "end_date": "date",
                 "timeframe": "string",
-                "confidenceThreshold": "number"
+                "confidenceThreshold": "number",
+                "customerSegment": "string|null",
+                "productCategory": "string|null"
             }
         },
         "sales-trends": {
             "components": ["timeSeriesExplorer", "seasonalPatternAnalyzer", "growthRateVisualizer", "kpiTiles"],
             "parameters": {
-                "startDate": "date",
-                "endDate": "date",
+                "start_date": "date",
+                "end_date": "date",
                 "timePeriod": "string",
                 "metric": "string",
                 "dimension": "string|null"
@@ -110,19 +148,39 @@ COMPONENT_SCHEMA = {
         },
         "regional-sales": {
             "components": ["kpiTiles", "performanceMap", "timeSeriesExplorer"],
-            "parameters": "None"
+            "parameters": {
+                "start_date": "date",
+                "end_date": "date",
+                "country": "string|null",
+                "state": "string|null",
+                "aggregation": "string"
+            }
         },
         "performance-deviation": {
             "components": ["kpiTiles", "performanceExplorer", "featureImportance", "varianceDecomposition", "deviationPatterns"],
-            "parameters": "Not specified"
+            "parameters": {
+                "start_date": "date",
+                "end_date": "date",
+                "metric": "string",
+                "dimension": "string",
+                "threshold": "number"
+            }
         },
         "retention-planner": {
             "components": ["kpiTiles", "churnRiskGauge", "valueRiskMatrix", "actionSankey", "roiWaterfall"],
-            "parameters": "Not specified"
+            "parameters": {
+                "start_date": "date",
+                "end_date": "date",
+                "retentionPeriod": "string",
+                "customerSegment": "string|null",
+                "interventionBudget": "number"
+            }
         },
         "inventory-level-analyzer": {
             "components": ["healthMatrix", "itemAnalyzer", "kpiTiles"],
             "parameters": {
+                "start_date": "date",
+                "end_date": "date",
                 "time_period": "string",
                 "category": "string",
                 "warehouse_id": "string",
@@ -132,6 +190,8 @@ COMPONENT_SCHEMA = {
         "inventory-holding-cost-analyzer": {
             "components": ["kpiTiles", "costBreakdown", "excessiveCostGrid", "costTrend", "warehouseComparison"],
             "parameters": {
+                "start_date": "date",
+                "end_date": "date",
                 "category": "string|null",
                 "warehouseId": "string|null",
                 "annualHoldingCostPercentage": "number",
@@ -140,6 +200,7 @@ COMPONENT_SCHEMA = {
         }
     }
 }
+
 
 VIS_SCHEMA_PROMPT = """
 You are an intelligent component resolver for a business analytics visualization system. Your task is to analyze user queries and ADK (MultiAgent-adk) responses to determine the most appropriate spawnable components for data visualization.
@@ -162,10 +223,12 @@ The schema above shows TOOLS (like "sales-performance", "product-performance") a
 You must:
 1. ANALYZE the ADK response to identify ALL tools that were called/executed
 2. For EACH tool found in the ADK response, SELECT THE APPROPRIATE TOOL NAME from the schema keys
-3. SELECT COMPONENT NAMES FROM THE "components" ARRAY of each identified tool
+3. SELECT COMPONENT NAME FROM THE "components" ARRAY of each identified tool
 4. INCLUDE BOTH the tool name and the component details for ALL tools in your response
 5. If NO tools were called in the ADK response, return an empty array []
 6. If MULTIPLE tools were called, include components for ALL of them
+7. For each tool, you must select the most appropriate component from the "components" array
+8. Each tool must have only one component, of the best fit for the analysis.
 
 ## Input Format
 You will receive:
@@ -226,7 +289,7 @@ Return a JSON array containing objects in this EXACT format:
 1. **Analyze ADK response** to identify which tools were actually called/executed
 2. **For each tool found in ADK response:**
    - Identify the corresponding tool in the schema (e.g., if ADK called a sales analysis tool → "sales-performance")
-   - Select appropriate components from that tool's "components" array based on the analysis performed
+   - Select appropriate component from that tool's "components" array based on the analysis performed
    - Determine how many components are needed for that tool (could be 1 or multiple)
 3. **Use each tool's parameters schema** to build the body for each selected component
 4. **Include the tool name** in each response object
@@ -246,7 +309,7 @@ Return a JSON array containing objects in this EXACT format:
 1. **Analyze ADK output first**: Look for tool execution results, function calls, or analysis outputs
 2. **Match ADK tools to schema tools**: Map what ADK executed to available visualization tools
 3. **Multiple tools handling**: If ADK called multiple tools, include components for each one
-4. **Component quantity per tool**: Each tool may need 1 or multiple components based on the complexity of analysis
+4. **Component quantity per tool**: Each tool must use only 1 component, of the best fit for the analysis.
 5. **Empty response handling**: If ADK response contains no tool outputs, return []
 6. **Prioritize actual execution over intent**: Focus on what tools were actually called, not just what was requested
 7. ALL THE FIELDS GIVEN IN THE BODY OF THE VISUALIZATION SCHEMA MUST BE INCLUDED IN YOUR RESPONSE
@@ -288,16 +351,6 @@ Return a JSON array containing objects in this EXACT format:
       "metric": "revenue",
       "time_granularity": "monthly"
     }
-  },
-  {
-    "toolname": "sales-performance",
-    "componentName": "distribution",
-    "body": {
-      "start_date": "2023-01-01",
-      "end_date": "2023-12-31",
-      "dimension": "region",
-      "metric": "revenue"
-    }
   }
 ]
 ```
@@ -323,11 +376,6 @@ Return a JSON array containing objects in this EXACT format:
   {
     "toolname": "customer-behaviour",
     "componentName": "dashboard",
-    "body": {}
-  },
-  {
-    "toolname": "customer-behaviour",
-    "componentName": "radar",
     "body": {}
   }
 ]
@@ -356,7 +404,6 @@ Before returning your response, verify:
 - [ ] Metrics match available options in schema
 - [ ] JSON structure is valid and complete
 - [ ] Each object includes both "toolname" and "componentName"
-- [ ] Multiple components per tool are included when appropriate
 
 ## Edge Cases
 - **No tools called**: Return empty array [] if ADK response shows no tool execution
@@ -364,7 +411,7 @@ Before returning your response, verify:
 - **Ambiguous tool mapping**: Choose the most likely schema tool based on ADK output context
 - **Missing parameters**: Use schema defaults only when user provides no relevant information
 - **Multiple time periods**: Create separate components for each period if needed
-- **Complex multi-tool analysis**: Each tool may need multiple components - include as many as appropriate
+- **Complex multi-tool analysis**: Each tool needs single component- include the most appropriate one
 - **Tool execution errors**: If ADK shows tool errors but some tools succeeded, include components for successful tools only
 
 ## Response Format
@@ -374,7 +421,7 @@ Return only the JSON array, no additional text or explanations. Ensure the JSON 
 1. **Analyze ADK response first** - identify which tools were actually called/executed
 2. **Return empty array []** if no tools were called in ADK response  
 3. **Include ALL tools** that were called in ADK response
-4. **Multiple components per tool** are allowed and encouraged when appropriate
+4. **Single component per tool** is only allowed, of the best fit for the analysis.
 5. Each object in the array must include:
    - "toolname": The exact tool name from the schema that corresponds to the ADK tool called
    - "componentName": The exact component name from that tool's components array
@@ -430,6 +477,11 @@ def remove_markdown_characters_fast(text):
     return clean_text
 
 
+async def fetch_data(session, url, payload, headers, querystring):
+    async with session.post(url, json=payload, headers=headers, params=querystring) as response:
+        data = await response.json()
+        return data
+
 
 def wave_file_memory(pcm, channels=1, rate=24000, sample_width=2):
     """
@@ -455,6 +507,7 @@ def wave_file_memory(pcm, channels=1, rate=24000, sample_width=2):
     return buffer.getvalue()  # Return bytes instead of BytesIO
 
 async def get_audio_groq(text: str) -> str:
+  groq_client = AsyncGroq(api_key=os.getenv("GROQ_API_KEY", ""))
   response = {
     "mime_type": "audio/wav",
     "data": ""
@@ -477,7 +530,51 @@ async def get_audio_groq(text: str) -> str:
   response["data"] = audio_base64
   return response
 
+
+
+
+async def get_audio_deepgram(text: str) -> str:
+
+    response = {
+        "mime_type": "audio/mpeg",
+        "data": ""
+    }
+
+    SPEAK_TEXT = {"text": remove_markdown_characters_fast(text)}
+
+    try:
+
+        deepgram = DeepgramClient(api_key=os.getenv("DEEPGRAM_API_KEY", ""), config=ClientOptionsFromEnv())
+
+                # STEP 2 Call the save method on the asyncspeak property
+        options = SpeakOptions(
+            model="aura-2-thalia-en",
+        )
+
+        res = await deepgram.speak.asyncrest.v("1").stream_memory(
+            SPEAK_TEXT, options
+        )
+
+        buffer = wave_file_memory(res.stream_memory.getbuffer(), channels=1, rate=44000, sample_width=2)
+        audio_base64 = base64.b64encode(buffer).decode('utf-8')
+        response["data"] = audio_base64
+        return response
+
+    except Exception as e:
+        print(e)
+        return None
+
+    # buffer = wave_file_memory(audio_stream.getvalue(), channels=1, rate=44000, sample_width=2)
+    # audio_base64 = base64.b64encode(buffer).decode('utf-8')
+    # response["data"] = audio_base64
+    return audio_stream.getvalue()
+
+
+
 async def get_audio(text: str) -> str:
+
+  gemini_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY", ""))
+
   
   response = {
     "mime_type": "audio/wav",
@@ -486,39 +583,43 @@ async def get_audio(text: str) -> str:
 
   print("\nGenerating audio\n")
 
-#   audio_response = await gemini_client.aio.models.generate_content(
-#       model="gemini-2.5-flash-preview-tts",
-#       contents=remove_markdown_characters_fast(text),
-#       config=types.GenerateContentConfig(
-#           response_modalities=["AUDIO"],
-#           speech_config=types.SpeechConfig(
-#               voice_config=types.VoiceConfig(
-#                   prebuilt_voice_config=types.PrebuiltVoiceConfig(
-#                       voice_name='Leda',
-#                   )
-#               )
-#           ),
-#       )
-#   )
-#   response["mime_type"] = "audio/wav"
-#   buffer = wave_file_memory(audio_response.candidates[0].content.parts[0].inline_data.data)
+  audio_response = await gemini_client.aio.models.generate_content(
+      model="gemini-2.5-flash-preview-tts",
+      contents=remove_markdown_characters_fast(text),
+      config=types.GenerateContentConfig(
+          response_modalities=["AUDIO"],
+          speech_config=types.SpeechConfig(
+              voice_config=types.VoiceConfig(
+                  prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                      voice_name='Leda',
+                  )
+              )
+          ),
+      )
+  )
+  response["mime_type"] = "audio/wav"
+  buffer = wave_file_memory(audio_response.candidates[0].content.parts[0].inline_data.data)
 
+  cartesia_client = AsyncCartesia(
+    api_key=os.getenv("CARTESIA_API_KEY", ""),
+  )
+   
   chunks = []
-  async for output in cartesia_client.tts.bytes(
-      model_id="sonic-2",
-      transcript=remove_markdown_characters_fast(text),
-      voice={"id": "bf0a246a-8642-498a-9950-80c35e9276b5"},
-      language="en",
-      output_format={
-          "container": "mp3",
-          "bit_rate": 64000,
-          "sample_rate": 44100,
-      },
-  ):
-      chunks.append(output)
+  # async for output in cartesia_client.tts.bytes(
+  #     model_id="sonic-2",
+  #     transcript=remove_markdown_characters_fast(text),
+  #     voice={"id": "bf0a246a-8642-498a-9950-80c35e9276b5"},
+  #     language="en",
+  #     output_format={
+  #         "container": "mp3",
+  #         "bit_rate": 64000,
+  #         "sample_rate": 44100,
+  #     },
+  # ):
+  #     chunks.append(output)
 
-  buffer = b''.join(chunks)
-  response["mime_type"] = "audio/mp3"
+  # buffer = b''.join(chunks)
+  # response["mime_type"] = "audio/mp3"
 
   audio_base64 = base64.b64encode(buffer).decode('utf-8')
 
@@ -538,6 +639,7 @@ def get_audio_from_base64(base64_data: str) -> str:
     return base64.b64decode(base64_data)
 
 async def get_visualisation(user_query: str, adk_response: str) -> dict:
+    gemini_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY", ""))
     prompt = f"""
     {VIS_SCHEMA_PROMPT}
     
@@ -576,5 +678,14 @@ def get_data():
 
     with open(jsonFile, "r") as file:
         data = json.load(file)
+    
+    data["audio"] = get_audio_from_file()
+
 
     return data
+
+
+
+if __name__ == "__main__":
+    data = asyncio.run(get_audio_deepgram("Hello, welcome to Deepgram!"))
+    print(data)
