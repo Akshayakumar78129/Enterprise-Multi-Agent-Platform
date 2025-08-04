@@ -38,3 +38,4 @@ agentops
 google-genai
 cartesia
 groq
+deepgram-sdk
