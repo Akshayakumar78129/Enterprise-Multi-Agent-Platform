@@ -1,87 +1,388 @@
-# Enterprise IQ UI Common Components
+# UI Common - Shared Components Library
 
-This directory contains all shared UI components for the Enterprise IQ system across all tools and domains.
+## Overview
+
+This directory contains all shared UI components, design system elements, and utilities used across the Enterprise IQ Data Analytics Platform. It provides a consistent visual language and reusable components for all domain tools.
 
 ## Directory Structure
 
-- `/design-system/` - Core design system for Enterprise IQ
-  - `/components/` - Base reusable UI components
-  - `theme.js` - Global theme configuration
-  - `tokens.js` - Design tokens for colors, spacing, typography
-  - `ComponentDemo.jsx` - Demo showcase of all components
-
-- `/ai-interaction/` - AI agent interaction components
-  - `/RobotCharacter/` - Draggable robot character component
-  - `/LaserPointer/` - Laser pointer component
-  - `/SpeechBubble/` - Speech bubble component
-
-- `/utils/` - Shared utilities across all domains
-  - `/charts/` - Plotly.js integration and chart utilities
-  - `/api/` - Gemini API integration
+```
+ui-common/
+├── ai-interaction/              # AI-specific UI components
+│   ├── LaserPointer/           # Visual attention guidance
+│   ├── RobotCharacter/         # AI assistant avatar
+│   └── SpeechBubble/           # AI response display
+├── QueryInput/                 # Natural language input
+├── design-system/              # Core design system
+│   ├── components/             # Base UI components
+│   │   ├── Button/
+│   │   ├── Card/
+│   │   ├── Checkbox/
+│   │   ├── Grid/
+│   │   ├── Input/
+│   │   ├── KpiTile/
+│   │   ├── Navigation/
+│   │   ├── Select/
+│   │   ├── Table/
+│   │   ├── Tabs/
+│   │   └── Toggle/
+│   ├── ComponentDemo.jsx       # Component showcase
+│   ├── theme.js                # Theme configuration
+│   └── tokens.js               # Design tokens
+├── components/                 # Additional shared components
+│   └── ErrorBoundary.js       # Error handling wrapper
+├── hooks/                      # Custom React hooks
+│   └── useApiClient.js        # API client hook
+├── utils/                      # Shared utilities
+│   ├── api/                    # API utilities
+│   │   ├── ApiClient.js       # Base API client
+│   │   ├── functionCalls.js   # Function call helpers
+│   │   └── geminiClient.js    # Gemini AI integration
+│   └── charts/                 # Chart utilities
+│       └── plotlyTheme.js     # Plotly theme config
+└── markdown.tsx                # Markdown renderer
+```
 
 ## Core Components
 
-The ui-common library includes these base components:
+### Design System Components
 
-- **Card** - Container component for content blocks
-- **Button** - Action buttons with multiple variants
-- **KpiTile** - Key performance indicator display tiles
-- **Input** - Text input fields
-- **Select** - Dropdown selection component
-- **Table** - Data table component
-- **Tabs** - Tabbed navigation component
-- **Toggle** - Toggle switch for boolean inputs
-- **Checkbox** - Checkbox component for multiple selection
-- **Grid** - Responsive layout grid system
+#### **Card** (`Card.tsx`)
+Container component for content blocks
+```jsx
+<Card title="Analytics" icon="chart" collapsible>
+  {/* Content */}
+</Card>
+```
 
-## AI Interaction Components
+#### **KpiTile** (`KpiTile.tsx`)
+Key performance indicator display
+```jsx
+<KpiTile 
+  value={1254} 
+  label="Total Customers"
+  trend={+12.5}
+  format="number"
+/>
+```
 
-Enterprise IQ features interactive AI agent components:
+#### **Button** (`Button/`)
+Action buttons with multiple variants
+```jsx
+<Button variant="primary" size="large" onClick={handleClick}>
+  Analyze Data
+</Button>
+```
 
-- **RobotCharacter** - Draggable robot character that represents the AI assistant
-- **LaserPointer** - Visual pointer that connects the robot to UI elements
-- **SpeechBubble** - Display text from the AI assistant
-- **QueryInput** - Natural language query input for the user
+#### **Grid** (`Grid.tsx`)
+Responsive layout grid system
+```jsx
+<Grid columns={3} gap="medium">
+  <GridItem>{/* Content */}</GridItem>
+</Grid>
+```
 
-## Theme System
+#### **Table** (`Table/`)
+Data table with sorting and filtering
+```jsx
+<Table 
+  data={customers}
+  columns={columns}
+  sortable
+  paginated
+/>
+```
 
-The design system uses a consistent color palette:
+### AI Interaction Components
 
-- Primary Background: Midnight Navy (#0a1224)
-- Interactive Focus & Agent Highlights: Electric Cyan (#00e0ff)
-- Alert & Anomaly Accents: Signal Magenta (#e930ff)
-- Card Bodies & Chart Canvas: Graphite (#232a36 / #3a4459)
-- Text & High-Contrast Surfaces: Cloud White (#f7f9fb)
-
-## Getting Started
-
-To use these components in a tool implementation:
+#### **RobotCharacter** (`ai-interaction/RobotCharacter/`)
+Interactive AI assistant avatar
+- Draggable positioning
+- State animations (idle, thinking, speaking, pointing)
+- Voice interface integration
+- Position persistence
 
 ```jsx
-import { Card, Button, KpiTile, useTheme } from '../../../ui-common';
+<RobotCharacter 
+  state="speaking"
+  position={{ x: 100, y: 100 }}
+  onPositionChange={handlePosition}
+/>
+```
 
-const MyToolComponent = () => {
-  const theme = useTheme();
+#### **LaserPointer** (`ai-interaction/LaserPointer/`)
+Visual attention guidance system
+- AI laser (red) for AI-guided attention
+- User laser (green) for user selections
+- Dynamic tracking of components
+- Pulsing animations
+
+```jsx
+<LaserPointer 
+  from={{ x: robotX, y: robotY }}
+  to={{ x: targetX, y: targetY }}
+  type="ai"
+  active
+/>
+```
+
+#### **SpeechBubble** (`ai-interaction/SpeechBubble/`)
+AI response display component
+```jsx
+<SpeechBubble 
+  text="I've identified 3 key insights..."
+  position="right"
+  typing
+/>
+```
+
+#### **QueryInput** (`QueryInput/`)
+Natural language query interface
+- Voice input support
+- Slash commands
+- Query history
+- Auto-suggestions
+
+```jsx
+<QueryInput 
+  onSubmit={handleQuery}
+  suggestions={suggestions}
+  enableVoice
+  placeholder="Ask me anything..."
+/>
+```
+
+## Design System
+
+### Color Palette
+
+```javascript
+const colors = {
+  // Primary Colors
+  electricCyan: '#00e0ff',      // Interactive elements, AI highlights
+  signalMagenta: '#e930ff',     // Alerts, anomalies, important actions
+  midnightNavy: '#0a1224',      // Primary background
+  cloudWhite: '#f7f9fb',        // Text, high-contrast surfaces
+  
+  // Secondary Colors
+  graphite: '#232a36',          // Card backgrounds
+  slate: '#3a4459',             // Secondary backgrounds
+  steel: '#566379',             // Borders, dividers
+  
+  // Semantic Colors
+  success: '#10b981',           // Positive trends
+  warning: '#f59e0b',           // Warnings
+  error: '#ef4444',             // Errors, negative trends
+  info: '#3b82f6'               // Information
+}
+```
+
+### Typography
+
+```javascript
+const typography = {
+  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  
+  sizes: {
+    xs: '0.75rem',    // 12px
+    sm: '0.875rem',   // 14px
+    base: '1rem',     // 16px
+    lg: '1.125rem',   // 18px
+    xl: '1.25rem',    // 20px
+    '2xl': '1.5rem',  // 24px
+    '3xl': '1.875rem', // 30px
+    '4xl': '2.25rem'  // 36px
+  },
+  
+  weights: {
+    normal: 400,
+    medium: 500,
+    semibold: 600,
+    bold: 700
+  }
+}
+```
+
+### Spacing
+
+```javascript
+const spacing = {
+  xs: '0.25rem',   // 4px
+  sm: '0.5rem',    // 8px
+  md: '1rem',      // 16px
+  lg: '1.5rem',    // 24px
+  xl: '2rem',      // 32px
+  '2xl': '3rem',   // 48px
+  '3xl': '4rem'    // 64px
+}
+```
+
+## Utilities
+
+### API Client (`utils/api/ApiClient.js`)
+Base API client with authentication and error handling
+```javascript
+import { ApiClient } from 'ui-common/utils/api';
+
+const client = new ApiClient({
+  baseURL: '/api',
+  timeout: 30000
+});
+
+const data = await client.get('/customer/segmentation');
+```
+
+### Gemini Client (`utils/api/geminiClient.js`)
+AI integration with function calling
+```javascript
+import { GeminiClient } from 'ui-common/utils/api';
+
+const gemini = new GeminiClient();
+
+// Register UI functions for AI control
+gemini.registerFunction({
+  name: 'spawnVisualization',
+  description: 'Creates a new visualization',
+  parameters: { /* schema */ },
+  handler: async (args) => { /* implementation */ }
+});
+
+const response = await gemini.query("Show me sales trends");
+```
+
+### Plotly Theme (`utils/charts/plotlyTheme.js`)
+Consistent chart styling
+```javascript
+import { plotlyTheme } from 'ui-common/utils/charts';
+
+const chart = {
+  data: [/* ... */],
+  layout: {
+    ...plotlyTheme.layout,
+    title: 'Sales Performance'
+  }
+};
+```
+
+## Custom Hooks
+
+### useApiClient
+Hook for API interactions with loading and error states
+```jsx
+import { useApiClient } from 'ui-common/hooks';
+
+const MyComponent = () => {
+  const { data, loading, error, fetch } = useApiClient('/api/endpoint');
+  
+  useEffect(() => {
+    fetch();
+  }, []);
+  
+  if (loading) return <Spinner />;
+  if (error) return <Error message={error} />;
+  return <DataDisplay data={data} />;
+};
+```
+
+## Usage Examples
+
+### Creating a Dashboard with KPI Tiles
+```jsx
+import { Grid, KpiTile, Card } from 'ui-common';
+
+const Dashboard = ({ metrics }) => (
+  <Card title="Performance Metrics">
+    <Grid columns={4} gap="md">
+      <KpiTile 
+        value={metrics.revenue} 
+        label="Revenue"
+        format="currency"
+        trend={metrics.revenueTrend}
+      />
+      <KpiTile 
+        value={metrics.customers} 
+        label="Customers"
+        format="number"
+        trend={metrics.customerTrend}
+      />
+      {/* More tiles */}
+    </Grid>
+  </Card>
+);
+```
+
+### Implementing AI Interaction
+```jsx
+import { RobotCharacter, LaserPointer, QueryInput } from 'ui-common';
+
+const AICanvas = () => {
+  const [robotState, setRobotState] = useState('idle');
+  const [laserTarget, setLaserTarget] = useState(null);
+  
+  const handleQuery = async (query) => {
+    setRobotState('thinking');
+    const response = await processQuery(query);
+    setRobotState('speaking');
+    
+    if (response.targetElement) {
+      setLaserTarget(response.targetElement);
+    }
+  };
   
   return (
-    <Card title="My Tool">
-      <KpiTile value={1254} label="Total Items" />
-      <Button variant="primary">Action</Button>
-    </Card>
+    <>
+      <RobotCharacter state={robotState} />
+      {laserTarget && <LaserPointer to={laserTarget} />}
+      <QueryInput onSubmit={handleQuery} />
+    </>
   );
 };
 ```
 
-## Component Demo
+## Best Practices
 
-To see all components in action:
+### Component Usage
+1. Always use design system components for consistency
+2. Leverage theme tokens instead of hardcoded values
+3. Use semantic color names for better maintainability
+4. Implement proper error boundaries around components
 
-```jsx
-import ComponentDemo from '../../../ui-common';
+### Performance
+1. Use React.memo for expensive components
+2. Implement lazy loading for heavy components
+3. Optimize re-renders with useMemo and useCallback
+4. Use virtual scrolling for large lists
 
-const DemoPage = () => <ComponentDemo />;
+### Accessibility
+1. Ensure proper ARIA labels
+2. Maintain keyboard navigation support
+3. Provide sufficient color contrast
+4. Include screen reader descriptions
+
+## Testing
+
+Components include unit tests using Jest and React Testing Library:
+```bash
+# Run component tests
+npm test -- ui-common
+
+# Test specific component
+npm test -- KpiTile
 ```
 
----
+## Contributing
 
-For more detailed documentation on each component, please refer to the component's PropTypes and JSDoc comments. 
+When adding new components:
+1. Follow the existing component structure
+2. Include PropTypes or TypeScript types
+3. Add JSDoc documentation
+4. Create unit tests
+5. Update ComponentDemo.jsx
+6. Add usage examples to this README
+
+## Related Documentation
+
+- [Web Application](../README.md)
+- [Design System Tokens](./design-system/tokens.js)
+- [Component Demo](./design-system/ComponentDemo.jsx)
+- [Main AI Documentation](../../../AI_DOCS.md)

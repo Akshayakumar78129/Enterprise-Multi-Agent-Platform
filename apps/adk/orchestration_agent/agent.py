@@ -55,15 +55,15 @@ class StandardOutputSchema(BaseModel):
         is_visualisation: bool = Field(description="Whether the output uses visualisation or not.")
 
 
-def standard_output(text: str) -> Agent:
-        return Agent(
-                name=f"standard_output_{text}",
-                model=model,
-                instruction=STANDARD_OUTPUT_INSTR,
-                output_schema=StandardOutputSchema,
-                output_key="standard_output",
-                description="This agent is used to output the text to the user.",
-        )
+# def standard_output(text: str) -> Agent:
+#         return Agent(
+#                 name=f"standard_output_{text}",
+#                 model=model,
+#                 instruction=STANDARD_OUTPUT_INSTR,
+#                 output_schema=StandardOutputSchema,
+#                 output_key="standard_output",
+#                 description="This agent is used to output the text to the user.",
+#         )
 
 # Get sales analyst tools
 sales_analyst_tools = register_sales_analyst_tools()
