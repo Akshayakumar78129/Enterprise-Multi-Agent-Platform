@@ -23,6 +23,11 @@ from google.adk.runners import Runner
 from orchestration_agent import root_agent
 from google.adk.cli.fast_api import AgentRunRequest, StreamingMode, RunConfig, Event
 
+from customer.agent import root_agent as customer_agent
+from finance.agent import root_agent as finance_agent
+from inventory.agent import root_agent as inventory_agent
+from sales.agent import root_agent as sales_agent
+
 logger = logging.getLogger(__name__)
 
 class RunResponse(BaseModel):
@@ -174,6 +179,49 @@ async def run_agent(req: AgentRunRequest) -> StreamingResponse:
                 # yield f'data: {json.dumps(response)}\n\n'
                 # sleep(2)
                 # yield f'data: {json.dumps(response)}\n\n'
+
+        return StreamingResponse(
+            event_generator(),
+            media_type="text/event-stream",
+        )
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/run_sse_agent")
+async def run_agent(req: AgentRunRequest) -> StreamingResponse:
+    try:
+        print(req)
+        session = await get_session(app_name=req.app_name, user_id=req.user_id, session_id=req.session_id)
+        if not session:
+            print("Session not found")
+            return StreamingResponse(
+                (b"", 404),
+                media_type="text/event-stream",
+                status_code=404,
+            )
+        async def event_generator():
+            try:
+                stream_mode = StreamingMode.SSE if req.streaming else StreamingMode.NONE
+                agent = customer_agent if req.app_name == "customer_agent" else finance_agent if req.app_name == "financial_agent" else inventory_agent if req.app_name == "inventory_agent" else sales_agent if req.app_name == "sales_agent" else root_agent
+                runner = Runner(agent=agent, app_name=req.app_name, session_service=memory_session_service)
+                async for event in runner.run_async(
+                    user_id=req.user_id,
+                    session_id=req.session_id,
+                    new_message=req.new_message,
+                    run_config=RunConfig(streaming_mode=stream_mode),
+                ):
+                    if event.content and event.content.parts and event.author:
+                        logger.info("Generated event in agent run streaming: %s", event)
+                        if event.content.parts[0].text:
+                            data = {
+                                "text": event.content.parts[0].text,
+                            }
+                            yield f"data: {json.dumps(data)}\n\n"
+                                
+            except Exception as e:
+                logger.exception("Error in event_generator: %s", e)
+                yield f'error: {str(e)}\n\n'
 
         return StreamingResponse(
             event_generator(),
