@@ -191,7 +191,7 @@ export default function ConversationalCanvas() {
   const [session, setSession] = useState({
     session_id: uuidv4(),
     user_id: "ari",
-    app_name: "sales_agent",
+    app_name: "orchestration_agent",
   });
 
   // State for drag and resize
