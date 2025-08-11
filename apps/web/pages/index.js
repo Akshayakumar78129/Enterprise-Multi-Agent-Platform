@@ -9,6 +9,7 @@ import { RobotCharacter } from '../ui-common/ai-interaction/RobotCharacter/Robot
 import DashboardNavigation from '../ui-common/design-system/components/Navigation/DashboardNavigation.jsx';
 import NavigationToggle from '../ui-common/design-system/components/Navigation/NavigationToggle.jsx';
 import { v4 as uuidv4 } from 'uuid';
+import { AIResponseDashboard } from '../ui-common/ai-interaction/aiResponse';
 
 // Import reducers
 import purchaseFrequencyReducer from '../Customer/tools/purchase_frequency/ui/state/purchaseFrequencySlice';
@@ -190,7 +191,7 @@ export default function ConversationalCanvas() {
   const [session, setSession] = useState({
     session_id: uuidv4(),
     user_id: "ari",
-    app_name: "orchestration_agent",
+    app_name: "sales_agent",
   });
 
   // State for drag and resize
@@ -2368,97 +2369,22 @@ export default function ConversationalCanvas() {
     }
   }, [queue, audio?.ended])
 
-  const handQuerySubmit2 = async (query) => {
-    console.log('Query from Robot:', query);
-    // console.log('Context from Robot:', selectedPoints);
+  const handQueryDemo = async (query) => {
+    console.log('Query from user:', query);
 
-    const response = await fetch(`${backendAiUrl}/get_audio_file`, {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    const response = AIResponseDashboard(query, session);
 
-    const resolveData = await response.json();
-
-    let audioData = null;
-
-    if (resolveData.response.audio) {
-      console.log('Audio data received from API:', {
-        hasData: !!resolveData.response.audio.data,
-        mimeType: resolveData.response.audio.mime_type,
-        size: resolveData.response.audio.size,
-        error: resolveData.response.audio.error
-      });
-
-      if (resolveData.response.audio.data && !resolveData.response.audio.error) {
-        try {
-          // Decode base64 audio data and create blob URL
-          console.log('Decoding base64 audio data, length:', resolveData.response.audio.data.length);
-          
-          // Try multiple approaches for decoding base64 audio
-          const base64Data = resolveData.response.audio.data;
-          let audioArray;
-          
-          try {
-            // Method 1: Using atob and manual conversion
-            const binaryString = atob(base64Data);
-            audioArray = new Uint8Array(binaryString.length);
-            
-            for (let i = 0; i < binaryString.length; i++) {
-              audioArray[i] = binaryString.charCodeAt(i) & 0xff;
-            }
-          } catch (atobError) {
-            console.warn('atob method failed, trying fetch method:', atobError);
-            
-            // Method 2: Using fetch with data URL
-            try {
-              const dataUrl = `data:${resolveData.response.audio.mime_type || 'audio/wav'};base64,${base64Data}`;
-              const response = await fetch(dataUrl);
-              const arrayBuffer = await response.arrayBuffer();
-              audioArray = new Uint8Array(arrayBuffer);
-            } catch (fetchError) {
-              console.error('Fetch method also failed:', fetchError);
-              throw fetchError;
-            }
-          }
-          
-          console.log('Decoded audio array length:', audioArray.length);
-          console.log('MIME type:', resolveData.response.audio.mime_type);
-          
-          if (audioArray.length === 0) {
-            throw new Error('Decoded audio array is empty');
-          }
-          
-          const audioBlob = new Blob([audioArray], { 
-            type: resolveData.response.audio.mime_type || 'audio/wav' 
-          });
-          
-          console.log('Audio blob size:', audioBlob.size, 'type:', audioBlob.type);
-          
-          if (audioBlob.size === 0) {
-            throw new Error('Created audio blob is empty');
-          }
-          
-          audioData = {
-            url: URL.createObjectURL(audioBlob),
-            mimeType: resolveData.response.audio.mime_type,
-            size: resolveData.response.audio.size,
-            blob: audioBlob // Keep reference for debugging
-          };
-
-          playAudio(audioData);
-          console.log('Audio blob created successfully:', audioData);
-        } catch (error) {
-          console.error('Error processing audio data:', error);
-          console.error('Base64 data sample:', resolveData.response.audio.data?.substring(0, 100));
-          console.error('Audio processing failed, will skip audio playback');
-        }
-      } else if (resolveData.response.audio.error) {
-        console.warn('Audio generation error:', resolveData.response.audio.error);
+    for await (const chunk of response) {
+      console.log('AI response:', chunk);
+      if (chunk === '[DONE]') {
+        break;
+      }
+      if (chunk === '[ERROR]') {
+        console.error('Error in AI response:', chunk);
+        break;
       }
     }
 
-    // Here you can decide if you want to process this query differently,
-    // or perhaps clear selections, etc.
-    // For now, let's clear selections after a robot query is submitted via its own input
   }
   
   // Function to handle user queries
@@ -3104,7 +3030,7 @@ export default function ConversationalCanvas() {
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 20px rgba(0, 224, 255, 0.1)'
           }}>
             <QueryInput 
-              onSubmit={handleQuerySubmit}
+              onSubmit={handQueryDemo}
               placeholder="Ask about purchase frequency, customer segments, sales performance, churn prediction, or customer behavior..."
               disabled={loading}
             />
