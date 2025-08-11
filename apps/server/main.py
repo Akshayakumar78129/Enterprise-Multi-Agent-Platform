@@ -26,6 +26,7 @@ app.add_middleware(
 
 AGENT_BASE_URL = os.getenv("AGENT_BASE_URL")
 AGENT_RUN_URL = f"{AGENT_BASE_URL}/run_sse"
+SINGLE_AGENT_RUN_URL = f"{AGENT_BASE_URL}/run_sse_agent"
 
 @app.post("/run_sse")
 async def run_sse(request: Request):
@@ -35,7 +36,7 @@ async def run_sse(request: Request):
     app_name = data.get("app_name", "orchestration_agent")
     session_id = data.get("session_id", "")
     user_id = data.get("user_id", "")
-
+    is_canvas = data.get("is_canvas", False)
     # print(data)
 
     if not new_message and not app_name and not session_id and not user_id:
@@ -73,11 +74,13 @@ async def run_sse(request: Request):
     }
     print(request)
 
+    RUN_URL = AGENT_RUN_URL if is_canvas else SINGLE_AGENT_RUN_URL
+
     async def event_generator():
         try:
             timeout = httpx.Timeout(300.0, read=300.0)  # 5 minute timeout
             async with httpx.AsyncClient(timeout=timeout) as client:
-                async with client.stream('POST', AGENT_RUN_URL, json=request) as response:
+                async with client.stream('POST', RUN_URL, json=request) as response:
                     print(response)
                     if response.status_code != 200:
                         yield f"data: {{\"error\": \"HTTP {response.status_code}\"}}\n\n"

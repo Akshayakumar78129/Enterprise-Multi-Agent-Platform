@@ -2487,7 +2487,7 @@ export default function ConversationalCanvas() {
       const response = await fetch(`${backendAiUrl}/run_sse`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
-        body: JSON.stringify({ user_query: query, session_id: session.session_id, user_id: session.user_id, app_name: session.app_name })
+        body: JSON.stringify({ user_query: query, session_id: session.session_id, user_id: session.user_id, app_name: session.app_name, is_canvas: true })
       });
 
       setQuery('');
