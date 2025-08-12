@@ -37,7 +37,7 @@ export async function* AIResponseDashboard(query, session) {
                         try {
                             const jsonData = JSON.parse(data);
                             console.log('🟢 AIResponseDashboard:', jsonData);
-                            yield jsonData.text;
+                            yield jsonData;
                             
                         } catch (e) {
                             console.warn('Error in AIResponseDashboard:', e);

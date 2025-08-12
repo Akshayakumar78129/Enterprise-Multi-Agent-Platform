@@ -215,6 +215,7 @@ async def run_agent(req: AgentRunRequest) -> StreamingResponse:
                         logger.info("Generated event in agent run streaming: %s", event)
                         if event.content.parts[0].text:
                             data = {
+                                "agent": event.author,
                                 "text": event.content.parts[0].text,
                             }
                             yield f"data: {json.dumps(data)}\n\n"
