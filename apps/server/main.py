@@ -25,7 +25,10 @@ app.add_middleware(
 )
 
 AGENT_BASE_URL = os.getenv("AGENT_BASE_URL")
-AGENT_RUN_URL = f"{AGENT_BASE_URL}/run_sse"
+print(f"[DEBUG] AGENT_BASE_URL at startup: {AGENT_BASE_URL}")
+
+AGENT_RUN_URL = f"{AGENT_BASE_URL}/run_sse" if AGENT_BASE_URL else None
+print(f"[DEBUG] AGENT_RUN_URL at startup: {AGENT_RUN_URL}")
 
 @app.post("/run_sse")
 async def run_sse(request: Request):

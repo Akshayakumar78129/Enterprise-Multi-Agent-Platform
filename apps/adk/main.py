@@ -16,7 +16,8 @@ from pydantic import BaseModel
 from typing import Optional, Any
 from pydantic import BaseModel, Field
 from lib.utils import get_audio, get_visualisation, get_audio_from_file, get_audio_groq, get_audio_deepgram
-
+from dotenv import load_dotenv
+load_dotenv()
 # ADK imports
 from google.adk.sessions import InMemorySessionService, Session
 from google.adk.runners import Runner
