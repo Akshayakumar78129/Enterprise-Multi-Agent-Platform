@@ -50,18 +50,17 @@ def print_db_info():
         
         print("📋 Tables in the database:")
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-        tables = [row[0] for row in cursor.fetchall()]
+        tables = cursor.fetchall()
         for table in tables:
-            print(f" - {table}")
+            print(f" - {table[0]}")
             
             # For each table, check if there's data and print the structure
             try:
-                # Use the cleaned table name directly
-                cursor.execute(f'SELECT COUNT(*) FROM "{table}"')
+                cursor.execute(f"SELECT COUNT(*) FROM [{table[0]}]")
                 count = cursor.fetchone()[0]
                 print(f"   - Row count: {count}")
                 
-                cursor.execute(f'PRAGMA table_info("{table}")')
+                cursor.execute(f"PRAGMA table_info([{table[0]}])")
                 columns = cursor.fetchall()
                 if columns:
                     print(f"   - First few column names: {[col[1] for col in columns[:3]]}")
@@ -135,7 +134,7 @@ def cash_flow_analysis(
             logger.info("No date range specified, defaulting to last 3 months")
             query = """
             SELECT MIN("Posting Date") as earliest_date, MAX("Posting Date") as latest_date
-            FROM \"\"\"dbo_F_GL_Transaction\"\"\"
+            FROM "\"\"dbo_F_GL_Transaction_Detail\"\""
             """
             try:
                 date_range = pd.read_sql_query(query, conn)
@@ -156,9 +155,9 @@ def cash_flow_analysis(
             date_filter += " AND [Posting Date] <= :end_date"
             params['end_date'] = end_date
         
-        # Query GL transactions - using triple quotes for table name
+        # Query GL transactions - using square brackets for table and column names
         query = f"""
-        SELECT * FROM \"\"\"dbo_F_GL_Transaction\"\"\"
+        SELECT * FROM "\"\"dbo_F_GL_Transaction_Detail\"\""
         WHERE 1=1 {date_filter}
         """
         
@@ -279,9 +278,9 @@ def revenue_forecast(days_ahead: int = 30) -> str:
         # Connect to database
         conn = sqlite3.connect(db_path)
         
-        # Query GL transactions (only positive amounts represent revenue) - using triple quotes for table name
+        # Query GL transactions (only positive amounts represent revenue) - using square brackets for table and column names
         query = """
-            SELECT * FROM \"\"\"dbo_F_GL_Transaction\"\"\"
+            SELECT * FROM "\"\"dbo_F_GL_Transaction_Detail\"\""
             WHERE "Txn Amount" > 0
             """
         

@@ -32,15 +32,6 @@ The is_visualisation output should be true if the response requires a visualisat
 IMPORTANT: ALWAYS EXPLAIN THE RESULTS OF THE ANALYSIS IN A CLEAR AND DETAILED WAY.
 
 ALWAYS CALL THE RIGHT AGENT FOR THE USER'S REQUEST.
-
-MENTION ROUTING:
-- If the user's message includes an explicit agent mention like @sales, @sales_agent, @customer, @customer_insights_agent, @financial, @finance, @inventory, or @inventory_agent, you MUST directly delegate the task to that specific sub-agent without re-evaluating which agent to choose.
-- Example mapping:
-   - @sales or @sales_agent -> sales_agent
-   - @customer or @customer_insights_agent -> customer_insights_agent
-   - @financial or @finance -> financial_agent
-   - @inventory or @inventory_agent -> inventory_agent
-- When a mention is present, immediately transfer the task to the mapped agent and proceed.
 """ 
 
 CUSTOMER_INSTR = """
