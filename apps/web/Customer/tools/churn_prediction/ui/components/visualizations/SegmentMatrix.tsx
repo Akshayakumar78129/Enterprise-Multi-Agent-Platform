@@ -13,12 +13,13 @@ export interface SegmentMatrixDatum {
 }
 export interface SegmentMatrixProps {
   segmentMatrix: SegmentMatrixDatum[];
+  onSegmentClick?: (segment: string, riskData: any, event: React.MouseEvent) => void;
 }
 
-const colors = ['#00e0ff', '#5fd4d6', '#aa45dd', '#e930ff'];
+const colors = ['#1976D2', '#2196F3', '#64B5F6', '#FFC107'];
 const riskLabels = ['Low', 'Medium', 'High', 'Very High'];
 
-export default function SegmentMatrix({ segmentMatrix }: SegmentMatrixProps) {
+export default function SegmentMatrix({ segmentMatrix, onSegmentClick }: SegmentMatrixProps) {
   const z = [
     segmentMatrix.map(s => s.low),
     segmentMatrix.map(s => s.medium),
@@ -34,7 +35,7 @@ export default function SegmentMatrix({ segmentMatrix }: SegmentMatrixProps) {
           x: segmentMatrix.map(s => s.segment),
           y: riskLabels,
           type: 'heatmap',
-          colorscale: [[0, '#00e0ff'], [0.33, '#5fd4d6'], [0.66, '#aa45dd'], [1, '#e930ff']],
+          colorscale: [[0, '#1976D2'], [0.33, '#2196F3'], [0.66, '#64B5F6'], [1, '#FFC107']],
           showscale: true,
           hoverongaps: false,
         }]}
@@ -46,6 +47,32 @@ export default function SegmentMatrix({ segmentMatrix }: SegmentMatrixProps) {
           paper_bgcolor: '#232a36',
         }}
         config={{ displayModeBar: false }}
+        onClick={(event: any) => {
+          if (onSegmentClick && event.points && event.points[0]) {
+            const point = event.points[0];
+            // For heatmaps, point.x gives us the x-axis value (segment name)
+            // We need to find the corresponding segment in our data
+            const segmentName = point.x;
+            const segment = segmentMatrix.find(s => s.segment === segmentName);
+            
+            if (segment) {
+              // Create a mock React MouseEvent for positioning
+              const mockEvent = {
+                clientX: event.event?.clientX || window.innerWidth / 2,
+                clientY: event.event?.clientY || window.innerHeight / 2,
+                preventDefault: () => {},
+                stopPropagation: () => {}
+              } as React.MouseEvent;
+              
+              onSegmentClick(segment.segment, {
+                low: segment.low,
+                medium: segment.medium,
+                high: segment.high,
+                very_high: segment.very_high
+              }, mockEvent);
+            }
+          }
+        }}
       />
     </Card>
   );

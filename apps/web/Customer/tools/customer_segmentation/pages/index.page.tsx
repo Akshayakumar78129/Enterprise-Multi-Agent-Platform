@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import SegmentationKpiTiles from '../ui/components/kpi/SegmentationKpiTiles';
+import { useDispatch, useSelector, Provider } from 'react-redux';
+import { configureStore } from '@reduxjs/toolkit';
+import SegmentKPITiles from '../ui/components/kpi/SegmentKPITiles';
 import SegmentationFilters from '../ui/components/controls/SegmentationFilters';
 import SegmentProfileCards from '../ui/components/visualizations/SegmentProfileCards';
 import SegmentDistributionMap from '../ui/components/visualizations/SegmentDistributionMap';
-import { RootState } from 'store';
+// Remove global store import - using local store
 import {
   setSegmentSummaries,
   setKPIs,
@@ -15,8 +16,21 @@ import {
   setLoading,
   setError
 } from '../ui/state/customerSegmentationSlice';
+import customerSegmentationReducer from '../ui/state/customerSegmentationSlice';
 
-const CustomerSegmentationDashboard: React.FC = () => {
+const store = configureStore({
+  reducer: {
+    customerSegmentation: customerSegmentationReducer,
+  },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: false,
+    }),
+});
+
+type RootState = ReturnType<typeof store.getState>;
+
+const CustomerSegmentationDashboardInner: React.FC = () => {
   const dispatch = useDispatch();
   const {
     segmentSummaries,
@@ -37,19 +51,44 @@ const CustomerSegmentationDashboard: React.FC = () => {
     dispatch(setLoading(true));
     fetch('/api/customer-segmentation/data')
       .then(res => res.json())
-      .then(data => {
-        if (data.status === 'success') {
-          dispatch(setSegmentSummaries(data.segmentSummaries));
-          dispatch(setKPIs(data.kpis));
-          dispatch(setScatterData(data.scatterData));
-          dispatch(setCustomers(data.customers));
-          setRegions([
-            ...new Set(data.segmentSummaries.flatMap((s: any) => s.regions))
-          ]);
-          setSegments(data.segmentSummaries.map((s: any) => s.segment));
+      .then(response => {
+        if (response.success && response.data) {
+          const { data } = response;
+          
+          // Map API response to Redux state structure
+          dispatch(setSegmentSummaries(data.segment_distribution || []));
+          dispatch(setKPIs(data.kpi_data || null));
+          dispatch(setScatterData(data.segment_data?.map((customer: any) => ({
+            x: customer.recency_days || 0,
+            y: customer.frequency || 0,
+            z: customer.lifetime_value || 0,
+            segment: customer.segment || 'Unknown',
+            customer_id: customer.customer_id || ''
+          })) || []));
+          dispatch(setCustomers(data.segment_data?.map((customer: any) => ({
+            customer_id: customer.customer_id || '',
+            customer_type: 'Standard',
+            status: 'Active',
+            region: 'Unknown',
+            industry: 'Unknown',
+            transaction_count: customer.frequency || 0,
+            avg_order_value: customer.avg_order_value || 0,
+            total_spend: customer.lifetime_value || 0,
+            last_purchase_date: customer.last_purchase_date || '',
+            credit_limit: 0,
+            recency: customer.recency_days || 0,
+            segment: customer.segment || 'Unknown'
+          })) || []));
+          
+          // Extract regions and segments from the data
+          const segments = [...new Set(data.segment_distribution?.map((s: any) => s.segment_name) || [])];
+          const regions = ['North', 'South', 'East', 'West']; // Default regions since not in API
+          
+          setRegions(regions);
+          setSegments(segments);
           dispatch(setError(null));
         } else {
-          dispatch(setError(data.message || 'Unknown error'));
+          dispatch(setError(response.error || 'Failed to load data'));
         }
       })
       .catch(e => dispatch(setError(e.message)))
@@ -87,7 +126,7 @@ const CustomerSegmentationDashboard: React.FC = () => {
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: 32 }}>
       <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>Customer Segmentation</h1>
       <div style={{ color: '#888', marginBottom: 24 }}>Explore customer segments, profiles, and distribution. Use filters to focus on specific regions or segments.</div>
-      <SegmentationKpiTiles kpis={kpis} />
+      <SegmentKPITiles kpis={kpis} />
       <SegmentationFilters
         regions={regions}
         segments={segments}
@@ -107,6 +146,14 @@ const CustomerSegmentationDashboard: React.FC = () => {
       />
       {error && <div style={{ color: 'red', marginTop: 24 }}>{error}</div>}
     </div>
+  );
+};
+
+const CustomerSegmentationDashboard: React.FC = () => {
+  return (
+    <Provider store={store}>
+      <CustomerSegmentationDashboardInner />
+    </Provider>
   );
 };
 

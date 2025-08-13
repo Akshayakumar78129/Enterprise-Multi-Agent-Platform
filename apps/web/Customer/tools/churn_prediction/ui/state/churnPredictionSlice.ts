@@ -11,6 +11,14 @@ export interface ChurnCustomer {
   risk_level: 'Low' | 'Medium' | 'High' | 'Very High';
 }
 
+export interface ChartContext {
+  chartType: string;
+  chartName: string;
+  selectedData: any;
+  clickedElement: string;
+  timestamp: Date;
+}
+
 export interface ChurnPredictionState {
   customers: ChurnCustomer[];
   loading: boolean;
@@ -21,6 +29,8 @@ export interface ChurnPredictionState {
   };
   highlights: any;
   kpis: any;
+  chatContext: ChartContext | null;
+  isChatOpen: boolean;
 }
 
 const initialState: ChurnPredictionState = {
@@ -30,6 +40,8 @@ const initialState: ChurnPredictionState = {
   filters: {},
   highlights: {},
   kpis: {},
+  chatContext: null,
+  isChatOpen: false,
 };
 
 export const fetchChurnCustomers = createAsyncThunk(
@@ -59,6 +71,15 @@ const churnPredictionSlice = createSlice({
     setKPIs(state, action) {
       state.kpis = action.payload;
     },
+    setChatContext(state, action) {
+      state.chatContext = action.payload;
+    },
+    toggleChat(state, action) {
+      state.isChatOpen = action.payload !== undefined ? action.payload : !state.isChatOpen;
+    },
+    clearChatContext(state) {
+      state.chatContext = null;
+    },
   },
   extraReducers: builder => {
     builder
@@ -77,5 +98,5 @@ const churnPredictionSlice = createSlice({
   }
 });
 
-export const { setFilters, setHighlights, setKPIs } = churnPredictionSlice.actions;
+export const { setFilters, setHighlights, setKPIs, setChatContext, toggleChat, clearChatContext } = churnPredictionSlice.actions;
 export default churnPredictionSlice.reducer; 

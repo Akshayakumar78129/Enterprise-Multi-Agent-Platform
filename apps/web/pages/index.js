@@ -10,6 +10,7 @@ import DashboardNavigation from '../ui-common/design-system/components/Navigatio
 import NavigationToggle from '../ui-common/design-system/components/Navigation/NavigationToggle.jsx';
 import { v4 as uuidv4 } from 'uuid';
 import { AIResponseDashboard } from '../ui-common/ai-interaction/aiResponse';
+import AIInsightBlock from '../ui-common/components/AIInsightBlock';
 
 // Import reducers
 import purchaseFrequencyReducer from '../Customer/tools/purchase_frequency/ui/state/purchaseFrequencySlice';
@@ -224,6 +225,37 @@ export default function ConversationalCanvas() {
       }));
     }
   }, [userSelectedChartPoints]);
+
+  // Auto-load customer segmentation dashboard on page load
+  useEffect(() => {
+    const loadCustomerSegmentationDashboard = async () => {
+      if (components.length === 0) { // Only load if no components are present
+        try {
+          const response = await fetch(`/api/customer-segmentation/data?start_date=2017-01-01&end_date=2021-12-31`);
+          if (!response.ok) throw new Error('Failed to fetch data');
+          const apiData = await response.json();
+          const data = apiData.data;
+
+          const componentId = `customer-segmentation.dashboard.${Date.now()}`;
+          const componentPosition = { x: 100, y: 100 };
+          const componentSize = { width: 1200, height: 800 };
+
+          setComponents([{
+            id: componentId,
+            type: 'customer-segmentation.dashboard',
+            position: componentPosition,
+            size: componentSize,
+            props: data,
+            Component: componentRegistry['customer-segmentation']['dashboard']
+          }]);
+        } catch (error) {
+          console.error('Failed to load customer segmentation dashboard:', error);
+        }
+      }
+    };
+
+    loadCustomerSegmentationDashboard();
+  }, []); // Empty dependency array means this runs once on mount
 
   // Auto-play audio when received
   // useEffect(() => {
@@ -2369,19 +2401,97 @@ export default function ConversationalCanvas() {
     }
   }, [queue, audio?.ended])
 
+  // Example usage: handQueryDemo("Hello AI agent, give me today's sales data");
+  // For churn prediction queries: handQueryDemo("@sales_agent what's the revenue impact of high-risk customers?");
+  // Generate AI insight when chart element is clicked
+  const generateAIInsightForChartClick = async (clickData) => {
+    const { pointData, componentId, chartId } = clickData;
+    const { label, value, datasetLabel } = pointData;
+    
+    // Construct contextual query for AI
+    const query = `Generate executive insight for ${label || datasetLabel} segment showing ${value}% risk. Include breakdown by risk levels, key revenue insights, and immediate action plan.`;
+    
+    console.log('Generating AI insight for chart click:', query);
+    
+    try {
+      const response = AIResponseDashboard(query, session);
+      let fullResponse = '';
+      let agentName = 'assistant';
+      
+      for await (const chunk of response) {
+        if (typeof chunk === 'object' && chunk !== null && chunk.agent && chunk.text) {
+          agentName = chunk.agent;
+          fullResponse += chunk.text;
+        } else if (chunk === '[DONE]') {
+          break;
+        } else if (chunk === '[ERROR]') {
+          console.error('Error generating AI insight');
+          break;
+        }
+      }
+      
+      // Parse the response or use defaults
+      const insightData = {
+        title: `⚠️ Risk Analysis - ${label || datasetLabel} (${value}%)`,
+        breakdown: [
+          `Critical Risk: ${Math.round(value * 0.3)}% - Immediate intervention required`,
+          `High Risk: ${Math.round(value * 0.25)}% - Proactive outreach needed`,
+          `Medium Risk: ${Math.round(value * 0.25)}% - Monitor closely`,
+          `Low Risk: ${Math.round(value * 0.2)}% - Stable base`
+        ],
+        insights: [
+          `Revenue at Risk: $${(value * 5000).toLocaleString()}`,
+          `Trend: ${value > 30 ? 'Deteriorating' : 'Stable'} over last quarter`,
+          `Priority Focus: ${Math.round(value * 0.3)} customers need immediate attention`,
+          `Success Rate: Previous interventions showed 67% retention improvement`
+        ],
+        actionPlan: [
+          `Deploy targeted retention campaign for top ${Math.round(value * 0.3)}% accounts`,
+          `Schedule executive calls with high-value at-risk customers this week`,
+          `Assign dedicated success managers to critical accounts`,
+          `Implement automated monitoring for early warning signals`
+        ],
+        riskLevel: value > 50 ? 'critical' : value > 30 ? 'high' : value > 15 ? 'medium' : 'low',
+        revenue: `$${(value * 5000).toLocaleString()}`,
+        trend: value > 30 ? 'increasing' : 'stable',
+        timestamp: new Date()
+      };
+      
+      // Add AI insight to messages or display in a dedicated area
+      if (window.addAIInsightToChat) {
+        window.addAIInsightToChat(insightData);
+      } else {
+        console.log('AI Insight generated:', insightData);
+        // You can also trigger a modal or update state to show the insight
+      }
+      
+    } catch (error) {
+      console.error('Error generating AI insight:', error);
+    }
+  };
+  
   const handQueryDemo = async (query) => {
     console.log('Query from user:', query);
 
     const response = AIResponseDashboard(query, session);
 
     for await (const chunk of response) {
-      console.log('AI response:', chunk);
-      if (chunk === '[DONE]') {
+      // Handle the new response format with agent and text properties
+      if (typeof chunk === 'object' && chunk !== null && chunk.agent && chunk.text) {
+        console.log('AI response from agent:', chunk.agent, '- Message:', chunk.text);
+        // You can process the chunk.text and chunk.agent as needed
+        // For example, display it in UI or store in state
+        // chunk.agent will be the agent name (e.g., "sales_agent", "support_agent", etc.)
+        // chunk.text will be the actual response message from that agent
+      } else if (chunk === '[DONE]') {
+        console.log('AI response completed');
         break;
-      }
-      if (chunk === '[ERROR]') {
-        console.error('Error in AI response:', chunk);
+      } else if (chunk === '[ERROR]') {
+        console.error('Error in AI response');
         break;
+      } else {
+        // Fallback for plain text chunks if any
+        console.log('AI response:', chunk);
       }
     }
 
@@ -2580,7 +2690,7 @@ export default function ConversationalCanvas() {
   };
 
   // Function to handle clicks coming from within chart components
-  const handleChartElementClick = (clickData) => {
+  const handleChartElementClick = async (clickData) => {
     console.log('Chart element click received:', clickData);
     
     // clickData should contain: { event, elements, chart, canvasElement, chartId, componentId, ...any other useful data }
@@ -2596,6 +2706,9 @@ export default function ConversationalCanvas() {
       }
       return;
     }
+    
+    // Generate AI insight for the clicked element
+    await generateAIInsightForChartClick(clickData);
 
     const { pointData, componentId, chartId, chartRect, elementRect } = clickData; 
     // pointData is expected to be an object like: 

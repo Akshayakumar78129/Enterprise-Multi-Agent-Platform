@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise IQ - Churn Intelligence Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* CSS Variables - Enterprise IQ Design System */
+        :root {
+            --midnight-navy: #0a1224;
+            --graphite: #232a36;
+            --graphite-light: #3a4459;
+            --electric-cyan: #00e0ff;
+            --signal-magenta: #e930ff;
+            --cloud-white: #f7f9fb;
+            --lighter-cyan: #5fd4d6;
+            --muted-purple: #aa45dd;
+            --success: #39ff14;
+            --warning: #ffb800;
+            --error: #ff1f4f;
+            
+            /* Spacing */
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            --spacing-2xl: 48px;
+            
+            /* Border Radius */
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+            
+            /* Shadows */
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.12);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.15);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.2);
+            --shadow-glow: 0 0 20px rgba(0, 224, 255, 0.3);
+            
+            /* Transitions */
+            --transition-fast: 0.15s ease;
+            --transition-normal: 0.3s ease;
+            --transition-slow: 0.5s ease;
+        }
+
+        /* Global Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--midnight-navy) 0%, #0d1a2d 100%);
+            color: var(--cloud-white);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--graphite) 0%, var(--graphite-light) 100%);
+            padding: var(--spacing-xl) var(--spacing-2xl);
+            border-bottom: 2px solid var(--graphite-light);
+            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(0, 224, 255, 0.1) 50%, transparent 100%);
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: var(--spacing-sm);
+            background: linear-gradient(135deg, var(--cloud-white) 0%, var(--electric-cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-subtitle {
+            color: rgba(247, 249, 251, 0.8);
+            font-size: 1.1rem;
+            font-weight: 400;
+        }
+
+        /* Main Container */
+        .container {
+            padding: var(--spacing-2xl);
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Grid System */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: var(--spacing-xl);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .col-span-12 { grid-column: span 12; }
+        .col-span-6 { grid-column: span 6; }
+        .col-span-4 { grid-column: span 4; }
+        .col-span-3 { grid-column: span 3; }
+        .col-span-2 { grid-column: span 2; }
+
+        /* Card Component */
+        .card {
+            background: linear-gradient(135deg, var(--graphite) 0%, rgba(58, 68, 89, 0.8) 100%);
+            border: 1px solid var(--graphite-light);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-md);
+            transition: all var(--transition-normal);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--electric-cyan), var(--signal-magenta));
+            opacity: 0;
+            transition: opacity var(--transition-normal);
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--electric-cyan);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: var(--spacing-md);
+            color: var(--cloud-white);
+        }
+
+        /* KPI Tiles */
+        .kpi-tiles {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .kpi-tile {
+            background: linear-gradient(135deg, var(--graphite) 0%, var(--graphite-light) 100%);
+            border: 1px solid var(--graphite-light);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            text-align: center;
+            transition: all var(--transition-normal);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-tile::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(0, 224, 255, 0.1) 0%, rgba(233, 48, 255, 0.1) 100%);
+            opacity: 0;
+            transition: opacity var(--transition-normal);
+        }
+
+        .kpi-tile:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-glow);
+            border-color: var(--electric-cyan);
+        }
+
+        .kpi-tile:hover::before {
+            opacity: 1;
+        }
+
+        .kpi-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--electric-cyan);
+            margin-bottom: var(--spacing-sm);
+            position: relative;
+            z-index: 1;
+        }
+
+        .kpi-label {
+            font-size: 0.9rem;
+            color: rgba(247, 249, 251, 0.8);
+            font-weight: 500;
+            position: relative;
+            z-index: 1;
+        }
+
+        .kpi-trend {
+            position: absolute;
+            top: var(--spacing-md);
+            right: var(--spacing-md);
+            font-size: 1.2rem;
+            z-index: 1;
+        }
+
+        .trend-up { color: var(--success); }
+        .trend-down { color: var(--error); }
+        .trend-neutral { color: var(--warning); }
+
+        /* Risk Pyramid */
+        .risk-pyramid {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-lg);
+        }
+
+        .pyramid-level {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 80px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            position: relative;
+            overflow: hidden;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .pyramid-level::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity var(--transition-normal);
+        }
+
+        .pyramid-level:hover::before {
+            opacity: 1;
+        }
+
+        .pyramid-level.active {
+            box-shadow: 0 0 0 3px var(--electric-cyan);
+            transform: scale(1.02);
+        }
+
+        .pyramid-level.very-high {
+            background: linear-gradient(135deg, var(--signal-magenta) 0%, #c41e3a 100%);
+        }
+
+        .pyramid-level.high {
+            background: linear-gradient(135deg, var(--muted-purple) 0%, #8e44ad 100%);
+        }
+
+        .pyramid-level.medium {
+            background: linear-gradient(135deg, var(--lighter-cyan) 0%, #3498db 100%);
+        }
+
+        .pyramid-level.low {
+            background: linear-gradient(135deg, var(--electric-cyan) 0%, #1abc9c 100%);
+        }
+
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-top: var(--spacing-md);
+        }
+
+        .chart-container canvas {
+            border-radius: var(--radius-sm);
+        }
+
+        /* Customer Table */
+        .customer-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: var(--spacing-md);
+        }
+
+        .customer-table th,
+        .customer-table td {
+            padding: var(--spacing-md);
+            text-align: left;
+            border-bottom: 1px solid var(--graphite-light);
+        }
+
+        .customer-table th {
+            background: var(--graphite-light);
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color var(--transition-fast);
+        }
+
+        .customer-table th:hover {
+            background: var(--electric-cyan);
+            color: var(--midnight-navy);
+        }
+
+        .customer-table tr {
+            transition: background-color var(--transition-fast);
+        }
+
+        .customer-table tr:hover {
+            background: rgba(0, 224, 255, 0.1);
+        }
+
+        .risk-badge {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .risk-very-high { background: var(--signal-magenta); color: white; }
+        .risk-high { background: var(--muted-purple); color: white; }
+        .risk-medium { background: var(--lighter-cyan); color: var(--midnight-navy); }
+        .risk-low { background: var(--electric-cyan); color: var(--midnight-navy); }
+
+        /* Chatbot */
+        .chatbot {
+            position: fixed;
+            bottom: var(--spacing-xl);
+            right: var(--spacing-xl);
+            width: 400px;
+            max-height: 500px;
+            background: linear-gradient(135deg, var(--graphite) 0%, var(--graphite-light) 100%);
+            border: 1px solid var(--electric-cyan);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            transform: translateY(100%);
+            transition: transform var(--transition-normal);
+        }
+
+        .chatbot.active {
+            transform: translateY(0);
+        }
+
+        .chatbot-header {
+            padding: var(--spacing-md);
+            background: linear-gradient(135deg, var(--electric-cyan) 0%, var(--signal-magenta) 100%);
+            color: var(--midnight-navy);
+            font-weight: 700;
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chatbot-close {
+            background: none;
+            border: none;
+            color: var(--midnight-navy);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chatbot-content {
+            padding: var(--spacing-md);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .chatbot-message {
+            background: rgba(0, 224, 255, 0.1);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-sm);
+            margin-bottom: var(--spacing-md);
+            border-left: 3px solid var(--electric-cyan);
+        }
+
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: var(--spacing-xl);
+            right: var(--spacing-xl);
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--electric-cyan) 0%, var(--signal-magenta) 100%);
+            border: none;
+            border-radius: 50%;
+            color: var(--midnight-navy);
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: var(--shadow-lg);
+            transition: all var(--transition-normal);
+            z-index: 999;
+        }
+
+        .fab:hover {
+            transform: scale(1.1);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .fab.hidden {
+            display: none;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--graphite-light);
+            border: 1px solid var(--electric-cyan);
+            border-radius: var(--radius-sm);
+            color: var(--cloud-white);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .btn:hover {
+            background: var(--electric-cyan);
+            color: var(--midnight-navy);
+        }
+
+        .btn.active {
+            background: var(--electric-cyan);
+            color: var(--midnight-navy);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .kpi-tiles {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .col-span-6 {
+                grid-column: span 12;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: var(--spacing-md);
+            }
+            
+            .kpi-tiles {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .chatbot {
+                width: calc(100vw - 2rem);
+                right: 1rem;
+                left: 1rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 224, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--electric-cyan);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: var(--graphite);
+            color: var(--cloud-white);
+            padding: var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            font-size: 0.8rem;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+            border: 1px solid var(--electric-cyan);
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <h1>Churn Intelligence Dashboard</h1>
+            <p class="header-subtitle">AI-powered churn risk analytics and retention strategy</p>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- KPI Tiles -->
+        <div class="kpi-tiles">
+            <div class="kpi-tile" data-tooltip="Overall percentage of customers at risk of churning">
+                <div class="kpi-trend trend-up">↗</div>
+                <div class="kpi-value" id="overall-risk">0%</div>
+                <div class="kpi-label">Overall Churn Risk</div>
+            </div>
+            <div class="kpi-tile" data-tooltip="Number of customers in High and Very High risk categories">
+                <div class="kpi-trend trend-down">↘</div>
+                <div class="kpi-value" id="high-risk-count">0</div>
+                <div class="kpi-label">High Risk Count</div>
+            </div>
+            <div class="kpi-tile" data-tooltip="Model accuracy score (ROC AUC)">
+                <div class="kpi-trend trend-neutral">→</div>
+                <div class="kpi-value" id="model-confidence">0.85</div>
+                <div class="kpi-label">Model Confidence</div>
+            </div>
+            <div class="kpi-tile" data-tooltip="Most important factor contributing to churn risk">
+                <div class="kpi-value" id="top-factor" style="font-size: 1.2rem;">Recency</div>
+                <div class="kpi-label">Top Churn Factor</div>
+            </div>
+            <div class="kpi-tile" data-tooltip="Net change in risk level transitions">
+                <div class="kpi-trend trend-up">↗</div>
+                <div class="kpi-value" id="risk-transition">+12</div>
+                <div class="kpi-label">Risk Transitions</div>
+            </div>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="grid">
+            <!-- Risk Pyramid -->
+            <div class="col-span-6">
+                <div class="card">
+                    <h2 class="card-title">Churn Risk Distribution</h2>
+                    <div class="risk-pyramid" id="risk-pyramid">
+                        <!-- Pyramid levels will be generated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Probability Distribution -->
+            <div class="col-span-6">
+                <div class="card">
+                    <h2 class="card-title">Probability Distribution</h2>
+                    <div class="controls">
+                        <button class="btn" onclick="updateBinCount(20)">20 Bins</button>
+                        <button class="btn active" onclick="updateBinCount(30)">30 Bins</button>
+                        <button class="btn" onclick="updateBinCount(50)">50 Bins</button>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="probability-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature Importance -->
+            <div class="col-span-6">
+                <div class="card">
+                    <h2 class="card-title">Contributing Factors</h2>
+                    <div class="controls">
+                        <button class="btn active" onclick="sortFactors('importance')">By Importance</button>
+                        <button class="btn" onclick="sortFactors('alphabetical')">Alphabetical</button>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="factors-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer Risk Explorer -->
+            <div class="col-span-6">
+                <div class="card">
+                    <h2 class="card-title">Customer Risk Explorer</h2>
+                    <div class="controls">
+                        <input type="text" id="search-input" placeholder="Search customers..." 
+                               style="padding: 8px; background: var(--graphite-light); border: 1px solid var(--electric-cyan); border-radius: 4px; color: var(--cloud-white);">
+                        <button class="btn" onclick="resetFilter()">Show All</button>
+                    </div>
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        <table class="customer-table" id="customer-table">
+                            <thead>
+                                <tr>
+                                    <th onclick="sortTable('name')">Name</th>
+                                    <th onclick="sortTable('riskLevel')">Risk Level</th>
+                                    <th onclick="sortTable('churnProbability')">Probability</th>
+                                    <th>Top Factor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customer-table-body">
+                                <!-- Table rows will be generated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button class="fab" id="chat-fab" onclick="toggleChatbot()">💬</button>
+
+    <!-- Chatbot -->
+    <div class="chatbot" id="chatbot">
+        <div class="chatbot-header">
+            <span>🤖 Churn Intelligence Assistant</span>
+            <button class="chatbot-close" onclick="toggleChatbot()">×</button>
+        </div>
+        <div class="chatbot-content" id="chatbot-content">
+            <div class="chatbot-message">
+                Hi! I'm your Churn Intelligence Assistant. Click on any chart, KPI tile, or customer to get detailed explanations and insights!
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        // Global Variables
+        let customers = [];
+        let filteredCustomers = [];
+        let currentFilter = 'all';
+        let currentSort = { column: null, direction: 'asc' };
+        let binCount = 30;
+        let factorSort = 'importance';
+        
+        // Charts
+        let probabilityChart = null;
+        let factorsChart = null;
+
+        // Mock Data Generation
+        function generateMockData() {
+            const names = [
+                'Alice Johnson', 'Bob Smith', 'Carol Davis', 'David Wilson', 'Emma Brown',
+                'Frank Miller', 'Grace Lee', 'Henry Taylor', 'Ivy Chen', 'Jack Anderson',
+                'Kate Thompson', 'Liam Garcia', 'Maya Patel', 'Noah Rodriguez', 'Olivia Martinez',
+                'Paul Jackson', 'Quinn White', 'Ruby Harris', 'Sam Clark', 'Tina Lewis'
+            ];
+            
+            const factors = [
+                'Recency', 'Frequency', 'Monetary Value', 'Support Tickets', 'Login Frequency',
+                'Feature Usage', 'Payment Issues', 'Contract Length', 'Engagement Score', 'Satisfaction Rating'
+            ];
+            
+            const riskLevels = ['Low', 'Medium', 'High', 'Very High'];
+            const riskProbabilities = {
+                'Low': [0.0, 0.25],
+                'Medium': [0.25, 0.5],
+                'High': [0.5, 0.8],
+                'Very High': [0.8, 1.0]
+            };
+
+            customers = [];
+            
+            for (let i = 1; i <= 200; i++) {
+                const riskLevel = riskLevels[Math.floor(Math.random() * riskLevels.length)];
+                const [minProb, maxProb] = riskProbabilities[riskLevel];
+                const churnProbability = Math.random() * (maxProb - minProb) + minProb;
+                
+                const contributingFactors = [];
+                const numFactors = Math.floor(Math.random() * 3) + 3; // 3-5 factors
+                const selectedFactors = [...factors].sort(() => 0.5 - Math.random()).slice(0, numFactors);
+                
+                selectedFactors.forEach(factor => {
+                    contributingFactors.push({
+                        factor: factor,
+                        importance: Math.random() * 0.8 + 0.2 // 0.2 to 1.0
+                    });
+                });
+                
+                customers.push({
+                    id: i,
+                    name: names[Math.floor(Math.random() * names.length)] + ` ${i}`,
+                    riskLevel: riskLevel,
+                    churnProbability: Math.round(churnProbability * 1000) / 1000,
+                    contributingFactors: contributingFactors.sort((a, b) => b.importance - a.importance)
+                });
+            }
+            
+            filteredCustomers = [...customers];
+        }
+
+        // Initialize Dashboard
+        function initDashboard() {
+            generateMockData();
+            updateKPIs();
+            createRiskPyramid();
+            createProbabilityChart();
+            createFactorsChart();
+            updateCustomerTable();
+            setupEventListeners();
+        }
+
+        // Update KPIs
+        function updateKPIs() {
+            const data = filteredCustomers;
+            
+            // Overall Risk
+            const atRiskCount = data.filter(c => c.riskLevel !== 'Low').length;
+            const overallRisk = Math.round((atRiskCount / data.length) * 100);
+            document.getElementById('overall-risk').textContent = `${overallRisk}%`;
+            
+            // High Risk Count
+            const highRiskCount = data.filter(c => c.riskLevel === 'High' || c.riskLevel === 'Very High').length;
+            document.getElementById('high-risk-count').textContent = highRiskCount;
+            
+            // Risk Transitions (simulated)
+            const transitions = Math.floor(Math.random() * 20) + 5;
+            document.getElementById('risk-transition').textContent = `+${transitions}`;
+        }
+
+        // Create Risk Pyramid
+        function createRiskPyramid() {
+            const pyramid = document.getElementById('risk-pyramid');
+            pyramid.innerHTML = '';
+            
+            const riskLevels = ['Very High', 'High', 'Medium', 'Low'];
+            const colors = ['very-high', 'high', 'medium', 'low'];
+            
+            riskLevels.forEach((level, index) => {
+                const count = filteredCustomers.filter(c => c.riskLevel === level).length;
+                const percentage = ((count / filteredCustomers.length) * 100).toFixed(1);
+                const maxCount = Math.max(...riskLevels.map(l => 
+                    filteredCustomers.filter(c => c.riskLevel === l).length
+                ));
+                const width = Math.max(25, (count / maxCount) * 100);
+                
+                const levelDiv = document.createElement('div');
+                levelDiv.className = `pyramid-level ${colors[index]} ${currentFilter === level.toLowerCase().replace(' ', '-') ? 'active' : ''}`;
+                levelDiv.style.width = `${width}%`;
+                levelDiv.innerHTML = `
+                    <div>
+                        <div style="font-size: 1.1rem; font-weight: 700;">${level}</div>
+                        <div style="font-size: 0.9rem; opacity: 0.9;">${count} (${percentage}%)</div>
+                    </div>
+                `;
+                levelDiv.onclick = () => filterByRisk(level);
+                levelDiv.setAttribute('data-tooltip', `${count} customers in ${level} risk category (${percentage}%)`);
+                
+                pyramid.appendChild(levelDiv);
+            });
+        }
+
+        // Filter by Risk Level
+        function filterByRisk(riskLevel) {
+            const filterKey = riskLevel.toLowerCase().replace(' ', '-');
+            
+            if (currentFilter === filterKey) {
+                // Reset filter
+                currentFilter = 'all';
+                filteredCustomers = [...customers];
+            } else {
+                // Apply filter
+                currentFilter = filterKey;
+                filteredCustomers = customers.filter(c => c.riskLevel === riskLevel);
+            }
+            
+            updateDashboard();
+            showChatbotMessage(`Filtered to show ${riskLevel === 'all' ? 'all' : riskLevel} risk customers. The dashboard now shows ${filteredCustomers.length} customers with detailed risk analysis.`);
+        }
+
+        // Reset Filter
+        function resetFilter() {
+            currentFilter = 'all';
+            filteredCustomers = [...customers];
+            updateDashboard();
+            showChatbotMessage('Filter reset! Now showing all customers across all risk levels.');
+        }
+
+        // Update Dashboard
+        function updateDashboard() {
+            updateKPIs();
+            createRiskPyramid();
+            updateProbabilityChart();
+            updateFactorsChart();
+            updateCustomerTable();
+        }
+
+        // Create Probability Chart
+        function createProbabilityChart() {
+            const ctx = document.getElementById('probability-chart').getContext('2d');
+            
+            if (probabilityChart) {
+                probabilityChart.destroy();
+            }
+            
+            const probabilities = filteredCustomers.map(c => c.churnProbability);
+            const bins = createHistogramBins(probabilities, binCount);
+            
+            probabilityChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: bins.labels,
+                    datasets: [{
+                        label: 'Customer Count',
+                        data: bins.counts,
+                        backgroundColor: bins.colors,
+                        borderColor: '#f7f9fb',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    return `Probability Range: ${context[0].label}`;
+                                },
+                                label: function(context) {
+                                    return `Customers: ${context.parsed.y}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Churn Probability',
+                                color: '#f7f9fb'
+                            },
+                            ticks: {
+                                color: '#f7f9fb'
+                            },
+                            grid: {
+                                color: '#3a4459'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Customer Count',
+                                color: '#f7f9fb'
+                            },
+                            ticks: {
+                                color: '#f7f9fb'
+                            },
+                            grid: {
+                                color: '#3a4459'
+                            }
+                        }
+                    },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const range = bins.labels[index];
+                            const count = bins.counts[index];
+                            showChatbotMessage(`This probability range (${range}) contains ${count} customers. These customers have churn probabilities within this specific range, helping you identify patterns in risk distribution.`);
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update Probability Chart
+        function updateProbabilityChart() {
+            if (probabilityChart) {
+                const probabilities = filteredCustomers.map(c => c.churnProbability);
+                const bins = createHistogramBins(probabilities, binCount);
+                
+                probabilityChart.data.labels = bins.labels;
+                probabilityChart.data.datasets[0].data = bins.counts;
+                probabilityChart.data.datasets[0].backgroundColor = bins.colors;
+                probabilityChart.update();
+            }
+        }
+
+        // Create Histogram Bins
+        function createHistogramBins(probabilities, binCount) {
+            const bins = Array(binCount).fill(0);
+            const labels = [];
+            const colors = [];
+            
+            for (let i = 0; i < binCount; i++) {
+                const start = i / binCount;
+                const end = (i + 1) / binCount;
+                labels.push(`${(start * 100).toFixed(0)}-${(end * 100).toFixed(0)}%`);
+                
+                // Color based on risk level
+                if (end <= 0.25) colors.push('#00e0ff');
+                else if (end <= 0.5) colors.push('#5fd4d6');
+                else if (end <= 0.8) colors.push('#aa45dd');
+                else colors.push('#e930ff');
+            }
+            
+            probabilities.forEach(prob => {
+                const binIndex = Math.min(Math.floor(prob * binCount), binCount - 1);
+                bins[binIndex]++;
+            });
+            
+            return { labels, counts: bins, colors };
+        }
+
+        // Update Bin Count
+        function updateBinCount(newBinCount) {
+            binCount = newBinCount;
+            updateProbabilityChart();
+            
+            // Update button states
+            document.querySelectorAll('.controls .btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            showChatbotMessage(`Updated histogram to show ${newBinCount} bins. This changes the granularity of the probability distribution, helping you see patterns at different levels of detail.`);
+        }
+
+        // Create Factors Chart
+        function createFactorsChart() {
+            const ctx = document.getElementById('factors-chart').getContext('2d');
+            
+            if (factorsChart) {
+                factorsChart.destroy();
+            }
+            
+            const factorImportance = calculateFactorImportance();
+            
+            factorsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: factorImportance.labels,
+                    datasets: [{
+                        label: 'Importance',
+                        data: factorImportance.values,
+                        backgroundColor: factorImportance.colors,
+                        borderColor: '#f7f9fb',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Importance: ${(context.parsed.x * 100).toFixed(1)}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Importance Score',
+                                color: '#f7f9fb'
+                            },
+                            ticks: {
+                                color: '#f7f9fb',
+                                callback: function(value) {
+                                    return (value * 100).toFixed(0) + '%';
+                                }
+                            },
+                            grid: {
+                                color: '#3a4459'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#f7f9fb'
+                            },
+                            grid: {
+                                color: '#3a4459'
+                            }
+                        }
+                    },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const factor = factorImportance.labels[index];
+                            const importance = (factorImportance.values[index] * 100).toFixed(1);
+                            showChatbotMessage(`${factor} is a key churn predictor with ${importance}% importance. This factor significantly influences customer churn risk. Consider focusing retention efforts on improving this metric.`);
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update Factors Chart
+        function updateFactorsChart() {
+            if (factorsChart) {
+                const factorImportance = calculateFactorImportance();
+                
+                factorsChart.data.labels = factorImportance.labels;
+                factorsChart.data.datasets[0].data = factorImportance.values;
+                factorsChart.data.datasets[0].backgroundColor = factorImportance.colors;
+                factorsChart.update();
+            }
+        }
+
+        // Calculate Factor Importance
+        function calculateFactorImportance() {
+            const factorMap = new Map();
+            
+            filteredCustomers.forEach(customer => {
+                customer.contributingFactors.forEach(factor => {
+                    if (!factorMap.has(factor.factor)) {
+                        factorMap.set(factor.factor, []);
+                    }
+                    factorMap.get(factor.factor).push(factor.importance);
+                });
+            });
+            
+            const factors = [];
+            factorMap.forEach((importanceList, factor) => {
+                const avgImportance = importanceList.reduce((sum, imp) => sum + imp, 0) / importanceList.length;
+                factors.push({ factor, importance: avgImportance });
+            });
+            
+            // Sort factors
+            if (factorSort === 'importance') {
+                factors.sort((a, b) => b.importance - a.importance);
+            } else {
+                factors.sort((a, b) => a.factor.localeCompare(b.factor));
+            }
+            
+            const labels = factors.map(f => f.factor);
+            const values = factors.map(f => f.importance);
+            const colors = values.map((_, i) => {
+                const intensity = 0.8 - (i * 0.1);
+                return `rgba(233, 48, 255, ${Math.max(0.3, intensity)})`;
+            });
+            
+            return { labels, values, colors };
+        }
+
+        // Sort Factors
+        function sortFactors(sortType) {
+            factorSort = sortType;
+            updateFactorsChart();
+            
+            // Update button states
+            document.querySelectorAll('.controls .btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            showChatbotMessage(`Sorted factors by ${sortType}. This helps you understand which factors are most important for predicting churn in your current dataset.`);
+        }
+
+        // Update Customer Table
+        function updateCustomerTable() {
+            const tbody = document.getElementById('customer-table-body');
+            tbody.innerHTML = '';
+            
+            let displayCustomers = [...filteredCustomers];
+            
+            // Apply search filter
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            if (searchTerm) {
+                displayCustomers = displayCustomers.filter(c => 
+                    c.name.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            // Apply sorting
+            if (currentSort.column) {
+                displayCustomers.sort((a, b) => {
+                    let aVal = a[currentSort.column];
+                    let bVal = b[currentSort.column];
+                    
+                    if (typeof aVal === 'string') {
+                        aVal = aVal.toLowerCase();
+                        bVal = bVal.toLowerCase();
+                    }
+                    
+                    if (currentSort.direction === 'asc') {
+                        return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+                    } else {
+                        return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
+                    }
+                });
+            }
+            
+            // Show first 20 customers
+            displayCustomers.slice(0, 20).forEach(customer => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${customer.name}</td>
+                    <td><span class="risk-badge risk-${customer.riskLevel.toLowerCase().replace(' ', '-')}">${customer.riskLevel}</span></td>
+                    <td>${(customer.churnProbability * 100).toFixed(1)}%</td>
+                    <td>${customer.contributingFactors[0]?.factor || 'N/A'}</td>
+                `;
+                row.onclick = () => showCustomerDetails(customer);
+                tbody.appendChild(row);
+            });
+        }
+
+        // Sort Table
+        function sortTable(column) {
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'asc';
+            }
+            
+            updateCustomerTable();
+        }
+
+        // Show Customer Details
+        function showCustomerDetails(customer) {
+            const topFactors = customer.contributingFactors.slice(0, 3)
+                .map(f => `${f.factor} (${(f.importance * 100).toFixed(1)}%)`)
+                .join(', ');
+            
+            showChatbotMessage(`
+                <strong>${customer.name}</strong><br>
+                Risk Level: <span class="risk-badge risk-${customer.riskLevel.toLowerCase().replace(' ', '-')}">${customer.riskLevel}</span><br>
+                Churn Probability: ${(customer.churnProbability * 100).toFixed(1)}%<br>
+                Top Contributing Factors: ${topFactors}<br><br>
+                This customer's risk profile suggests ${customer.riskLevel.toLowerCase()} priority for retention efforts. Focus on addressing the top contributing factors to reduce churn risk.
+            `);
+        }
+
+        // Chatbot Functions
+        function toggleChatbot() {
+            const chatbot = document.getElementById('chatbot');
+            const fab = document.getElementById('chat-fab');
+            
+            chatbot.classList.toggle('active');
+            fab.classList.toggle('hidden');
+        }
+
+        function showChatbotMessage(message) {
+            const chatbot = document.getElementById('chatbot');
+            const content = document.getElementById('chatbot-content');
+            const fab = document.getElementById('chat-fab');
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chatbot-message';
+            messageDiv.innerHTML = message;
+            
+            content.appendChild(messageDiv);
+            content.scrollTop = content.scrollHeight;
+            
+            // Show chatbot
+            chatbot.classList.add('active');
+            fab.classList.add('hidden');
+        }
+
+        // Setup Event Listeners
+        function setupEventListeners() {
+            // Search input
+            document.getElementById('search-input').addEventListener('input', updateCustomerTable);
+            
+            // KPI tile clicks
+            document.querySelectorAll('.kpi-tile').forEach((tile, index) => {
+                tile.addEventListener('click', () => {
+                    const messages = [
+                        'Overall Churn Risk shows the percentage of customers who are at medium, high, or very high risk of churning. This is your primary health metric.',
+                        'High Risk Count represents customers in the High and Very High risk categories who need immediate attention and retention efforts.',
+                        'Model Confidence (ROC AUC) indicates how accurately our machine learning model can distinguish between customers who will churn and those who won\'t.',
+                        'Top Churn Factor is the most important predictor in our model. Focus your retention strategies on improving this metric.',
+                        'Risk Transitions show how many customers have moved between risk levels recently, indicating the dynamic nature of churn risk.'
+                    ];
+                    showChatbotMessage(messages[index]);
+                });
+            });
+            
+            // Tooltip functionality
+            const tooltip = document.getElementById('tooltip');
+            document.querySelectorAll('[data-tooltip]').forEach(element => {
+                element.addEventListener('mouseenter', (e) => {
+                    tooltip.textContent = e.target.getAttribute('data-tooltip');
+                    tooltip.classList.add('show');
+                });
+                
+                element.addEventListener('mousemove', (e) => {
+                    tooltip.style.left = e.pageX + 10 + 'px';
+                    tooltip.style.top = e.pageY + 10 + 'px';
+                });
+                
+                element.addEventListener('mouseleave', () => {
+                    tooltip.classList.remove('show');
+                });
+            });
+        }
+
+        // Initialize Dashboard on Load
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>
