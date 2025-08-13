@@ -1,0 +1,83 @@
+/* Root tokens (dark is default; ThemeToggle flips [data-theme]) */
+:root,
+[data-theme="dark"] {
+  --midnightNavy: #0a1224;
+  --graphite: #232a36;
+  --graphiteLight: #3a4459;
+  --cloudWhite: #f7f9fb;
+  --muted: #5891cb;
+  --panel: #1a2038;
+
+  --electricCyan: #00e0ff;
+  --signalMagenta: #e930ff;
+}
+
+/* Light mode palette */
+[data-theme="light"] {
+  --midnightNavy: #f6f8fb;   /* page bg */
+  --graphite: #ffffff;       /* cards/inputs bg */
+  --graphiteLight: #d9e0ea;  /* borders */
+  --cloudWhite: #0a1224;     /* text */
+  --muted: #3a4459;
+  --panel: #ffffff;
+
+  --electricCyan: #00b7d6;   /* keep brand but a touch softer on light */
+  --signalMagenta: #e930ff;
+}
+
+/* Global resets + typography */
+html, body, #__next { height: 100%; }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--midnightNavy);
+  color: var(--cloudWhite);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Form controls match theme */
+button, input, select, textarea { font: inherit; }
+input, select, textarea {
+  background: var(--graphite);
+  color: var(--cloudWhite);
+  border: 1px solid var(--graphiteLight);
+  border-radius: 6px;
+}
+
+/* Plotly background should be transparent so cards show through */
+.js-plotly-plot .plotly .bg { fill: transparent !important; }
+.js-plotly-plot .plotly .user-select-none svg { background: transparent !important; }
+
+/* Optional: subtle scrollbar in dark */
+[data-theme="dark"] *::-webkit-scrollbar { width: 8px; height: 8px; }
+[data-theme="dark"] *::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+  border-radius: 8px;
+}
+
+/* Links inherit color */
+a { color: inherit; text-decoration: none; }
+:root,
+[data-theme="dark"] {
+  --brand: var(--electricCyan);
+  --text-strong: var(--cloudWhite);
+  --text-muted: var(--muted);
+}
+
+[data-theme="light"] {
+  --brand: var(--electricCyan); /* you already soften this in light */
+  --text-strong: var(--cloudWhite); /* becomes dark text in your light theme */
+  --text-muted: var(--muted);
+}
+.icon-button {
+  background: var(--graphite);
+  color: var(--cloudWhite);
+  border: 1px solid var(--graphiteLight);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.icon-button:hover { border-color: var(--electricCyan); }
