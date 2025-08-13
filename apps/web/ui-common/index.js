@@ -3,6 +3,7 @@ import ComponentDemo from './design-system/ComponentDemo';
 // Design system components
 import { Card } from './design-system/components/Card';
 import { Button } from './design-system/components/Button';
+// KpiTile consolidated to single JS implementation
 import { KpiTile } from './design-system/components/KpiTile';
 import { Select } from './design-system/components/Select';
 import { Input } from './design-system/components/Input';
