@@ -77,12 +77,12 @@ const EnhancedSegmentKPITiles: React.FC<EnhancedSegmentKPITilesProps> = ({ kpis 
             transition: { duration: 0.2 }
           }}
           style={{
-            background: segmentationTheme.gradients.container,
-            backdropFilter: segmentationTheme.effects.backdropBlur,
-            WebkitBackdropFilter: segmentationTheme.effects.backdropBlur,
+            background: 'rgba(30, 41, 59, 0.95)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
             borderRadius: segmentationTheme.borderRadius.xl,
-            border: `1px solid rgba(255, 255, 255, 0.1)`,
-            boxShadow: segmentationTheme.effects.tileShadow,
+            border: `2px solid rgba(255, 255, 255, 0.15)`,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
             padding: segmentationTheme.spacing.lg,
             position: 'relative',
             overflow: 'hidden',
@@ -105,7 +105,14 @@ const EnhancedSegmentKPITiles: React.FC<EnhancedSegmentKPITilesProps> = ({ kpis 
             right: '20px',
             transform: 'translateY(-50%)',
             fontSize: '48px',
-            opacity: 0.1,
+            opacity: 0.4,
+            background: 'rgba(255, 255, 255, 0.1)',
+            borderRadius: '50%',
+            width: '60px',
+            height: '60px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}>
             {tile.icon}
           </div>
@@ -113,10 +120,12 @@ const EnhancedSegmentKPITiles: React.FC<EnhancedSegmentKPITilesProps> = ({ kpis 
           <div style={{ position: 'relative', zIndex: 1 }}>
             <div style={{
               fontSize: '12px',
-              color: segmentationTheme.colors.textTertiary,
+              color: '#ffffff',
               marginBottom: segmentationTheme.spacing.sm,
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
+              fontWeight: 600,
+              opacity: 0.9
             }}>
               {tile.title}
             </div>
@@ -124,18 +133,17 @@ const EnhancedSegmentKPITiles: React.FC<EnhancedSegmentKPITilesProps> = ({ kpis 
             <div style={{
               fontSize: '32px',
               fontWeight: 'bold',
-              color: segmentationTheme.colors.textPrimary,
+              color: '#ffffff',
               marginBottom: segmentationTheme.spacing.xs,
-              background: `linear-gradient(135deg, ${tile.color}, ${segmentationTheme.colors.textPrimary})`,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              textShadow: '0 0 20px rgba(255, 255, 255, 0.3)'
             }}>
               {tile.value}
             </div>
             
             <div style={{
               fontSize: '14px',
-              color: segmentationTheme.colors.textSecondary,
+              color: tile.color,
+              fontWeight: 500
             }}>
               {tile.subtitle}
             </div>

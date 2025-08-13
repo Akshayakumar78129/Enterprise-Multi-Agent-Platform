@@ -226,36 +226,7 @@ export default function ConversationalCanvas() {
     }
   }, [userSelectedChartPoints]);
 
-  // Auto-load customer segmentation dashboard on page load
-  useEffect(() => {
-    const loadCustomerSegmentationDashboard = async () => {
-      if (components.length === 0) { // Only load if no components are present
-        try {
-          const response = await fetch(`/api/customer-segmentation/data?start_date=2017-01-01&end_date=2021-12-31`);
-          if (!response.ok) throw new Error('Failed to fetch data');
-          const apiData = await response.json();
-          const data = apiData.data;
-
-          const componentId = `customer-segmentation.dashboard.${Date.now()}`;
-          const componentPosition = { x: 100, y: 100 };
-          const componentSize = { width: 1200, height: 800 };
-
-          setComponents([{
-            id: componentId,
-            type: 'customer-segmentation.dashboard',
-            position: componentPosition,
-            size: componentSize,
-            props: data,
-            Component: componentRegistry['customer-segmentation']['dashboard']
-          }]);
-        } catch (error) {
-          console.error('Failed to load customer segmentation dashboard:', error);
-        }
-      }
-    };
-
-    loadCustomerSegmentationDashboard();
-  }, []); // Empty dependency array means this runs once on mount
+  // Auto-load disabled - no dashboard on page load
 
   // Auto-play audio when received
   // useEffect(() => {

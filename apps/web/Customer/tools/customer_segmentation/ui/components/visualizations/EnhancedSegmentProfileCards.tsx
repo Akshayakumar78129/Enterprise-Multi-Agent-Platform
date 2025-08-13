@@ -46,11 +46,11 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
       {
         label: `Segment ${segment.segment}`,
         data: [
-          segment.avgSpend / 1000, // Normalize for display
-          segment.frequency,
-          100 - segment.recency, // Invert recency
-          segment.loyaltyScore,
-          segment.engagementRate,
+          (segment.avgSpend || 0) / 1000, // Normalize for display
+          segment.frequency || 0,
+          100 - (segment.recency || 0), // Invert recency
+          segment.loyaltyScore || 0,
+          segment.engagementRate || 0,
         ],
         backgroundColor: `${getSegmentColor(segment.segment - 1)}30`,
         borderColor: getSegmentColor(segment.segment - 1),
@@ -191,14 +191,18 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
                   fontSize: '14px',
                   color: segmentationTheme.colors.textSecondary,
                 }}>
-                  {segment.customerCount} customers ({((segment.customerCount / segments.reduce((acc, s) => acc + s.customerCount, 0)) * 100).toFixed(1)}%)
+                  {segment.customerCount || 0} customers ({(() => {
+                    const total = segments.reduce((acc, s) => acc + (s.customerCount || 0), 0);
+                    const percentage = total > 0 ? ((segment.customerCount || 0) / total) * 100 : 0;
+                    return percentage.toFixed(1);
+                  })()}%)
                 </div>
                 <div style={{
                   fontSize: '13px',
                   color: getSegmentColor(segment.segment - 1),
                   marginTop: segmentationTheme.spacing.xs,
                 }}>
-                  {getValueRating(segment.avgSpend)}
+                  {getValueRating(segment.avgSpend || 0)}
                 </div>
               </div>
 
@@ -248,10 +252,10 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
               marginBottom: segmentationTheme.spacing.md,
             }}>
               {[
-                { label: 'Avg Spend', value: `$${segment.avgSpend.toLocaleString()}` },
-                { label: 'Frequency', value: `${segment.frequency}/mo` },
-                { label: 'Recency', value: `${segment.recency} days` },
-                { label: 'Loyalty', value: `${segment.loyaltyScore}%` },
+                { label: 'Avg Spend', value: `$${(segment.avgSpend || 0).toLocaleString()}` },
+                { label: 'Frequency', value: `${segment.frequency || 0}/mo` },
+                { label: 'Recency', value: `${segment.recency || 0} days` },
+                { label: 'Loyalty', value: `${segment.loyaltyScore || 0}%` },
               ].map((metric) => (
                 <div
                   key={metric.label}
@@ -315,7 +319,7 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
                         fontSize: '13px',
                         color: segmentationTheme.colors.textSecondary,
                       }}>
-                        {segment.characteristics.slice(0, 3).map((char, i) => (
+                        {(segment.characteristics || []).slice(0, 3).map((char, i) => (
                           <li key={i}>{char}</li>
                         ))}
                       </ul>
@@ -330,7 +334,7 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
                       }}>
                         Marketing Recommendations
                       </h5>
-                      {segment.recommendations.slice(0, 2).map((rec, i) => (
+                      {(segment.recommendations || []).slice(0, 2).map((rec, i) => (
                         <div
                           key={i}
                           style={{
