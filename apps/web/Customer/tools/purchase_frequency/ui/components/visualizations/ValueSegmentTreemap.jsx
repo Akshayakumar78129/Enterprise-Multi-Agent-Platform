@@ -48,13 +48,19 @@ const ValueSegmentTreemap = ({
 
     const trace = {
       type: 'treemap',
-      labels: validData.map(segment => `${segment.segment}<br/>${segment.customerCount} customers<br/>$${segment.avgValue.toLocaleString()}`),
+      labels: validData.map(segment => segment.segment),
       parents: validData.map(() => ''), // All are root level
-      values: validData.map(segment => segment.totalValue),
+      values: validData.map(segment => {
+        const total = Number(segment.totalValue);
+        if (Number.isFinite(total) && total > 0) return total;
+        const avg = Number(segment.avgValue);
+        const cnt = Number(segment.customerCount);
+        return (Number.isFinite(avg) && Number.isFinite(cnt) && avg > 0 && cnt > 0) ? avg * cnt : (Number.isFinite(cnt) ? cnt : 0);
+      }),
       ids: validData.map(segment => segment.segment),
       
       textinfo: 'label+value+percent parent',
-      texttemplate: '<b>%{label}</b><br/>$%{value:,.0f}<br/>%{percentParent}',
+      texttemplate: '<b>%{label}</b><br>%{customdata.customerCount:,} customers<br>$%{customdata.avgValue:,.2f}<br>$%{value:,.0f}<br>%{percentParent}',
       textfont: {
         size: 11,
         color: '#f7f9fb'

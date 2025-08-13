@@ -79,9 +79,11 @@ const nextConfig = {
 
   // Experimental features for better API handling
   experimental: {
-    // Enable Server Components for better performance
-    serverComponentsExternalPackages: [],
+    // Experimental features can be added here
   },
+
+  // Standalone server components packages
+  serverExternalPackages: [],
 
   // Redirects for legacy API routes (if needed)
   async redirects() {

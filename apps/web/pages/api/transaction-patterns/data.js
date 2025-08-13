@@ -1,6 +1,9 @@
 // DIRECT DATABASE ACCESS - Real Transaction Pattern Data
 // This endpoint now connects directly to the SQLite database for real transaction patterns
 
+// Import formatting utilities using ES6 imports
+import { formatToTwoDecimals, formatCurrency, formatPercentage, formatLargeNumber } from '../../../ui-common/utils/numberFormat.js';
+
 export default async function handler(req, res) {
   if (req.method !== "GET" && req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -64,6 +67,50 @@ export default async function handler(req, res) {
       });
     });
 
+    // Apply additional filters beyond date range (optional)
+    let filteredTransactions = realTransactions;
+    try {
+      // Day of week filter: accepts string day name or array of names
+      if (filters.dayOfWeek) {
+        const days = Array.isArray(filters.dayOfWeek) ? filters.dayOfWeek : [filters.dayOfWeek];
+        const dayIndexMap = { Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6 };
+        const indices = days
+          .map(d => (typeof d === 'string' ? dayIndexMap[d] : d))
+          .filter(v => v !== undefined && v !== null);
+        if (indices.length > 0) {
+          filteredTransactions = filteredTransactions.filter(t => indices.includes(parseInt(t.day_of_week)));
+        }
+      }
+      // Hour filter: accepts number or [start, end]
+      if (filters.hour !== undefined && filters.hour !== null) {
+        const toNum = (v) => typeof v === 'string' ? parseInt(v, 10) : Number(v);
+        if (Array.isArray(filters.hour) && filters.hour.length === 2) {
+          const [hs, he] = [toNum(filters.hour[0]), toNum(filters.hour[1])];
+          filteredTransactions = filteredTransactions.filter(t => {
+            const h = parseInt(t.hour);
+            return h >= hs && h <= he;
+          });
+        } else {
+          const hsel = toNum(filters.hour);
+          filteredTransactions = filteredTransactions.filter(t => parseInt(t.hour) === hsel);
+        }
+      }
+      // Payment method filter (if present in data)
+      if (filters.paymentMethod) {
+        const methods = Array.isArray(filters.paymentMethod) ? filters.paymentMethod : [filters.paymentMethod];
+        filteredTransactions = filteredTransactions.filter(t => methods.includes(t.payment_method));
+      }
+    } catch (e) {
+      console.warn('Filter application failed:', e.message);
+    }
+
+    // Format transaction amounts to 2 decimal places
+    filteredTransactions = filteredTransactions.map(t => ({
+      ...t,
+      sales_amount: parseFloat(formatToTwoDecimals(t.sales_amount || 0, false)),
+      sales_quantity: parseFloat(formatToTwoDecimals(t.sales_quantity || 0, false))
+    }));
+
     // Process real transaction data into visualization formats
     console.log('📊 Processing real transaction data for visualizations...');
 
@@ -73,7 +120,7 @@ export default async function handler(req, res) {
     
     for (let day = 0; day < 7; day++) {
       for (let hour = 0; hour < 24; hour++) {
-        const transactionsInSlot = realTransactions.filter(t => 
+        const transactionsInSlot = filteredTransactions.filter(t => 
           parseInt(t.day_of_week) === day && parseInt(t.hour) === hour
         );
         
@@ -90,7 +137,7 @@ export default async function handler(req, res) {
 
     // Generate time series data (monthly aggregation)
     const timeSeriesData = {};
-    realTransactions.forEach(transaction => {
+    filteredTransactions.forEach(transaction => {
       const monthKey = transaction.year_month;
       if (!timeSeriesData[monthKey]) {
         timeSeriesData[monthKey] = {
@@ -115,7 +162,7 @@ export default async function handler(req, res) {
 
     // Generate payment method distribution
     const paymentMethods = {};
-    realTransactions.forEach(transaction => {
+    filteredTransactions.forEach(transaction => {
       const method = transaction.payment_method || 'Unknown';
       if (!paymentMethods[method]) {
         paymentMethods[method] = { count: 0, total_amount: 0 };
@@ -126,7 +173,7 @@ export default async function handler(req, res) {
 
     // Calculate peak hour
     const hourCounts = {};
-    realTransactions.forEach(t => {
+    filteredTransactions.forEach(t => {
       const hour = parseInt(t.hour) || 0;
       hourCounts[hour] = (hourCounts[hour] || 0) + 1;
     });
@@ -139,55 +186,117 @@ export default async function handler(req, res) {
     );
 
     // Simple anomaly detection based on transaction amounts
-    const amounts = realTransactions.map(t => t.sales_amount || 0);
+    const amounts = filteredTransactions.map(t => t.sales_amount || 0);
     const mean = amounts.reduce((sum, val) => sum + val, 0) / amounts.length;
     const stdDev = Math.sqrt(amounts.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / amounts.length);
     const threshold = mean + (2 * stdDev);
-    const anomalies = realTransactions.filter(t => (t.sales_amount || 0) > threshold);
+    const anomalies = filteredTransactions.filter(t => (t.sales_amount || 0) > threshold);
+
+    // Initialize enrichment data
+    let salesInsights = null;
+    let financeInsights = null;
+
+    // Try to enrich with sales_agent.db and financial_agent.db
+    const pathVariants = [
+      ['..', 'adk', 'orchestration_agent', 'database'],
+      ['apps', 'adk', 'orchestration_agent', 'database'],
+    ];
+    const resolveDbPath = (file) => {
+      for (const variant of pathVariants) {
+        const fullPath = path.join(process.cwd(), ...variant, file);
+        try {
+          require('fs').accessSync(fullPath);
+          return fullPath;
+        } catch (e) {
+          // Path doesn't exist, try next variant
+        }
+      }
+      return null;
+    };
 
     // Build response with real transaction data (optimized - don't send all transaction details)
+    const totalAmount = filteredTransactions.reduce((sum, t) => sum + (t.sales_amount || 0), 0);
+    const avgAmount = filteredTransactions.length > 0 ? totalAmount / filteredTransactions.length : 0;
+    
+    // Generate Product Matrix data (Sales Value vs. Quantity)
+    const productData = {};
+    filteredTransactions.forEach(t => {
+      const key = t.product_key;
+      if (!productData[key]) {
+        productData[key] = {
+          name: `Product ${key}`,
+          total_value: 0,
+          total_quantity: 0,
+        };
+      }
+      productData[key].total_value += t.sales_amount || 0;
+      productData[key].total_quantity += t.sales_quantity || 0;
+    });
+    const productMatrix = Object.values(productData);
+
+    // Generate Transaction Amount Distribution data
+    const amountBins = [0, 50, 100, 200, 500, 1000, 5000];
+    const amountDistribution = Array(amountBins.length).fill(0).map((_, i) => ({
+        binName: i < amountBins.length - 1 ? `$${amountBins[i]}-$${amountBins[i+1]}` : `$${amountBins[i]}+`,
+        count: 0
+    }));
+
+    filteredTransactions.forEach(t => {
+        const amount = t.sales_amount || 0;
+        for (let i = amountBins.length - 1; i >= 0; i--) {
+            if (amount >= amountBins[i]) {
+                amountDistribution[i].count++;
+                break;
+            }
+        }
+    });
+
     const response = {
       success: true,
       data: {
-        transactions: realTransactions.slice(0, 100), // Send only first 100 for table display
+        transactions: filteredTransactions.slice(0, 100), // Send only first 100 for table display
         
         kpis: {
-          totalTransactions: realTransactions.length,
-          anomalyRate: (anomalies.length / realTransactions.length) * 100,
+          totalTransactions: filteredTransactions.length,
+          anomalyRate: filteredTransactions.length > 0 ? parseFloat(formatToTwoDecimals((anomalies.length / filteredTransactions.length) * 100, false)) : 0,
           peakHour: peakHour,
           topPaymentMethod: topPaymentMethodKey || 'Credit Card',
           topPaymentPercentage: topPaymentMethodKey ? 
-            (paymentMethods[topPaymentMethodKey].count / realTransactions.length) * 100 : 0,
-          totalAmount: realTransactions.reduce((sum, t) => sum + (t.sales_amount || 0), 0),
-          avgAmount: realTransactions.length > 0 ? 
-            realTransactions.reduce((sum, t) => sum + (t.sales_amount || 0), 0) / realTransactions.length : 0,
-          uniqueCustomers: new Set(realTransactions.map(t => t.customer_id)).size,
-          uniqueItems: new Set(realTransactions.map(t => t.product_key)).size,
+            parseFloat(formatToTwoDecimals((paymentMethods[topPaymentMethodKey].count / filteredTransactions.length) * 100, false)) : 0,
+          totalAmount: parseFloat(formatToTwoDecimals(totalAmount, false)),
+          avgAmount: parseFloat(formatToTwoDecimals(avgAmount, false)),
+          uniqueCustomers: new Set(filteredTransactions.map(t => t.customer_id)).size,
+          uniqueItems: new Set(filteredTransactions.map(t => t.product_key)).size,
           dateRange: `${filters.dateRange.start} to ${filters.dateRange.end}`
         },
         
         temporalHeatmap: heatmapData,
-        timeSeriesData: timeSeriesArray,
+        timeSeries: timeSeriesArray,
+        productMatrix: productMatrix,
+        amountDistribution: amountDistribution,
         productAssociations: [], // Simplified for now
         anomalies: anomalies,
         paymentMethods: Object.keys(paymentMethods).map(method => ({
           method,
           count: paymentMethods[method].count,
-          total_amount: paymentMethods[method].total_amount,
-          percentage: (paymentMethods[method].count / realTransactions.length) * 100
+          total_amount: parseFloat(formatToTwoDecimals(paymentMethods[method].total_amount, false)),
+          percentage: filteredTransactions.length > 0 ? 
+            parseFloat(formatToTwoDecimals((paymentMethods[method].count / filteredTransactions.length) * 100, false)) : 0
         })),
         dailyVolume: Object.keys(timeSeriesData).map(key => ({
           date: key,
           count: timeSeriesData[key].count,
-          total_amount: timeSeriesData[key].value
-        }))
+          total_amount: parseFloat(formatToTwoDecimals(timeSeriesData[key].value, false))
+        })),
+        salesInsights,
+        financeInsights
       },
       filters: filters,
       timestamp: new Date().toISOString(),
       source: 'real-database',
       database: {
         path: 'Customer/database/customers.db',
-        transactions_count: realTransactions.length,
+        transactions_count: filteredTransactions.length,
         note: 'Direct access to real transaction data - 81,423 transactions available'
       }
     };

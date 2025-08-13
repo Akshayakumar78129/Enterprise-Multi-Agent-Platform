@@ -5,4 +5,7 @@ else
   source .venv/bin/activate
   pip install -r requirements.txt
 fi
-uvicorn main:app --host 0.0.0.0 --port 8000
+
+# Allow overriding the port via PORT env var (default 8000)
+PORT="${PORT:-8000}"
+uvicorn main:app --host 0.0.0.0 --port "$PORT"
