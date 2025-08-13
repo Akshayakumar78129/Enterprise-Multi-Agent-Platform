@@ -14,6 +14,7 @@ const FrequencyDistribution = ({
   height = 300
 }) => {
   const [hoveredBin, setHoveredBin] = useState(null);
+  const [keyPoints, setKeyPoints] = useState([]);
 
   const chartData = useMemo(() => {
     console.log('📊 FrequencyDistribution data:', data);
@@ -54,7 +55,7 @@ const FrequencyDistribution = ({
       type: 'bar',
       name: 'Customer Count',
       marker: {
-        color: data.map((bin, index) => {
+        color: actualData.map((bin, index) => {
           if (selectedBin && bin.bin === selectedBin) {
             return '#00e0ff'; // Electric Cyan for selected
           }
@@ -62,14 +63,14 @@ const FrequencyDistribution = ({
             return '#5fd4d6'; // Lighter cyan for hover
           }
           // Gradient from Midnight Navy to Electric Cyan
-          const intensity = bin.count / Math.max(...data.map(b => b.count));
+          const intensity = bin.count / Math.max(...actualData.map(b => b.count));
           const r = Math.round(10 + (0 - 10) * intensity);
           const g = Math.round(18 + (224 - 18) * intensity);
           const b = Math.round(36 + (255 - 36) * intensity);
           return `rgb(${r}, ${g}, ${b})`;
         }),
         line: {
-          color: data.map((bin, index) => {
+          color: actualData.map((bin, index) => {
             if (selectedBin && bin.bin === selectedBin) {
               return '#00e0ff';
             }
@@ -80,7 +81,7 @@ const FrequencyDistribution = ({
           }),
           width: 1
         },
-        opacity: data.map((bin, index) => {
+        opacity: actualData.map((bin, index) => {
           if (selectedBin && bin.bin !== selectedBin) {
             return 0.4; // Fade non-selected bars
           }
@@ -92,7 +93,7 @@ const FrequencyDistribution = ({
         'Customers: %{y}<br>' +
         'Percentage: %{customdata}%<br>' +
         '<extra></extra>',
-      customdata: data.map(bin => bin.percentage),
+      customdata: actualData.map(bin => bin.percentage),
       hoverlabel: {
         bgcolor: '#232a36',
         bordercolor: '#00e0ff',
@@ -144,7 +145,25 @@ const FrequencyDistribution = ({
     ];
 
     console.log('✅ FrequencyDistribution: Generated chartData with trace');
-    return { trace, shapes, avgFrequency };
+
+    // Compute key points for summary
+    const peakBin = actualData.reduce((a, b) => (b.count > a.count ? b : a), actualData[0]);
+    const tail = actualData.find(b => (b.bin.includes('+') || (b.bin.includes('-') && parseInt(b.bin.split('-')[1]) >= 20))) || peakBin;
+    const lowBin = actualData.reduce((a, b) => (b.count < a.count ? b : a), actualData[0]);
+    const top3Share = (() => {
+      const sorted = [...actualData].sort((a,b)=>b.count - a.count).slice(0,3);
+      const share = (sorted.reduce((s, b) => s + b.count, 0) / totalCustomers) * 100;
+      return share.toFixed(1);
+    })();
+    setKeyPoints([
+      `★ Peak frequency bin: ${peakBin.bin} purchases (${peakBin.count} customers)`,
+      `Long tail: ${tail.bin} captures heavy buyers`,
+      `Least common bin: ${lowBin.bin} (${lowBin.count} customers)`,
+      `Top 3 bins cover ${top3Share}% of customers`
+    ]);
+
+    const maxCount = Math.max(...actualData.map(b => b.count));
+    return { trace, shapes, avgFrequency, maxCount };
   }, [data, selectedBin, hoveredBin]);
 
   const handleClick = (eventData) => {
@@ -216,7 +235,7 @@ const FrequencyDistribution = ({
     annotations: chartData ? [
       {
         x: chartData.avgFrequency * 1.5,
-        y: Math.max(...data.map(b => b.count)) * 0.9,
+        y: chartData.maxCount * 0.9,
         text: 'High Freq',
         showarrow: false,
         font: { size: 10, color: '#e930ff' },
@@ -224,7 +243,7 @@ const FrequencyDistribution = ({
       },
       {
         x: chartData.avgFrequency,
-        y: Math.max(...data.map(b => b.count)) * 0.9,
+        y: chartData.maxCount * 0.9,
         text: 'Average',
         showarrow: false,
         font: { size: 10, color: '#00e0ff' },
@@ -232,7 +251,7 @@ const FrequencyDistribution = ({
       },
       {
         x: chartData.avgFrequency * 0.5,
-        y: Math.max(...data.map(b => b.count)) * 0.9,
+        y: chartData.maxCount * 0.9,
         text: 'Low Freq',
         showarrow: false,
         font: { size: 10, color: '#8893a7' },
@@ -289,6 +308,25 @@ const FrequencyDistribution = ({
           color: '#00e0ff'
         }}>
           Selected: {selectedBin} purchases ({(data && data.length > 0 ? data : []).find(d => d.bin === selectedBin)?.count || 0} customers)
+        </div>
+      )}
+
+      {keyPoints && keyPoints.length > 0 && (
+        <div style={{
+          marginTop: '10px',
+          padding: '8px 12px',
+          backgroundColor: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 8,
+          color: '#d6e3f1',
+          fontSize: 12
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: 6, color: '#a5b4fc' }}>Key Points</div>
+          <ul style={{ margin: 0, paddingLeft: 16 }}>
+            {keyPoints.map((kp, i) => (
+              <li key={i} style={{ marginBottom: 4 }}>{kp}</li>
+            ))}
+          </ul>
         </div>
       )}
     </Card>

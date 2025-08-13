@@ -1,0 +1,312 @@
+import React, { useState, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { Scatter } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  LinearScale,
+  PointElement,
+  Tooltip,
+  Legend,
+  ChartOptions,
+} from 'chart.js';
+import { segmentationTheme, getSegmentColor } from '../../styles/theme';
+
+ChartJS.register(LinearScale, PointElement, Tooltip, Legend);
+
+interface DataPoint {
+  customer_id: string;
+  x: number;
+  y: number;
+  segment: number;
+  value?: number;
+  name?: string;
+}
+
+interface EnhancedSegmentDistributionMapProps {
+  scatterData: DataPoint[];
+  highlights?: { segment?: number };
+  width?: number;
+  height?: number;
+  onPointClick?: (point: DataPoint) => void;
+}
+
+const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapProps> = ({
+  scatterData,
+  highlights,
+  width = 760,
+  height = 560,
+  onPointClick,
+}) => {
+  const [selectedPoint, setSelectedPoint] = useState<DataPoint | null>(null);
+  const [hoveredSegment, setHoveredSegment] = useState<number | null>(null);
+
+  const segmentData = React.useMemo(() => {
+    const segments = new Map<number, DataPoint[]>();
+    scatterData.forEach(point => {
+      if (!segments.has(point.segment)) {
+        segments.set(point.segment, []);
+      }
+      segments.get(point.segment)?.push(point);
+    });
+    return segments;
+  }, [scatterData]);
+
+  const chartData = {
+    datasets: Array.from(segmentData.entries()).map(([segment, points]) => ({
+      label: `Segment ${segment}`,
+      data: points.map(p => ({ x: p.x, y: p.y, customer_id: p.customer_id })),
+      backgroundColor: `${getSegmentColor(segment - 1)}${
+        hoveredSegment === segment ? 'FF' : highlights?.segment === segment ? 'CC' : '99'
+      }`,
+      borderColor: getSegmentColor(segment - 1),
+      borderWidth: highlights?.segment === segment ? 2 : 1,
+      pointRadius: hoveredSegment === segment || highlights?.segment === segment ? 8 : 6,
+      pointHoverRadius: 10,
+      pointStyle: 'circle',
+    })),
+  };
+
+  const options: ChartOptions<'scatter'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'right',
+        labels: {
+          color: segmentationTheme.colors.textPrimary,
+          padding: 15,
+          font: {
+            size: 12,
+            family: 'Inter, sans-serif',
+          },
+          generateLabels: (chart) => {
+            const datasets = chart.data.datasets;
+            return datasets.map((dataset, i) => ({
+              text: `${dataset.label} (${dataset.data.length})`,
+              fillStyle: getSegmentColor(i),
+              strokeStyle: getSegmentColor(i),
+              lineWidth: 2,
+              hidden: false,
+              index: i,
+            }));
+          },
+        },
+      },
+      tooltip: {
+        backgroundColor: segmentationTheme.colors.bgGlass,
+        titleColor: segmentationTheme.colors.textPrimary,
+        bodyColor: segmentationTheme.colors.textSecondary,
+        borderColor: segmentationTheme.colors.accentCyan,
+        borderWidth: 1,
+        padding: 12,
+        displayColors: false,
+        callbacks: {
+          title: (context) => {
+            const point = context[0].raw as any;
+            return `Customer: ${point.customer_id}`;
+          },
+          label: (context) => {
+            const datasetLabel = context.dataset.label || '';
+            return [
+              datasetLabel,
+              `X: ${context.parsed.x.toFixed(2)}`,
+              `Y: ${context.parsed.y.toFixed(2)}`,
+            ];
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: {
+          color: 'rgba(255, 255, 255, 0.05)',
+          lineWidth: 1,
+        },
+        ticks: {
+          color: segmentationTheme.colors.textTertiary,
+          font: {
+            size: 11,
+          },
+        },
+        title: {
+          display: true,
+          text: 'Principal Component 1',
+          color: segmentationTheme.colors.textSecondary,
+          font: {
+            size: 12,
+            weight: '500',
+          },
+        },
+      },
+      y: {
+        grid: {
+          color: 'rgba(255, 255, 255, 0.05)',
+          lineWidth: 1,
+        },
+        ticks: {
+          color: segmentationTheme.colors.textTertiary,
+          font: {
+            size: 11,
+          },
+        },
+        title: {
+          display: true,
+          text: 'Principal Component 2',
+          color: segmentationTheme.colors.textSecondary,
+          font: {
+            size: 12,
+            weight: '500',
+          },
+        },
+      },
+    },
+    onClick: (event, elements) => {
+      if (elements.length > 0) {
+        const datasetIndex = elements[0].datasetIndex;
+        const index = elements[0].index;
+        const point = scatterData.find(
+          p => p.x === chartData.datasets[datasetIndex].data[index].x &&
+               p.y === chartData.datasets[datasetIndex].data[index].y
+        );
+        if (point) {
+          setSelectedPoint(point);
+          onPointClick?.(point);
+        }
+      }
+    },
+    onHover: (event, elements) => {
+      if (elements.length > 0) {
+        const segmentIndex = elements[0].datasetIndex + 1;
+        setHoveredSegment(segmentIndex);
+      } else {
+        setHoveredSegment(null);
+      }
+    },
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5 }}
+      style={{
+        background: segmentationTheme.gradients.container,
+        backdropFilter: segmentationTheme.effects.backdropBlur,
+        WebkitBackdropFilter: segmentationTheme.effects.backdropBlur,
+        borderRadius: segmentationTheme.borderRadius.xl,
+        border: `1px solid rgba(0, 224, 255, 0.2)`,
+        boxShadow: segmentationTheme.effects.glassShadow,
+        padding: segmentationTheme.spacing.xl,
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: segmentationTheme.spacing.lg,
+      }}>
+        <div>
+          <h3 style={{
+            fontSize: '20px',
+            fontWeight: '600',
+            color: segmentationTheme.colors.textPrimary,
+            marginBottom: segmentationTheme.spacing.xs,
+          }}>
+            Customer Segment Distribution
+          </h3>
+          <p style={{
+            fontSize: '14px',
+            color: segmentationTheme.colors.textTertiary,
+          }}>
+            Interactive visualization of customer segments in feature space
+          </p>
+        </div>
+        
+        <div style={{
+          display: 'flex',
+          gap: segmentationTheme.spacing.md,
+        }}>
+          <button
+            style={{
+              background: segmentationTheme.colors.bgGlass,
+              border: `1px solid ${segmentationTheme.colors.accentCyan}40`,
+              borderRadius: segmentationTheme.borderRadius.md,
+              color: segmentationTheme.colors.textPrimary,
+              padding: '8px 16px',
+              fontSize: '13px',
+              cursor: 'pointer',
+              transition: segmentationTheme.animation.fast,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = segmentationTheme.gradients.primary;
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = segmentationTheme.colors.bgGlass;
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            Reset View
+          </button>
+        </div>
+      </div>
+
+      <div style={{ 
+        width: '100%', 
+        height: `${height}px`,
+        position: 'relative',
+      }}>
+        <Scatter data={chartData} options={options} />
+        
+        {selectedPoint && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{
+              position: 'absolute',
+              top: '20px',
+              left: '20px',
+              background: segmentationTheme.colors.bgGlass,
+              borderRadius: segmentationTheme.borderRadius.md,
+              padding: segmentationTheme.spacing.md,
+              border: `1px solid ${segmentationTheme.colors.accentCyan}60`,
+              boxShadow: segmentationTheme.effects.tileShadow,
+            }}
+          >
+            <div style={{ color: segmentationTheme.colors.textPrimary, fontSize: '14px' }}>
+              <strong>Selected Customer:</strong> {selectedPoint.customer_id}
+            </div>
+            <div style={{ color: segmentationTheme.colors.textSecondary, fontSize: '13px' }}>
+              Segment {selectedPoint.segment}
+            </div>
+          </motion.div>
+        )}
+      </div>
+
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        width: '200px',
+        height: '200px',
+        background: `radial-gradient(circle, ${segmentationTheme.colors.accentCyan}10 0%, transparent 70%)`,
+        pointerEvents: 'none',
+      }} />
+      
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        width: '150px',
+        height: '150px',
+        background: `radial-gradient(circle, ${segmentationTheme.colors.accentPurple}10 0%, transparent 70%)`,
+        pointerEvents: 'none',
+      }} />
+    </motion.div>
+  );
+};
+
+export default EnhancedSegmentDistributionMap;

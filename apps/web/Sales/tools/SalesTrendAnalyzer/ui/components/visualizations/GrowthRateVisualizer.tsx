@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Card } from '../../../../../../ui-common/design-system/components/Card';
+import type { Data } from 'plotly.js';
 import { GrowthRateVisualizerProps, THEME } from '../../types';
 import { formatCurrency, formatPercentage } from '../../utils/formatters';
 
@@ -11,31 +11,33 @@ const GrowthRateVisualizer: React.FC<GrowthRateVisualizerProps> = ({
   data,
   isLoading = false,
   timePeriod,
-  onTimePeriodChange
+  onTimePeriodChange,
+  onDataPointClick,
+  onInfoIconClick
 }) => {
-  const chartData = useMemo(() => {
+  const chartData = useMemo((): Data[] | null => {
     if (!data?.length) return null;
 
     // Bar chart for growth rates
-    const growthBars = {
+    const growthBars: Data = {
       x: data.map(d => d.period),
       y: data.map(d => d.growth_rate),
       type: 'bar',
       name: 'Growth Rate',
       marker: {
-        color: data.map(d => d.growth_rate >= 0 ? THEME.colors.electricCyan : THEME.colors.signalMagenta)
+        color: data.map(d => d.growth_rate >= 0 ? THEME.colors.risk.green : THEME.colors.risk.red)
       }
     };
 
     // Line for average growth rate
-    const avgLine = {
+    const avgLine: Data = {
       x: data.map(d => d.period),
       y: Array(data.length).fill(data[0].avg_growth_rate),
       type: 'scatter',
       mode: 'lines',
       name: 'Average Growth',
       line: {
-        color: THEME.colors.cloudWhite,
+        color: THEME.colors.text.secondary,
         width: 2,
         dash: 'dash'
       }
@@ -148,57 +150,340 @@ const GrowthRateVisualizer: React.FC<GrowthRateVisualizerProps> = ({
   }
 
   return (
-    <Card
-      title="Growth Rate Analysis"
-      isLoading={isLoading}
+    <div
+      className="glass-card"
       style={{
-        backgroundColor: THEME.colors.midnightNavy,
-        borderRadius: '12px',
-        padding: '16px'
+        borderRadius: '20px',
+        padding: '24px',
+        position: 'relative',
+        overflow: 'hidden'
       }}
     >
+      {/* Header with Gradient Text */}
+      <div style={{ marginBottom: '24px' }}>
+        <h2
+          className="gradient-text"
+          style={{
+            fontSize: THEME.typography.sizes.xl,
+            fontWeight: THEME.typography.weights.bold,
+            margin: '0 0 8px 0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}
+        >
+          📊 Growth Rate Analysis
+        </h2>
+        <p style={{
+          color: THEME.colors.text.secondary,
+          fontSize: THEME.typography.sizes.sm,
+          margin: 0,
+          fontWeight: THEME.typography.weights.medium
+        }}>
+          Period-over-period growth momentum and trends
+        </p>
+      </div>
+
+      {/* Growth Metrics Cards */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
           gap: '16px',
-          marginBottom: '24px'
+          marginBottom: '32px'
         }}
       >
         {metrics?.map((metric, index) => (
           <div
             key={index}
+            className="glass-card"
             style={{
-              backgroundColor: THEME.colors.graphite,
-              padding: '16px',
-              borderRadius: '8px',
-              textAlign: 'center'
+              padding: '20px 16px',
+              borderRadius: '16px',
+              textAlign: 'center',
+              position: 'relative',
+              overflow: 'hidden',
+              animation: `${THEME.animations.scaleIn}`,
+              animationDelay: `${index * 0.1}s`,
+              animationFillMode: 'both'
             }}
           >
-            <div style={{ color: THEME.colors.cloudWhite, fontSize: '14px', marginBottom: '8px' }}>
-              {metric.label}
-            </div>
+            {/* Gradient Background for Positive Growth */}
+            {metric.value >= 0 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%)',
+                  borderRadius: '14px',
+                  zIndex: -1
+                }}
+              />
+            )}
+
+            {/* Icon Badge */}
             <div
               style={{
-                color: metric.value >= 0 ? THEME.colors.electricCyan : THEME.colors.signalMagenta,
-                fontSize: '24px',
-                fontWeight: 'bold'
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                background: metric.value >= 0 
+                  ? THEME.colors.risk.green 
+                  : THEME.colors.risk.red,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '16px',
+                margin: '0 auto 12px',
+                color: THEME.colors.text.white,
+                boxShadow: `0 4px 12px ${metric.value >= 0 ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+              }}
+            >
+              {metric.value >= 0 ? '📈' : '📉'}
+            </div>
+
+            {/* Metric Label */}
+            <div style={{ 
+              color: THEME.colors.text.secondary,
+              fontSize: THEME.typography.sizes.xs,
+              fontWeight: THEME.typography.weights.medium,
+              marginBottom: '8px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>
+              {metric.label}
+            </div>
+
+            {/* Metric Value */}
+            <div
+              style={{
+                color: metric.value >= 0 
+                  ? THEME.colors.risk.green 
+                  : THEME.colors.risk.red,
+                fontSize: THEME.typography.sizes.xl,
+                fontWeight: THEME.typography.weights.extrabold,
+                lineHeight: '1'
               }}
             >
               {metric.formatter(metric.value)}
             </div>
+
+            {/* Trend Indicator */}
+            <div style={{
+              position: 'absolute',
+              top: '12px',
+              right: '12px',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: metric.value >= 0 
+                ? THEME.colors.risk.green 
+                : THEME.colors.risk.red,
+              opacity: 0.6,
+              animation: THEME.animations.float,
+              animationDelay: `${index * 0.5}s`
+            }} />
           </div>
         ))}
       </div>
 
-      {chartData && (
-        <Plot
-          data={chartData}
-          layout={layout}
-          config={config}
-        />
-      )}
-    </Card>
+      {/* Chart Container */}
+      <div style={{
+        position: 'relative',
+        minHeight: '400px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        {isLoading ? (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px'
+          }}>
+            <div style={{ 
+              width: '40px',
+              height: '40px',
+              border: `3px solid ${THEME.colors.primary}`,
+              borderTop: '3px solid transparent',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite'
+            }} />
+            <p style={{
+              color: THEME.colors.text.secondary,
+              fontSize: THEME.typography.sizes.base,
+              margin: 0
+            }}>
+              Calculating growth rates...
+            </p>
+          </div>
+        ) : !data?.length ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '40px'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📊</div>
+            <h3 style={{
+              color: THEME.colors.text.primary,
+              fontSize: THEME.typography.sizes.lg,
+              fontWeight: THEME.typography.weights.semibold,
+              margin: '0 0 8px 0'
+            }}>
+              No Growth Data
+            </h3>
+            <p style={{
+              color: THEME.colors.text.secondary,
+              fontSize: THEME.typography.sizes.base,
+              margin: 0
+            }}>
+              Need historical data to calculate growth rates
+            </p>
+          </div>
+        ) : (
+          <div style={{ width: '100%' }}>
+            <Plot
+              data={chartData}
+              layout={{
+                ...layout,
+                paper_bgcolor: 'transparent',
+                plot_bgcolor: 'transparent',
+                font: { 
+                  family: THEME.typography.fontFamily,
+                  color: THEME.colors.text.primary
+                },
+                title: {
+                  text: '',
+                  font: { 
+                    color: THEME.colors.text.primary,
+                    size: parseInt(THEME.typography.sizes.lg)
+                  }
+                },
+                xaxis: {
+                  ...layout.xaxis,
+                  gridcolor: THEME.colors.primary20,
+                  tickfont: { color: THEME.colors.text.secondary },
+                  title: {
+                    text: 'Period',
+                    font: { color: THEME.colors.text.secondary }
+                  }
+                },
+                yaxis: {
+                  ...layout.yaxis,
+                  gridcolor: THEME.colors.primary20,
+                  tickfont: { color: THEME.colors.text.secondary },
+                  title: {
+                    text: 'Growth Rate (%)',
+                    font: { color: THEME.colors.text.secondary }
+                  },
+                  zeroline: true,
+                  zerolinecolor: THEME.colors.text.secondary,
+                  zerolinewidth: 2
+                },
+                legend: {
+                  font: { color: THEME.colors.text.primary },
+                  bgcolor: 'rgba(0,0,0,0)',
+                  bordercolor: 'rgba(0,0,0,0)'
+                },
+                hovermode: 'x unified',
+                hoverlabel: {
+                  bgcolor: THEME.glass.background,
+                  bordercolor: THEME.colors.primary,
+                  font: { 
+                    color: THEME.colors.text.primary,
+                    family: THEME.typography.fontFamily
+                  }
+                }
+              }}
+              config={{
+                ...config,
+                toImageButtonOptions: {
+                  format: 'png',
+                  filename: 'growth_rate_analysis',
+                  height: 420,
+                  width: 680,
+                  scale: 1
+                }
+              }}
+              onClick={(e) => {
+                if (onDataPointClick && e.points?.[0] && data) {
+                  // Get the clicked point data
+                  const pointIndex = e.points[0].pointIndex;
+                  const clickedDataPoint = data[pointIndex];
+                  
+                  if (clickedDataPoint) {
+                    onDataPointClick({
+                      ...clickedDataPoint,
+                      metricName: 'growth_rate',
+                      date: clickedDataPoint.period,
+                      value: clickedDataPoint.growth_rate
+                    }, e);
+                  }
+                }
+              }}
+              style={{ width: '100%', height: '400px' }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Info Icon */}
+      <div style={{
+        position: 'absolute',
+        top: '24px',
+        right: '60px' // Moved away from edge to prevent off-screen issues
+      }}>
+        <div
+          title="Click for chart explanation"
+          onClick={onInfoIconClick}
+          style={{
+            width: '24px',
+            height: '24px',
+            borderRadius: '50%',
+            background: THEME.colors.primary20,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            fontSize: '12px',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = THEME.colors.primary40;
+            e.currentTarget.style.transform = 'scale(1.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = THEME.colors.primary20;
+            e.currentTarget.style.transform = 'scale(1)';
+          }}
+        >
+          ℹ️
+        </div>
+      </div>
+
+      {/* Floating Pattern Elements */}
+      <div style={{
+        position: 'absolute',
+        bottom: '20px',
+        left: '30px',
+        width: '3px',
+        height: '3px',
+        borderRadius: '50%',
+        background: THEME.colors.secondary40,
+        animation: THEME.animations.float,
+        animationDelay: '2s'
+      }} />
+      
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
   );
 };
 

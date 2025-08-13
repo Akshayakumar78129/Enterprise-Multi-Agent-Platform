@@ -1,12 +1,7 @@
 import React from 'react';
 import { KpiTile } from '../../../../../../ui-common/design-system/components/KpiTile';
-import { KPITileProps, THEME } from '../../types';
+import { KPITilesProps, THEME } from '../../types';
 import { formatCurrency, formatNumber, formatPercentage } from '../../utils/formatters';
-
-interface KPITilesProps extends KPITileProps {
-  selectedMetric?: string;
-  onMetricSelect?: (metric: string) => void;
-}
 
 const KPITiles: React.FC<KPITilesProps> = ({ data, isLoading = false, previousPeriodData, selectedMetric, onMetricSelect }) => {
   // console.log('KPITiles render:', { data, isLoading, selectedMetric });
@@ -82,30 +77,35 @@ const KPITiles: React.FC<KPITilesProps> = ({ data, isLoading = false, previousPe
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
         gap: '24px',
-        marginBottom: '32px',
-        padding: '20px',
-        background: THEME.colors.midnightNavy,
-        borderRadius: '18px',
-        boxShadow: '0 4px 24px 0 rgba(10,18,36,0.12)',
+        marginBottom: '32px'
       }}
     >
       {tiles.map((tile, idx) => (
         <div
           key={tile.label}
+          className="glass-card"
           style={{
             cursor: onMetricSelect ? 'pointer' : 'default',
-            border: tile.metric === selectedMetric ? `2px solid ${THEME.colors.electricCyan}` : '2px solid transparent',
-            borderRadius: 16,
-            transition: 'border 0.2s, box-shadow 0.2s',
-            background: THEME.colors.graphite,
-            padding: '24px 20px',
-            boxShadow: tile.metric === selectedMetric ? '0 0 0 4px rgba(0,224,255,0.12)' : '0 2px 12px 0 rgba(10,18,36,0.08)',
+            border: tile.metric === selectedMetric 
+              ? `2px solid ${THEME.colors.primary}` 
+              : '2px solid transparent',
+            borderRadius: '20px',
+            transition: THEME.animations.spring,
+            padding: '24px',
+            boxShadow: tile.metric === selectedMetric 
+              ? '0 8px 32px rgba(59, 130, 246, 0.25)' 
+              : THEME.glass.boxShadow,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'flex-start',
-            minHeight: 140,
+            minHeight: THEME.dimensions.kpiTile.height,
+            minWidth: THEME.dimensions.kpiTile.minWidth,
             position: 'relative',
             outline: 'none',
+            overflow: 'hidden',
+            animation: `${THEME.animations.scaleIn}`,
+            animationDelay: `${idx * 0.1}s`,
+            animationFillMode: 'both'
           }}
           onClick={() => {
             onMetricSelect && onMetricSelect(tile.metric);
@@ -114,16 +114,155 @@ const KPITiles: React.FC<KPITilesProps> = ({ data, isLoading = false, previousPe
           onKeyPress={e => {
             if (e.key === 'Enter' && onMetricSelect) onMetricSelect(tile.metric);
           }}
+          onMouseEnter={(e) => {
+            if (onMetricSelect) {
+              e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)';
+              e.currentTarget.style.boxShadow = '0 12px 40px rgba(59, 130, 246, 0.2)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (onMetricSelect) {
+              e.currentTarget.style.transform = 'translateY(0) scale(1)';
+              e.currentTarget.style.boxShadow = tile.metric === selectedMetric 
+                ? '0 8px 32px rgba(59, 130, 246, 0.25)' 
+                : THEME.glass.boxShadow;
+            }
+          }}
         >
-          <span style={{ fontSize: 32, marginBottom: 8, color: THEME.colors.electricCyan }}>{tile.icon}</span>
-          <span style={{ fontSize: 18, fontWeight: 600, color: THEME.colors.cloudWhite, marginBottom: 4 }}>{tile.label}</span>
-          <span style={{ fontSize: 28, fontWeight: 700, color: THEME.colors.cloudWhite, marginBottom: 2 }}>{tile.formatter(tile.value)}</span>
-          <span style={{ fontSize: 14, color: THEME.colors.cloudWhite, opacity: 0.7, marginBottom: 8 }}>{tile.subValue}</span>
-          {tile.growth !== undefined && (
-            <span style={{ fontSize: 14, color: tile.growth > 0 ? THEME.colors.electricCyan : tile.growth < 0 ? THEME.colors.signalMagenta : THEME.colors.cloudWhite, fontWeight: 500 }}>
-              {tile.growth > 0 ? '▲' : tile.growth < 0 ? '▼' : '→'} {Math.abs(tile.growth).toFixed(1)}%
-            </span>
+          {/* Gradient Background Overlay for Selected State */}
+          {tile.metric === selectedMetric && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)',
+                borderRadius: '18px',
+                zIndex: -1
+              }}
+            />
           )}
+
+          {/* Icon with Gradient Background */}
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              background: THEME.colors.primaryGradient,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+              marginBottom: '16px',
+              boxShadow: '0 4px 16px rgba(59, 130, 246, 0.3)'
+            }}
+          >
+            {tile.icon}
+          </div>
+
+          {/* Title */}
+          <h3
+            style={{
+              fontSize: THEME.typography.sizes.base,
+              fontWeight: THEME.typography.weights.semibold,
+              color: THEME.colors.text.primary,
+              margin: '0 0 8px 0',
+              lineHeight: '1.2'
+            }}
+          >
+            {tile.label}
+          </h3>
+
+          {/* Main Value with Gradient Text for Selected */}
+          <div
+            style={{
+              fontSize: THEME.typography.sizes['2xl'],
+              fontWeight: THEME.typography.weights.extrabold,
+              background: tile.metric === selectedMetric 
+                ? THEME.colors.text.gradient
+                : 'none',
+              WebkitBackgroundClip: tile.metric === selectedMetric ? 'text' : 'none',
+              WebkitTextFillColor: tile.metric === selectedMetric ? 'transparent' : THEME.colors.text.primary,
+              backgroundClip: tile.metric === selectedMetric ? 'text' : 'none',
+              margin: '0 0 4px 0',
+              lineHeight: '1.1'
+            }}
+          >
+            {tile.formatter(tile.value)}
+          </div>
+
+          {/* Subtitle */}
+          <p
+            style={{
+              fontSize: THEME.typography.sizes.sm,
+              color: THEME.colors.text.secondary,
+              margin: '0 0 12px 0',
+              fontWeight: THEME.typography.weights.medium
+            }}
+          >
+            {tile.subValue}
+          </p>
+
+          {/* Growth Indicator */}
+          {tile.growth !== undefined && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 8px',
+                borderRadius: '8px',
+                background: tile.growth > 0 
+                  ? 'rgba(34, 197, 94, 0.1)' 
+                  : tile.growth < 0 
+                  ? 'rgba(239, 68, 68, 0.1)' 
+                  : 'rgba(107, 114, 128, 0.1)',
+                fontSize: THEME.typography.sizes.sm,
+                fontWeight: THEME.typography.weights.semibold,
+                color: tile.growth > 0 
+                  ? THEME.colors.risk.green 
+                  : tile.growth < 0 
+                  ? THEME.colors.risk.red 
+                  : THEME.colors.text.secondary
+              }}
+            >
+              <span style={{ fontSize: '12px' }}>
+                {tile.growth > 0 ? '📈' : tile.growth < 0 ? '📉' : '➡️'}
+              </span>
+              {tile.growth > 0 ? '+' : ''}{Math.abs(tile.growth).toFixed(1)}%
+            </div>
+          )}
+
+          {/* Floating Dot Pattern for Visual Interest */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              width: '4px',
+              height: '4px',
+              borderRadius: '50%',
+              background: THEME.colors.primary40,
+              opacity: tile.metric === selectedMetric ? 1 : 0.3,
+              transition: THEME.animations.smooth
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: '30px',
+              right: '32px',
+              width: '2px',
+              height: '2px',
+              borderRadius: '50%',
+              background: THEME.colors.secondary40,
+              opacity: tile.metric === selectedMetric ? 1 : 0.2,
+              transition: THEME.animations.smooth
+            }}
+          />
         </div>
       ))}
     </div>

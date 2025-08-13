@@ -5,6 +5,9 @@ import path from 'path';
 // Adjusted import path for types from pages/api directory
 import { SalesKpiData, SalesData } from '../../Sales/tools/SalesPerformanceAnalyzer/ui/types';
 
+// TODO: Re-add numberFormat imports once build issues are resolved
+// import { formatToTwoDecimals, formatCurrency, formatPercentage } from '../../../ui-common';
+
 interface SalesApiRequestBody {
   start_date: string;
   end_date: string;
@@ -228,19 +231,27 @@ function processSalesResults(
         metricValue = (row.revenue - row.cost_of_goods) / row.revenue;
     } // Add other metric calculations as needed
     
+    // Format all numeric values to 2 decimal places
+    const revenue = row.revenue || 0;
+    const unitsSold = row.units_sold || 0;
+    const orderCount = row.order_count || 0;
+    const costOfGoods = row.cost_of_goods || 0;
+    const aov = (orderCount && orderCount > 0) ? revenue / orderCount : 0;
+    const margin = (revenue && revenue > 0) ? ((revenue - costOfGoods) / revenue) * 100 : 0;
+    
     return {
         id: (row.dim_key || 'unknown') + '_' + row.date,
         dimension: row.dim_value || 'Unknown', 
-        metricValue: metricValue,
+        metricValue: parseFloat(metricValue.toFixed(2)),
         date: row.date,
-        // Include all raw metrics for frontend calculations
-        revenue: row.revenue || 0,
-        units_sold: row.units_sold || 0,
-        order_count: row.order_count || 0,
-        cost_of_goods: row.cost_of_goods || 0,
-        // Calculate derived metrics
-        aov: (row.order_count && row.order_count > 0) ? (row.revenue || 0) / row.order_count : 0,
-        margin: (row.revenue && row.revenue > 0) ? ((row.revenue - (row.cost_of_goods || 0)) / row.revenue) * 100 : 0
+        // Include all raw metrics for frontend calculations with proper formatting
+        revenue: parseFloat(revenue.toFixed(2)),
+        units_sold: parseFloat(unitsSold.toFixed(2)),
+        order_count: orderCount,
+        cost_of_goods: parseFloat(costOfGoods.toFixed(2)),
+        // Calculate derived metrics with proper formatting
+        aov: parseFloat(aov.toFixed(2)),
+        margin: parseFloat(margin.toFixed(2))
     };
   }); 
 
@@ -270,16 +281,36 @@ function processSalesResults(
     }
   });
 
+  // Format all KPI values to 2 decimal places
   const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
   const grossMargin = totalRevenue > 0 ? ((totalRevenue - totalCost) / totalRevenue) : 0;
 
   const kpiData: SalesKpiData = {
-    totalRevenue: { value: totalRevenue, trend: 0.02, direction: 'up' }, // Trend is mock
-    averageOrderValue: { value: averageOrderValue, trend: 0.01, direction: 'down' }, // Trend is mock
-    totalUnitsSold: { value: totalUnitsSold, trend: 0.05, direction: 'up' }, // Trend is mock
-    // topPerformingRegion should ideally be dynamic based on dimension and actual top performer
-    topPerformingRegion: { value: topPerformerName, percentage: totalRevenue > 0 && metric === 'revenue' ? (topPerformerValue / totalRevenue) : 0 }, 
-    conversionRate: { value: grossMargin, trend: 0.005, direction: 'up' }, 
+    totalRevenue: { 
+      value: parseFloat(totalRevenue.toFixed(2)), 
+      trend: parseFloat((0.02).toFixed(2)), 
+      direction: 'up' 
+    },
+    averageOrderValue: { 
+      value: parseFloat(averageOrderValue.toFixed(2)), 
+      trend: parseFloat((0.01).toFixed(2)), 
+      direction: 'down' 
+    },
+    totalUnitsSold: { 
+      value: parseFloat(totalUnitsSold.toFixed(2)), 
+      trend: parseFloat((0.05).toFixed(2)), 
+      direction: 'up' 
+    },
+    topPerformingRegion: { 
+      value: topPerformerName, 
+      percentage: totalRevenue > 0 && metric === 'revenue' ? 
+        parseFloat(((topPerformerValue / totalRevenue) * 100).toFixed(2)) : 0 
+    }, 
+    conversionRate: { 
+      value: parseFloat((grossMargin * 100).toFixed(2)), 
+      trend: parseFloat((0.005).toFixed(2)), 
+      direction: 'up' 
+    }, 
   };
 
   return {

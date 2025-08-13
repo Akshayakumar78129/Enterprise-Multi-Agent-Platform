@@ -20,6 +20,13 @@ The Next Purchase Prediction Tool provides AI-powered insights into customer pur
 - **Customer Purchase Journey**: Interactive timeline with historical and predicted purchases
 - **Product Affinity Network**: Network graph showing product-to-product relationships
 - **KPI Dashboard**: Model accuracy, coverage, prediction windows, and active customer metrics
+- **Feature Importance Explorer**: Bar visualization of model feature contributions
+- **Time-to-Purchase Predictor**: Radial / list view of timing predictions
+- **Probability Map**: Scatterplot mapping probability vs days to purchase
+- **Sequence Flow (Sankey)**: Common purchase path transitions
+- **Segment Comparison**: Confidence and volume comparison across segments
+- **Confidence Distribution**: Histogram of prediction confidence buckets
+- **Action Cards**: AI-generated marketing recommendation cards
 
 ## Dashboard Access
 
@@ -116,6 +123,13 @@ interface NextPurchaseKPIs {
 3. **PredictionConfidenceMatrix** - Confidence heatmap visualization
 4. **CustomerPurchaseJourney** - Timeline of customer purchases
 5. **ProductAffinityNetwork** - Product relationship network
+6. **FeatureImportanceExplorer** - Model feature contribution display
+7. **PurchaseTimingPredictor** - Time-to-purchase visualization
+8. **ProbabilityMap** - Customer-product probability scatter
+9. **SequenceFlows** - Purchase sequence Sankey
+10. **SegmentComparison** - Segment-level comparison view
+11. **ConfidenceDistribution** - Histogram visualization
+12. **ActionRecommendationCards** - Marketing actions list
 
 ### LLM Function Calls
 

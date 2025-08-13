@@ -287,4 +287,21 @@ export const nextPurchaseFunctions = [
       required: []
     }
   }
-]; 
+];
+
+// High-level spawning helpers for AI canvas
+export const nextPurchaseSpawnFunctions = [
+  { name: 'spawn_next_purchase_dashboard', description: 'Render full next purchase dashboard', parameters: { type: 'object', properties: {}, required: [] } },
+  { name: 'show_prediction_confidence_matrix', description: 'Show confidence heatmap', parameters: { type: 'object', properties: {}, required: [] } },
+  { name: 'show_customer_purchase_journey', description: 'Show customer purchase journey timeline', parameters: { type: 'object', properties: { customerId: { type: 'number' } }, required: [] } },
+  { name: 'show_product_affinity_network', description: 'Show product affinity network', parameters: { type: 'object', properties: {}, required: [] } },
+  { name: 'show_next_purchase_kpis', description: 'Show KPI tiles', parameters: { type: 'object', properties: {}, required: [] } },
+  { name: 'show_purchase_timing_predictor', description: 'Show time-to-purchase predictor', parameters: { type: 'object', properties: {}, required: [] } },
+  { name: 'show_feature_importance_explorer', description: 'Show feature importance explorer', parameters: { type: 'object', properties: {}, required: [] } }
+];
+
+export const allNextPurchaseFunctionDeclarations = [
+  ...nextPurchaseFunctions,
+  ...nextPurchaseSpawnFunctions
+];
+export default allNextPurchaseFunctionDeclarations;

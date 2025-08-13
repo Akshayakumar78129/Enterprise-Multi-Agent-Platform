@@ -30,19 +30,29 @@ export const Card = ({
   // Define variant styles directly
   const variantStyles = {
     default: {
-      backgroundColor: theme.colors.graphite,
+      background: 'linear-gradient(135deg, #232a36 0%, rgba(58, 68, 89, 0.8) 100%)',
       borderRadius: theme.borderRadius.xl,
       padding: 0,
+      border: '1px solid #3a4459',
+      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
+      transition: 'all 0.3s ease',
+      position: 'relative',
+      overflow: 'hidden',
     },
     interactive: {
-      backgroundColor: theme.colors.graphite,
+      background: 'linear-gradient(135deg, #232a36 0%, rgba(58, 68, 89, 0.8) 100%)',
       borderRadius: theme.borderRadius.xl,
       padding: 0,
+      border: '1px solid #3a4459',
+      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
       cursor: 'pointer',
-      transition: theme.transitions.default,
+      transition: 'all 0.3s ease',
+      position: 'relative',
+      overflow: 'hidden',
       '&:hover': {
-        boxShadow: theme.shadows.lg,
-        transform: 'translateY(-2px)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+        transform: 'translateY(-4px)',
+        borderColor: theme.colors.electricCyan,
       }
     },
     anomaly: {
@@ -114,7 +124,38 @@ export const Card = ({
       className={`enterprise-iq-card ${className}`}
       style={cardStyle}
       onClick={handleClick}
+      onMouseEnter={(e) => {
+        if (variant === 'interactive' || onClick) {
+          e.currentTarget.style.transform = 'translateY(-4px)';
+          e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.2)';
+          e.currentTarget.style.borderColor = '#FFC107';
+          const gradientLine = e.currentTarget.querySelector('.card-gradient-line');
+          if (gradientLine) gradientLine.style.opacity = '1';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (variant === 'interactive' || onClick) {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.15)';
+          e.currentTarget.style.borderColor = '#3a4459';
+          const gradientLine = e.currentTarget.querySelector('.card-gradient-line');
+          if (gradientLine) gradientLine.style.opacity = '0';
+        }
+      }}
     >
+      {/* Top gradient line */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '2px',
+        background: 'linear-gradient(90deg, #FFC107, #FF9800)',
+        opacity: 0,
+        transition: 'opacity 0.3s ease',
+        zIndex: 1
+      }} className="card-gradient-line" />
+      
       {/* Loading overlay */}
       {isLoading && (
         <div style={loadingOverlayStyle}>
