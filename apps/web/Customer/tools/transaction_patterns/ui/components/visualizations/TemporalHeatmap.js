@@ -15,6 +15,7 @@ const TemporalHeatmap = ({
   colorScale = null
 }) => {
   const [plotData, setPlotData] = useState(null);
+  const [keyPoints, setKeyPoints] = useState([]);
   const plotRef = useRef(null);
 
   useEffect(() => {
@@ -52,7 +53,7 @@ const TemporalHeatmap = ({
       [1, '#00e0ff']       // Electric Cyan
     ];
 
-    const trace = {
+  const trace = {
       z: matrix,
       x: hours.map(h => `${h}:00`),
       y: days,
@@ -74,7 +75,33 @@ const TemporalHeatmap = ({
       }
     };
 
-    setPlotData([trace]);
+    // Compute key points
+    const flatData = [];
+    days.forEach(d => {
+      hours.forEach(h => {
+        const point = data.find(p => p.day === d && p.hour === h);
+        flatData.push({ day: d, hour: h, count: point ? (point.transactionCount || 0) : 0 });
+      });
+    });
+    const peak = flatData.reduce((a, b) => (b.count > a.count ? b : a), { day: 'Monday', hour: 0, count: 0 });
+    const nonZero = flatData.filter(p => p.count > 0);
+    const lull = nonZero.length ? nonZero.reduce((a, b) => (b.count < a.count ? b : a), nonZero[0]) : { day: peak.day, hour: peak.hour, count: peak.count };
+    const weekendSet = new Set(['Saturday', 'Sunday']);
+    const weekendTotal = flatData.filter(p => weekendSet.has(p.day)).reduce((s, p) => s + p.count, 0);
+    const total = flatData.reduce((s, p) => s + p.count, 0) || 1;
+    const weekendShare = ((weekendTotal / total) * 100).toFixed(1);
+    // Top hour overall (sum across days)
+    const hourSums = hours.map(h => ({ hour: h, sum: flatData.filter(p => p.hour === h).reduce((s, p) => s + p.count, 0) }));
+    const topHour = hourSums.reduce((a, b) => (b.sum > a.sum ? b : a), { hour: 0, sum: 0 });
+
+    setKeyPoints([
+      `★ Peak traffic: ${peak.day} at ${peak.hour}:00 (${peak.count.toLocaleString()} tx)`,
+      nonZero.length ? `Quietest active slot: ${lull.day} at ${lull.hour}:00 (${lull.count.toLocaleString()} tx)` : `All traffic concentrated around ${peak.hour}:00`,
+      `Weekend share: ${weekendShare}% of all transactions`,
+      `Top hour overall: ${topHour.hour}:00`
+    ]);
+
+    setPlotData([trace,]);
   }, [data, colorScale]);
 
   const layout = {
@@ -106,6 +133,29 @@ const TemporalHeatmap = ({
       zeroline: false
     }
   };
+
+  // Add an annotation for the peak cell for quick visual cue
+  const peakAnnotation = (() => {
+    if (!data || data.length === 0) return [];
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const peak = data.reduce((a, b) => ((b.transactionCount || 0) > (a.transactionCount || 0) ? b : a), data[0]);
+    const x = `${peak.hour}:00`;
+    const y = peak.day || 'Monday';
+    return [
+      {
+        x,
+        y,
+        text: 'Peak',
+        showarrow: true,
+        arrowhead: 2,
+        ax: 20,
+        ay: -20,
+        font: { color: '#00e0ff', size: 10 },
+        bgcolor: 'rgba(0, 224, 255, 0.1)',
+        bordercolor: '#00e0ff'
+      }
+    ];
+  })();
 
   const config = {
     displayModeBar: true,
@@ -156,13 +206,31 @@ const TemporalHeatmap = ({
           <Plot
             ref={plotRef}
             data={plotData}
-            layout={layout}
+            layout={{ ...layout, annotations: peakAnnotation }}
             config={config}
             onClick={handlePlotClick}
             style={{ width: '100%', height: '100%' }}
           />
         )}
       </div>
+      {keyPoints && keyPoints.length > 0 && (
+        <div style={{
+          marginTop: 10,
+          padding: '8px 12px',
+          backgroundColor: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 8,
+          color: '#d6e3f1',
+          fontSize: 12
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: 6, color: '#a5b4fc' }}>Key Points</div>
+          <ul style={{ margin: 0, paddingLeft: 16 }}>
+            {keyPoints.map((kp, idx) => (
+              <li key={idx} style={{ marginBottom: 4 }}>{kp}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </Card>
   );
 };
