@@ -5,7 +5,7 @@ import { Card } from '../Card';
 
 /**
  * KpiTile Component
- * 
+ *
  * A specialized card component for displaying key performance indicators (KPIs)
  * with value, label, comparison, and trend information.
  */
@@ -19,6 +19,8 @@ export const KpiTile = ({
   trendDirection = 'neutral',
   isLoading = false,
   onClick = null,
+  onInfo = null,
+  onExplain = null,
   className = '',
   style = {},
   variant = 'default',
@@ -27,7 +29,7 @@ export const KpiTile = ({
   subtitle = null,
 }) => {
   const theme = useTheme();
-  
+
   // Size configurations
   const sizes = {
     sm: {
@@ -46,7 +48,7 @@ export const KpiTile = ({
       trendSize: theme.typography.fontSize.sm,
     },
   };
-  
+
   // Get trend color based on direction
   const getTrendColor = () => {
     switch (trendDirection) {
@@ -60,7 +62,7 @@ export const KpiTile = ({
         return theme.colors.cloudWhite;
     }
   };
-  
+
   // Get trend arrow based on direction
   const getTrendArrow = () => {
     if (trendDirection.startsWith('up')) {
@@ -71,15 +73,26 @@ export const KpiTile = ({
       return '→';
     }
   };
-  
+
   // Custom body style for KPI tile
   const kpiBodyStyle = {
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
     padding: theme.spacing[4],
+    position: 'relative', // enables absolute-positioned action buttons
   };
-  
+
+  const actionBtnStyle = {
+    background: 'var(--graphite)',
+    color: 'var(--cloudWhite)',
+    border: '1px solid var(--graphiteLight)',
+    borderRadius: 8,
+    padding: '4px 8px',
+    fontSize: 12,
+    cursor: 'pointer',
+  };
+
   return (
     <Card
       variant={variant}
@@ -90,70 +103,100 @@ export const KpiTile = ({
       bodyStyle={kpiBodyStyle}
       fullHeight
     >
+      {/* Actions (top-right) */}
+      {(onInfo || onExplain) && (
+        <div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', gap: 8 }}>
+          {onInfo && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onInfo();
+              }}
+              className="icon-button"
+              style={actionBtnStyle}
+              title="What is this?"
+            >
+              i
+            </button>
+          )}
+          {onExplain && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onExplain();
+              }}
+              className="icon-button"
+              style={actionBtnStyle}
+              title="Explain this KPI"
+            >
+              💡
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Header with icon and label */}
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        marginBottom: theme.spacing[2],
-        color: theme.colors.cloudWhite,
-        opacity: 0.8, 
-      }}>
-        {icon && (
-          <span style={{ marginRight: theme.spacing[2] }}>
-            {icon}
-          </span>
-        )}
-        <div style={{ 
-          fontSize: sizes[size].labelSize,
-          fontWeight: theme.typography.fontWeight.medium,
-        }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          marginBottom: theme.spacing[2],
+          color: theme.colors.cloudWhite,
+          opacity: 0.8,
+        }}
+      >
+        {icon && <span style={{ marginRight: theme.spacing[2] }}>{icon}</span>}
+        <div
+          style={{
+            fontSize: sizes[size].labelSize,
+            fontWeight: theme.typography.fontWeight.medium,
+          }}
+        >
           {label}
         </div>
       </div>
-      
+
       {/* Main value */}
-      <div style={{ 
-        fontSize: sizes[size].valueSize,
-        fontWeight: theme.typography.fontWeight.bold,
-        color: theme.colors.cloudWhite,
-        letterSpacing: '-0.02em',
-        lineHeight: 1.2,
-      }}>
+      <div
+        style={{
+          fontSize: sizes[size].valueSize,
+          fontWeight: theme.typography.fontWeight.bold,
+          color: theme.colors.cloudWhite,
+          letterSpacing: '-0.02em',
+          lineHeight: 1.2,
+        }}
+      >
         {formatter(value)}
       </div>
-      
+
       {/* Subtitle (if provided) */}
       {subtitle && (
-        <div style={{ 
-          fontSize: theme.typography.fontSize.sm,
-          color: theme.colors.cloudWhite,
-          opacity: 0.7,
-          marginTop: theme.spacing[1],
-        }}>
+        <div
+          style={{
+            fontSize: theme.typography.fontSize.sm,
+            color: theme.colors.cloudWhite,
+            opacity: 0.7,
+            marginTop: theme.spacing[1],
+          }}
+        >
           {subtitle}
         </div>
       )}
-      
+
       {/* Trend information */}
       {(trend || trendValue) && (
-        <div style={{ 
-          display: 'flex',
-          alignItems: 'center',
-          marginTop: theme.spacing[2],
-          fontSize: sizes[size].trendSize,
-          color: getTrendColor(),
-          fontWeight: theme.typography.fontWeight.medium,
-        }}>
-          {trend && (
-            <span style={{ marginRight: theme.spacing[1] }}>
-              {getTrendArrow()} {trend}
-            </span>
-          )}
-          {trendValue && (
-            <span>
-              {trendValue} {trendLabel}
-            </span>
-          )}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            marginTop: theme.spacing[2],
+            fontSize: sizes[size].trendSize,
+            color: getTrendColor(),
+            fontWeight: theme.typography.fontWeight.medium,
+          }}
+        >
+          {trend && <span style={{ marginRight: theme.spacing[1] }}>{getTrendArrow()} {trend}</span>}
+          {trendValue && <span>{trendValue} {trendLabel}</span>}
         </div>
       )}
     </Card>
@@ -179,6 +222,10 @@ KpiTile.propTypes = {
   isLoading: PropTypes.bool,
   /** Click handler for the tile */
   onClick: PropTypes.func,
+  /** Info click handler */
+  onInfo: PropTypes.func,
+  /** AI explain click handler */
+  onExplain: PropTypes.func,
   /** Additional CSS class names */
   className: PropTypes.string,
   /** Custom styles for the tile */
@@ -193,4 +240,4 @@ KpiTile.propTypes = {
   subtitle: PropTypes.node,
 };
 
-export default KpiTile; 
+export default KpiTile;

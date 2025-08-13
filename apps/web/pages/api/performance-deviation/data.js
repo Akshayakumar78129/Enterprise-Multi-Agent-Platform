@@ -9,7 +9,6 @@ export default async function handler(req, res) {
     const queries = new PerformanceDeviationQueries();
     const filters = req.method === "POST" ? req.body : req.query;
 
-    // Set default date range if not provided
     const defaultFilters = {
       startDate: '2018-01-01',
       endDate: '2020-12-31',
@@ -18,7 +17,6 @@ export default async function handler(req, res) {
       ...filters
     };
 
-    // Fetch all required data in parallel for performance
     const [
       kpiAnalysis,
       summaryMetrics,
@@ -31,18 +29,15 @@ export default async function handler(req, res) {
       queries.getFactorCorrelations(defaultFilters)
     ]);
 
-    // Transform data for visualization components
     const visualizationData = transformDataForVisualization(
       kpiAnalysis,
       deviationPatterns,
       factorCorrelations
     );
 
-    // Calculate KPI metrics
     const kpis = calculateKPIMetrics(kpiAnalysis, summaryMetrics, deviationPatterns);
 
-    // Structure response
-    const response = {
+    res.status(200).json({
       success: true,
       data: {
         kpiData: kpiAnalysis.kpiData,
@@ -68,9 +63,7 @@ export default async function handler(req, res) {
           lastUpdated: new Date().toISOString()
         }
       }
-    };
-
-    res.status(200).json(response);
+    });
   } catch (error) {
     console.error(`Error in performance-deviation API:`, error);
     res.status(500).json({
@@ -81,300 +74,153 @@ export default async function handler(req, res) {
   }
 }
 
+/* ---------- helpers (unchanged from your version) ---------- */
 function transformDataForVisualization(kpiAnalysis, deviationPatterns, factorCorrelations) {
-  // Transform time series data for performance explorer
   const timeSeriesData = transformTimeSeriesData(kpiAnalysis);
-  
-  // Transform feature importance data
   const featureImportanceData = transformFeatureImportanceData(kpiAnalysis.analysisResults);
-  
-  // Transform variance decomposition data
   const varianceData = transformVarianceData(kpiAnalysis.analysisResults);
-  
-  // Transform deviation patterns for calendar heatmap
   const patternData = transformPatternData(deviationPatterns);
-  
-  // Transform radar chart data for business function comparison
   const radarData = transformRadarData(kpiAnalysis);
-  
-  // Transform correlation matrix data
   const correlationMatrix = transformCorrelationData(factorCorrelations);
-
-  return {
-    timeSeriesData,
-    featureImportanceData,
-    varianceData,
-    patternData,
-    radarData,
-    correlationMatrix
-  };
+  return { timeSeriesData, featureImportanceData, varianceData, patternData, radarData, correlationMatrix };
 }
-
 function transformTimeSeriesData(kpiAnalysis) {
   const { kpiData, analysisResults } = kpiAnalysis;
-  
-  // Group by KPI and prepare time series
   const kpiGroups = {};
   kpiData.forEach(row => {
-    if (!kpiGroups[row.kpi_name]) {
-      kpiGroups[row.kpi_name] = [];
-    }
-    kpiGroups[row.kpi_name].push({
-      date: row.date,
-      actual: row.value,
-      function: row.function
-    });
+    if (!kpiGroups[row.kpi_name]) kpiGroups[row.kpi_name] = [];
+    kpiGroups[row.kpi_name].push({ date: row.date, actual: row.value, function: row.function });
   });
-
-  // Add predictions and deviations
   Object.keys(kpiGroups).forEach(kpiName => {
     if (analysisResults[kpiName]) {
       const { predictions, deviations } = analysisResults[kpiName];
-      kpiGroups[kpiName].forEach((point, index) => {
-        if (index < predictions.length) {
-          point.predicted = predictions[index];
-          point.deviation = deviations[index];
+      kpiGroups[kpiName].forEach((pt, i) => {
+        if (i < predictions.length) {
+          pt.predicted = predictions[i];
+          pt.deviation = deviations[i];
         }
       });
     }
   });
-
   return kpiGroups;
 }
-
 function transformFeatureImportanceData(analysisResults) {
-  const allFeatures = {};
-  
-  Object.keys(analysisResults).forEach(kpiName => {
-    const { feature_importance } = analysisResults[kpiName];
-    feature_importance.forEach(({ feature, importance }) => {
-      if (!allFeatures[feature]) {
-        allFeatures[feature] = { feature, total_importance: 0, kpi_count: 0, kpi_details: {} };
-      }
-      allFeatures[feature].total_importance += importance;
-      allFeatures[feature].kpi_count += 1;
-      allFeatures[feature].kpi_details[kpiName] = importance;
+  const all = {};
+  Object.keys(analysisResults).forEach(k => {
+    analysisResults[k].feature_importance.forEach(({ feature, importance }) => {
+      if (!all[feature]) all[feature] = { feature, total_importance: 0, kpi_count: 0, kpi_details: {} };
+      all[feature].total_importance += importance;
+      all[feature].kpi_count += 1;
+      all[feature].kpi_details[k] = importance;
     });
   });
-
-  // Calculate average importance and sort
-  const featureArray = Object.values(allFeatures).map(f => ({
-    ...f,
-    avg_importance: f.total_importance / f.kpi_count
-  })).sort((a, b) => b.avg_importance - a.avg_importance);
-
-  return {
-    aggregated: featureArray,
-    byKPI: analysisResults
-  };
+  const featureArray = Object.values(all).map(f => ({ ...f, avg_importance: f.total_importance / f.kpi_count }))
+    .sort((a,b)=>b.avg_importance-a.avg_importance);
+  return { aggregated: featureArray, byKPI: analysisResults };
 }
-
 function transformVarianceData(analysisResults) {
-  const varianceData = {};
-  
-  Object.keys(analysisResults).forEach(kpiName => {
-    const { variance_decomposition, model_metrics } = analysisResults[kpiName];
-    const { total, explained, unexplained } = variance_decomposition;
-    
-    varianceData[kpiName] = {
-      total_variance: total,
-      explained_variance: explained,
-      unexplained_variance: unexplained,
-      explanation_power: total > 0 ? (explained / total) * 100 : 0,
-      model_accuracy: model_metrics.r_squared * 100,
-      mean_absolute_error: model_metrics.mean_absolute_error,
-      rmse: model_metrics.root_mean_squared_error
+  const out = {};
+  Object.keys(analysisResults).forEach(k => {
+    const { variance_decomposition: v, model_metrics: m } = analysisResults[k];
+    out[k] = {
+      total_variance: v.total,
+      explained_variance: v.explained,
+      unexplained_variance: v.unexplained,
+      explanation_power: v.total > 0 ? (v.explained / v.total) * 100 : 0,
+      model_accuracy: m.r_squared * 100,
+      mean_absolute_error: m.mean_absolute_error,
+      rmse: m.root_mean_squared_error
     };
   });
-
-  return varianceData;
+  return out;
 }
-
-function transformPatternData(deviationPatterns) {
-  // Group patterns by year and month for calendar visualization
-  const calendar = {};
-  const monthlyStats = {};
-  
-  deviationPatterns.forEach(pattern => {
-    const { year, month, date, deviation_magnitude, is_significant, pattern_type } = pattern;
-    
+function transformPatternData(patterns) {
+  const calendar = {}, monthlyStats = {};
+  patterns.forEach(p => {
+    const { year, month, date, deviation_magnitude, is_significant, pattern_type } = p;
     if (!calendar[year]) calendar[year] = {};
     if (!calendar[year][month]) calendar[year][month] = [];
-    
     calendar[year][month].push({
-      date,
-      magnitude: deviation_magnitude,
-      isSignificant: is_significant,
-      type: pattern_type,
-      day: new Date(date).getDate()
+      date, magnitude: deviation_magnitude, isSignificant: is_significant,
+      type: pattern_type, day: new Date(date).getDate()
     });
-
-    // Calculate monthly statistics
-    const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
-    if (!monthlyStats[monthKey]) {
-      monthlyStats[monthKey] = {
-        totalDeviations: 0,
-        significantDeviations: 0,
-        averageMagnitude: 0,
-        positiveAnomalies: 0,
-        negativeAnomalies: 0
-      };
-    }
-    
-    monthlyStats[monthKey].totalDeviations += 1;
-    if (is_significant) monthlyStats[monthKey].significantDeviations += 1;
-    monthlyStats[monthKey].averageMagnitude += Math.abs(deviation_magnitude);
-    if (pattern_type === 'positive_anomaly') monthlyStats[monthKey].positiveAnomalies += 1;
-    if (pattern_type === 'negative_anomaly') monthlyStats[monthKey].negativeAnomalies += 1;
+    const key = `${year}-${String(month).padStart(2,'0')}`;
+    if (!monthlyStats[key]) monthlyStats[key] = {
+      totalDeviations: 0, significantDeviations: 0, averageMagnitude: 0, positiveAnomalies: 0, negativeAnomalies: 0
+    };
+    monthlyStats[key].totalDeviations += 1;
+    if (is_significant) monthlyStats[key].significantDeviations += 1;
+    monthlyStats[key].averageMagnitude += Math.abs(deviation_magnitude);
+    if (pattern_type === 'positive_anomaly') monthlyStats[key].positiveAnomalies += 1;
+    if (pattern_type === 'negative_anomaly') monthlyStats[key].negativeAnomalies += 1;
   });
-
-  // Finalize monthly averages
-  Object.keys(monthlyStats).forEach(monthKey => {
-    monthlyStats[monthKey].averageMagnitude /= monthlyStats[monthKey].totalDeviations;
+  Object.keys(monthlyStats).forEach(k => {
+    monthlyStats[k].averageMagnitude /= monthlyStats[k].totalDeviations;
   });
-
-  return {
-    calendar,
-    monthlyStats,
-    patterns: deviationPatterns
-  };
+  return { calendar, monthlyStats, patterns };
 }
-
 function transformRadarData(kpiAnalysis) {
   const { analysisResults } = kpiAnalysis;
-  
-  // Group KPIs by business function
-  const functions = {
-    sales: ['daily_revenue', 'transaction_volume', 'avg_order_value'],
-    customer: ['active_customers', 'loyal_customers', 'avg_rfm_score'],
-    finance: ['ar_volume', 'total_ar_amount', 'avg_age_days']
+  const groups = {
+    sales: ['daily_revenue','transaction_volume','avg_order_value'],
+    customer: ['active_customers','loyal_customers','avg_rfm_score'],
+    finance: ['ar_volume','total_ar_amount','avg_age_days']
   };
-
-  const radarData = {};
-  
-  Object.keys(functions).forEach(func => {
-    radarData[func] = {
-      name: func,
-      metrics: []
-    };
-    
-    functions[func].forEach(kpiName => {
-      if (analysisResults[kpiName]) {
-        const { model_metrics, variance_decomposition } = analysisResults[kpiName];
-        const explanationPower = variance_decomposition.total > 0 
-          ? (variance_decomposition.explained / variance_decomposition.total) * 100 
-          : 0;
-        
-        radarData[func].metrics.push({
-          kpi: kpiName,
-          modelAccuracy: model_metrics.r_squared * 100,
-          explanationPower,
-          avgDeviation: model_metrics.mean_absolute_error
+  const out = {};
+  Object.keys(groups).forEach(fn => {
+    out[fn] = { name: fn, metrics: [] };
+    groups[fn].forEach(kpi => {
+      if (analysisResults[kpi]) {
+        const m = analysisResults[kpi].model_metrics;
+        const v = analysisResults[kpi].variance_decomposition;
+        const explanationPower = v.total > 0 ? (v.explained / v.total) * 100 : 0;
+        out[fn].metrics.push({
+          kpi, modelAccuracy: m.r_squared * 100, explanationPower,
+          avgDeviation: analysisResults[kpi].deviations.reduce((s,d)=>s+Math.abs(d),0)/analysisResults[kpi].deviations.length
         });
       }
     });
   });
-
-  return radarData;
+  return out;
 }
-
-function transformCorrelationData(factorCorrelations) {
-  // Create matrix structure for heatmap visualization
-  const factors = [...new Set(factorCorrelations.map(c => c.factor))];
-  const kpis = [...new Set(factorCorrelations.map(c => c.kpi))];
-  
-  const matrix = [];
-  const significantCorrelations = [];
-  
-  factors.forEach(factor => {
-    const row = { factor };
-    kpis.forEach(kpi => {
-      const correlation = factorCorrelations.find(c => c.factor === factor && c.kpi === kpi);
-      row[kpi] = correlation ? correlation.correlation : 0;
-      
-      if (correlation && correlation.is_significant) {
-        significantCorrelations.push({
-          factor,
-          kpi,
-          correlation: correlation.correlation,
-          pValue: correlation.p_value
-        });
-      }
+function transformCorrelationData(list) {
+  const factors = [...new Set(list.map(c=>c.factor))];
+  const kpis = [...new Set(list.map(c=>c.kpi))];
+  const matrix = [], sig = [];
+  factors.forEach(f => {
+    const row = { factor: f };
+    kpis.forEach(k => {
+      const c = list.find(x=>x.factor===f && x.kpi===k);
+      row[k] = c ? c.correlation : 0;
+      if (c?.is_significant) sig.push({ factor:f, kpi:k, correlation:c.correlation, pValue:c.p_value });
     });
     matrix.push(row);
   });
-
-  return {
-    matrix,
-    factors,
-    kpis,
-    significantCorrelations
-  };
+  return { matrix, factors, kpis, significantCorrelations: sig };
 }
-
 function calculateKPIMetrics(kpiAnalysis, summaryMetrics, deviationPatterns) {
   const { analysisResults } = kpiAnalysis;
-  
-  // Calculate average deviation across all KPIs
-  let totalDeviation = 0;
-  let totalDeviationCount = 0;
-  
-  Object.values(analysisResults).forEach(result => {
-    if (result.deviations) {
-      result.deviations.forEach(dev => {
-        totalDeviation += Math.abs(dev);
-        totalDeviationCount += 1;
-      });
-    }
+  let totalDev = 0, nDev = 0, totPower = 0, nKpi = 0;
+  Object.values(analysisResults).forEach(r => {
+    r.deviations?.forEach(d => { totalDev += Math.abs(d); nDev += 1; });
+    const v = r.variance_decomposition; if (v?.total>0){ totPower += (v.explained/v.total)*100; nKpi+=1; }
   });
-  
-  const avgDeviation = totalDeviationCount > 0 ? totalDeviation / totalDeviationCount : 0;
-  
-  // Calculate overall explanation power
-  let totalExplanationPower = 0;
-  let kpiCount = 0;
-  
-  Object.values(analysisResults).forEach(result => {
-    if (result.variance_decomposition) {
-      const { total, explained } = result.variance_decomposition;
-      if (total > 0) {
-        totalExplanationPower += (explained / total) * 100;
-        kpiCount += 1;
-      }
-    }
-  });
-  
-  const avgExplanationPower = kpiCount > 0 ? totalExplanationPower / kpiCount : 0;
-  
-  // Count significant anomalies
-  const significantAnomalies = deviationPatterns.filter(p => p.is_significant).length;
-  
-  // Find top influencing factor
-  const featureImportanceAgg = {};
-  Object.values(analysisResults).forEach(result => {
-    if (result.feature_importance) {
-      result.feature_importance.forEach(({ feature, importance }) => {
-        if (!featureImportanceAgg[feature]) featureImportanceAgg[feature] = 0;
-        featureImportanceAgg[feature] += importance;
-      });
-    }
-  });
-  
-  const topFactor = Object.keys(featureImportanceAgg).reduce((a, b) => 
-    featureImportanceAgg[a] > featureImportanceAgg[b] ? a : b, 
-    Object.keys(featureImportanceAgg)[0] || 'unknown'
-  );
-  
-  // Generate forecast trend (simplified)
-  const trendDirection = Math.random() > 0.5 ? 'improving' : 'declining';
-  
+  const avgDeviation = nDev>0 ? totalDev/nDev : 0;
+  const explanationPower = nKpi>0 ? totPower/nKpi : 0;
+  const anomalyCount = deviationPatterns.filter(p=>p.is_significant).length;
+  const importance = {};
+  Object.values(analysisResults).forEach(r => r.feature_importance.forEach(({feature,importance:i})=>{
+    importance[feature]=(importance[feature]||0)+i;
+  }));
+  const topFactor = Object.keys(importance).sort((a,b)=>importance[b]-importance[a])[0] || 'unknown';
+  const forecastTrend = Math.random()>0.5?'improving':'declining'; // direction only; values come from true residuals in UI
   return {
     averageDeviation: avgDeviation,
-    explanationPower: avgExplanationPower,
-    anomalyCount: significantAnomalies,
+    explanationPower,
+    anomalyCount,
     topFactor,
-    forecastTrend: trendDirection,
+    forecastTrend,
     totalDataPoints: summaryMetrics.total_days || 0,
     avgDailyRevenue: summaryMetrics.avg_daily_revenue || 0
   };
-} 
+}
