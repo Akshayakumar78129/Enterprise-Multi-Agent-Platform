@@ -1,3 +1,6 @@
+import { GoogleGenAI } from "@google/genai";
+
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -8,6 +11,8 @@ export default async function handler(req, res) {
     if (!apiKey) {
       return res.status(200).json({ text: 'AI is not configured (missing GEMINI_API_KEY). Provide the key to enable explanations.' });
     }
+
+    const ai = new GoogleGenAI({ apiKey });
 
     const instructionsByMode = {
       quick: [
@@ -47,24 +52,13 @@ export default async function handler(req, res) {
 
     const finalPrompt = `${system}\n\n---\n\n${user}`;
 
-    const resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + apiKey, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          { role: 'user', parts: [{ text: finalPrompt }] }
-        ]
-      })
+    const resp = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents:finalPrompt,
     });
-
-    if (!resp.ok) {
-      const txt = await resp.text();
-      return res.status(200).json({ text: `AI request failed: ${txt}` });
-    }
-
-    const data = await resp.json();
-    const explanation = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('\n') || 'No explanation received.';
-    const audit = { prompt: finalPrompt, model: 'gemini-1.5-flash' };
+    console.log(resp);
+    const explanation = resp.text || 'No explanation received.';
+    const audit = { prompt: finalPrompt, model: 'gemini-2.5-flash' };
     res.status(200).json({ text: explanation, audit });
   } catch (e) {
     res.status(200).json({ text: `AI error: ${e.message}` });

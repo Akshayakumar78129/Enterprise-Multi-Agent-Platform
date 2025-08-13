@@ -175,7 +175,7 @@ const TransactionPatternsDashboard = ({
       });
       if (!response.ok) throw new Error('AI API request failed');
       const result = await response.json();
-      setAiText(result.explanation || 'No explanation received.');
+      setAiText(result.text || 'No explanation received.');
       setAiAudit(result.audit || null);
     } catch (err) {
       setAiText(`Error: ${err.message}`);
