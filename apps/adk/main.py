@@ -15,13 +15,14 @@ import logging
 from pydantic import BaseModel
 from typing import Optional, Any
 from pydantic import BaseModel, Field
-from lib.utils import get_audio, get_visualisation, get_audio_from_file, get_audio_groq, get_audio_deepgram
+# Lazy import audio/visualization utils where needed to avoid hard deps at startup
 
 # ADK imports
 from google.adk.sessions import InMemorySessionService, Session
 from google.adk.runners import Runner
 from orchestration_agent import root_agent
 from google.adk.cli.fast_api import AgentRunRequest, StreamingMode, RunConfig, Event
+from google.genai import types as genai_types
 
 from customer.agent import root_agent as customer_agent
 from finance.agent import root_agent as finance_agent
@@ -74,6 +75,105 @@ def read_root():
     return {"message": "Hello, World!"}
 
 
+class RunOnceRequest(BaseModel):
+    app_name: str
+    user_id: str
+    session_id: str
+    message: str
+    routing_hint: Optional[str] = None  # e.g., "sales_agent", "customer_insights_agent"
+
+class RunOnceResponse(BaseModel):
+    text: Optional[str] = None
+    is_visualisation: Optional[bool] = None
+    author: Optional[str] = None
+
+
+@app.post("/run_once", response_model=RunOnceResponse)
+async def run_once(req: RunOnceRequest):
+    try:
+        # Ensure session exists
+        _ = await memory_session_service.create_session(app_name=req.app_name, user_id=req.user_id, session_id=req.session_id)
+
+        runner = Runner(agent=root_agent, app_name=req.app_name, session_service=memory_session_service)
+
+        # Build message; include routing hint inline for the orchestrator if provided
+        user_text = req.message
+        if req.routing_hint:
+            user_text = f"[ROUTING_HINT:{req.routing_hint}] " + user_text
+
+        # Run non-streaming
+        events = []
+        # Build a proper Content object expected by Runner (not a plain dict)
+        user_content = genai_types.Content(
+            role="user",
+            parts=[genai_types.Part(text=user_text)],
+        )
+
+        async for event in runner.run_async(
+            user_id=req.user_id,
+            session_id=req.session_id,
+            new_message=user_content,
+            run_config=RunConfig(streaming_mode=StreamingMode.NONE),
+        ):
+            events.append(event)
+
+        # Helper accessors to tolerate dict- or attr-style events
+        def get_author(ev):
+            if hasattr(ev, "author"):
+                return getattr(ev, "author")
+            if isinstance(ev, dict):
+                return ev.get("author")
+            return None
+
+        def get_content(ev):
+            if hasattr(ev, "content"):
+                return getattr(ev, "content")
+            if isinstance(ev, dict):
+                return ev.get("content")
+            return None
+
+        def get_parts_list(content):
+            if content is None:
+                return []
+            if hasattr(content, "parts"):
+                parts = getattr(content, "parts")
+            elif isinstance(content, dict):
+                parts = content.get("parts")
+            else:
+                parts = None
+            return parts or []
+
+        def get_part_text(part):
+            if hasattr(part, "text"):
+                return getattr(part, "text")
+            if isinstance(part, dict):
+                return part.get("text")
+            return None
+
+        # Find the first agent author event with text content
+        for ev in reversed(events):
+            author = get_author(ev)
+            content = get_content(ev)
+            parts = get_parts_list(content)
+            if not (author and parts):
+                continue
+            first_text = get_part_text(parts[0]) if parts else None
+            if not first_text:
+                continue
+            agent_response = first_text
+            # Parse <output> and <is_visualisation>
+            output_match = re.search(r'<output>(.*?)</output>', agent_response, re.DOTALL)
+            is_vis_match = re.search(r'<is_visualisation>(.*?)</is_visualisation>', agent_response)
+            output = output_match.group(1).strip() if output_match else agent_response
+            is_visualisation = is_vis_match.group(1).strip().lower() == 'true' if is_vis_match else False
+            return RunOnceResponse(text=output, is_visualisation=is_visualisation, author=author)
+
+        # Fallback
+        return RunOnceResponse(text="No response generated.", is_visualisation=False, author=None)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/apps/{app_name}/users/{user_id}/sessions/{session_id}")
 async def get_session(app_name: str, user_id: str, session_id: str):
     try:
@@ -111,19 +211,55 @@ async def run_agent(req: AgentRunRequest) -> StreamingResponse:
                 visualisation = None
                 visualisation_text = None
                 is_visualisation = False
+                # Ensure new_message has content.parts shape
+                nm = req.new_message
+                if isinstance(nm, dict) and "content" not in nm and "parts" in nm:
+                    nm = {"role": nm.get("role", "user"), "content": {"parts": nm.get("parts")}}
+
                 async for event in runner.run_async(
                     user_id=req.user_id,
                     session_id=req.session_id,
-                    new_message=req.new_message,
+                    new_message=nm,
                     run_config=RunConfig(streaming_mode=stream_mode),
                 ):
-                    if event.content and event.content.parts and event.author:
+                    # Tolerate dict- or attr-style access for event fields
+                    try:
+                        ev_content = getattr(event, "content", None)
+                        ev_author = getattr(event, "author", None)
+                        if ev_content is None and isinstance(event, dict):
+                            ev_content = event.get("content")
+                        if ev_author is None and isinstance(event, dict):
+                            ev_author = event.get("author")
+
+                        def _parts_list(content):
+                            if content is None:
+                                return []
+                            if hasattr(content, "parts"):
+                                return getattr(content, "parts") or []
+                            if isinstance(content, dict):
+                                return content.get("parts") or []
+                            return []
+
+                        def _part_text(part):
+                            if hasattr(part, "text"):
+                                return getattr(part, "text")
+                            if isinstance(part, dict):
+                                return part.get("text")
+                            return None
+
+                        parts = _parts_list(ev_content)
+                    except Exception:
+                        parts = []
+                        ev_author = None
+
+                    if parts and ev_author:
                         logger.info("Generated event in agent run streaming: %s", event)
                         audio_base64 = None
-                        if event.author in agents_list:
+                        if ev_author in agents_list:
                             
-                            if event.content.parts[0].text:
-                                agent_response = event.content.parts[0].text
+                            first_text = _part_text(parts[0])
+                            if first_text:
+                                agent_response = first_text
                                 
                                 # Extract output and is_visualisation from agent response
                                 output_match = re.search(r'<output>(.*?)</output>', agent_response, re.DOTALL)
@@ -146,16 +282,21 @@ async def run_agent(req: AgentRunRequest) -> StreamingResponse:
 
                         # Run audio and visualisation tasks in parallel
                         tasks = []
-                        # tasks.append(get_audio(output))
-                        # tasks = [get_audio_groq(output)]
-                        tasks.append(get_audio_deepgram(output))
-                        if is_visualisation:
-                            print("Generating visualisation")
-                            tasks.append(get_visualisation(req.new_message.parts[0].text, visualisation_text))
+                        try:
+                            from lib.utils import get_audio_deepgram, get_visualisation
+                            tasks.append(get_audio_deepgram(visualisation_text))
+                            if is_visualisation:
+                                print("Generating visualisation")
+                                tasks.append(get_visualisation(req.new_message.parts[0].text, visualisation_text))
+                        except Exception as _e:
+                            # If optional deps are missing, degrade gracefully: return text only
+                            tasks = []
                         
-                        results = await asyncio.gather(*tasks)
-                        audio_base64 = results[0]
-                        visualisation = results[1] if len(results) > 1 else None                        
+                        audio_base64 = None
+                        if tasks:
+                            results = await asyncio.gather(*tasks)
+                            audio_base64 = results[0]
+                            visualisation = results[1] if len(results) > 1 else None                        
 
                         response = {
                             "audio": audio_base64,

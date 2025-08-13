@@ -1,0 +1,33 @@
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.kpi-tile-custom {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+  text-align: left;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.kpi-tile-custom :global(.kpi-value) {
+  font-size: 2.5rem !important;
+  font-weight: 600 !important;
+}
+
+.kpi-tile-custom :global(.kpi-label) {
+  font-size: 1rem !important;
+  color: var(--text-secondary) !important;
+}
+
+.kpi-tile-custom:hover {
+  transform: translateY(-12px) scale(1.02);
+  background: linear-gradient(135deg, rgba(30, 39, 56, 0.95) 0%, rgba(60, 68, 89, 0.95) 100%);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(0, 224, 255, 0.3);
+}
