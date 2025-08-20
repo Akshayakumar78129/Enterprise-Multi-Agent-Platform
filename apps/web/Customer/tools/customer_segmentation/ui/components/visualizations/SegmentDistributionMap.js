@@ -167,8 +167,37 @@ const SegmentDistributionMap = ({
     if (event.points && event.points.length > 0) {
       const point = event.points[0];
       const customerData = point.customdata;
-      if (customerData && customerData.customer) {
-        onCustomerSelect(customerData.customer);
+      
+      // Check if shift key is pressed
+      if (event.event?.shiftKey) {
+        // Shift+click: Use ChartSelectionManager for multi-selection
+        const selectionAPI = window.chartSelectionAPI;
+        if (selectionAPI && customerData) {
+          const selectionPoint = {
+            chartId: 'segment-distribution-map',
+            chartType: 'scatter',
+            dataIndex: point.pointIndex,
+            label: customerData.segment || 'Unknown',
+            value: point.y || 0,
+            unit: '',
+            coordinates: { 
+              x: event.event?.clientX || 0, 
+              y: event.event?.clientY || 0 
+            },
+            metadata: {
+              customer: customerData.customer,
+              x: point.x,
+              y: point.y,
+              segment: customerData.segment
+            }
+          };
+          selectionAPI.addPoint(selectionPoint);
+        }
+      } else {
+        // Regular click: Original behavior
+        if (customerData && customerData.customer) {
+          onCustomerSelect(customerData.customer, event.event);
+        }
       }
     }
   }, [onCustomerSelect]);

@@ -1,6 +1,6 @@
 import React from 'react';
 import Head from 'next/head';
-import EnhancedSegmentationDashboard from '../../Customer/tools/customer_segmentation/pages/enhanced.page';
+import CustomerSegmentationDashboard from '../../Customer/tools/customer_segmentation/pages/index.page';
 
 export default function CustomerSegmentationPage() {
   return (
@@ -11,7 +11,7 @@ export default function CustomerSegmentationPage() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
       
-      <EnhancedSegmentationDashboard />
+      <CustomerSegmentationDashboard />
     </>
   );
 } 

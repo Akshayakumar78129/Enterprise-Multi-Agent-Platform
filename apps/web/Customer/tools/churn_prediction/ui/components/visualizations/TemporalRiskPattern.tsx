@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { ChurnCustomer } from '../../types';
+import { handleChartClick } from '../../utils/chartSelectionHelper';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
@@ -16,6 +17,7 @@ export interface TemporalRiskPatternProps {
   customers?: ChurnCustomer[];
   data?: ChurnCustomer[];
   riskTimeSeries?: RiskTimeSeriesDatum[];
+  onTimePointClick?: (date: string, riskData: any, event: React.MouseEvent) => void;
 }
 
 const colors = ['#00E676', '#FFB800', '#FF8800', '#FF4444'];
@@ -24,7 +26,8 @@ const riskLabels = ['Low', 'Medium', 'High', 'Very High'];
 export default function TemporalRiskPattern({ 
   customers = [], 
   data = [], 
-  riskTimeSeries 
+  riskTimeSeries,
+  onTimePointClick 
 }: TemporalRiskPatternProps) {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
   const [hoveredDate, setHoveredDate] = useState<string | null>(null);
@@ -263,6 +266,61 @@ export default function TemporalRiskPattern({
             }
           }}
           onUnhover={() => setHoveredDate(null)}
+          onClick={(event: any) => {
+            if (event.points && event.points[0]) {
+              const point = event.points[0];
+              const dateIndex = point.pointIndex;
+              const date = dates[dateIndex];
+              const dataPoint = timeSeriesData[dateIndex];
+              
+              const isShiftClick = event.event?.shiftKey;
+              
+              if (isShiftClick) {
+                // Shift+click: Use ChartSelectionManager for multi-selection
+                const riskCategory = point.data.name || 'Unknown';
+                const value = point.y;
+                
+                handleChartClick({
+                  chartId: 'temporal-risk-pattern',
+                  chartType: 'time-series',
+                  label: `${date} - ${riskCategory}`,
+                  value: value,
+                  unit: ' customers',
+                  index: dateIndex,
+                  color: colors[['Low Risk', 'Medium Risk', 'High Risk', 'Very High Risk'].indexOf(riskCategory)] || '#999',
+                  metadata: {
+                    date,
+                    riskCategory,
+                    distribution: {
+                      low: dataPoint.low,
+                      medium: dataPoint.medium,
+                      high: dataPoint.high,
+                      very_high: dataPoint.very_high
+                    }
+                  }
+                }, event.event);
+              } else {
+                // Regular click: Call the original callback for AI insights
+                if (onTimePointClick) {
+                  const mockEvent = {
+                    clientX: event.event?.clientX || window.innerWidth / 2,
+                    clientY: event.event?.clientY || window.innerHeight / 2,
+                    preventDefault: () => {},
+                    stopPropagation: () => {},
+                    shiftKey: false
+                  } as React.MouseEvent;
+                  
+                  onTimePointClick(date, {
+                    low: dataPoint.low,
+                    medium: dataPoint.medium,
+                    high: dataPoint.high,
+                    very_high: dataPoint.very_high,
+                    total: dataPoint.low + dataPoint.medium + dataPoint.high + dataPoint.very_high
+                  }, mockEvent);
+                }
+              }
+            }
+          }}
         />
       </div>
 

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { ChurnCustomer } from '../../types';
+import { handleChartClick } from '../../utils/chartSelectionHelper';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
@@ -207,20 +208,43 @@ export default function FeatureImportance({
           }}
           onUnhover={() => setHoveredFeature(null)}
           onClick={(event: any) => {
-            if (onFeatureClick && event.points && event.points[0]) {
+            if (event.points && event.points[0]) {
               const point = event.points[0];
               const featureIndex = point.pointIndex;
               const feature = sorted[featureIndex];
               const rank = sortBy === 'importance' ? featureIndex + 1 : featureData.findIndex(f => f.feature === feature.feature) + 1;
               
-              const mockEvent = {
-                clientX: event.event?.clientX || window.innerWidth / 2,
-                clientY: event.event?.clientY || window.innerHeight / 2,
-                preventDefault: () => {},
-                stopPropagation: () => {}
-              } as React.MouseEvent;
+              const isShiftClick = event.event?.shiftKey;
               
-              onFeatureClick(feature.feature, feature.importance, rank, mockEvent);
+              if (isShiftClick) {
+                // Shift+click: Use ChartSelectionManager for multi-selection
+                handleChartClick({
+                  chartId: 'feature-importance',
+                  chartType: 'bar-horizontal',
+                  label: feature.feature,
+                  value: feature.importance,
+                  unit: '%',
+                  index: featureIndex,
+                  color: feature.importance > 0.15 ? '#ff4444' : feature.importance > 0.10 ? '#ff9800' : feature.importance > 0.05 ? '#ffeb3b' : '#4caf50',
+                  metadata: {
+                    rank,
+                    category: feature.category || 'General'
+                  }
+                }, event.event);
+              } else {
+                // Regular click: Call the original callback for AI insights
+                if (onFeatureClick) {
+                  const mockEvent = {
+                    clientX: event.event?.clientX || window.innerWidth / 2,
+                    clientY: event.event?.clientY || window.innerHeight / 2,
+                    preventDefault: () => {},
+                    stopPropagation: () => {},
+                    shiftKey: false
+                  } as React.MouseEvent;
+                  
+                  onFeatureClick(feature.feature, feature.importance, rank, mockEvent);
+                }
+              }
             }
           }}
         />

@@ -59,7 +59,35 @@ const nextConfig = {
   },
 
   // Webpack configuration
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
+    // Memory optimization
+    config.optimization = {
+      ...config.optimization,
+      splitChunks: {
+        chunks: 'all',
+        cacheGroups: {
+          plotly: {
+            name: 'plotly',
+            test: /[\\/]node_modules[\\/](plotly\.js|react-plotly\.js)[\\/]/,
+            chunks: 'all',
+            priority: 30,
+          },
+          charts: {
+            name: 'charts',
+            test: /[\\/]node_modules[\\/](chart\.js|react-chartjs-2|d3|recharts)[\\/]/,
+            chunks: 'all',
+            priority: 25,
+          },
+          vendor: {
+            name: 'vendor',
+            test: /[\\/]node_modules[\\/]/,
+            chunks: 'all',
+            priority: 10,
+          },
+        },
+      },
+    };
+
     // Frontend-compatible SQLite with better-sqlite3
     config.resolve.fallback = {
       ...config.resolve.fallback,
@@ -73,15 +101,27 @@ const nextConfig = {
       // Don't load plotly on server
       config.externals = [...config.externals, 'plotly.js', 'react-plotly.js'];
     }
+
+    // Development memory optimizations
+    if (dev) {
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: ['**/node_modules', '**/.next', '**/.git'],
+      };
+    }
     
     return config;
   },
 
   // Experimental features for better API handling
   experimental: {
-    // Enable Server Components for better performance
-    serverComponentsExternalPackages: [],
+    // Moved to serverExternalPackages as per Next.js 15 requirements
+    optimizeCss: true,
+    optimizePackageImports: ['plotly.js', 'react-plotly.js', 'd3', 'chart.js'],
   },
+
+  // External packages for server components (Next.js 15+)
+  serverExternalPackages: ['better-sqlite3', 'sqlite3', 'mysql2'],
 
   // Redirects for legacy API routes (if needed)
   async redirects() {

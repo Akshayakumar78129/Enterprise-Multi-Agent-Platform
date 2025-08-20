@@ -252,9 +252,11 @@ const SegmentProfileCards = ({
                 ringColor: isSelected ? segmentColor : 'transparent',
                 animationDelay: `${index * 50}ms`
               }}
-              onClick={() => {
-                onSegmentSelect?.(segment.segment_name);
-                setExpandedCard(isExpanded ? null : segment.segment_name);
+              onClick={(e) => {
+                onSegmentSelect?.(segment.segment_name, e);
+                if (!e.shiftKey) {
+                  setExpandedCard(isExpanded ? null : segment.segment_name);
+                }
               }}
             >
               {/* Hover effect overlay */}

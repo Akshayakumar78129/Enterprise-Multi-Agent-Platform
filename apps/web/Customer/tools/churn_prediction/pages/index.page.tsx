@@ -188,10 +188,11 @@ export function ChurnPredictionDashboard() {
           
           .chart-container {
             position: relative;
-            overflow: hidden;
+            overflow: visible;
             box-sizing: border-box;
             padding: 8px;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
+            contain: layout;
           }
           
           .chart-container:hover {
@@ -237,7 +238,8 @@ export function ChurnPredictionDashboard() {
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%, #f8fafc 100%)',
         padding: windowWidth > 1400 ? '40px 60px' : windowWidth > 768 ? '32px 40px' : '24px 20px',
-        position: 'relative'
+        position: 'relative',
+        overflow: 'hidden'
       }}>
       {/* Subtle animated background */}
       <div style={{
@@ -248,7 +250,7 @@ export function ChurnPredictionDashboard() {
         bottom: 0,
         pointerEvents: 'none',
         overflow: 'hidden',
-        zIndex: 0,
+        zIndex: 1,
         background: `
           radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
           radial-gradient(circle at 80% 20%, rgba(147, 51, 234, 0.05) 0%, transparent 50%),
@@ -261,7 +263,7 @@ export function ChurnPredictionDashboard() {
         maxWidth: windowWidth > 1400 ? 1800 : 1200, 
         margin: '0 auto', 
         position: 'relative', 
-        zIndex: 1,
+        zIndex: 10,
         padding: '0 20px'
       }}>
         {/* Modern Header Section */}
@@ -312,16 +314,15 @@ export function ChurnPredictionDashboard() {
             gridTemplateColumns: windowWidth > 1400 ? 'repeat(2, 1fr)' : '1fr', 
             gap: windowWidth > 1400 ? 48 : windowWidth > 768 ? 32 : 24, 
             marginBottom: 60,
-            gridAutoRows: windowWidth > 1400 ? '650px' : windowWidth > 768 ? '580px' : '500px',
+            gridAutoRows: 'minmax(420px, auto)',
             padding: '20px 0'
           }}>
           <div 
             className="chart-container"
             style={{ 
               width: '100%',
-              height: '100%',
-              minHeight: windowWidth > 1400 ? '650px' : windowWidth > 768 ? '580px' : '500px',
-              marginBottom: windowWidth > 1400 ? 0 : 20
+              height: 'auto',
+              minHeight: 'clamp(420px, 50vh, 650px)'
             }}>
             <EnhancedRiskPyramid customers={customers} data={customers} />
           </div>
@@ -329,9 +330,8 @@ export function ChurnPredictionDashboard() {
             className="chart-container"
             style={{ 
               width: '100%',
-              height: '100%',
-              minHeight: windowWidth > 1400 ? '650px' : windowWidth > 768 ? '580px' : '500px',
-              marginBottom: windowWidth > 1400 ? 0 : 20
+              height: 'auto',
+              minHeight: 'clamp(420px, 50vh, 650px)'
             }}>
             <EnhancedProbabilityHistogram customers={customers} data={customers} />
           </div>
@@ -339,9 +339,8 @@ export function ChurnPredictionDashboard() {
             className="chart-container"
             style={{ 
               width: '100%',
-              height: '100%',
-              minHeight: windowWidth > 1400 ? '650px' : windowWidth > 768 ? '580px' : '500px',
-              marginBottom: windowWidth > 1400 ? 0 : 20
+              height: 'auto',
+              minHeight: 'clamp(420px, 50vh, 650px)'
             }}>
             <EnhancedFeatureImportance customers={customers} data={customers} />
           </div>
@@ -349,9 +348,8 @@ export function ChurnPredictionDashboard() {
             className="chart-container"
             style={{ 
               width: '100%',
-              height: '100%',
-              minHeight: windowWidth > 1400 ? '650px' : windowWidth > 768 ? '580px' : '500px',
-              marginBottom: windowWidth > 1400 ? 0 : 20
+              height: 'auto',
+              minHeight: 'clamp(420px, 50vh, 650px)'
             }}>
             <EnhancedTemporalRiskPattern customers={customers} data={customers} />
           </div>
@@ -715,7 +713,7 @@ export function ChurnPredictionDashboard() {
           border: '2px solid rgba(59, 130, 246, 0.3)',
           borderRadius: '30px',
           cursor: 'pointer',
-          zIndex: 99999,
+          zIndex: 9900,
           boxShadow: '0 10px 40px rgba(59, 130, 246, 0.5)',
           transition: 'all 0.3s ease',
           display: 'flex',

@@ -1,6 +1,7 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { Card } from '../../../../../../ui-common/design-system/components/Card';
+import { handleChartClick } from '../../utils/chartSelectionHelper';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
@@ -48,28 +49,56 @@ export default function SegmentMatrix({ segmentMatrix, onSegmentClick }: Segment
         }}
         config={{ displayModeBar: false }}
         onClick={(event: any) => {
-          if (onSegmentClick && event.points && event.points[0]) {
+          if (event.points && event.points[0]) {
             const point = event.points[0];
-            // For heatmaps, point.x gives us the x-axis value (segment name)
-            // We need to find the corresponding segment in our data
             const segmentName = point.x;
+            const riskLevel = point.y;
+            const value = point.z;
             const segment = segmentMatrix.find(s => s.segment === segmentName);
             
             if (segment) {
-              // Create a mock React MouseEvent for positioning
-              const mockEvent = {
-                clientX: event.event?.clientX || window.innerWidth / 2,
-                clientY: event.event?.clientY || window.innerHeight / 2,
-                preventDefault: () => {},
-                stopPropagation: () => {}
-              } as React.MouseEvent;
+              const isShiftClick = event.event?.shiftKey;
               
-              onSegmentClick(segment.segment, {
-                low: segment.low,
-                medium: segment.medium,
-                high: segment.high,
-                very_high: segment.very_high
-              }, mockEvent);
+              if (isShiftClick) {
+                // Shift+click: Use ChartSelectionManager for multi-selection
+                handleChartClick({
+                  chartId: 'segment-matrix',
+                  chartType: 'heatmap',
+                  label: `${segmentName} - ${riskLevel}`,
+                  value: value,
+                  unit: ' customers',
+                  index: event.points[0].pointIndex,
+                  color: value > 30 ? '#FFC107' : value > 20 ? '#64B5F6' : value > 10 ? '#2196F3' : '#1976D2',
+                  metadata: {
+                    segment: segmentName,
+                    riskLevel: riskLevel,
+                    distribution: {
+                      low: segment.low,
+                      medium: segment.medium,
+                      high: segment.high,
+                      very_high: segment.very_high
+                    }
+                  }
+                }, event.event);
+              } else {
+                // Regular click: Call the original callback for AI insights
+                if (onSegmentClick) {
+                  const mockEvent = {
+                    clientX: event.event?.clientX || window.innerWidth / 2,
+                    clientY: event.event?.clientY || window.innerHeight / 2,
+                    preventDefault: () => {},
+                    stopPropagation: () => {},
+                    shiftKey: false
+                  } as React.MouseEvent;
+                  
+                  onSegmentClick(segment.segment, {
+                    low: segment.low,
+                    medium: segment.medium,
+                    high: segment.high,
+                    very_high: segment.very_high
+                  }, mockEvent);
+                }
+              }
             }
           }
         }}

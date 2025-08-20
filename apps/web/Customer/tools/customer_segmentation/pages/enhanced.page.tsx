@@ -7,6 +7,7 @@ import EnhancedSegmentProfileCards from '../ui/components/visualizations/Enhance
 import EnhancedSegmentDistributionMap from '../ui/components/visualizations/EnhancedSegmentDistributionMap';
 import SegmentationChatbot from '../ui/components/chat/SegmentationChatbot';
 import SegmentationBIAgent from '../ui/components/SegmentationBIAgent';
+import { SegmentationDashboardWithSelection } from '../ui/components/SegmentationDashboardWithSelection';
 import {
   setSegmentSummaries,
   setKPIs,
@@ -123,7 +124,10 @@ const EnhancedSegmentationDashboardInner: React.FC = () => {
   }, [dispatch]);
 
   return (
-    <>
+    <SegmentationDashboardWithSelection
+      segmentData={segmentSummaries}
+      kpiData={kpis}
+    >
       <div style={{ 
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #1a1f2e 0%, #2d3748 100%)',
@@ -326,7 +330,7 @@ const EnhancedSegmentationDashboardInner: React.FC = () => {
 
       {/* BI Agent Modal */}
       {showBIAgent && <SegmentationBIAgent onClose={() => setShowBIAgent(false)} />}
-    </>
+    </SegmentationDashboardWithSelection>
   );
 };
 

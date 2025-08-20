@@ -137,15 +137,17 @@ const ChurnRiskPyramid: React.FC<ChurnRiskPyramidProps> = (props) => {
                   filter: 'drop-shadow(0 4px 20px rgba(0,0,0,0.3))',
                   cursor: 'pointer'
                 }}
-                onClick={() => {
-                  // Trigger AI insight when clicking a risk level
-                  if (typeof window !== 'undefined' && (window as any).addAIInsightToChat) {
-                    (window as any).addAIInsightToChat({
-                      label: level.key,
-                      value: percentages[i].toFixed(1),
+                onClick={(e) => {
+                  // Only trigger robot with Shift key
+                  if (typeof window !== 'undefined' && (window as any).robotAddPoint) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    (window as any).robotAddPoint({
+                      x: rect.left + rect.width / 2,
+                      y: rect.top + rect.height / 2,
+                      label: `${level.key} Risk`,
+                      value: `${counts[i]} customers (${percentages[i].toFixed(1)}%)`,
                       chartType: 'Risk Pyramid',
-                      count: counts[i],
-                      total: total
+                      originalEvent: e.nativeEvent
                     });
                   }
                 }}

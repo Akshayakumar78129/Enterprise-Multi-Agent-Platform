@@ -17,6 +17,7 @@ interface InteractiveChatbotProps {
   isOpen: boolean;
   onClose: () => void;
   contextData?: any; // Churn data for context-aware responses
+  selectedPoints?: any[]; // Selected data points from shift+click
 }
 
 // Helper function to format AI messages with proper styling
@@ -90,15 +91,9 @@ const formatTextWithBold = (text: string) => {
   });
 };
 
-export default function InteractiveChatbot({ isOpen, onClose, contextData }: InteractiveChatbotProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: '👋 Hi! I\'m your AI Churn Analysis Assistant. I can help you understand your customer data, analyze trends, and suggest retention strategies. What would you like to know?',
-      sender: 'ai',
-      timestamp: new Date()
-    }
-  ]);
+export default function InteractiveChatbot({ isOpen, onClose, contextData, selectedPoints }: InteractiveChatbotProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [contextDataBackground, setContextDataBackground] = useState<any>(null);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -111,18 +106,91 @@ export default function InteractiveChatbot({ isOpen, onClose, contextData }: Int
     scrollToBottom();
   }, [messages]);
 
+  // Initialize messages and handle selected points
+  useEffect(() => {
+    if (isOpen) {
+      // Store full context in background
+      setContextDataBackground(contextData);
+      
+      // Generate initial message based on selected points
+      let initialMessage = '';
+      if (selectedPoints && selectedPoints.length > 0) {
+        // Show only selected point information
+        initialMessage = `🎯 **Selected Data Analysis**\n\n`;
+        initialMessage += `You've selected ${selectedPoints.length} data point${selectedPoints.length > 1 ? 's' : ''}:\n\n`;
+        
+        selectedPoints.forEach((point, idx) => {
+          initialMessage += `**${idx + 1}. ${point.chartType || 'Data Point'}**\n`;
+          initialMessage += `• **${point.label}**: ${point.value}${point.unit || ''}\n`;
+          if (point.trend) {
+            initialMessage += `• **Trend**: ${point.trend}\n`;
+          }
+          if (point.isAnomaly) {
+            initialMessage += `• ⚠️ **Anomaly Detected**\n`;
+          }
+          initialMessage += `\n`;
+        });
+        
+        initialMessage += `What would you like to know about ${selectedPoints.length === 1 ? 'this data point' : 'these data points'}?`;
+      } else {
+        // Default welcome message when no points selected
+        initialMessage = '👋 Hi! I\'m your AI Churn Analysis Assistant. I can help you understand your customer data, analyze trends, and suggest retention strategies. What would you like to know?';
+      }
+      
+      setMessages([{
+        id: '1',
+        text: initialMessage,
+        sender: 'ai',
+        timestamp: new Date()
+      }]);
+    }
+  }, [isOpen, selectedPoints]);
+
   const generateAIResponse = async (userMessage: string): Promise<string> => {
     // Simulate AI thinking time
     await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
 
     const lowerMessage = userMessage.toLowerCase();
     
-    // Context-aware responses based on churn data
+    // Use background context data for processing, but prioritize selected points in responses
+    const fullContext = contextDataBackground || contextData;
+    const hasSelectedPoints = selectedPoints && selectedPoints.length > 0;
+    
+    // If there are selected points and user asks about them, focus on those
+    if (hasSelectedPoints && (lowerMessage.includes('select') || lowerMessage.includes('point') || lowerMessage.includes('this') || lowerMessage.includes('these'))) {
+      let response = `📊 **Analysis of Selected Points**:\n\n`;
+      
+      selectedPoints.forEach((point, idx) => {
+        response += `**${point.label}** (${point.chartType}):\n`;
+        response += `• Value: ${point.value}${point.unit || ''}\n`;
+        
+        // Add context-specific insights based on point type
+        if (point.chartType === 'risk-pyramid') {
+          const riskPct = (point.value / (fullContext?.customers?.length || 100)) * 100;
+          response += `• Risk Level: ${riskPct > 30 ? '🚨 Critical' : riskPct > 20 ? '⚠️ High' : '📊 Moderate'}\n`;
+          response += `• Revenue Impact: ~$${(point.value * 2500).toLocaleString()}\n`;
+        } else if (point.chartType === 'temporal') {
+          response += `• Trend: ${point.trend || 'Stable'}\n`;
+          response += `• Period: ${point.label}\n`;
+        }
+        response += `\n`;
+      });
+      
+      response += `**Recommendations:**\n`;
+      response += `1. Focus immediate attention on ${selectedPoints[0].label} segment\n`;
+      response += `2. Deploy targeted retention strategies\n`;
+      response += `3. Monitor closely for next 30 days\n\n`;
+      response += `Would you like deeper analysis or specific action plans?`;
+      
+      return response;
+    }
+    
+    // Context-aware responses based on churn data (using background context)
     if (lowerMessage.includes('high risk') || lowerMessage.includes('dangerous')) {
-      const highRiskCustomers = contextData?.customers?.filter((c: any) => c.risk_level === 'High') || [];
-      const veryHighRiskCustomers = contextData?.customers?.filter((c: any) => c.risk_level === 'Very High') || [];
+      const highRiskCustomers = fullContext?.customers?.filter((c: any) => c.risk_level === 'High') || [];
+      const veryHighRiskCustomers = fullContext?.customers?.filter((c: any) => c.risk_level === 'Very High') || [];
       const totalHighRisk = highRiskCustomers.length + veryHighRiskCustomers.length;
-      const totalCustomers = contextData?.customers?.length || 0;
+      const totalCustomers = fullContext?.customers?.length || 0;
       const riskPct = totalCustomers > 0 ? Math.round((totalHighRisk / totalCustomers) * 100) : 0;
       
       return `🚨 **High-Risk Customer Analysis**: You currently have **${totalHighRisk} customers** at high/very high risk (${riskPct}% of total). 
@@ -134,18 +202,18 @@ export default function InteractiveChatbot({ isOpen, onClose, contextData }: Int
 **Key Insights:**
 • **Revenue at Risk**: ~$${(totalHighRisk * 2500).toLocaleString()}
 • **Urgency Level**: ${totalHighRisk > 50 ? 'CRITICAL - Deploy emergency retention campaigns' : totalHighRisk > 20 ? 'HIGH - Focus on personalized outreach' : 'MODERATE - Implement targeted strategies'}
-• **Top Risk Factor**: ${contextData?.topFactor || 'Recency'}
+• **Top Risk Factor**: ${fullContext?.topFactor || 'Recency'}
 
 **Recommended Actions:**
 1. **Immediate**: Contact top ${Math.min(10, veryHighRiskCustomers.length)} very high-risk customers personally
 2. **This Week**: Launch targeted email campaign with special offers to all ${totalHighRisk} high-risk customers
-3. **This Month**: Implement loyalty program improvements and address **${contextData?.topFactor || 'key risk factors'}**
+3. **This Month**: Implement loyalty program improvements and address **${fullContext?.topFactor || 'key risk factors'}**
 
 Would you like me to analyze specific customer segments or suggest detailed retention strategies?`;
     }
 
     if (lowerMessage.includes('trend') || lowerMessage.includes('pattern') || lowerMessage.includes('temporal')) {
-      const riskTimeSeries = contextData?.risk_time_series || [];
+      const riskTimeSeries = fullContext?.risk_time_series || [];
       if (riskTimeSeries.length > 0) {
         const latest = riskTimeSeries[riskTimeSeries.length - 1];
         const earliest = riskTimeSeries[0];
@@ -171,7 +239,7 @@ What specific time period or pattern would you like me to analyze deeper?`;
     }
 
     if (lowerMessage.includes('segment') || lowerMessage.includes('customer type')) {
-      const segments = contextData?.segment_matrix || [];
+      const segments = fullContext?.segment_matrix || [];
       if (segments.length > 0) {
         const riskiestSegment = segments.reduce((prev: any, curr: any) => 
           (curr.high + curr.very_high) > (prev.high + prev.very_high) ? curr : prev
@@ -202,9 +270,9 @@ Which segment would you like me to analyze in detail?`;
     }
 
     if (lowerMessage.includes('strategy') || lowerMessage.includes('retention') || lowerMessage.includes('action')) {
-      const highRiskCustomers = contextData?.customers?.filter((c: any) => c.risk_level === 'High' || c.risk_level === 'Very High') || [];
-      const mediumRiskCustomers = contextData?.customers?.filter((c: any) => c.risk_level === 'Medium') || [];
-      const totalCustomers = contextData?.customers?.length || 0;
+      const highRiskCustomers = fullContext?.customers?.filter((c: any) => c.risk_level === 'High' || c.risk_level === 'Very High') || [];
+      const mediumRiskCustomers = fullContext?.customers?.filter((c: any) => c.risk_level === 'Medium') || [];
+      const totalCustomers = fullContext?.customers?.length || 0;
       const expectedROI = highRiskCustomers.length * 2500; // Updated to match other calculations
       
       return `🎯 **Retention Strategy Recommendations**:
@@ -220,7 +288,7 @@ Which segment would you like me to analyze in detail?`;
 3. **Feedback Collection**: Survey ${mediumRiskCustomers.length} medium-risk customers to prevent escalation
 
 **Long-term (Next 90 Days):**
-1. **Product Improvements**: Address **${contextData?.topFactor || 'top churn factors'}** identified
+1. **Product Improvements**: Address **${fullContext?.topFactor || 'top churn factors'}** identified
 2. **Customer Success**: Implement dedicated success manager for high-value accounts
 3. **Predictive Alerts**: Set up automated early warning system
 
@@ -235,18 +303,18 @@ What specific strategy area would you like me to elaborate on?`;
     }
 
     if (lowerMessage.includes('model') || lowerMessage.includes('accuracy') || lowerMessage.includes('confidence')) {
-      const confidence = contextData?.modelConfidence || 0.85;
+      const confidence = fullContext?.modelConfidence || 0.85;
       return `🤖 **Model Performance Analysis**:
 
 **Current Confidence**: **${(confidence * 100).toFixed(1)}%** (${confidence > 0.8 ? 'Excellent' : confidence > 0.7 ? 'Good' : 'Needs Improvement'})
 
 **Model Insights:**
 • **Accuracy**: ${confidence > 0.8 ? 'High prediction accuracy - trust the insights' : 'Moderate accuracy - use with caution'}
-• **Top Predictor**: **${contextData?.topFactor || 'Recency'}** (strongest churn indicator)
+• **Top Predictor**: **${fullContext?.topFactor || 'Recency'}** (strongest churn indicator)
 • **Reliability**: ${confidence > 0.8 ? 'Suitable for automated decisions' : 'Requires human validation'}
 
 **Feature Importance:**
-${contextData?.feature_importance?.slice(0, 5).map((f: any, i: number) => 
+${fullContext?.feature_importance?.slice(0, 5).map((f: any, i: number) => 
   `${i + 1}. **${f.feature}**: ${(f.importance * 100).toFixed(1)}% impact`
 ).join('\n') || 'Feature data not available'}
 
@@ -296,9 +364,9 @@ What would you like to explore first?`;
     return `🤔 I understand you're asking about "${userMessage}". Let me provide some insights based on your current data:
 
 **Quick Analysis:**
-• **Total Customers**: ${contextData?.customers?.length || 0}
-• **High Risk**: ${contextData?.customers?.filter((c: any) => c.risk_level === 'High' || c.risk_level === 'Very High').length || 0} customers
-• **Model Confidence**: ${((contextData?.modelConfidence || 0.85) * 100).toFixed(1)}%
+• **Total Customers**: ${fullContext?.customers?.length || 0}
+• **High Risk**: ${fullContext?.customers?.filter((c: any) => c.risk_level === 'High' || c.risk_level === 'Very High').length || 0} customers
+• **Model Confidence**: ${((fullContext?.modelConfidence || 0.85) * 100).toFixed(1)}%
 
 **I can help you with:**
 • 📈 **Trend Analysis** - "Show me churn trends"
@@ -364,7 +432,7 @@ Could you be more specific about what aspect you'd like me to analyze? For examp
       right: 0,
       bottom: 0,
       background: 'rgba(0, 0, 0, 0.7)',
-      zIndex: 2000,
+      zIndex: 1200,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
