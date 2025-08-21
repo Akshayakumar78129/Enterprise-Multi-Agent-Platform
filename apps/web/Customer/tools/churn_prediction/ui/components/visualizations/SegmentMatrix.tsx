@@ -27,6 +27,25 @@ export default function SegmentMatrix({ segmentMatrix, onSegmentClick }: Segment
     segmentMatrix.map(s => s.high),
     segmentMatrix.map(s => s.very_high)
   ];
+  
+  // Calculate totals for percentage display
+  const segmentTotals = segmentMatrix.map(s => s.low + s.medium + s.high + s.very_high);
+  
+  // Create custom hover text for each cell
+  const customHoverText = z.map((row, riskIndex) => 
+    row.map((value, segmentIndex) => {
+      const segment = segmentMatrix[segmentIndex];
+      const total = segmentTotals[segmentIndex];
+      const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
+      const riskLevel = riskLabels[riskIndex];
+      
+      return `<b>${segment.segment}</b><br>` +
+             `<b style="color: ${colors[riskIndex]}">${riskLevel} Risk</b><br>` +
+             `Customers: <b>${value}</b> (${percentage}%)<br>` +
+             `Total in Segment: ${total}<br>` +
+             `<span style="color: #00e0ff">Click for details</span>`;
+    })
+  );
   return (
     <Card style={{ background: '#232a36', padding: 16 }}>
       <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Segment Comparison Matrix</div>
@@ -39,6 +58,18 @@ export default function SegmentMatrix({ segmentMatrix, onSegmentClick }: Segment
           colorscale: [[0, '#1976D2'], [0.33, '#2196F3'], [0.66, '#64B5F6'], [1, '#FFC107']],
           showscale: true,
           hoverongaps: false,
+          text: customHoverText,
+          hovertemplate: '%{text}<extra></extra>',
+          hoverlabel: {
+            bgcolor: 'rgba(30, 39, 56, 0.95)',
+            bordercolor: '#00e0ff',
+            font: {
+              family: 'Inter, sans-serif',
+              size: 13,
+              color: '#f7f9fb'
+            },
+            align: 'left'
+          }
         }]}
         layout={{
           margin: { l: 80, r: 10, t: 10, b: 40 },

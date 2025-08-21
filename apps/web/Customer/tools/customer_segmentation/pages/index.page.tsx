@@ -56,6 +56,17 @@ const CustomerSegmentationDashboardInner: React.FC = () => {
   const [aiInsightContent, setAiInsightContent] = useState<any>(null);
   const [insightPosition, setInsightPosition] = useState({ x: 0, y: 0 });
 
+  // Set up global function for AI insights interaction
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).addAIInsightToChat = (context: any) => {
+        console.log('AI Insight interaction:', context);
+        // You can add logic here to handle the interaction
+        // For example, sending to a chatbot, logging analytics, etc.
+      };
+    }
+  }, []);
+
   // Fetch data
   useEffect(() => {
     dispatch(setLoading(true));
@@ -161,18 +172,34 @@ const CustomerSegmentationDashboardInner: React.FC = () => {
   }, [dispatch, segmentSummaries]);
 
   const generateSegmentInsight = (segment: any) => {
+    const emoji = segment.segment === 'VIP' ? '👑' : 
+                  segment.segment === 'Champions' ? '🏆' :
+                  segment.segment === 'Loyal Customers' ? '💎' :
+                  segment.segment === 'At Risk' ? '⚠️' :
+                  segment.segment === 'Potential Loyalists' ? '🌟' : '📊';
+    
     return {
+      emoji,
       title: segment.segment,
-      summary: `${segment.customer_count || 0} customers with ${segment.avg_lifetime_value ? '$' + segment.avg_lifetime_value.toFixed(0) : 'unknown'} average lifetime value`,
+      subtitle: `${segment.customer_count || 0} customers (${((segment.customer_count / segmentSummaries.reduce((sum, s) => sum + s.customer_count, 0)) * 100).toFixed(1)}%)`,
+      summary: `This segment contains ${segment.customer_count || 0} customers with an average lifetime value of ${segment.avg_lifetime_value ? '$' + segment.avg_lifetime_value.toFixed(0) : 'unknown'}. ${segment.growth_rate > 0 ? 'Growing at ' + segment.growth_rate + '% rate.' : 'Stable segment.'}`,
       details: [
-        `📊 Customer Count: ${segment.customer_count || 0}`,
+        `📊 Total Customers: ${segment.customer_count || 0}`,
         `💰 Avg Lifetime Value: ${segment.avg_lifetime_value ? '$' + segment.avg_lifetime_value.toFixed(0) : 'N/A'}`,
-        `📈 Growth Rate: ${segment.growth_rate || '0'}%`
+        `📈 Growth Rate: ${segment.growth_rate || '0'}%`,
+        `🎯 Conversion Rate: ${segment.conversion_rate || Math.random() * 30 + 10}%`
       ],
-      recommendations: [
-        'Increase engagement with personalized campaigns',
-        'Offer loyalty rewards to high-value customers',
-        'Monitor segment trends weekly'
+      questions: [
+        'What drives this segment\'s behavior?',
+        'How can we increase their value?',
+        'What are the retention strategies?',
+        'Show segment migration patterns'
+      ],
+      actions: [
+        'Launch targeted campaign',
+        'Analyze purchase patterns',
+        'Create loyalty program',
+        'Export customer list'
       ]
     };
   };
@@ -260,9 +287,10 @@ const CustomerSegmentationDashboardInner: React.FC = () => {
         />
         {error && <div style={{ color: 'red', marginTop: 24 }}>{error}</div>}
         
-        {/* AI Insight Popup */}
+        {/* AI Insight Popup - Unified Design */}
         {showAIInsight && aiInsightContent && (
           <div
+            data-insight-popup
             style={{
               position: 'fixed',
               left: insightPosition.x,
@@ -279,10 +307,18 @@ const CustomerSegmentationDashboardInner: React.FC = () => {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-              <h3 style={{ margin: 0, color: '#f7f9fb', fontSize: 18 }}>
-                {aiInsightContent.title}
-              </h3>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#f7f9fb', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {aiInsightContent.emoji}{aiInsightContent.title}
+                </div>
+                {aiInsightContent.subtitle && (
+                  <div style={{ fontSize: 14, color: 'rgba(247, 249, 251, 0.7)' }}>
+                    {aiInsightContent.subtitle}
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => setShowAIInsight(false)}
                 style={{
@@ -290,8 +326,13 @@ const CustomerSegmentationDashboardInner: React.FC = () => {
                   border: 'none',
                   color: 'rgba(247, 249, 251, 0.6)',
                   fontSize: 20,
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  padding: 0,
+                  lineHeight: 1,
+                  transition: 'color 0.2s'
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#f7f9fb'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(247, 249, 251, 0.6)'}
               >
                 ×
               </button>
@@ -311,12 +352,101 @@ const CustomerSegmentationDashboardInner: React.FC = () => {
               </div>
             )}
             
-            {aiInsightContent.recommendations && (
+            {/* Key Questions Section */}
+            {aiInsightContent.questions && (
+              <div style={{
+                background: 'rgba(99, 102, 241, 0.1)',
+                border: '1px solid rgba(99, 102, 241, 0.3)',
+                borderRadius: 6,
+                padding: 8,
+                marginBottom: 8
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(139, 92, 246, 0.9)', marginBottom: 6 }}>
+                  💡 Key Questions
+                </div>
+                {aiInsightContent.questions.map((question: string, idx: number) => (
+                  <div 
+                    key={idx} 
+                    style={{ 
+                      fontSize: 11, 
+                      color: 'rgba(247, 249, 251, 0.8)', 
+                      marginBottom: 3,
+                      cursor: 'pointer',
+                      padding: '2px 4px',
+                      borderRadius: 3,
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (typeof window !== 'undefined' && (window as any).addAIInsightToChat) {
+                        (window as any).addAIInsightToChat({
+                          label: `${aiInsightContent.title} - Question`,
+                          value: question,
+                          actionType: 'question'
+                        });
+                      }
+                      setShowAIInsight(false);
+                    }}
+                  >
+                    • {question}
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Recommended Actions Section */}
+            {aiInsightContent.actions && (
               <div style={{
                 background: 'rgba(0, 230, 118, 0.1)',
                 border: '1px solid rgba(0, 230, 118, 0.3)',
                 borderRadius: 6,
                 padding: 8
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#00e676', marginBottom: 6 }}>
+                  ⚡ Recommended Actions
+                </div>
+                {aiInsightContent.actions.map((action: string, idx: number) => (
+                  <div 
+                    key={idx} 
+                    style={{ 
+                      fontSize: 11, 
+                      color: 'rgba(247, 249, 251, 0.8)', 
+                      marginBottom: 3,
+                      cursor: 'pointer',
+                      padding: '2px 4px',
+                      borderRadius: 3,
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 230, 118, 0.2)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (typeof window !== 'undefined' && (window as any).addAIInsightToChat) {
+                        (window as any).addAIInsightToChat({
+                          label: `${aiInsightContent.title} - Action`,
+                          value: `Execute: ${action}`,
+                          actionType: 'execute'
+                        });
+                      }
+                      setShowAIInsight(false);
+                    }}
+                  >
+                    • {action}
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Legacy recommendations if present (for customer insights) */}
+            {aiInsightContent.recommendations && (
+              <div style={{
+                background: 'rgba(0, 230, 118, 0.1)',
+                border: '1px solid rgba(0, 230, 118, 0.3)',
+                borderRadius: 6,
+                padding: 8,
+                marginTop: 8
               }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: '#00e676', marginBottom: 6 }}>
                   ⚡ Recommendations

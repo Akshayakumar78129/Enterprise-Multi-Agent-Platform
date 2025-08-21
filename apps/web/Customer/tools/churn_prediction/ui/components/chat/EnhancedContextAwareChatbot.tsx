@@ -243,33 +243,29 @@ export default function EnhancedContextAwareChatbot({ dashboardContext }: Enhanc
   const generateSelectedPointsMessage = (selectedPoints: any[]) => {
     if (!selectedPoints || selectedPoints.length === 0) return '';
     
-    let message = `🎯 **Selected Data Points Analysis**\n\n`;
-    message += `You've selected **${selectedPoints.length} data point${selectedPoints.length > 1 ? 's' : ''}** for analysis:\n\n`;
+    let message = `🎯 **Selected Data Points Analysis**\n`;
+    message += `You've selected **${selectedPoints.length} data point${selectedPoints.length > 1 ? 's' : ''}** for analysis:\n`;
     
     selectedPoints.forEach((point, idx) => {
-      message += `**${idx + 1}. ${point.label || 'Data Point'}**\n`;
-      message += `• **Chart**: ${point.chartType || 'Unknown'}\n`;
-      message += `• **Value**: ${point.value}${point.unit || ''}\n`;
+      message += `\n**${idx + 1}. ${point.label || 'Data Point'}** - `;
+      message += `${point.chartType || 'Unknown'} • `;
+      message += `${point.value}${point.unit || ''}`;
       
       if (point.chartType === 'risk-pyramid') {
         const riskImpact = point.value * 2500;
-        message += `• **Risk Level**: ${point.label}\n`;
-        message += `• **Revenue at Risk**: $${riskImpact.toLocaleString()}\n`;
+        message += ` • $${(riskImpact/1000).toFixed(0)}K risk`;
       }
       
       if (point.trend) {
-        message += `• **Trend**: ${point.trend}\n`;
+        message += ` • ${point.trend}`;
       }
       
       if (point.isAnomaly) {
-        message += `• ⚠️ **Anomaly Detected**\n`;
+        message += ` ⚠️`;
       }
-      
-      message += `\n`;
     });
     
-    message += `\n**Analysis Modes:**\n`;
-    message += `Select an analysis mode below or ask me anything about the selected data.`;
+    message += `\n\n**Analysis Modes:** Select below or ask me anything.`;
     
     return message;
   };

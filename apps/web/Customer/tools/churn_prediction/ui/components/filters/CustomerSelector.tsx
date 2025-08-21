@@ -21,7 +21,7 @@ export default function CustomerSelector({
   useEffect(() => {
     setSelectedCustomers([]);
     onCustomerSelect([]);
-  }, [selectedSegments.join(','), onCustomerSelect]);
+  }, [selectedSegments.join(',')]);
 
   // Don't render if no segments are selected
   if (!selectedSegments || selectedSegments.length === 0) {
@@ -319,10 +319,11 @@ export default function CustomerSelector({
                     <input
                       type="checkbox"
                       checked={selectedCustomers.includes(customer.customer_id)}
-                      onChange={() => {}}
+                      readOnly
                       style={{
                         marginRight: 12,
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        pointerEvents: 'none'
                       }}
                     />
                     

@@ -115,23 +115,17 @@ export default function InteractiveChatbot({ isOpen, onClose, contextData, selec
       // Generate initial message based on selected points
       let initialMessage = '';
       if (selectedPoints && selectedPoints.length > 0) {
-        // Show only selected point information
-        initialMessage = `🎯 **Selected Data Analysis**\n\n`;
-        initialMessage += `You've selected ${selectedPoints.length} data point${selectedPoints.length > 1 ? 's' : ''}:\n\n`;
+        // Compact selected point information
+        initialMessage = `🎯 **Selected Data**\n`;
+        initialMessage += `${selectedPoints.length} point${selectedPoints.length > 1 ? 's' : ''}: `;
         
         selectedPoints.forEach((point, idx) => {
-          initialMessage += `**${idx + 1}. ${point.chartType || 'Data Point'}**\n`;
-          initialMessage += `• **${point.label}**: ${point.value}${point.unit || ''}\n`;
-          if (point.trend) {
-            initialMessage += `• **Trend**: ${point.trend}\n`;
-          }
-          if (point.isAnomaly) {
-            initialMessage += `• ⚠️ **Anomaly Detected**\n`;
-          }
-          initialMessage += `\n`;
+          if (idx > 0) initialMessage += ` • `;
+          initialMessage += `${point.label}(${point.value}${point.unit || ''})`;
+          if (point.isAnomaly) initialMessage += `⚠️`;
         });
         
-        initialMessage += `What would you like to know about ${selectedPoints.length === 1 ? 'this data point' : 'these data points'}?`;
+        initialMessage += `\n\nWhat would you like to analyze?`;
       } else {
         // Default welcome message when no points selected
         initialMessage = '👋 Hi! I\'m your AI Churn Analysis Assistant. I can help you understand your customer data, analyze trends, and suggest retention strategies. What would you like to know?';

@@ -653,12 +653,43 @@ const ChurnRiskPyramidWithSelection: React.FC<ChurnRiskPyramidProps> = (props) =
                 ⚡ Recommended Actions
               </div>
               {insightContent.actions.map((action: string, idx: number) => (
-                <div key={idx} style={{
-                  fontSize: 11,
-                  color: 'rgba(247, 249, 251, 0.8)',
-                  marginBottom: 2,
-                  paddingLeft: 12
-                }}>
+                <div 
+                  key={idx} 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Send action to chat for execution
+                    if (typeof window !== 'undefined' && (window as any).addAIInsightToChat) {
+                      (window as any).addAIInsightToChat({
+                        label: `${insightContent.level} Risk - Action`,
+                        value: `Execute: ${action}`,
+                        chartType: 'Risk Pyramid',
+                        count: insightContent.count,
+                        total: total,
+                        actionType: 'execute'
+                      });
+                    }
+                    setShowInsight(false);
+                  }}
+                  style={{
+                    fontSize: 11,
+                    color: 'rgba(247, 249, 251, 0.8)',
+                    marginBottom: 2,
+                    paddingLeft: 12,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    position: 'relative'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#00e676';
+                    e.currentTarget.style.paddingLeft = '16px';
+                    e.currentTarget.style.background = 'rgba(0, 230, 118, 0.05)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = 'rgba(247, 249, 251, 0.8)';
+                    e.currentTarget.style.paddingLeft = '12px';
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
                   • {action}
                 </div>
               ))}

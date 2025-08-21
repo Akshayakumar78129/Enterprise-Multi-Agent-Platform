@@ -34,6 +34,10 @@ const CustomerSelector = dynamic(() => import('../../../Customer/tools/churn_pre
   ssr: false
 });
 
+const SelectedCustomersDisplay = dynamic(() => import('../../../Customer/tools/churn_prediction/ui/components/SelectedCustomersDisplay'), {
+  ssr: false
+});
+
 // Loading component for Suspense fallbacks
 const LoadingSpinner = ({ height = '200px' }: { height?: string }) => (
   <div style={{ 
@@ -102,20 +106,32 @@ const formatMessage = (text: string | any) => {
   // Ensure text is a string
   const textStr = typeof text === 'string' ? text : (text?.toString() || '');
   
+  // Clean up the text - remove excessive newlines and spaces
+  const cleanText = textStr.replace(/\n{3,}/g, '\n\n').trim();
+  
   // Split text by **bold** markers and create React elements
-  const parts = textStr.split(/(\*\*[^*]+\*\*)/g);
+  const parts = cleanText.split(/(\*\*[^*]+\*\*)/g);
   
   return parts.map((part, index) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       // Remove ** markers and make bold
       const boldText = part.slice(2, -2);
-      return <strong key={index} style={{ fontWeight: 700, color: '#FFC107' }}>{boldText}</strong>;
+      return <strong key={index} style={{ fontWeight: 600, color: '#00e0ff' }}>{boldText}</strong>;
+    }
+    // Convert newlines to breaks for better formatting
+    if (part.includes('\n')) {
+      return part.split('\n').map((line, i) => (
+        <span key={`${index}-${i}`}>
+          {line}
+          {i < part.split('\n').length - 1 && <br />}
+        </span>
+      ));
     }
     return part;
   });
 };
 
-// Enhanced Interactive Inline Chatbot Component
+// Enhanced Interactive Inline Chatbot Component - Unified Design
 const InlineChatbot = ({ message, position, onClose, onOpenInteractiveChat, data }: any) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -190,221 +206,155 @@ const InlineChatbot = ({ message, position, onClose, onOpenInteractiveChat, data
 
   if (!message || !position) return null;
 
-  const maxWidth = isExpanded ? 450 : 350;
-  const maxHeight = isExpanded ? 300 : 200;
+  // Parse the message to extract title and details
+  const parseMessage = (msg: any) => {
+    // Convert to string if not already
+    const msgStr = typeof msg === 'string' ? msg : (msg?.toString() || 'AI Insight');
+    
+    // Check if message already has emoji at start
+    const emojiMatch = msgStr.match(/^([🔴🟠🟡🟢📊🎯💡❓🚀📞🎁📅⚡])\s*/);
+    let emoji = emojiMatch ? emojiMatch[1] : '🤖';
+    let cleanMsg = emojiMatch ? msgStr.substring(emojiMatch[0].length) : msgStr;
+    
+    const parts = cleanMsg.split('**');
+    let title = 'AI Insight';
+    let mainContent = cleanMsg;
+    
+    // Extract bold title if exists
+    if (parts.length > 2) {
+      title = parts[1];
+      mainContent = parts.slice(2).join('**').trim();
+    } else if (parts.length === 2) {
+      // Handle case where only title is bold
+      title = parts[1];
+      mainContent = '';
+    }
+    
+    // If no emoji was found at start, detect from title
+    if (!emojiMatch) {
+      if (title.includes('Very High')) { emoji = '🔴'; }
+      else if (title.includes('High')) { emoji = '🟠'; }
+      else if (title.includes('Medium')) { emoji = '🟡'; }
+      else if (title.includes('Low')) { emoji = '🟢'; }
+      else if (title.includes('Analyzing')) { emoji = '💡'; }
+      else if (title.includes('?')) { emoji = '❓'; }
+    }
+    
+    return { title, emoji, content: mainContent };
+  };
+  
+  const { title, emoji, content } = parseMessage(currentMessage);
 
   return (
     <>
-      {/* Click position indicator */}
-      <div style={{
-        position: 'fixed',
-        left: position.x - 3,
-        top: position.y - 3,
-        width: '6px',
-        height: '6px',
-        background: '#FFC107',
-        borderRadius: '50%',
-        zIndex: 1998,
-        animation: 'expandFade 0.8s ease-out',
-        pointerEvents: 'none'
-      }} />
-
-      {/* Backdrop blur effect */}
-      <div style={{
-        position: 'fixed',
-        left: position.x - 50,
-        top: position.y - 50,
-        width: '100px',
-        height: '100px',
-        background: 'radial-gradient(circle, rgba(255, 193, 7, 0.1) 0%, transparent 70%)',
-        borderRadius: '50%',
-        zIndex: 1999,
-        animation: 'pulse 2s infinite',
-        pointerEvents: 'none'
-      }} />
-
-      {/* Main chatbot */}
+      {/* Main AI Insight Popup - Compact Design */}
       <div 
+        data-insight-popup
         style={{
           position: 'fixed',
-          left: Math.min(position.x, window.innerWidth - maxWidth - 20),
-          top: Math.min(position.y, window.innerHeight - maxHeight - 20),
-          width: `${maxWidth}px`,
-          maxHeight: `${maxHeight}px`,
-          background: isHovered 
-            ? 'linear-gradient(135deg, #1e2738 0%, #2a3441 100%)'
-            : 'linear-gradient(135deg, #1a1f2e 0%, #232a36 100%)',
-          border: `2px solid ${isHovered ? '#FFD54F' : '#FFC107'}`,
-          borderRadius: '16px',
-          boxShadow: isHovered 
-            ? '0 20px 60px rgba(255, 193, 7, 0.4), 0 8px 32px rgba(0, 0, 0, 0.3)'
-            : '0 12px 40px rgba(255, 193, 7, 0.3), 0 4px 16px rgba(0, 0, 0, 0.4)',
-          zIndex: 2000,
-          fontFamily: 'Inter, sans-serif',
-          animation: 'slideInBounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
-          transform: isHovered ? 'scale(1.02)' : 'scale(1)',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          overflow: 'hidden'
+          left: position.x,
+          top: position.y,
+          transform: 'translate(-50%, -50%)',
+          background: 'linear-gradient(135deg, #1e2738, #2a3447)',
+          border: '1px solid rgba(0, 224, 255, 0.3)',
+          borderRadius: 8,
+          padding: 12,
+          maxWidth: 280,
+          minWidth: 200,
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.6)',
+          zIndex: 1001,
+          animation: 'fadeIn 0.2s ease-out'
         }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Animated header */}
+        {/* Compact Header */}
         <div style={{
-          padding: '14px 18px',
-          background: isHovered 
-            ? 'linear-gradient(135deg, #FFD54F 0%, #FFA726 100%)'
-            : 'linear-gradient(135deg, #FFC107 0%, #FF9800 100%)',
-          color: '#0a1224',
-          fontWeight: 700,
-          borderRadius: '14px 14px 0 0',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          fontSize: '14px',
-          position: 'relative',
-          overflow: 'hidden'
+          marginBottom: 8
         }}>
-          {/* Animated background effect */}
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: '-100%',
-            width: '100%',
-            height: '100%',
-            background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
-            animation: isHovered ? 'shimmer 1.5s infinite' : 'none'
-          }} />
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 1 }}>
-            <span style={{ 
-              fontSize: '16px',
-              animation: 'bounce 2s infinite'
-            }}>🤖</span>
-            <span>AI Insight</span>
-            {isHovered && (
-              <span style={{ 
-                fontSize: '12px', 
-                opacity: 0.8,
-                animation: 'fadeIn 0.3s ease-in'
-              }}>
-                • Click to expand
-              </span>
-            )}
-          </div>
-          
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', zIndex: 1 }}>
-            {/* Expand/Collapse button */}
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              style={{
-                background: 'rgba(10, 18, 36, 0.1)',
-                border: 'none',
-                color: '#0a1224',
-                fontSize: '14px',
-                cursor: 'pointer',
-                padding: '4px 8px',
-                borderRadius: '6px',
-                transition: 'all 0.2s ease',
-                fontWeight: 600
-              }}
-              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(10, 18, 36, 0.2)'}
-              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(10, 18, 36, 0.1)'}
-              title={isExpanded ? 'Collapse' : 'Expand'}
-            >
-              {isExpanded ? '⬇' : '⬆'}
-            </button>
-            
-            {/* Close button */}
-            <button
-              onClick={onClose}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#0a1224',
-                fontSize: '18px',
-                cursor: 'pointer',
-                padding: 0,
-                width: '24px',
-                height: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '50%',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = 'rgba(10, 18, 36, 0.2)';
-                e.currentTarget.style.transform = 'rotate(90deg)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = 'none';
-                e.currentTarget.style.transform = 'rotate(0deg)';
-              }}
-            >
-              ×
-            </button>
-          </div>
-        </div>
-
-        {/* Content area */}
-        <div style={{
-          padding: '18px',
-          color: '#f7f9fb',
-          fontSize: '14px',
-          lineHeight: '1.6',
-          maxHeight: isExpanded ? '220px' : '140px',
-          overflowY: 'auto',
-          scrollbarWidth: 'thin',
-          scrollbarColor: '#FFC107 transparent'
-        }}>
-          <div style={{
-            background: isHovered 
-              ? 'rgba(255, 193, 7, 0.2)'
-              : 'rgba(255, 193, 7, 0.15)',
-            padding: '16px',
-            borderRadius: '12px',
-            borderLeft: '4px solid #FFC107',
-            position: 'relative',
-            transition: 'all 0.3s ease'
-          }}>
-            {/* Floating particles effect */}
-            {isHovered && (
-              <>
-                <div style={{
-                  position: 'absolute',
-                  top: '10px',
-                  right: '10px',
-                  width: '4px',
-                  height: '4px',
-                  background: '#FFC107',
-                  borderRadius: '50%',
-                  animation: 'float 3s ease-in-out infinite'
-                }} />
-                <div style={{
-                  position: 'absolute',
-                  bottom: '15px',
-                  right: '25px',
-                  width: '3px',
-                  height: '3px',
-                  background: '#FF9800',
-                  borderRadius: '50%',
-                  animation: 'float 3s ease-in-out infinite 1s'
-                }} />
-              </>
-            )}
-            
-            {currentMessage && formatMessage(currentMessage)}
-          </div>
-          
-          {/* Interactive Options */}
-          {showInteractiveOptions && dataContext && (
+          <div>
             <div style={{
-              marginTop: '12px',
+              fontSize: 14,
+              fontWeight: 600,
+              color: '#00e0ff',
               display: 'flex',
-              flexDirection: 'column',
-              gap: '6px'
+              alignItems: 'center',
+              gap: 6
             }}>
+              <span style={{ fontSize: 16 }}>{emoji}</span>
+              <span>{title}</span>
+            </div>
+            {dataContext && (
+              <div style={{
+                fontSize: 14,
+                color: 'rgba(247, 249, 251, 0.7)'
+              }}>
+                {dataContext.count} customers ({dataContext.percentage?.toFixed(1)}%)
+              </div>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'rgba(247, 249, 251, 0.5)',
+              fontSize: 16,
+              cursor: 'pointer',
+              padding: 0,
+              lineHeight: 1,
+              transition: 'color 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#f7f9fb'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(247, 249, 251, 0.5)'}
+          >
+            ×
+          </button>
+        </div>
+        
+        {/* Compact Content */}
+        {content && (
+          <div style={{
+            fontSize: 12,
+            color: 'rgba(247, 249, 251, 0.85)',
+            lineHeight: 1.4,
+            marginBottom: dataContext ? 8 : 0
+          }}>
+            {formatMessage(content)}
+          </div>
+        )}
+        
+        {/* Details if available */}
+        {dataContext && dataContext.details && (
+          <div style={{ marginBottom: 8 }}>
+            {dataContext.details.slice(0, 2).map((detail: string, idx: number) => (
+              <div key={idx} style={{
+                fontSize: 11,
+                color: 'rgba(247, 249, 251, 0.7)',
+                marginBottom: 2
+              }}>
+                • {detail}
+              </div>
+            ))}
+          </div>
+        )}
+          
+        {/* Key Questions */}
+        {showInteractiveOptions && dataContext && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: '#00e0ff',
+              marginBottom: 8,
+              textTransform: 'uppercase',
+              letterSpacing: 1
+            }}>
+              🤔 Key Questions
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {getInteractiveOptions(dataContext).map((option) => (
                 <button
                   key={option.key}
@@ -452,121 +402,114 @@ const InlineChatbot = ({ message, position, onClose, onOpenInteractiveChat, data
                     setIsExpanded(true);
                   }}
                   style={{
-                    background: 'rgba(255, 193, 7, 0.1)',
-                    border: '1px solid rgba(255, 193, 7, 0.3)',
-                    color: '#FFC107',
-                    fontSize: '12px',
-                    padding: '8px 12px',
-                    borderRadius: '6px',
+                    background: 'rgba(0, 224, 255, 0.1)',
+                    border: '1px solid rgba(0, 224, 255, 0.3)',
+                    borderRadius: 6,
+                    padding: '4px 8px',
+                    fontSize: 11,
+                    color: 'rgba(247, 249, 251, 0.9)',
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    fontWeight: 500,
-                    textAlign: 'left',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
+                    transition: 'all 0.2s'
                   }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 193, 7, 0.2)';
-                    e.currentTarget.style.transform = 'translateX(4px)';
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(0, 224, 255, 0.2)';
+                    e.currentTarget.style.borderColor = 'rgba(0, 224, 255, 0.5)';
                   }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 193, 7, 0.1)';
-                    e.currentTarget.style.transform = 'translateX(0)';
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(0, 224, 255, 0.1)';
+                    e.currentTarget.style.borderColor = 'rgba(0, 224, 255, 0.3)';
                   }}
                 >
-                  <span>{option.icon}</span>
-                  <span>{option.label}</span>
+                  {option.label}
                 </button>
               ))}
             </div>
-          )}
-        </div>
-
-        {/* Interactive action buttons */}
-        {showActions && (
-          <div style={{
-            padding: '12px 18px',
-            borderTop: '1px solid rgba(255, 193, 7, 0.2)',
-            display: 'flex',
-            gap: '8px',
-            justifyContent: 'flex-end',
-            animation: 'slideUp 0.4s ease-out'
-          }}>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(message);
-                setShowCopyFeedback(true);
-                setTimeout(() => setShowCopyFeedback(false), 2000);
-              }}
-              style={{
-                background: 'rgba(255, 193, 7, 0.1)',
-                border: '1px solid rgba(255, 193, 7, 0.3)',
-                color: '#FFC107',
-                fontSize: '12px',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                fontWeight: 500
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 193, 7, 0.2)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 193, 7, 0.1)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-            >
-              {showCopyFeedback ? '✅ Copied!' : '📋 Copy'}
-            </button>
-            
-            <button
-              onClick={() => {
-                onClose(); // Close the inline chatbot
-                onOpenInteractiveChat && onOpenInteractiveChat(); // Open the interactive chatbot
-              }}
-              style={{
-                background: 'rgba(33, 150, 243, 0.1)',
-                border: '1px solid rgba(33, 150, 243, 0.3)',
-                color: '#2196F3',
-                fontSize: '12px',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                fontWeight: 500
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = 'rgba(33, 150, 243, 0.2)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = 'rgba(33, 150, 243, 0.1)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-            >
-              💬 Ask More
-            </button>
           </div>
         )}
+        
+        {/* Recommended Actions */}
+        {showInteractiveOptions && (
+          <div style={{
+            background: 'rgba(0, 230, 118, 0.1)',
+            border: '1px solid rgba(0, 230, 118, 0.3)',
+            borderRadius: 6,
+            padding: 8,
+            marginBottom: 12
+          }}>
+            <div style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: '#00e676',
+              marginBottom: 6,
+              textTransform: 'uppercase'
+            }}>
+              ⚡ Recommended Actions
+            </div>
+            <div style={{
+              fontSize: 11,
+              color: 'rgba(247, 249, 251, 0.8)',
+              marginBottom: 2,
+              paddingLeft: 12
+            }}>
+              • Analyze detailed metrics
+            </div>
+            <div style={{
+              fontSize: 11,
+              color: 'rgba(247, 249, 251, 0.8)',
+              marginBottom: 2,
+              paddingLeft: 12
+            }}>
+              • Export insights report
+            </div>
+            <div style={{
+              fontSize: 11,
+              color: 'rgba(247, 249, 251, 0.8)',
+              marginBottom: 2,
+              paddingLeft: 12
+            }}>
+              • Schedule team review
+            </div>
+          </div>
+        )}
+        
+        {/* Footer hint */}
+        <div style={{
+          fontSize: 12,
+          color: 'rgba(247, 249, 251, 0.6)',
+          textAlign: 'center'
+        }}>
+          Press <strong>Shift+Click</strong> to send to chatbot for deeper analysis
+        </div>
       </div>
 
       {/* Add CSS animations */}
       <style jsx>{`
-        @keyframes slideInBounce {
-          0% {
+        @keyframes fadeIn {
+          from {
             opacity: 0;
-            transform: translateY(30px) scale(0.8);
+            transform: translate(-50%, -45%);
           }
-          50% {
-            opacity: 0.8;
-            transform: translateY(-5px) scale(1.05);
+          to {
+            opacity: 1;
+            transform: translate(-50%, -50%);
+          }
+        }
+        
+        @keyframes rotate {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        
+        @keyframes shimmer {
+          0% {
+            left: -100%;
           }
           100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
+            left: 100%;
           }
         }
 
@@ -701,6 +644,17 @@ export default function ChurnDashboardPage() {
   const [filters, setFilters] = useState<any>(null);
   const [filteredData, setFilteredData] = useState<any>(null);
   const [selectedPoints, setSelectedPoints] = useState<any[]>([]);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     fetchChurnData().then((response) => {
@@ -1026,6 +980,64 @@ Want detailed tactics for this specific segment?`;
     setChatbotMessage('');
     setChatbotPosition(null);
   };
+  
+  // Set up global function for Risk Pyramid questions and actions
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).addAIInsightToChat = (context: any) => {
+        // Ultra-compact message (5-6 words max)
+        let message = '';
+        
+        if (context.actionType === 'execute') {
+          // Super brief action message
+          const actionName = context.value.replace('Execute: ', '');
+          const emoji = actionName.includes('campaign') ? '🚀' :
+                       actionName.includes('patterns') ? '📊' :
+                       actionName.includes('offers') ? '🎁' :
+                       actionName.includes('Contact') ? '📞' :
+                       actionName.includes('review') ? '📅' : '⚡';
+          
+          // Just emoji and 3-4 words
+          if (actionName.includes('retention campaign')) {
+            message = `${emoji} **Campaign launched** for high-risk`;
+          } else if (actionName.includes('usage patterns')) {
+            message = `${emoji} **Analyzing** usage patterns`;
+          } else if (actionName.includes('win-back offers')) {
+            message = `${emoji} **Offers** prepared`;
+          } else if (actionName.includes('Contact')) {
+            message = `${emoji} **Contacting** priority customers`;
+          } else if (actionName.includes('review')) {
+            message = `${emoji} **Review** scheduled`;
+          } else {
+            message = `${emoji} **Action** executed`;
+          }
+        } else if (context.value && typeof context.value === 'string' && context.value.includes('?')) {
+          // Ultra-short question format
+          const shortQuestion = context.value.split(' ').slice(0, 4).join(' ');
+          message = `❓ **${shortQuestion}...**`;
+        } else {
+          // Super compact data format
+          const label = context.label?.split(' ').slice(0, 2).join(' ') || 'Data';
+          const value = context.value || '';
+          
+          // Just 4-5 words total
+          if (context.count !== undefined) {
+            message = `📊 **${label}** ${context.count} items`;
+          } else {
+            message = `📊 **${label}** ${value}`;
+          }
+        }
+        
+        showChatbotMessage(message);
+      };
+    }
+    
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete (window as any).addAIInsightToChat;
+      }
+    };
+  }, []);
 
   if (data.status === 'loading') {
     return (
@@ -1171,18 +1183,52 @@ Want detailed tactics for this specific segment?`;
       
       <div style={{ 
         minHeight: '100vh', 
-        background: 'linear-gradient(135deg, #0a1224 0%, #0d1a2d 100%)', 
+        background: 'linear-gradient(180deg, #0a0f1b 0%, #1a1f3a 50%, #0d1525 100%)',
         color: '#f7f9fb', 
         fontFamily: 'Inter, sans-serif', 
-        padding: 0 
+        padding: 0,
+        position: 'relative',
+        overflow: 'hidden'
       }}>
-        {/* Enhanced Header */}
+        {/* Animated background effects */}
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          pointerEvents: 'none',
+          zIndex: 0
+        }}>
+          <div style={{
+            position: 'absolute',
+            top: '-50%',
+            left: '-50%',
+            width: '200%',
+            height: '200%',
+            background: 'radial-gradient(circle at 20% 80%, rgba(124, 58, 237, 0.1) 0%, transparent 50%)',
+            animation: 'rotate 30s linear infinite'
+          }} />
+          <div style={{
+            position: 'absolute',
+            top: '-50%',
+            left: '-50%',
+            width: '200%',
+            height: '200%',
+            background: 'radial-gradient(circle at 80% 20%, rgba(0, 224, 255, 0.08) 0%, transparent 50%)',
+            animation: 'rotate 25s linear infinite reverse'
+          }} />
+        </div>
+        {/* Enhanced Header with Glass Effect */}
         <div style={{ 
-          padding: '32px 40px', 
-          borderBottom: '2px solid #232a36', 
-          background: 'linear-gradient(135deg, #232a36 0%, #3a4459 100%)',
+          padding: '40px 48px', 
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)', 
+          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(51, 65, 85, 0.9) 100%)',
+          backdropFilter: 'blur(20px)',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          zIndex: 10,
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)'
         }}>
           <div style={{
             position: 'absolute',
@@ -1195,15 +1241,17 @@ Want detailed tactics for this specific segment?`;
           }}></div>
           <div style={{ position: 'relative', zIndex: 1 }}>
             <h1 style={{ 
-              fontSize: '2.5rem', 
-              fontWeight: 800, 
+              fontSize: '3rem', 
+              fontWeight: 900, 
               margin: 0,
-              background: 'linear-gradient(135deg, #f7f9fb 0%, #FFC107 100%)',
+              background: 'linear-gradient(135deg, #00e0ff 0%, #7c3aed 50%, #FFC107 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
+              backgroundClip: 'text',
+              letterSpacing: '-1px',
+              textShadow: '0 0 80px rgba(124, 58, 237, 0.5)'
             }}>
-              Churn Intelligence Dashboard
+              ⚡ Churn Intelligence Dashboard
             </h1>
             <div style={{ 
               color: 'rgba(247, 249, 251, 0.8)', 
@@ -1216,8 +1264,14 @@ Want detailed tactics for this specific segment?`;
           </div>
         </div>
 
-        {/* Main Content - Full Width */}
-        <div style={{ padding: '32px 40px' }}>
+        {/* Main Content - Full Width with better spacing */}
+        <div style={{ 
+          padding: windowWidth < 768 ? '20px' : '40px',
+          maxWidth: '1800px',
+          margin: '0 auto',
+          position: 'relative',
+          zIndex: 1
+        }}>
           <div style={{ width: '100%' }} className="animate-fade-in">
             {/* Dashboard Filters */}
             <DashboardFilters 
@@ -1244,22 +1298,60 @@ Want detailed tactics for this specific segment?`;
               </Suspense>
             ) : (
               <div style={{
-                padding: '12px 16px',
-                background: 'rgba(124, 58, 237, 0.1)',
-                border: '1px solid rgba(124, 58, 237, 0.3)',
-                borderRadius: 8,
-                marginBottom: 16,
-                fontSize: 14,
-                color: 'rgba(247, 249, 251, 0.8)',
-                textAlign: 'center'
+                padding: '16px 20px',
+                background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(0, 224, 255, 0.1))',
+                border: '1px solid rgba(124, 58, 237, 0.4)',
+                borderRadius: 12,
+                marginBottom: 24,
+                fontSize: 15,
+                color: 'rgba(247, 249, 251, 0.9)',
+                textAlign: 'center',
+                backdropFilter: 'blur(10px)',
+                boxShadow: '0 4px 20px rgba(124, 58, 237, 0.2)'
               }}>
                 💡 Select one or more <strong>Customer Segments</strong> above to enable individual customer selection
               </div>
             )}
             
+            {/* Selected Customers Display */}
+            {filters?.selectedCustomerIds && filters.selectedCustomerIds.length > 0 && (
+              <Suspense fallback={<LoadingSpinner height="200px" />}>
+                <SelectedCustomersDisplay
+                  selectedCustomers={displayData.customers?.filter((c: any) => 
+                    filters.selectedCustomerIds.includes(c.customer_id)
+                  ) || []}
+                  onClearSelection={() => {
+                    setFilters((prev: any) => ({
+                      ...prev,
+                      selectedCustomerIds: []
+                    }));
+                  }}
+                  onGenerateStrategies={() => {
+                    // Trigger the chatbot with a specific prompt for strategies
+                    const selectedCustomers = displayData.customers?.filter((c: any) => 
+                      filters.selectedCustomerIds.includes(c.customer_id)
+                    ) || [];
+                    const avgRisk = selectedCustomers.reduce((sum: number, c: any) => sum + c.churn_probability, 0) / selectedCustomers.length * 100;
+                    const highRiskCount = selectedCustomers.filter((c: any) => c.risk_level === 'High' || c.risk_level === 'Very High').length;
+                    const message = `🎯 **Retention Strategy Generator**: Analyzing ${selectedCustomers.length} selected customers with ${avgRisk.toFixed(1)}% average churn risk. ${highRiskCount} are high-risk requiring immediate attention. Generating personalized retention strategies based on their profiles...`;
+                    showChatbotMessage(message);
+                  }}
+                />
+              </Suspense>
+            )}
             
-            {/* Enhanced KPI Tiles with context-aware click handlers */}
-            <div style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}>
+            {/* Enhanced KPI Tiles with Glass Morphism */}
+            <div style={{ 
+              cursor: 'pointer', 
+              transition: 'all 0.3s ease',
+              marginBottom: '32px',
+              padding: '20px',
+              background: 'rgba(30, 41, 59, 0.5)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '20px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+            }}>
               <Suspense fallback={<LoadingSpinner height="160px" />}>
                 <ChurnKpiTiles 
                   kpis={kpis} 
@@ -1285,12 +1377,11 @@ Want detailed tactics for this specific segment?`;
             {/* First Row - Risk Pyramid and Probability Histogram */}
             <div style={{ 
               display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(550px, 1fr))', 
-              gap: '32px', 
-              marginTop: '24px',
+              gridTemplateColumns: windowWidth < 1200 ? '1fr' : 'repeat(2, 1fr)', 
+              gap: '30px', 
+              marginBottom: '40px',
               width: '100%',
-              padding: '0 8px',
-              minHeight: '480px'
+              minHeight: windowWidth < 768 ? 'auto' : '500px'
             }}>
               <div 
                 onClick={(e) => {
@@ -1310,7 +1401,19 @@ Want detailed tactics for this specific segment?`;
                       });
                     }
                 }}
-                style={{ cursor: 'pointer' }}
+                style={{ 
+                  cursor: 'pointer',
+                  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                  borderRadius: '16px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = '0 12px 40px rgba(124, 58, 237, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               >
                 <ChurnRiskPyramidWithSelection 
                   customers={displayData.customers || []} 
@@ -1361,12 +1464,11 @@ Want detailed tactics for this specific segment?`;
             {/* Second Row - Feature Importance and Segment Matrix */}
             <div style={{ 
               display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(550px, 1fr))', 
-              gap: '32px', 
-              marginTop: '32px',
+              gridTemplateColumns: windowWidth < 1200 ? '1fr' : 'repeat(2, 1fr)', 
+              gap: '30px', 
+              marginBottom: '40px',
               width: '100%',
-              padding: '0 8px',
-              minHeight: '420px'
+              minHeight: windowWidth < 768 ? 'auto' : '450px'
             }}>
               <Suspense fallback={<LoadingSpinner height="350px" />}>
                 <FeatureImportance
@@ -1422,9 +1524,15 @@ Want detailed tactics for this specific segment?`;
             
             {/* Third Row - Temporal Risk Pattern (Full Width) */}
             <div style={{
-              marginTop: '32px',
-              padding: '0 8px',
-              minHeight: '420px'
+              marginBottom: '40px',
+              width: '100%',
+              minHeight: '450px',
+              padding: '24px',
+              background: 'rgba(30, 41, 59, 0.4)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '20px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
             }}>
               <div 
                 onClick={(e) => {
@@ -1460,9 +1568,15 @@ Want detailed tactics for this specific segment?`;
             
             {/* Fourth Row - Customer Table (Full Width) */}
             <div style={{
-              marginTop: '32px',
-              padding: '0 8px',
-              minHeight: '500px'
+              marginBottom: '40px',
+              width: '100%',
+              minHeight: '500px',
+              padding: '24px',
+              background: 'rgba(30, 41, 59, 0.4)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '20px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
             }}>
               <div 
                 onClick={(e) => showChatbotMessage('👥 **Customer Risk Explorer**: Individual customer details with risk levels and probabilities. **Click any row** for detailed profile. **Sort by columns** to find patterns. Use for targeted retention campaigns and personal outreach!', e)}

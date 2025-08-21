@@ -126,8 +126,8 @@ export const ChartSelectionManager: React.FC<ChartSelectionManagerProps> = ({
   const generateSelectionInsight = (points: SelectedPoint[]) => {
     if (points.length === 0) return '';
     
-    let message = `🎯 **Shift+Click Multi-Selection Analysis**\n\n`;
-    message += `You've selected **${points.length} data point${points.length > 1 ? 's' : ''}** across your dashboard:\n\n`;
+    let message = `🎯 **Multi-Selection Analysis**\n`;
+    message += `${points.length} point${points.length > 1 ? 's' : ''} selected:\n`;
     
     // Group by chart type
     const byChartType = points.reduce((acc, point) => {
@@ -136,48 +136,32 @@ export const ChartSelectionManager: React.FC<ChartSelectionManagerProps> = ({
       return acc;
     }, {} as Record<string, SelectedPoint[]>);
     
-    // Display selected points by chart
+    // Display selected points compactly
     Object.entries(byChartType).forEach(([chartType, pts]) => {
-      message += `📊 **${chartType}**\n`;
+      message += `\n📊 **${chartType}:**`;
       pts.forEach(p => {
-        const riskIndicator = p.value > 50 ? '🔴' : p.value > 30 ? '🟠' : '🟢';
-        message += `${riskIndicator} ${p.label}: **${p.value}${p.unit || ''}**\n`;
+        const risk = p.value > 50 ? '🔴' : p.value > 30 ? '🟠' : '🟢';
+        message += ` ${risk}${p.label}(${p.value}${p.unit || ''})`;
       });
-      message += `\n`;
     });
     
-    // Calculate totals and insights
+    // Calculate totals
     const totalValue = points.reduce((sum, p) => sum + (p.value || 0), 0);
-    const avgValue = totalValue / points.length;
     const maxPoint = points.reduce((max, p) => p.value > max.value ? p : max);
-    const minPoint = points.reduce((min, p) => p.value < min.value ? p : min);
     
-    message += `**📈 Analysis Summary:**\n`;
-    message += `• **Total Impact:** ${totalValue.toFixed(0)} customers\n`;
-    message += `• **Revenue at Risk:** $${(totalValue * 2500).toLocaleString()}\n`;
-    message += `• **Highest Risk:** ${maxPoint.label} (${maxPoint.value}${maxPoint.unit || ''})\n`;
-    message += `• **Lowest Risk:** ${minPoint.label} (${minPoint.value}${minPoint.unit || ''})\n\n`;
+    message += `\n\n**Summary:** ${totalValue.toFixed(0)} total • $${(totalValue * 2.5).toFixed(0)}K risk`;
+    message += `\nMax: ${maxPoint.label}(${maxPoint.value})`;
     
-    // Strategic recommendations based on selection
-    message += `**💡 Strategic Recommendations:**\n`;
+    // Quick recommendation
     if (totalValue > 100) {
-      message += `• 🚨 **Critical Alert:** High concentration of risk detected\n`;
-      message += `• Deploy emergency retention campaigns immediately\n`;
-      message += `• Allocate additional resources to customer success\n`;
+      message += `\n🚨 **Critical:** Immediate action needed`;
     } else if (totalValue > 50) {
-      message += `• ⚠️ **Elevated Risk:** Proactive intervention recommended\n`;
-      message += `• Schedule personalized outreach for affected segments\n`;
-      message += `• Review and optimize retention strategies\n`;
+      message += `\n⚠️ **Warning:** Monitor closely`;
     } else {
-      message += `• ✅ **Manageable Risk:** Continue monitoring\n`;
-      message += `• Maintain current engagement strategies\n`;
-      message += `• Focus on preventive measures\n`;
+      message += `\n✅ **OK:** Continue monitoring`;
     }
     
-    message += `\n**🎯 Next Steps:**\n`;
-    message += `• Click "Open Chat" for detailed analysis\n`;
-    message += `• Press ESC to clear selection\n`;
-    message += `• Continue Shift+Click to add more points`;
+    message += `\n\n**Actions:** Open Chat • ESC to clear • Shift+Click for more`;
     
     return message;
   };

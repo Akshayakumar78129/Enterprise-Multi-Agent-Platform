@@ -39,6 +39,9 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
   onSelect,
 }) => {
   const [expandedCard, setExpandedCard] = useState<number | null>(null);
+  const [showAIInsight, setShowAIInsight] = useState(false);
+  const [aiInsightContent, setAiInsightContent] = useState<any>(null);
+  const [insightPosition, setInsightPosition] = useState({ x: 0, y: 0 });
 
   const getRadarData = (segment: SegmentProfile) => ({
     labels: ['Spend', 'Frequency', 'Recency', 'Loyalty', 'Engagement'],
@@ -100,6 +103,45 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
     return '⭐'.repeat(Math.max(1, Math.min(5, stars)));
   };
 
+  const generateSegmentInsight = (segment: SegmentProfile) => {
+    const totalCustomers = segments.reduce((acc, s) => acc + (s.customerCount || 0), 0);
+    const percentage = totalCustomers > 0 ? ((segment.customerCount || 0) / totalCustomers) * 100 : 0;
+    
+    const emoji = segment.loyaltyScore > 70 ? '👑' : 
+                  segment.engagementRate > 60 ? '🌟' :
+                  segment.avgSpend > 5000 ? '💎' :
+                  segment.frequency > 5 ? '🚀' : '📊';
+    
+    return {
+      emoji,
+      title: `Segment ${segment.segment}`,
+      subtitle: `${segment.customerCount} customers (${percentage.toFixed(1)}%)`,
+      summary: `This segment has ${segment.customerCount} customers with average spend of $${segment.avgSpend.toFixed(0)}. Loyalty score: ${segment.loyaltyScore}%, Engagement: ${segment.engagementRate}%.`,
+      details: [
+        `👥 Customer Count: ${segment.customerCount}`,
+        `💰 Average Spend: $${segment.avgSpend.toFixed(0)}`,
+        `📈 Purchase Frequency: ${segment.frequency}`,
+        `⏱️ Recency: ${segment.recency} days`,
+        `⭐ Loyalty Score: ${segment.loyaltyScore}%`,
+        `📊 Engagement Rate: ${segment.engagementRate}%`
+      ],
+      questions: [
+        'What drives this segment?',
+        'How to increase loyalty?',
+        'Show purchase patterns',
+        'Compare with other segments'
+      ],
+      actions: [
+        'Create targeted campaign',
+        'Export customer list',
+        'Set up automation',
+        'Schedule segment review'
+      ],
+      characteristics: segment.characteristics,
+      recommendations: segment.recommendations
+    };
+  };
+
   return (
     <div style={{
       marginBottom: segmentationTheme.spacing.xl,
@@ -137,9 +179,31 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.1 }}
             whileHover={{ scale: 1.02 }}
-            onClick={() => {
-              setExpandedCard(expandedCard === segment.segment ? null : segment.segment);
-              onSelect?.(segment.segment);
+            onClick={(e: React.MouseEvent) => {
+              if (e.shiftKey) {
+                // Shift+Click for multi-selection
+                const selectionAPI = (window as any).chartSelectionAPI;
+                if (selectionAPI) {
+                  selectionAPI.addPoint({
+                    chartId: 'enhanced-segment-profile',
+                    chartType: 'card',
+                    dataIndex: index,
+                    label: `Segment ${segment.segment}`,
+                    value: segment.customerCount,
+                    unit: ' customers',
+                    coordinates: { x: e.clientX, y: e.clientY }
+                  });
+                }
+              } else {
+                // Regular click for AI insights
+                setExpandedCard(expandedCard === segment.segment ? null : segment.segment);
+                onSelect?.(segment.segment);
+                
+                const insight = generateSegmentInsight(segment);
+                setAiInsightContent(insight);
+                setInsightPosition({ x: e.clientX, y: e.clientY });
+                setShowAIInsight(true);
+              }
             }}
             style={{
               background: `linear-gradient(135deg, ${segmentationTheme.colors.bgPrimary} 0%, ${
@@ -369,6 +433,163 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
           </motion.div>
         ))}
       </div>
+
+      {/* AI Insight Popup */}
+      {showAIInsight && aiInsightContent && (
+        <div
+          style={{
+            position: 'fixed',
+            left: insightPosition.x,
+            top: insightPosition.y,
+            transform: 'translate(-50%, -50%)',
+            background: 'linear-gradient(135deg, #1e2738, #2a3447)',
+            border: '2px solid rgba(124, 58, 237, 0.5)',
+            borderRadius: 12,
+            padding: 20,
+            maxWidth: 400,
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.7)',
+            zIndex: 1001,
+            animation: 'fadeIn 0.3s ease-out'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#f7f9fb', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                {aiInsightContent.emoji} {aiInsightContent.title}
+              </div>
+              {aiInsightContent.subtitle && (
+                <div style={{ fontSize: 14, color: 'rgba(247, 249, 251, 0.7)' }}>
+                  {aiInsightContent.subtitle}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => setShowAIInsight(false)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'rgba(247, 249, 251, 0.6)',
+                fontSize: 20,
+                cursor: 'pointer',
+                padding: 0,
+                lineHeight: 1,
+                transition: 'color 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#f7f9fb'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(247, 249, 251, 0.6)'}
+            >
+              ×
+            </button>
+          </div>
+          
+          <div style={{ fontSize: 14, color: 'rgba(247, 249, 251, 0.9)', marginBottom: 12 }}>
+            {aiInsightContent.summary}
+          </div>
+          
+          {aiInsightContent.details && (
+            <div style={{ marginBottom: 12 }}>
+              {aiInsightContent.details.map((detail: string, idx: number) => (
+                <div key={idx} style={{ fontSize: 12, color: 'rgba(247, 249, 251, 0.8)', marginBottom: 4 }}>
+                  {detail}
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Key Questions */}
+          {aiInsightContent.questions && (
+            <div style={{
+              background: 'rgba(99, 102, 241, 0.1)',
+              border: '1px solid rgba(99, 102, 241, 0.3)',
+              borderRadius: 6,
+              padding: 8,
+              marginBottom: 8
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(139, 92, 246, 0.9)', marginBottom: 6 }}>
+                💡 Key Questions
+              </div>
+              {aiInsightContent.questions.map((question: string, idx: number) => (
+                <div 
+                  key={idx} 
+                  style={{ 
+                    fontSize: 11, 
+                    color: 'rgba(247, 249, 251, 0.8)', 
+                    marginBottom: 3,
+                    cursor: 'pointer',
+                    padding: '2px 4px',
+                    borderRadius: 3,
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (typeof window !== 'undefined' && (window as any).addAIInsightToChat) {
+                      (window as any).addAIInsightToChat({
+                        label: `${aiInsightContent.title} - Question`,
+                        value: question,
+                        actionType: 'question'
+                      });
+                    }
+                    setShowAIInsight(false);
+                  }}
+                >
+                  • {question}
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Recommended Actions */}
+          {aiInsightContent.actions && (
+            <div style={{
+              background: 'rgba(0, 230, 118, 0.1)',
+              border: '1px solid rgba(0, 230, 118, 0.3)',
+              borderRadius: 6,
+              padding: 8
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#00e676', marginBottom: 6 }}>
+                ⚡ Recommended Actions
+              </div>
+              {aiInsightContent.actions.map((action: string, idx: number) => (
+                <div 
+                  key={idx} 
+                  style={{ 
+                    fontSize: 11, 
+                    color: 'rgba(247, 249, 251, 0.8)', 
+                    marginBottom: 3,
+                    cursor: 'pointer',
+                    padding: '2px 4px',
+                    borderRadius: 3,
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 230, 118, 0.2)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (typeof window !== 'undefined' && (window as any).addAIInsightToChat) {
+                      (window as any).addAIInsightToChat({
+                        label: `${aiInsightContent.title} - Action`,
+                        value: `Execute: ${action}`,
+                        actionType: 'execute'
+                      });
+                    }
+                    setShowAIInsight(false);
+                  }}
+                >
+                  • {action}
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <div style={{ fontSize: 11, color: 'rgba(247, 249, 251, 0.6)', marginTop: 12, textAlign: 'center' }}>
+            Press <strong>Shift+Click</strong> for multi-selection
+          </div>
+        </div>
+      )}
     </div>
   );
 };
