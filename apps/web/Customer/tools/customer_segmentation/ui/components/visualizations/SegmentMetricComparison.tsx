@@ -15,6 +15,7 @@ import {
   Legend,
 } from 'chart.js';
 import { segmentationTheme, getSegmentColor } from '../../styles/theme';
+import { createChartJsClickHandler } from '../../utils/chartSelectionHelper';
 
 ChartJS.register(
   CategoryScale,
@@ -145,36 +146,16 @@ const SegmentMetricComparison: React.FC<SegmentMetricComparisonProps> = ({
   };
 
   const handleChartClick = (event: any, elements: any[]) => {
-    if (elements.length > 0) {
-      const element = elements[0];
-      const segmentIndex = element.index;
-      
-      if (event.native?.shiftKey) {
-        // Shift+Click for multi-selection
-        const selectionAPI = (window as any).chartSelectionAPI;
-        if (selectionAPI) {
-          const segment = segments[segmentIndex];
-          selectionAPI.addPoint({
-            chartId: 'segment-metric-comparison',
-            chartType: chartType,
-            dataIndex: segmentIndex,
-            label: `Segment ${segment.segment}`,
-            value: segment[selectedMetric] as number,
-            unit: '',
-            coordinates: { x: event.native?.clientX || 0, y: event.native?.clientY || 0 }
-          });
-        }
-      } else {
-        // Regular click for AI insights
-        const insight = generateMetricInsight(segmentIndex, selectedMetric as string);
-        setAiInsightContent(insight);
-        setInsightPosition({ 
-          x: event.native?.clientX || window.innerWidth / 2, 
-          y: event.native?.clientY || window.innerHeight / 2 
-        });
-        setShowAIInsight(true);
-      }
-    }
+    // Use the chartSelectionHelper for consistent handling
+    const chartRef = { data: getChartData() };
+    const clickHandler = createChartJsClickHandler(
+      'segment-metric-comparison',
+      chartType,
+      chartRef
+    );
+    clickHandler(event, elements);
+    
+    // AI insights are now handled by ChartSelectionManager
   };
 
   const barOptions = {
@@ -421,8 +402,8 @@ const SegmentMetricComparison: React.FC<SegmentMetricComparisonProps> = ({
         pointerEvents: 'none',
       }} />
 
-      {/* AI Insight Popup */}
-      {showAIInsight && aiInsightContent && (
+      {/* AI Insight Popup removed - using ChartSelectionManager instead */}
+      {false && (
         <div
           style={{
             position: 'fixed',

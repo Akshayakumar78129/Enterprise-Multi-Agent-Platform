@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Scatter } from 'react-chartjs-2';
 import {
@@ -10,6 +10,7 @@ import {
   ChartOptions,
 } from 'chart.js';
 import { segmentationTheme, getSegmentColor } from '../../styles/theme';
+import { createChartJsClickHandler } from '../../utils/chartSelectionHelper';
 
 ChartJS.register(LinearScale, PointElement, Tooltip, Legend);
 
@@ -201,6 +202,12 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
       },
     },
     onClick: (event: any, elements: any[]) => {
+      // First handle ChartSelectionManager integration
+      const chartRef = { data: chartData };
+      const clickHandler = createChartJsClickHandler('segment-distribution', 'scatter', chartRef);
+      clickHandler(event, elements);
+      
+      // Then handle local state for the detailed popup
       if (elements.length > 0) {
         const datasetIndex = elements[0].datasetIndex;
         const index = elements[0].index;
@@ -225,17 +232,10 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
               });
             }
           } else {
-            // Regular click for AI insights
+            // Regular click - just set selected point
             setSelectedPoint(point);
             onPointClick?.(point);
-            
-            const insight = generatePointInsight(point);
-            setAiInsightContent(insight);
-            setInsightPosition({ 
-              x: event.native?.clientX || window.innerWidth / 2, 
-              y: event.native?.clientY || window.innerHeight / 2 
-            });
-            setShowAIInsight(true);
+            // AI insights are now handled by ChartSelectionManager
           }
         }
       }
@@ -371,8 +371,8 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
         pointerEvents: 'none',
       }} />
 
-      {/* AI Insight Popup */}
-      {showAIInsight && aiInsightContent && (
+      {/* AI Insight Popup removed - using ChartSelectionManager instead */}
+      {false && (
         <div
           style={{
             position: 'fixed',

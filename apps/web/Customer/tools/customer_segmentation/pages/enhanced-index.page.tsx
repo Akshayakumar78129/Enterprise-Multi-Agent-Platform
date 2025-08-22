@@ -20,6 +20,8 @@ import EnhancedSegmentProfileCards from '../ui/components/visualizations/Enhance
 import EnhancedSegmentDistributionMap from '../ui/components/visualizations/EnhancedSegmentDistributionMap';
 import SegmentMetricComparison from '../ui/components/visualizations/SegmentMetricComparison';
 import EnhancedSegmentationFilters from '../ui/components/controls/EnhancedSegmentationFilters';
+import SegmentationDashboardWithSelection from '../ui/components/SegmentationDashboardWithSelection';
+import BusinessIntelligenceAgent from '../ui/components/BusinessIntelligenceAgent';
 
 const store = configureStore({
   reducer: {
@@ -48,6 +50,7 @@ const EnhancedCustomerSegmentationDashboardInner: React.FC = () => {
 
   const [regions, setRegions] = useState<string[]>([]);
   const [segments, setSegments] = useState<Array<string | number>>([]);
+  const [showBIAgent, setShowBIAgent] = useState(false);
 
   useEffect(() => {
     dispatch(setLoading(true));
@@ -214,6 +217,7 @@ const EnhancedCustomerSegmentationDashboardInner: React.FC = () => {
 
   return (
     <>
+    <SegmentationDashboardWithSelection segmentData={segmentSummaries} kpiData={processedKPIs}>
       <style>
         {`
           @keyframes float {
@@ -464,6 +468,47 @@ const EnhancedCustomerSegmentationDashboardInner: React.FC = () => {
           )}
         </div>
       </div>
+    </SegmentationDashboardWithSelection>
+    
+    {/* Business Intelligence Agent */}
+    {showBIAgent && (
+      <BusinessIntelligenceAgent onClose={() => setShowBIAgent(false)} />
+    )}
+    
+    {/* Floating BI Agent Button */}
+    <button
+      onClick={() => setShowBIAgent(true)}
+      style={{
+        position: 'fixed',
+        bottom: 100,
+        right: 24,
+        width: 60,
+        height: 60,
+        borderRadius: '50%',
+        background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+        border: 'none',
+        color: 'white',
+        fontSize: 28,
+        cursor: 'pointer',
+        boxShadow: '0 8px 32px rgba(59, 130, 246, 0.4)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: 'transform 0.2s, box-shadow 0.2s',
+        zIndex: 999
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.transform = 'scale(1.1)';
+        e.currentTarget.style.boxShadow = '0 12px 48px rgba(59, 130, 246, 0.6)';
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.transform = 'scale(1)';
+        e.currentTarget.style.boxShadow = '0 8px 32px rgba(59, 130, 246, 0.4)';
+      }}
+      title="Open Business Intelligence Agent"
+    >
+      🤖
+    </button>
     </>
   );
 };

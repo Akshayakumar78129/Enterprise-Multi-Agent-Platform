@@ -11,6 +11,7 @@ import {
   Legend,
 } from 'chart.js';
 import { segmentationTheme, getSegmentColor } from '../../styles/theme';
+import { handleChartClick } from '../../utils/chartSelectionHelper';
 
 ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
@@ -180,6 +181,16 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
             transition={{ delay: index * 0.1 }}
             whileHover={{ scale: 1.02 }}
             onClick={(e: React.MouseEvent) => {
+              // Send to ChartSelectionManager
+              handleChartClick({
+                chartId: `segment-card-${segment.segment}`,
+                chartType: 'segment-profile',
+                label: `Segment ${segment.segment}`,
+                value: segment.customerCount,
+                unit: 'customers',
+                metadata: segment
+              }, e);
+              
               if (e.shiftKey) {
                 // Shift+Click for multi-selection
                 const selectionAPI = (window as any).chartSelectionAPI;
@@ -195,14 +206,9 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
                   });
                 }
               } else {
-                // Regular click for AI insights
+                // Regular click - just expand card
                 setExpandedCard(expandedCard === segment.segment ? null : segment.segment);
                 onSelect?.(segment.segment);
-                
-                const insight = generateSegmentInsight(segment);
-                setAiInsightContent(insight);
-                setInsightPosition({ x: e.clientX, y: e.clientY });
-                setShowAIInsight(true);
               }
             }}
             style={{
@@ -434,8 +440,8 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
         ))}
       </div>
 
-      {/* AI Insight Popup */}
-      {showAIInsight && aiInsightContent && (
+      {/* AI Insight Popup removed - using ChartSelectionManager instead */}
+      {false && (
         <div
           style={{
             position: 'fixed',
