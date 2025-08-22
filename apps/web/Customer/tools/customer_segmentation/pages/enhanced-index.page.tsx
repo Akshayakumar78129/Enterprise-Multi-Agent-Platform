@@ -19,9 +19,10 @@ import BeautifulSegmentKPITiles from '../ui/components/kpi/BeautifulSegmentKPITi
 import EnhancedSegmentProfileCards from '../ui/components/visualizations/EnhancedSegmentProfileCards';
 import EnhancedSegmentDistributionMap from '../ui/components/visualizations/EnhancedSegmentDistributionMap';
 import SegmentMetricComparison from '../ui/components/visualizations/SegmentMetricComparison';
-import EnhancedSegmentationFilters from '../ui/components/controls/EnhancedSegmentationFilters';
+// import EnhancedSegmentationFilters from '../ui/components/controls/EnhancedSegmentationFilters';
 import SegmentationDashboardWithSelection from '../ui/components/SegmentationDashboardWithSelection';
 import BusinessIntelligenceAgent from '../ui/components/BusinessIntelligenceAgent';
+import SegmentationFilters from '../ui/components/filters/SegmentationFilters';
 
 const store = configureStore({
   reducer: {
@@ -349,32 +350,14 @@ const EnhancedCustomerSegmentationDashboardInner: React.FC = () => {
           {/* KPI Section */}
           <BeautifulSegmentKPITiles kpis={processedKPIs} />
 
-          {/* Beautiful Filters Section */}
-          <div style={{
-            background: 'rgba(30, 39, 56, 0.9)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: 20,
-            padding: '32px',
-            border: '1px solid rgba(0, 224, 255, 0.2)',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 224, 255, 0.1)',
-            marginBottom: 48
-          }}>
-            <h3 style={{
-              fontSize: 18,
-              fontWeight: 600,
-              color: '#f7f9fb',
-              marginBottom: 24,
-              textAlign: 'center'
-            }}>
-              🎛️ Filters & Controls
-            </h3>
-            <EnhancedSegmentationFilters
-              regions={regions}
-              segments={segments}
-              value={filters}
-              onChange={handleFilterChange}
-            />
-          </div>
+          {/* New Filters Section like Churn Dashboard */}
+          <SegmentationFilters
+            onFiltersChange={(newFilters) => {
+              console.log('Filters changed:', newFilters);
+              // You can dispatch filter changes here if needed
+              // dispatch(setFilters(newFilters));
+            }}
+          />
 
           {/* Segment Profile Cards */}
           <div style={{ marginBottom: 60 }}>
