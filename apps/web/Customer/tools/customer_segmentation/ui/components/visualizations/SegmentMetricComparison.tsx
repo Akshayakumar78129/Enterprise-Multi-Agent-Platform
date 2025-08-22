@@ -15,7 +15,7 @@ import {
   Legend,
 } from 'chart.js';
 import { segmentationTheme, getSegmentColor } from '../../styles/theme';
-import { createChartJsClickHandler } from '../../utils/chartSelectionHelper';
+import { handleChartClick as sendToSelectionManager } from '../../utils/chartSelectionHelper';
 
 ChartJS.register(
   CategoryScale,
@@ -146,16 +146,41 @@ const SegmentMetricComparison: React.FC<SegmentMetricComparisonProps> = ({
   };
 
   const handleChartClick = (event: any, elements: any[]) => {
-    // Use the chartSelectionHelper for consistent handling
-    const chartRef = { data: getChartData() };
-    const clickHandler = createChartJsClickHandler(
-      'segment-metric-comparison',
-      chartType,
-      chartRef
-    );
-    clickHandler(event, elements);
+    if (!elements || elements.length === 0) return;
     
-    // AI insights are now handled by ChartSelectionManager
+    try {
+      // Get click coordinates from the event
+      const rect = event.native?.target?.getBoundingClientRect();
+      const x = event.native?.clientX || (rect ? rect.left + rect.width / 2 : window.innerWidth / 2);
+      const y = event.native?.clientY || (rect ? rect.top + rect.height / 2 : window.innerHeight / 2);
+      
+      const element = elements[0];
+      const datasetIndex = element.datasetIndex;
+      const index = element.index;
+      
+      const data = getChartData();
+      const dataset = data.datasets[datasetIndex];
+      const metricLabel = data.labels?.[index] || 'Unknown Metric';
+      const segmentName = dataset.label || 'Unknown Segment';
+      const value = dataset.data[index];
+      
+      // Send to ChartSelectionManager with proper coordinates
+      sendToSelectionManager({
+        chartId: 'segment-metric-comparison',
+        chartType: chartType === 'radar' ? 'radar' : 'bar',
+        label: `${segmentName} - ${metricLabel}`,
+        value: value,
+        index: index,
+        metadata: {
+          segment: segmentName,
+          metric: metricLabel,
+          datasetIndex,
+          dataIndex: index
+        }
+      }, { clientX: x, clientY: y });
+    } catch (error) {
+      console.error('Error handling chart click:', error);
+    }
   };
 
   const barOptions = {

@@ -265,8 +265,8 @@ const BeautifulSegmentKPITiles: React.FC<BeautifulSegmentKPITilesProps> = ({ kpi
       delay: 300
     },
     {
-      value: `${kpis.segmentStability || 0}%`,
-      label: 'Segment Stability',
+      value: Math.round(kpis.segmentStability || 0),
+      label: 'Segment Stability %',
       icon: '🔒',
       color: '#f59e0b',
       trend: kpis.segmentStability > 75 ? 'good' : 'fair',
