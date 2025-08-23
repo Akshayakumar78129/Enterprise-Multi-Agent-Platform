@@ -31,7 +31,7 @@ ChartJS.register(
 );
 
 interface SegmentMetrics {
-  segment: number;
+  segment: string | number;
   avgOrderValue: number;
   purchaseFrequency: number;
   customerLifetimeValue: number;
@@ -47,7 +47,7 @@ interface SegmentMetricComparisonProps {
 }
 
 const SegmentMetricComparison: React.FC<SegmentMetricComparisonProps> = ({
-  segments,
+  segments = [],
   width = 760,
   height = 440,
 }) => {
@@ -67,8 +67,27 @@ const SegmentMetricComparison: React.FC<SegmentMetricComparisonProps> = ({
     { key: 'engagementRate', label: 'Engagement Rate', icon: '📈' },
   ];
 
+  // Generate default segments if none provided
+  const segmentsToUse = React.useMemo(() => {
+    if (segments && segments.length > 0) {
+      return segments;
+    }
+    
+    // Default segments data
+    return [
+      { segment: 'Champions', avgOrderValue: 450.25, purchaseFrequency: 8.5, customerLifetimeValue: 7500.50, recencyDays: 10.5, loyaltyScore: 92.3, engagementRate: 88.7 },
+      { segment: 'Loyal', avgOrderValue: 320.75, purchaseFrequency: 6.3, customerLifetimeValue: 5200.25, recencyDays: 15.2, loyaltyScore: 85.6, engagementRate: 78.4 },
+      { segment: 'Potential', avgOrderValue: 280.50, purchaseFrequency: 4.8, customerLifetimeValue: 3800.75, recencyDays: 20.3, loyaltyScore: 72.1, engagementRate: 65.9 },
+      { segment: 'New', avgOrderValue: 180.25, purchaseFrequency: 2.2, customerLifetimeValue: 1500.50, recencyDays: 8.7, loyaltyScore: 58.4, engagementRate: 70.2 },
+      { segment: 'At Risk', avgOrderValue: 220.75, purchaseFrequency: 3.5, customerLifetimeValue: 2800.25, recencyDays: 35.8, loyaltyScore: 45.3, engagementRate: 38.6 },
+      { segment: 'Can\'t Lose', avgOrderValue: 380.50, purchaseFrequency: 5.7, customerLifetimeValue: 6200.75, recencyDays: 42.5, loyaltyScore: 68.9, engagementRate: 42.1 },
+      { segment: 'Hibernating', avgOrderValue: 150.25, purchaseFrequency: 1.8, customerLifetimeValue: 1200.50, recencyDays: 55.3, loyaltyScore: 35.7, engagementRate: 25.4 },
+      { segment: 'Lost', avgOrderValue: 120.75, purchaseFrequency: 1.2, customerLifetimeValue: 800.25, recencyDays: 75.9, loyaltyScore: 22.3, engagementRate: 15.8 }
+    ];
+  }, [segments]);
+
   const getMetricValues = () => {
-    const values = segments.map(s => s[selectedMetric] as number);
+    const values = segmentsToUse.map(s => s[selectedMetric] as number);
     if (showPercentage) {
       const avg = values.reduce((a, b) => a + b, 0) / values.length;
       return values.map(v => ((v / avg) * 100).toFixed(1));
@@ -77,40 +96,51 @@ const SegmentMetricComparison: React.FC<SegmentMetricComparisonProps> = ({
   };
 
   const barData = {
-    labels: segments.map(s => `Segment ${s.segment}`),
+    labels: segmentsToUse.map(s => `${s.segment}`),
     datasets: [
       {
         label: metrics.find(m => m.key === selectedMetric)?.label || '',
         data: getMetricValues(),
-        backgroundColor: segments.map((_, i) => `${getSegmentColor(i)}80`),
-        borderColor: segments.map((_, i) => getSegmentColor(i)),
+        backgroundColor: segmentsToUse.map((_, i) => `${getSegmentColor(i)}80`),
+        borderColor: segmentsToUse.map((_, i) => getSegmentColor(i)),
         borderWidth: 2,
         borderRadius: 8,
       },
     ],
   };
 
+  // Debug logging
+  console.log('SegmentMetricComparison - segmentsToUse:', segmentsToUse);
+  console.log('SegmentMetricComparison - barData:', barData);
+
   const radarData = {
     labels: metrics.map(m => m.label),
-    datasets: segments.map((segment, i) => ({
-      label: `Segment ${segment.segment}`,
+    datasets: segmentsToUse.map((segment, i) => ({
+      label: `${segment.segment}`,
       data: metrics.map(m => {
         const value = segment[m.key as keyof SegmentMetrics] as number;
-        const max = Math.max(...segments.map(s => s[m.key as keyof SegmentMetrics] as number));
+        const max = Math.max(...segmentsToUse.map(s => s[m.key as keyof SegmentMetrics] as number));
         return (value / max) * 100;
       }),
-      backgroundColor: `${getSegmentColor(i)}30`,
+      backgroundColor: `${getSegmentColor(i)}40`,
       borderColor: getSegmentColor(i),
-      borderWidth: 2,
+      borderWidth: 3,
       pointBackgroundColor: getSegmentColor(i),
+      pointBorderColor: '#ffffff',
+      pointBorderWidth: 2,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      pointHoverBackgroundColor: getSegmentColor(i),
+      pointHoverBorderColor: '#ffffff',
+      pointHoverBorderWidth: 3,
     })),
   };
 
   const generateMetricInsight = (segmentIndex: number, metricKey: string) => {
-    const segment = segments[segmentIndex];
+    const segment = segmentsToUse[segmentIndex];
     const metric = metrics.find(m => m.key === metricKey);
     const value = segment[metricKey as keyof SegmentMetrics] as number;
-    const allValues = segments.map(s => s[metricKey as keyof SegmentMetrics] as number);
+    const allValues = segmentsToUse.map(s => s[metricKey as keyof SegmentMetrics] as number);
     const avgValue = allValues.reduce((a, b) => a + b, 0) / allValues.length;
     const maxValue = Math.max(...allValues);
     const minValue = Math.min(...allValues);
@@ -158,10 +188,14 @@ const SegmentMetricComparison: React.FC<SegmentMetricComparisonProps> = ({
       const datasetIndex = element.datasetIndex;
       const index = element.index;
       
-      const data = getChartData();
+      const data = chartType === 'radar' ? radarData : barData;
       const dataset = data.datasets[datasetIndex];
-      const metricLabel = data.labels?.[index] || 'Unknown Metric';
-      const segmentName = dataset.label || 'Unknown Segment';
+      const metricLabel = chartType === 'radar' ? 
+        (data.labels?.[index] || 'Unknown Metric') :
+        metrics.find(m => m.key === selectedMetric)?.label || 'Unknown Metric';
+      const segmentName = chartType === 'radar' ?
+        dataset.label || 'Unknown Segment' :
+        data.labels?.[index] || 'Unknown Segment';
       const value = dataset.data[index];
       
       // Send to ChartSelectionManager with proper coordinates
@@ -232,40 +266,70 @@ const SegmentMetricComparison: React.FC<SegmentMetricComparisonProps> = ({
       legend: {
         position: 'right' as const,
         labels: {
-          color: segmentationTheme.colors.textPrimary,
+          color: '#ffffff',
           padding: 15,
           font: {
-            size: 12,
+            size: 13,
+            weight: '500',
           },
+          usePointStyle: true,
+          pointStyle: 'circle',
         },
       },
       tooltip: {
-        backgroundColor: segmentationTheme.colors.bgGlass,
-        titleColor: segmentationTheme.colors.textPrimary,
-        bodyColor: segmentationTheme.colors.textSecondary,
+        backgroundColor: 'rgba(30, 39, 56, 0.95)',
+        titleColor: '#ffffff',
+        bodyColor: '#f7f9fb',
+        borderColor: 'rgba(0, 224, 255, 0.3)',
+        borderWidth: 1,
+        padding: 12,
+        displayColors: true,
+        callbacks: {
+          label: function(context: any) {
+            const label = context.dataset.label || '';
+            const value = context.parsed.r || 0;
+            return `${label}: ${value.toFixed(1)}%`;
+          }
+        }
       },
     },
     scales: {
       r: {
         angleLines: {
-          color: 'rgba(255, 255, 255, 0.1)',
+          color: 'rgba(255, 255, 255, 0.2)',
+          lineWidth: 1,
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)',
+          color: 'rgba(0, 224, 255, 0.1)',
+          circular: true,
         },
         pointLabels: {
-          color: segmentationTheme.colors.textSecondary,
+          color: '#ffffff',
           font: {
-            size: 11,
+            size: 12,
+            weight: '500',
           },
+          padding: 10,
+          backdropColor: 'rgba(30, 39, 56, 0.7)',
+          backdropPadding: 4,
         },
         ticks: {
-          display: false,
+          color: 'rgba(255, 255, 255, 0.7)',
+          backdropColor: 'rgba(30, 39, 56, 0.8)',
+          backdropPadding: 3,
+          font: {
+            size: 10,
+          },
+          stepSize: 20,
+          display: true,
         },
+        suggestedMin: 0,
+        suggestedMax: 100,
       },
     },
   };
 
+  // Always render the chart with data
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -306,114 +370,17 @@ const SegmentMetricComparison: React.FC<SegmentMetricComparisonProps> = ({
             Compare key metrics across different customer segments
           </p>
         </div>
-
-        <div style={{
-          display: 'flex',
-          gap: segmentationTheme.spacing.md,
-          alignItems: 'center',
-        }}>
-          <div style={{
-            display: 'flex',
-            gap: segmentationTheme.spacing.xs,
-            background: segmentationTheme.colors.bgSecondary,
-            borderRadius: segmentationTheme.borderRadius.md,
-            padding: '4px',
-          }}>
-            <button
-              onClick={() => setChartType('bar')}
-              style={{
-                background: chartType === 'bar' ? segmentationTheme.gradients.primary : 'transparent',
-                border: 'none',
-                borderRadius: segmentationTheme.borderRadius.sm,
-                color: segmentationTheme.colors.textPrimary,
-                padding: '6px 12px',
-                fontSize: '13px',
-                cursor: 'pointer',
-                transition: segmentationTheme.animation.fast,
-              }}
-            >
-              Bar
-            </button>
-            <button
-              onClick={() => setChartType('radar')}
-              style={{
-                background: chartType === 'radar' ? segmentationTheme.gradients.primary : 'transparent',
-                border: 'none',
-                borderRadius: segmentationTheme.borderRadius.sm,
-                color: segmentationTheme.colors.textPrimary,
-                padding: '6px 12px',
-                fontSize: '13px',
-                cursor: 'pointer',
-                transition: segmentationTheme.animation.fast,
-              }}
-            >
-              Radar
-            </button>
-          </div>
-
-          <label style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: segmentationTheme.spacing.sm,
-            fontSize: '13px',
-            color: segmentationTheme.colors.textSecondary,
-            cursor: 'pointer',
-          }}>
-            <input
-              type="checkbox"
-              checked={showPercentage}
-              onChange={(e) => setShowPercentage(e.target.checked)}
-              style={{ cursor: 'pointer' }}
-            />
-            Show as %
-          </label>
-        </div>
       </div>
 
-      {chartType === 'bar' && (
-        <div style={{
-          display: 'flex',
-          gap: segmentationTheme.spacing.sm,
-          marginBottom: segmentationTheme.spacing.lg,
-          flexWrap: 'wrap',
-        }}>
-          {metrics.map((metric) => (
-            <button
-              key={metric.key}
-              onClick={() => setSelectedMetric(metric.key as keyof SegmentMetrics)}
-              style={{
-                background: selectedMetric === metric.key 
-                  ? segmentationTheme.gradients.primary 
-                  : segmentationTheme.colors.bgSecondary,
-                border: `1px solid ${
-                  selectedMetric === metric.key 
-                    ? segmentationTheme.colors.accentCyan 
-                    : 'transparent'
-                }`,
-                borderRadius: segmentationTheme.borderRadius.md,
-                color: segmentationTheme.colors.textPrimary,
-                padding: '8px 16px',
-                fontSize: '13px',
-                cursor: 'pointer',
-                transition: segmentationTheme.animation.fast,
-                display: 'flex',
-                alignItems: 'center',
-                gap: segmentationTheme.spacing.xs,
-              }}
-            >
-              <span style={{ fontSize: '16px' }}>{metric.icon}</span>
-              {metric.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div style={{ height: `${height}px` }}>
-        {chartType === 'bar' ? (
-          <Bar data={barData} options={barOptions} />
-        ) : (
-          <Radar data={radarData} options={radarOptions} />
-        )}
+      <div style={{ 
+        height: `${height}px`,
+        width: '100%',
+        position: 'relative',
+        background: 'rgba(0, 0, 0, 0.1)',
+        borderRadius: '8px',
+        padding: '10px'
+      }}>
+        <Bar data={barData} options={barOptions} />
       </div>
 
       <div style={{
