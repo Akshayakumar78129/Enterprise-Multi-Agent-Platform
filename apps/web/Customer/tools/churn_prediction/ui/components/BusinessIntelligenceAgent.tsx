@@ -315,7 +315,7 @@ export default function BusinessIntelligenceAgent() {
               border: '1px solid rgba(239, 68, 68, 0.2)'
             }}>
               <div style={{ fontSize: '24px', fontWeight: '700', color: '#ef4444', marginBottom: '8px' }}>
-                ₹{(totalRevenueAtRisk / 100000).toFixed(1)}L at Risk
+                ${(totalRevenueAtRisk / 1000).toFixed(1)}K at Risk
               </div>
               <div style={{ fontSize: '14px', color: '#f8fafc' }}>
                 {highRiskCustomers.length} customers likely to churn
@@ -388,7 +388,7 @@ export default function BusinessIntelligenceAgent() {
             </div>
             
             {[
-              { label: 'Revenue at Risk', value: `₹${(riskAssessment.revenueAtRisk / 100000).toFixed(1)}L`, severity: 'high' },
+              { label: 'Revenue at Risk', value: `$${(riskAssessment.revenueAtRisk / 1000).toFixed(1)}K`, severity: 'high' },
               { label: 'Customers Affected', value: riskAssessment.affectedCustomers, severity: 'medium' },
               { label: 'Segment Value', value: riskAssessment.segmentValue, severity: 'low' },
               { label: 'Brand Impact', value: 'Moderate to Severe', severity: 'high' }
@@ -467,7 +467,7 @@ export default function BusinessIntelligenceAgent() {
                       fontWeight: '600',
                       color: outcome.revenueImpact < 0 ? '#ef4444' : '#10b981'
                     }}>
-                      ₹{(Math.abs(outcome.revenueImpact) / 100000).toFixed(1)}L
+                      ${(Math.abs(outcome.revenueImpact) / 1000).toFixed(1)}K
                     </div>
                   </div>
                   <div>
@@ -665,7 +665,7 @@ export default function BusinessIntelligenceAgent() {
                           Preserved LTV
                         </div>
                         <div style={{ fontSize: '16px', fontWeight: '600', color: '#10b981' }}>
-                          ₹{(simulation.preservedLTV / 100000).toFixed(1)}L
+                          ${(simulation.preservedLTV / 1000).toFixed(1)}K
                         </div>
                       </div>
                       <div>
@@ -689,7 +689,7 @@ export default function BusinessIntelligenceAgent() {
                           Cost
                         </div>
                         <div style={{ fontSize: '16px', fontWeight: '600', color: '#ef4444' }}>
-                          ₹{(selectedStrategy.implementationCost / 1000).toFixed(0)}K
+                          ${(selectedStrategy.implementationCost / 1000).toFixed(0)}K
                         </div>
                       </div>
                     </div>
@@ -713,7 +713,7 @@ export default function BusinessIntelligenceAgent() {
                 If no action is taken:
               </div>
               <ul style={{ margin: 0, paddingLeft: '20px', color: '#ef4444', fontSize: '12px' }}>
-                <li>Revenue loss: ₹{(totalRevenueAtRisk * 0.7 / 100000).toFixed(1)}L</li>
+                <li>Revenue loss: ${(totalRevenueAtRisk * 0.7 / 1000).toFixed(1)}K</li>
                 <li>Customer churn: {Math.floor(highRiskCustomers.length * 0.65)} customers</li>
                 <li>Brand damage: Severe impact on reputation</li>
                 <li>Competitive disadvantage: Loss of market share</li>
