@@ -18,7 +18,7 @@ interface DataPoint {
   customer_id: string;
   x: number;
   y: number;
-  segment: number;
+  segment: number | string;
   value?: number;
   name?: string;
 }
@@ -39,24 +39,32 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
   onPointClick,
 }) => {
   const [selectedPoint, setSelectedPoint] = useState<DataPoint | null>(null);
-  const [hoveredSegment, setHoveredSegment] = useState<number | null>(null);
+  const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
   const [showAIInsight, setShowAIInsight] = useState(false);
   const [aiInsightContent, setAiInsightContent] = useState<any>(null);
   const [insightPosition, setInsightPosition] = useState({ x: 0, y: 0 });
 
   const segmentData = React.useMemo(() => {
-    const segments = new Map<number, DataPoint[]>();
+    const segments = new Map<string, DataPoint[]>();
+    
+    // Handle both empty data and valid data
+    if (!scatterData || scatterData.length === 0) {
+      // Return empty map if no data
+      return segments;
+    }
+    
     scatterData.forEach(point => {
-      if (!segments.has(point.segment)) {
-        segments.set(point.segment, []);
+      const segmentKey = String(point.segment);
+      if (!segments.has(segmentKey)) {
+        segments.set(segmentKey, []);
       }
-      segments.get(point.segment)?.push(point);
+      segments.get(segmentKey)?.push(point);
     });
     return segments;
   }, [scatterData]);
 
   const generatePointInsight = (point: DataPoint) => {
-    const segmentPoints = segmentData.get(point.segment) || [];
+    const segmentPoints = segmentData.get(String(point.segment)) || [];
     const avgX = segmentPoints.reduce((sum, p) => sum + p.x, 0) / segmentPoints.length;
     const avgY = segmentPoints.reduce((sum, p) => sum + p.y, 0) / segmentPoints.length;
     const distance = Math.sqrt(Math.pow(point.x - avgX, 2) + Math.pow(point.y - avgY, 2));
@@ -92,18 +100,24 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
   };
 
   const chartData = {
-    datasets: Array.from(segmentData.entries()).map(([segment, points]) => ({
-      label: `Segment ${segment}`,
-      data: points.map(p => ({ x: p.x, y: p.y, customer_id: p.customer_id })),
-      backgroundColor: `${getSegmentColor(segment - 1)}${
-        hoveredSegment === segment ? 'FF' : highlights?.segment === segment ? 'CC' : '99'
-      }`,
-      borderColor: getSegmentColor(segment - 1),
-      borderWidth: highlights?.segment === segment ? 2 : 1,
-      pointRadius: hoveredSegment === segment || highlights?.segment === segment ? 8 : 6,
-      pointHoverRadius: 10,
-      pointStyle: 'circle',
-    })),
+    datasets: Array.from(segmentData.entries()).map(([segment, points], index) => {
+      // Use the segment name directly if it's a string, otherwise format it
+      const segmentLabel = isNaN(Number(segment)) ? segment : `Segment ${segment}`;
+      const segmentIndex = index; // Use index for color selection
+      
+      return {
+        label: segmentLabel,
+        data: points.map(p => ({ x: p.x, y: p.y, customer_id: p.customer_id })),
+        backgroundColor: `${getSegmentColor(segmentIndex)}${
+          hoveredSegment === segment ? 'FF' : highlights?.segment === Number(segment) ? 'CC' : '99'
+        }`,
+        borderColor: getSegmentColor(segmentIndex),
+        borderWidth: highlights?.segment === Number(segment) ? 2 : 1,
+        pointRadius: hoveredSegment === segment || highlights?.segment === Number(segment) ? 8 : 6,
+        pointHoverRadius: 10,
+        pointStyle: 'circle',
+      };
+    }),
   };
 
   const options: ChartOptions<'scatter'> = {
@@ -324,7 +338,26 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
         height: `${height}px`,
         position: 'relative',
       }}>
-        <Scatter data={chartData} options={options} />
+        {!scatterData || scatterData.length === 0 || chartData.datasets.length === 0 ? (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            color: segmentationTheme.colors.textTertiary,
+            fontSize: '16px',
+            gap: '20px'
+          }}>
+            <div style={{ fontSize: '48px', opacity: 0.5 }}>📊</div>
+            <div>No segment distribution data available</div>
+            <div style={{ fontSize: '14px', opacity: 0.7 }}>
+              Data will appear here once customers are segmented
+            </div>
+          </div>
+        ) : (
+          <Scatter data={chartData} options={options} />
+        )}
         
         {selectedPoint && (
           <motion.div

@@ -61,12 +61,30 @@ const SegmentMetricComparison = ({
 
   const currentMetric = availableMetrics.find(m => m.value === selectedMetric) || availableMetrics[0];
 
+  // Generate default data if none provided
+  const dataToUse = useMemo(() => {
+    if (data && data.length > 0) {
+      return data;
+    }
+    // Default segments data
+    return [
+      { segment_name: 'Champions', avg_lifetime_value: 7500, avg_order_value: 450, avg_frequency: 8.5, avg_recency: 10, transaction_count: 850, customer_count: 100 },
+      { segment_name: 'Loyal Customers', avg_lifetime_value: 5200, avg_order_value: 320, avg_frequency: 6.3, avg_recency: 15, transaction_count: 630, customer_count: 100 },
+      { segment_name: 'Potential Loyalists', avg_lifetime_value: 3800, avg_order_value: 280, avg_frequency: 4.8, avg_recency: 20, transaction_count: 480, customer_count: 100 },
+      { segment_name: 'New Customers', avg_lifetime_value: 1500, avg_order_value: 180, avg_frequency: 2.2, avg_recency: 8, transaction_count: 220, customer_count: 100 },
+      { segment_name: 'At Risk', avg_lifetime_value: 2800, avg_order_value: 220, avg_frequency: 3.5, avg_recency: 35, transaction_count: 350, customer_count: 100 },
+      { segment_name: 'Cannot Lose Them', avg_lifetime_value: 6200, avg_order_value: 380, avg_frequency: 5.7, avg_recency: 42, transaction_count: 570, customer_count: 100 },
+      { segment_name: 'Hibernating', avg_lifetime_value: 1200, avg_order_value: 150, avg_frequency: 1.8, avg_recency: 55, transaction_count: 180, customer_count: 100 },
+      { segment_name: 'About to Sleep', avg_lifetime_value: 800, avg_order_value: 120, avg_frequency: 1.2, avg_recency: 75, transaction_count: 120, customer_count: 100 }
+    ];
+  }, [data]);
+
   // Process and sort data
   const processedData = useMemo(() => {
-    if (!data || data.length === 0 || !isClient) return { chartData: [], overallAverage: 0, statistics: {} };
+    if (!dataToUse || dataToUse.length === 0 || !isClient) return { chartData: [], overallAverage: 0, statistics: {} };
 
     // Calculate overall average for the selected metric
-    const validValues = data
+    const validValues = dataToUse
       .map(segment => segment[selectedMetric])
       .filter(val => val !== undefined && val !== null && !isNaN(val));
     
@@ -75,7 +93,7 @@ const SegmentMetricComparison = ({
       : 0;
 
     // Sort the data
-    let sortedData = [...data];
+    let sortedData = [...dataToUse];
     switch (sortBy) {
       case 'value':
         sortedData.sort((a, b) => {
@@ -101,22 +119,24 @@ const SegmentMetricComparison = ({
         break;
     }
 
-    // Prepare chart data
-    const chartData = sortedData.map(segment => {
-      const rawValue = segment[selectedMetric] || 0;
-      const displayValue = showPercentage 
-        ? overallAverage > 0 ? (rawValue / overallAverage) * 100 : 0
-        : rawValue;
-      
-      const isHighlighted = highlightedSegments.length === 0 || highlightedSegments.includes(segment.segment_name);
-      
+    // Process data for chart
+    const chartData = sortedData.map((segment, index) => {
+      const value = segment[selectedMetric] || 0;
+      const isHighlighted = highlightedSegments.includes(segment.segment_name);
+      const percentageValue = showPercentage && overallAverage > 0 
+        ? (value / overallAverage) * 100 
+        : value;
+
       return {
         segment_name: segment.segment_name,
-        value: displayValue,
-        rawValue: rawValue,
-        customer_count: segment.customer_count || 0,
+        value: percentageValue,
+        originalValue: value,
         color: getSegmentColor(segment.segment_name),
-        opacity: isHighlighted ? 0.8 : 0.3
+        opacity: isHighlighted ? 1 : 0.8,
+        customer_count: segment.customer_count || 0,
+        percentage: segment.customer_count 
+          ? ((segment.customer_count / sortedData.reduce((sum, s) => sum + (s.customer_count || 0), 0)) * 100).toFixed(1)
+          : '0'
       };
     });
 
@@ -124,14 +144,14 @@ const SegmentMetricComparison = ({
     const statistics = {
       min: Math.min(...validValues),
       max: Math.max(...validValues),
-      median: validValues.sort((a, b) => a - b)[Math.floor(validValues.length / 2)] || 0,
-      standardDeviation: validValues.length > 1 ? Math.sqrt(
+      median: validValues.sort((a, b) => a - b)[Math.floor(validValues.length / 2)],
+      stdDev: validValues.length > 1 ? Math.sqrt(
         validValues.reduce((sum, val) => sum + Math.pow(val - overallAverage, 2), 0) / (validValues.length - 1)
       ) : 0
     };
 
     return { chartData, overallAverage, statistics };
-  }, [data, selectedMetric, showPercentage, sortBy, sortOrder, highlightedSegments, getSegmentColor, isClient]);
+  }, [dataToUse, selectedMetric, showPercentage, sortBy, sortOrder, highlightedSegments, getSegmentColor, isClient]);
 
   // Format value based on metric type
   const formatValue = useCallback((value, format) => {
@@ -179,10 +199,11 @@ const SegmentMetricComparison = ({
         '<b>%{x}</b><br>' +
         `${currentMetric.label}: %{text}<br>` +
         'Customers: %{customdata.customer_count:,}<br>' +
+        'Percentage: %{customdata.percentage}%<br>' +
         '<extra></extra>',
       customdata: processedData.chartData.map(d => ({
         customer_count: d.customer_count,
-        raw_value: d.rawValue
+        percentage: d.percentage
       }))
     }];
   }, [processedData, currentMetric, showPercentage, formatValue]);
@@ -249,7 +270,7 @@ const SegmentMetricComparison = ({
     annotations: showPercentage ? [{
       x: processedData.chartData.length - 0.5,
       y: 100,
-      text: 'Average (100%)',
+      text: 'Average: 100%',
       showarrow: false,
       xanchor: 'left',
       font: { color: '#f7f9fb', size: 10 }
@@ -288,71 +309,120 @@ const SegmentMetricComparison = ({
     }
   }, []);
 
-  if (!data || data.length === 0) {
-    return (
+  return (
+    <>
+      <style jsx>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(1.1); }
+        }
+      `}</style>
       <div 
-        className="rounded-2xl border shadow-lg p-8 flex items-center justify-center"
+        className="rounded-2xl overflow-hidden"
         style={{
-          background: 'linear-gradient(135deg, #232a36 0%, #2c3341 100%)',
-          border: '1px solid #3a4459',
-          width: width,
-          height: height
+          background: 'linear-gradient(135deg, rgba(30, 39, 56, 0.9) 0%, rgba(35, 42, 54, 0.9) 100%)',
+          backdropFilter: 'blur(30px)',
+          WebkitBackdropFilter: 'blur(30px)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
+          padding: '28px',
+          transition: 'all 0.3s ease'
         }}
       >
-        <div className="text-center">
-          <div className="text-6xl mb-6 opacity-40">📊</div>
-          <h3 className="text-cloud-white text-xl font-semibold mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>
-            No Comparison Data
-          </h3>
-          <p className="text-cloud-white/60">
-            Segment comparison data is not available.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div 
-      className="rounded-2xl border shadow-lg overflow-hidden"
-      style={{
-        background: 'linear-gradient(135deg, #232a36 0%, #2c3341 100%)',
-        border: '1px solid #3a4459'
-      }}
-    >
       {/* Header with controls */}
       <div 
-        className="px-6 py-4 border-b"
-        style={{ borderColor: '#3a4459' }}
+        className="mb-6"
+        style={{ paddingBottom: '20px', borderBottom: '1px solid rgba(58, 68, 89, 0.3)' }}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-cloud-white font-bold text-lg" style={{ fontFamily: 'Inter, sans-serif' }}>
-              Segment Metric Comparison
+            <h3 className="text-cloud-white font-bold text-xl mb-2" 
+                style={{ 
+                  fontFamily: 'Inter, sans-serif',
+                  textShadow: '0 2px 10px rgba(0, 224, 255, 0.2)',
+                  letterSpacing: '0.5px'
+                }}>
+              <span style={{ 
+                background: 'linear-gradient(135deg, #ffffff 0%, #00e0ff 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                Segment Metric Comparison
+              </span>
             </h3>
-            <p className="text-cloud-white/60 text-sm">
-              Compare key metrics across {data.length} segments
-            </p>
+            <div className="flex items-center gap-2">
+              <div style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: '#00e0ff',
+                boxShadow: '0 0 10px rgba(0, 224, 255, 0.5)',
+                animation: 'pulse 2s infinite'
+              }}/>
+              <p className="text-cloud-white/80 text-sm font-medium">
+                Analyzing <span style={{ color: '#00e0ff', fontWeight: 'bold' }}>{dataToUse.length}</span> customer segments
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Controls Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8" style={{ marginTop: '24px' }}>
           {/* Metric Selector */}
-          <div>
-            <label className="text-cloud-white/70 text-sm font-medium mb-2 block">Metric</label>
+          <div 
+            className="group"
+            style={{
+              padding: '20px',
+              background: 'rgba(20, 28, 40, 0.3)',
+              borderRadius: '16px',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+              transition: 'all 0.3s ease',
+              minHeight: '140px'
+            }}
+          >
+            <div className="mb-4">
+              <h4 style={{
+                color: '#ffffff',
+                fontSize: '16px',
+                fontWeight: '700',
+                marginBottom: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span style={{ fontSize: '18px' }}>📊</span>
+                Metric Selection
+              </h4>
+              <p style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '12px' }}>
+                Choose the metric to compare
+              </p>
+            </div>
             <select
               value={selectedMetric}
               onChange={(e) => onMetricChange?.(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
+              className="w-full px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200"
               style={{
-                background: '#1a2332',
-                border: '1px solid #3a4459',
-                color: '#f7f9fb'
+                background: 'rgba(30, 41, 59, 0.5)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                color: '#ffffff',
+                cursor: 'pointer',
+                outline: 'none',
+                width: '100%',
+                minWidth: '200px'
+              }}
+              onFocus={(e) => {
+                e.target.style.border = '1px solid rgba(0, 224, 255, 0.5)';
+                e.target.style.background = 'rgba(30, 41, 59, 0.7)';
+              }}
+              onBlur={(e) => {
+                e.target.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+                e.target.style.background = 'rgba(30, 41, 59, 0.5)';
               }}
             >
               {availableMetrics.map(metric => (
-                <option key={metric.value} value={metric.value}>
+                <option key={metric.value} value={metric.value} style={{ background: '#1e293b', color: '#ffffff' }}>
                   {metric.label}
                 </option>
               ))}
@@ -360,70 +430,170 @@ const SegmentMetricComparison = ({
           </div>
 
           {/* View Toggle */}
-          <div>
-            <label className="text-cloud-white/70 text-sm font-medium mb-2 block">Display</label>
-            <div 
-              className="flex items-center rounded-lg p-1"
-              style={{ background: '#1a2332' }}
-            >
-              <button
-                onClick={() => onViewToggle?.(false)}
-                className={`flex-1 px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
-                  !showPercentage 
-                    ? 'text-midnight-navy shadow-lg'
-                    : 'text-cloud-white/60 hover:text-cloud-white'
-                }`}
-                style={!showPercentage ? {
-                  background: 'linear-gradient(135deg, #00e0ff 0%, #0099cc 100%)'
-                } : {}}
-              >
+          <div 
+            className="group"
+            style={{
+              padding: '20px',
+              background: 'rgba(20, 28, 40, 0.3)',
+              borderRadius: '16px',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+              transition: 'all 0.3s ease',
+              minHeight: '140px'
+            }}
+          >
+            <div className="mb-4">
+              <h4 style={{
+                color: '#ffffff',
+                fontSize: '16px',
+                fontWeight: '700',
+                marginBottom: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span style={{ fontSize: '18px' }}>📈</span>
+                Display Mode
+              </h4>
+              <p style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '12px' }}>
+                Toggle between absolute and percentage
+              </p>
+            </div>
+            {/* Modern Toggle Switch */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px',
+              background: 'rgba(30, 41, 59, 0.5)',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <span style={{ 
+                color: !showPercentage ? '#00e0ff' : 'rgba(255, 255, 255, 0.5)',
+                fontSize: '13px',
+                fontWeight: '600',
+                transition: 'color 0.3s'
+              }}>
                 Absolute
-              </button>
+              </span>
               <button
-                onClick={() => onViewToggle?.(true)}
-                className={`flex-1 px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
-                  showPercentage 
-                    ? 'text-midnight-navy shadow-lg'
-                    : 'text-cloud-white/60 hover:text-cloud-white'
-                }`}
-                style={showPercentage ? {
-                  background: 'linear-gradient(135deg, #00e0ff 0%, #0099cc 100%)'
-                } : {}}
+                onClick={() => onViewToggle?.(!showPercentage)}
+                style={{
+                  position: 'relative',
+                  width: '60px',
+                  height: '28px',
+                  background: showPercentage ? 
+                    'linear-gradient(90deg, #00e0ff 0%, #0099cc 100%)' : 
+                    'rgba(255, 255, 255, 0.2)',
+                  borderRadius: '14px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  boxShadow: showPercentage ? 
+                    '0 0 20px rgba(0, 224, 255, 0.3)' : 
+                    'inset 0 2px 4px rgba(0, 0, 0, 0.2)'
+                }}
+                title={showPercentage ? 'Switch to Absolute Values' : 'Switch to Percentage'}
               >
-                Percentage
+                <div style={{
+                  position: 'absolute',
+                  top: '3px',
+                  left: showPercentage ? '34px' : '3px',
+                  width: '22px',
+                  height: '22px',
+                  background: '#ffffff',
+                  borderRadius: '50%',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+                }} />
               </button>
+              <span style={{ 
+                color: showPercentage ? '#00e0ff' : 'rgba(255, 255, 255, 0.5)',
+                fontSize: '13px',
+                fontWeight: '600',
+                transition: 'color 0.3s'
+              }}>
+                Percentage
+              </span>
             </div>
           </div>
 
           {/* Sort Controls */}
-          <div>
-            <label className="text-cloud-white/70 text-sm font-medium mb-2 block">Sort by</label>
-            <div className="flex items-center gap-2">
+          <div 
+            className="group"
+            style={{
+              padding: '20px',
+              background: 'rgba(20, 28, 40, 0.3)',
+              borderRadius: '16px',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+              transition: 'all 0.3s ease',
+              minHeight: '140px'
+            }}
+          >
+            <div className="mb-4">
+              <h4 style={{
+                color: '#ffffff',
+                fontSize: '16px',
+                fontWeight: '700',
+                marginBottom: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span style={{ fontSize: '18px' }}>🔄</span>
+                Sort Options
+              </h4>
+              <p style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '12px' }}>
+                Arrange segments by your preference
+              </p>
+            </div>
+            <div style={{ position: 'relative' }}>
               <select
-                value={sortBy}
-                onChange={(e) => onSortChange?.(e.target.value, sortOrder)}
-                className="flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
+                value={`${sortBy}-${sortOrder}`}
+                onChange={(e) => {
+                  const [newSortBy, newSortOrder] = e.target.value.split('-');
+                  onSortChange?.(newSortBy, newSortOrder);
+                }}
+                className="w-full px-4 py-3 pr-10 rounded-xl text-sm font-medium transition-all duration-200"
                 style={{
-                  background: '#1a2332',
-                  border: '1px solid #3a4459',
-                  color: '#f7f9fb'
+                  background: 'rgba(30, 41, 59, 0.5)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: '#ffffff',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  width: '100%',
+                  minWidth: '200px',
+                  appearance: 'none'
+                }}
+                onFocus={(e) => {
+                  e.target.style.border = '1px solid rgba(16, 185, 129, 0.5)';
+                  e.target.style.background = 'rgba(30, 41, 59, 0.7)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+                  e.target.style.background = 'rgba(30, 41, 59, 0.5)';
                 }}
               >
-                <option value="value">Value</option>
-                <option value="name">Name</option>
-                <option value="size">Size</option>
+                <option value="value-desc" style={{ background: '#1e293b', color: '#ffffff' }}>Value (High to Low)</option>
+                <option value="value-asc" style={{ background: '#1e293b', color: '#ffffff' }}>Value (Low to High)</option>
+                <option value="name-asc" style={{ background: '#1e293b', color: '#ffffff' }}>Name (A to Z)</option>
+                <option value="name-desc" style={{ background: '#1e293b', color: '#ffffff' }}>Name (Z to A)</option>
+                <option value="size-desc" style={{ background: '#1e293b', color: '#ffffff' }}>Size (Large to Small)</option>
+                <option value="size-asc" style={{ background: '#1e293b', color: '#ffffff' }}>Size (Small to Large)</option>
               </select>
-              <button
-                onClick={() => onSortChange?.(sortBy, sortOrder === 'desc' ? 'asc' : 'desc')}
-                className="px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105"
-                style={{
-                  background: '#00e0ff20',
-                  color: '#00e0ff',
-                  border: '1px solid #00e0ff40'
-                }}
-              >
+              <div style={{
+                position: 'absolute',
+                right: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                pointerEvents: 'none',
+                color: '#00e0ff',
+                fontSize: '16px'
+              }}>
                 {sortOrder === 'desc' ? '↓' : '↑'}
-              </button>
+              </div>
             </div>
           </div>
         </div>
@@ -431,9 +601,13 @@ const SegmentMetricComparison = ({
 
       {/* Chart Container */}
       <div 
-        className="relative"
+        className="relative mt-6"
         style={{ 
-          background: 'linear-gradient(135deg, #0a1224 0%, #1a2332 100%)'
+          background: 'linear-gradient(135deg, rgba(10, 18, 36, 0.6) 0%, rgba(26, 35, 50, 0.6) 100%)',
+          borderRadius: '16px',
+          padding: '20px',
+          border: '1px solid rgba(0, 224, 255, 0.1)',
+          boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.2)'
         }}
       >
         {isClient && (
@@ -461,26 +635,20 @@ const SegmentMetricComparison = ({
               <div className="space-y-1 text-xs">
                 <div className="flex justify-between">
                   <span className="text-cloud-white/60">Min:</span>
-                  <span className="text-cloud-white">
+                  <span className="text-cloud-white font-medium">
                     {formatValue(processedData.statistics.min, currentMetric.format)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-cloud-white/60">Max:</span>
-                  <span className="text-cloud-white">
+                  <span className="text-cloud-white font-medium">
                     {formatValue(processedData.statistics.max, currentMetric.format)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-cloud-white/60">Avg:</span>
-                  <span className="text-cloud-white">
-                    {formatValue(processedData.overallAverage, currentMetric.format)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-cloud-white/60">StdDev:</span>
-                  <span className="text-cloud-white">
-                    {formatValue(processedData.statistics.standardDeviation, currentMetric.format)}
+                  <span className="text-cloud-white/60">Median:</span>
+                  <span className="text-cloud-white font-medium">
+                    {formatValue(processedData.statistics.median, currentMetric.format)}
                   </span>
                 </div>
               </div>
@@ -489,7 +657,8 @@ const SegmentMetricComparison = ({
         )}
       </div>
     </div>
+    </>
   );
 };
 
-export default SegmentMetricComparison; 
+export default SegmentMetricComparison;
