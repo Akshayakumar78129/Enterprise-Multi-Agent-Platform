@@ -8,8 +8,7 @@ const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 const CustomerSegmentQuadrant = ({
   data = [],
   isLoading = false,
-  onCustomerClick = null,
-  onSegmentFilter = null,
+  onSegmentSelect = null,
   selectedCustomers = [],
   selectedSegment = null,
   width = 480,
@@ -137,10 +136,11 @@ const CustomerSegmentQuadrant = ({
   }, [data, selectedCustomers, selectedSegment, hoveredCustomer]);
 
   const handleClick = (eventData) => {
-    if (onCustomerClick && eventData.points && eventData.points.length > 0) {
+    if (onSegmentSelect && eventData.points && eventData.points.length > 0) {
+      // Find the segment name from the clicked trace
       const point = eventData.points[0];
-      const customerId = point.customdata.customerId;
-      onCustomerClick(customerId);
+      const segment = point.data.name;
+      onSegmentSelect(segment);
     }
   };
 
@@ -156,9 +156,9 @@ const CustomerSegmentQuadrant = ({
   };
 
   const handleLegendClick = (eventData) => {
-    if (onSegmentFilter) {
+    if (onSegmentSelect) {
       const segment = eventData.data[eventData.curveIndex].name;
-      onSegmentFilter(segment);
+      onSegmentSelect(segment);
     }
     return false; // Prevent default legend toggle
   };
@@ -367,14 +367,14 @@ const CustomerSegmentQuadrant = ({
         {Object.entries(segmentCounts).map(([segment, count]) => (
           <div
             key={segment}
-            onClick={() => onSegmentFilter && onSegmentFilter(segment)}
+            onClick={() => onSegmentSelect && onSegmentSelect(segment)}
             style={{
               padding: '4px 8px',
               backgroundColor: selectedSegment === segment ? 'rgba(0, 224, 255, 0.2)' : 'rgba(35, 42, 54, 0.5)',
               border: `1px solid ${segmentColors[segment]}`,
               borderRadius: '12px',
               color: segmentColors[segment],
-              cursor: onSegmentFilter ? 'pointer' : 'default',
+              cursor: onSegmentSelect ? 'pointer' : 'default',
               transition: 'all 0.2s ease'
             }}
           >

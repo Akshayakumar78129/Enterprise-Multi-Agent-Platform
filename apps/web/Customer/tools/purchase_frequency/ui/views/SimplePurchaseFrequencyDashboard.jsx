@@ -331,7 +331,7 @@ const SimplePurchaseFrequencyDashboard = () => {
               • {metadata.avgFrequency?.toFixed(2) || '0.00'} average purchases per customer
             </div>
             <div style={{ color: '#8893a7', fontSize: '14px' }}>
-              • ${kpis.avgCustomerValue?.toLocaleString() || '0'} average customer value
+              • ${kpis.avgCustomerValue?.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'} average customer value
             </div>
           </div>
         </div>
@@ -362,7 +362,7 @@ const SimplePurchaseFrequencyDashboard = () => {
                   {segment.customerCount?.toLocaleString()} customers
                 </div>
                 <div style={{ fontSize: '12px', color: '#5891cb' }}>
-                  {segment.percentage}% • ${segment.avgValue?.toLocaleString()} avg
+                  {segment.percentage}% • ${segment.avgValue?.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'} avg
                 </div>
               </div>
             </div>

@@ -1,5 +1,6 @@
 import React from "react";
 import { KpiTile } from "../../../../../../ui-common/design-system/components/KpiTile";
+import styles from './TransactionKPITiles.module.css';
 
 const TransactionKPITiles = ({ kpis, isLoading = false, onKPIClick = null }) => {
   if (!kpis) return null;
@@ -96,27 +97,14 @@ const TransactionKPITiles = ({ kpis, isLoading = false, onKPIClick = null }) => 
   ];
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-        gap: "16px",
-        marginBottom: "24px",
-      }}
-    >
+    <div className={styles['kpi-grid']}>
       {tiles.map((tile, index) => (
-        <div
+        <KpiTile 
           key={index}
-          onClick={tile.onClick}
-          style={{
-            cursor: tile.onClick ? 'pointer' : 'default'
-          }}
-        >
-          <KpiTile 
-            {...tile} 
-            isLoading={isLoading}
-          />
-        </div>
+          {...tile} 
+          isLoading={isLoading}
+          className={styles['kpi-tile-custom']}
+        />
       ))}
     </div>
   );

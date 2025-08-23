@@ -24,7 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-AGENT_BASE_URL = os.getenv("AGENT_BASE_URL")
+AGENT_BASE_URL = os.getenv("AGENT_BASE_URL", "http://127.0.0.1:8002").rstrip("/")
 AGENT_RUN_URL = f"{AGENT_BASE_URL}/run_sse"
 SINGLE_AGENT_RUN_URL = f"{AGENT_BASE_URL}/run_sse_agent"
 
@@ -103,6 +103,70 @@ async def run_sse(request: Request):
         event_generator(),
         media_type="text/event-stream",
     )
+# ---- Performance Deviation ML endpoint (ADD-ONLY) ----
+from pydantic import BaseModel
+from typing import List, Optional
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.metrics import r2_score
+
+class _PDPoint(BaseModel):
+    t: str
+    y: float
+    dow: Optional[int] = None
+    moy: Optional[int] = None
+    is_weekend: Optional[int] = None
+    eom: Optional[int] = None
+
+class _PDRequest(BaseModel):
+    kpi: str
+    horizon: int = 0
+    series: List[_PDPoint]
+
+@app.post("/pd/predict")
+def pd_predict(req: _PDRequest):
+    df = pd.DataFrame([p.dict() for p in req.series])
+    if df.empty or "y" not in df:
+        return {"ok": False, "error": "empty series"}
+
+    df["t"] = pd.to_datetime(df["t"])
+    df.sort_values("t", inplace=True)
+
+    if "dow" not in df or df["dow"].isna().any():
+        df["dow"] = df["t"].dt.dayofweek
+    if "moy" not in df or df["moy"].isna().any():
+        df["moy"] = df["t"].dt.month
+    if "is_weekend" not in df or df["is_weekend"].isna().any():
+        df["is_weekend"] = (df["dow"] >= 5).astype(int)
+    if "eom" not in df or df["eom"].isna().any():
+        df["eom"] = (df["t"] == (df["t"] + pd.offsets.MonthEnd(0))).astype(int)
+
+    X = df[["dow","moy","is_weekend","eom"]].values
+    y = df["y"].values
+
+    model = GradientBoostingRegressor(random_state=42)
+    model.fit(X, y)
+    pred = model.predict(X)
+
+    resid = y - pred
+    sigma = float(np.std(resid)) if len(resid) > 1 else 0.0
+    lower = (pred - 1.96*sigma).tolist()
+    upper = (pred + 1.96*sigma).tolist()
+
+    r2 = float(r2_score(y, pred)) if len(y) > 2 else 0.0
+    imps = model.feature_importances_.tolist()
+    features = ["dow","moy","is_weekend","eom"]
+
+    return {
+        "ok": True,
+        "r2": r2,
+        "sigma": sigma,
+        "pred": pred.tolist(),
+        "lower": lower,
+        "upper": upper,
+        "importances": [{"feature": f, "importance": float(v)} for f, v in zip(features, imps)]
+    }
 
 
 if __name__ == "__main__":

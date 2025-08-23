@@ -6,6 +6,7 @@
       "esnext"
     ],
     "allowJs": true,
+    "checkJs": false,
     "skipLibCheck": true,
     "strict": false,
     "noEmit": true,
@@ -22,7 +23,7 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx"
-, "pages/api/chat/data.js"  ],
+, "pages/api/chat/data.js", "Customer/tools/performance_deviation/ui/components/chat/EnhancedContextAwareChatbot.js"  ],
   "exclude": [
     "node_modules"
   ]

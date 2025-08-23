@@ -14,6 +14,7 @@ const DualAxisTimeSeries = ({
   highlightDateRange = null
 }) => {
   const [plotData, setPlotData] = useState(null);
+  const [keyPoints, setKeyPoints] = useState([]);
   const plotRef = useRef(null);
 
   useEffect(() => {
@@ -85,6 +86,38 @@ const DualAxisTimeSeries = ({
       };
       traces.unshift(highlightTrace);
     }
+
+    // Compute key points
+    const maxVolIdx = sortedData.reduce((maxIdx, d, i) => d.transaction_count > sortedData[maxIdx].transaction_count ? i : maxIdx, 0);
+    const maxVol = sortedData[maxVolIdx];
+    // Simple moving average for avg_amount to detect recent high/low
+    const window = 5;
+    const sma = sortedData.map((d, i) => {
+      const start = Math.max(0, i - window + 1);
+      const slice = sortedData.slice(start, i + 1).map(x => x.avg_amount);
+      return slice.reduce((s, v) => s + v, 0) / slice.length;
+    });
+    const lastN = Math.min(20, sortedData.length);
+    const recent = sma.slice(-lastN);
+    const recentHigh = Math.max(...recent);
+    const recentLow = Math.min(...recent);
+    const recentHighIdx = sma.lastIndexOf(recentHigh);
+    const recentLowIdx = sma.lastIndexOf(recentLow);
+    const trend = (() => {
+      const first = sortedData[0].avg_amount;
+      const last = sortedData[sortedData.length - 1].avg_amount;
+      const pct = first ? ((last - first) / first) * 100 : 0;
+      if (pct > 5) return `Avg value trending up (+${pct.toFixed(1)}%)`;
+      if (pct < -5) return `Avg value trending down (${pct.toFixed(1)}%)`;
+      return 'Avg value stable';
+    })();
+
+    setKeyPoints([
+      `★ Max volume: ${maxVol.date} (${maxVol.transaction_count.toLocaleString()} tx)`,
+      `Recent high avg value: $${sortedData[recentHighIdx].avg_amount.toFixed(2)} on ${sortedData[recentHighIdx].date}`,
+      `Recent low avg value: $${sortedData[recentLowIdx].avg_amount.toFixed(2)} on ${sortedData[recentLowIdx].date}`,
+      trend
+    ]);
 
     setPlotData(traces);
   }, [data, highlightDateRange]);
@@ -203,6 +236,24 @@ const DualAxisTimeSeries = ({
           />
         )}
       </div>
+      {keyPoints && keyPoints.length > 0 && (
+        <div style={{
+          marginTop: 10,
+          padding: '8px 12px',
+          backgroundColor: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 8,
+          color: '#d6e3f1',
+          fontSize: 12
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: 6, color: '#a5b4fc' }}>Key Points</div>
+          <ul style={{ margin: 0, paddingLeft: 16 }}>
+            {keyPoints.map((kp, idx) => (
+              <li key={idx} style={{ marginBottom: 4 }}>{kp}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </Card>
   );
 };
