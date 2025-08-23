@@ -1,8 +1,11 @@
-import ComponentDemo from './design-system/ComponentDemo';
+// UI Common Components and Utilities
+export { default as FloatingAIChat } from './FloatingAIChat';
+export { default as FormattedTable, KPICard, DataGrid } from './components/FormattedTable';
 
 // Design system components
 import { Card } from './design-system/components/Card';
 import { Button } from './design-system/components/Button';
+// KpiTile consolidated to single JS implementation
 import { KpiTile } from './design-system/components/KpiTile';
 import { Select } from './design-system/components/Select';
 import { Input } from './design-system/components/Input';
@@ -22,33 +25,21 @@ import { SpeechBubble } from './ai-interaction/SpeechBubble/SpeechBubble';
 import { QueryInput } from './QueryInput/QueryInput';
 
 // Export components
-export {
-  // Demo
-  ComponentDemo,
-  
-  // Design system components
-  Card,
-  Button,
-  KpiTile,
-  Select,
-  Input,
-  Table,
-  Tabs,
-  Toggle,
-  Checkbox,
-  Grid,
-  GridItem,
-  
-  // Theme
-  useTheme,
-  ThemeProvider,
-  
-  // AI Interaction components
-  RobotCharacter,
-  LaserPointer,
-  SpeechBubble,
-  QueryInput,
-};
 
-// Default export for the component demo
-export default ComponentDemo; 
+// Number formatting utilities
+export {
+  formatToTwoDecimals,
+  formatCurrency,
+  formatPercentage,
+  formatLargeNumber,
+  getTableCellStyles,
+  formatTableData,
+  getAlignmentClass,
+  formatKPIValues
+} from './utils/numberFormat';
+
+// AI interaction components
+export { default as QueryInput } from './QueryInput/QueryInput';
+
+// Available hooks
+export { default as useApiClient } from './hooks/useApiClient'; 

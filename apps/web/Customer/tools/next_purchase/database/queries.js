@@ -1,12 +1,22 @@
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
+const fs = require('fs');
 
 class NextPurchaseQueries {
   constructor() {
-    this.dbPath = path.resolve(
-      process.cwd(),
-      "Customer/database/customers.db"
-    );
+    // Attempt multiple candidate paths to locate customers.db to avoid CWD brittleness.
+    const candidates = [
+      path.resolve(process.cwd(), 'Customer', 'database', 'customers.db'),
+      path.resolve(process.cwd(), 'apps', 'web', 'Customer', 'database', 'customers.db'),
+      path.resolve(__dirname, '..', '..', 'database', 'customers.db'),
+      path.resolve(__dirname, '..', '..', '..', 'database', 'customers.db')
+    ];
+    this.dbPath = candidates.find(p => fs.existsSync(p));
+    if (!this.dbPath) {
+      // Keep a best-effort default (first) for error messaging
+      this.dbPath = candidates[0];
+      console.warn('[NextPurchaseQueries] customers.db not found at expected locations:', candidates);
+    }
   }
 
   async getMainData(filters = {}) {
