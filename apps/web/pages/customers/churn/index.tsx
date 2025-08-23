@@ -1,6 +1,7 @@
 import React, { useEffect, useState, Suspense, lazy } from 'react';
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
+import { applyFilters, calculateFilteredMetrics, getAvailableSegments, getAvailableCategories } from '../../../Customer/tools/churn_prediction/ui/utils/dataFilters';
 
 // Lazy load heavy components to reduce initial bundle size
 const ChurnKpiTiles = lazy(() => import('../../../Customer/tools/churn_prediction/ui/components/kpi/ChurnKpiTiles'));
@@ -629,8 +630,6 @@ const FloatingChatButton = ({ onClick, isHidden }: any) => {
     </button>
   );
 };
-
-import { applyFilters, calculateFilteredMetrics, getAvailableSegments, getAvailableCategories } from '../../../Customer/tools/churn_prediction/ui/utils/dataFilters';
 
 export default function ChurnDashboardPage() {
   const [data, setData] = useState<any>({ status: 'loading' });

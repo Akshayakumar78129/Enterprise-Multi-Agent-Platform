@@ -63,6 +63,13 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
   const [chatbotMode, setChatbotMode] = useState<ChatbotMode>('quick');
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Session state for AIResponseDashboard
+  const [session] = useState({
+    session_id: uuidv4(),
+    user_id: "ari",
+    app_name: "customer_segmentation"
+  });
 
   // Conversation memory for context
   const [conversationMemory, setConversationMemory] = useState({
@@ -392,24 +399,63 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
         }
       }
     } else {
-      // Regular bot response adapted to mode
-      let responseContent = '';
-      
-      if (chatbotMode === 'quick') {
-        responseContent = `Quick insight on "${textToSend}":\n\n📊 **Key Metrics:** Active segments showing 15% growth\n⚡ **Action:** Focus on top-performing segments\n\n💡 Try @customer for segment-specific insights.`;
-      } else if (chatbotMode === 'strategic') {
-        responseContent = `Strategic analysis for "${textToSend}":\n\n📈 **Trend Analysis:** Customer segments show varying performance patterns\n🎯 **Strategic Focus:** Optimize high-value segments while nurturing growth segments\n📋 **Recommendations:**\n• Deploy targeted campaigns for Champions\n• Retention strategies for At Risk segment\n• Upselling opportunities in Loyal segment\n\n💡 Mention @sales, @customer, @finance, or @inventory for specialized strategic insights.`;
-      } else if (chatbotMode === 'deep-dive') {
-        responseContent = `Deep exploration of "${textToSend}":\n\n🔍 **Behavioral Patterns:** Analyzing customer journey across segments\n📊 **Correlations:** Purchase frequency correlates with engagement (r=0.72)\n🎯 **Hidden Insights:**\n• Segment transitions occur primarily during promotional periods\n• Cross-segment movement indicates 23% upgrade potential\n• Behavioral clustering reveals 3 distinct sub-segments\n\n📈 **Detailed Metrics:**\n• Segment stability: 78%\n• Migration rate: 12% quarterly\n• Value concentration: Top 20% drive 65% revenue\n\n💡 Use @customer or @finance agents for comprehensive deep-dive analysis.`;
-      }
-      
-      const botMessage: Message = {
-        id: uuidv4(),
+      // Use AIResponseDashboard for regular bot responses
+      const botMessageId = uuidv4();
+      const loadingMessage: Message = {
+        id: botMessageId,
         type: 'bot',
-        content: responseContent,
+        content: 'Thinking...',
+        isLoading: true,
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, botMessage]);
+      setMessages(prev => [...prev, loadingMessage]);
+      
+      try {
+        // Construct query based on chatbot mode
+        let query = textToSend;
+        if (chatbotMode === 'quick') {
+          query = `Provide a quick insight for: ${textToSend}. Include key metrics and immediate actions.`;
+        } else if (chatbotMode === 'strategic') {
+          query = `Provide strategic analysis for: ${textToSend}. Include trend analysis, strategic focus areas, and recommendations.`;
+        } else if (chatbotMode === 'deep-dive') {
+          query = `Provide deep-dive analysis for: ${textToSend}. Include behavioral patterns, correlations, hidden insights, and detailed metrics.`;
+        }
+        
+        const response = AIResponseDashboard(query, session);
+        let fullResponse = '';
+        
+        for await (const chunk of response) {
+          if (chunk === '[DONE]') {
+            break;
+          }
+          if (chunk === '[ERROR]') {
+            console.error('Error in AI response');
+            setMessages(prev => prev.map(msg => 
+              msg.id === botMessageId
+                ? { ...msg, content: 'Sorry, I encountered an error processing your request.', isLoading: false, error: 'AI Response Error' }
+                : msg
+            ));
+            return;
+          }
+          
+          if (typeof chunk === 'object' && chunk !== null && chunk.text) {
+            fullResponse += chunk.text;
+            // Update message with streaming response
+            setMessages(prev => prev.map(msg => 
+              msg.id === botMessageId
+                ? { ...msg, content: fullResponse, isLoading: false }
+                : msg
+            ));
+          }
+        }
+      } catch (error) {
+        console.error('Error calling AIResponseDashboard:', error);
+        setMessages(prev => prev.map(msg => 
+          msg.id === botMessageId
+            ? { ...msg, content: 'Sorry, I encountered an error processing your request.', isLoading: false, error: error.message }
+            : msg
+        ));
+      }
     }
   };
 
