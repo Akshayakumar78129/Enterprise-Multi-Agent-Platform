@@ -57,7 +57,7 @@ export default function SimpleInteractiveBI({ onClose }: SimpleInteractiveBIProp
       border: '2px solid #3b82f6',
       boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
       overflow: 'hidden',
-      zIndex: 100000
+      zIndex: 1200
     }}>
       {/* Header */}
       <div style={{

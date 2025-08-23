@@ -1,6 +1,7 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { Card } from '../../../../../../ui-common/design-system/components/Card';
+import { handleChartClick } from '../../utils/chartSelectionHelper';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
@@ -26,6 +27,25 @@ export default function SegmentMatrix({ segmentMatrix, onSegmentClick }: Segment
     segmentMatrix.map(s => s.high),
     segmentMatrix.map(s => s.very_high)
   ];
+  
+  // Calculate totals for percentage display
+  const segmentTotals = segmentMatrix.map(s => s.low + s.medium + s.high + s.very_high);
+  
+  // Create custom hover text for each cell
+  const customHoverText = z.map((row, riskIndex) => 
+    row.map((value, segmentIndex) => {
+      const segment = segmentMatrix[segmentIndex];
+      const total = segmentTotals[segmentIndex];
+      const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
+      const riskLevel = riskLabels[riskIndex];
+      
+      return `<b>${segment.segment}</b><br>` +
+             `<b style="color: ${colors[riskIndex]}">${riskLevel} Risk</b><br>` +
+             `Customers: <b>${value}</b> (${percentage}%)<br>` +
+             `Total in Segment: ${total}<br>` +
+             `<span style="color: #00e0ff">Click for details</span>`;
+    })
+  );
   return (
     <Card style={{ background: '#232a36', padding: 16 }}>
       <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Segment Comparison Matrix</div>
@@ -38,6 +58,18 @@ export default function SegmentMatrix({ segmentMatrix, onSegmentClick }: Segment
           colorscale: [[0, '#1976D2'], [0.33, '#2196F3'], [0.66, '#64B5F6'], [1, '#FFC107']],
           showscale: true,
           hoverongaps: false,
+          text: customHoverText,
+          hovertemplate: '%{text}<extra></extra>',
+          hoverlabel: {
+            bgcolor: 'rgba(30, 39, 56, 0.95)',
+            bordercolor: '#00e0ff',
+            font: {
+              family: 'Inter, sans-serif',
+              size: 13,
+              color: '#f7f9fb'
+            },
+            align: 'left'
+          }
         }]}
         layout={{
           margin: { l: 80, r: 10, t: 10, b: 40 },
@@ -48,28 +80,56 @@ export default function SegmentMatrix({ segmentMatrix, onSegmentClick }: Segment
         }}
         config={{ displayModeBar: false }}
         onClick={(event: any) => {
-          if (onSegmentClick && event.points && event.points[0]) {
+          if (event.points && event.points[0]) {
             const point = event.points[0];
-            // For heatmaps, point.x gives us the x-axis value (segment name)
-            // We need to find the corresponding segment in our data
             const segmentName = point.x;
+            const riskLevel = point.y;
+            const value = point.z;
             const segment = segmentMatrix.find(s => s.segment === segmentName);
             
             if (segment) {
-              // Create a mock React MouseEvent for positioning
-              const mockEvent = {
-                clientX: event.event?.clientX || window.innerWidth / 2,
-                clientY: event.event?.clientY || window.innerHeight / 2,
-                preventDefault: () => {},
-                stopPropagation: () => {}
-              } as React.MouseEvent;
+              const isShiftClick = event.event?.shiftKey;
               
-              onSegmentClick(segment.segment, {
-                low: segment.low,
-                medium: segment.medium,
-                high: segment.high,
-                very_high: segment.very_high
-              }, mockEvent);
+              if (isShiftClick) {
+                // Shift+click: Use ChartSelectionManager for multi-selection
+                handleChartClick({
+                  chartId: 'segment-matrix',
+                  chartType: 'heatmap',
+                  label: `${segmentName} - ${riskLevel}`,
+                  value: value,
+                  unit: ' customers',
+                  index: event.points[0].pointIndex,
+                  color: value > 30 ? '#FFC107' : value > 20 ? '#64B5F6' : value > 10 ? '#2196F3' : '#1976D2',
+                  metadata: {
+                    segment: segmentName,
+                    riskLevel: riskLevel,
+                    distribution: {
+                      low: segment.low,
+                      medium: segment.medium,
+                      high: segment.high,
+                      very_high: segment.very_high
+                    }
+                  }
+                }, event.event);
+              } else {
+                // Regular click: Call the original callback for AI insights
+                if (onSegmentClick) {
+                  const mockEvent = {
+                    clientX: event.event?.clientX || window.innerWidth / 2,
+                    clientY: event.event?.clientY || window.innerHeight / 2,
+                    preventDefault: () => {},
+                    stopPropagation: () => {},
+                    shiftKey: false
+                  } as React.MouseEvent;
+                  
+                  onSegmentClick(segment.segment, {
+                    low: segment.low,
+                    medium: segment.medium,
+                    high: segment.high,
+                    very_high: segment.very_high
+                  }, mockEvent);
+                }
+              }
             }
           }
         }}

@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 // @ts-ignore
 import AIInsightBlock from '../../../../../../ui-common/components/AIInsightBlock';
 import MessageFormatterFixed from './MessageFormatterFixed';
+import ChatbotModeSelector, { ChatbotMode, getChatbotModeConfig } from './ChatbotModeSelector';
 
 interface Message {
   id: string;
@@ -58,6 +59,8 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
   const [showMentionDropdown, setShowMentionDropdown] = useState(false);
   const [mentionFilter, setMentionFilter] = useState('');
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+  const [selectedPoints, setSelectedPoints] = useState<any[]>([]);
+  const [chatbotMode, setChatbotMode] = useState<ChatbotMode>('quick');
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -91,14 +94,35 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
     }).format(amount * multiplier);
   };
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
+  const getInitialMessage = (mode: ChatbotMode): Message => {
+    const modeConfig = getChatbotModeConfig(mode);
+    let content = '';
+    
+    if (mode === 'quick') {
+      content = `⚡ **Quick Insights Mode**\n\n📊 **5,000** customers | **8** segments | **$2.5M** revenue\n\n**Top Actions:**\n• Focus on Champions (32%) - highest ROI\n• At Risk segment needs immediate attention\n• New customers (25%) - nurture opportunity\n\n💡 Mention @customer for instant segment insights.`;
+    } else if (mode === 'strategic') {
+      content = `🎯 **Strategic Planning Mode**\n\n📊 **Portfolio Overview:** 5,000 customers | 8 segments | $2.5M revenue\n${getHistoricalContext('portfolio', 5000)}\n\n**Segment Distribution:**\n• Champions: 32% - Drive 45% of revenue\n• Loyal: 28% - Consistent performers\n• At Risk: 15% - Retention priority\n• New: 25% - Growth potential\n\n**Strategic Opportunities:**\n• Segment optimization can yield 23% revenue increase\n• Cross-selling potential in Loyal segment\n• Retention focus on At Risk segment\n\n**Intelligence Teams:** @sales, @customer, @finance, @inventory\n\nWhat strategic initiative would you like to explore?`;
+    } else if (mode === 'deep-dive') {
+      content = `🔍 **Deep Dive Analysis Mode**\n\n📊 **Comprehensive Portfolio Analysis**\n5,000 customers | 8 segments | $2.5M revenue\n${getHistoricalContext('portfolio', 5000)}\n\n**Behavioral Insights:**\n• Segment migration patterns show 12% quarterly movement\n• Purchase frequency variance: σ = 2.3 across segments\n• Customer lifetime value distribution follows power law\n\n**Segment Correlations:**\n• Engagement ↔ Retention: r = 0.78\n• Frequency ↔ Value: r = 0.65\n• Recency ↔ Churn Risk: r = -0.82\n\n**Hidden Patterns:**\n• Sub-segment clustering reveals micro-behaviors\n• Seasonal effects vary by 35% across segments\n• Cross-product affinity strongest in Champions\n\n**Available Intelligence:** @sales, @customer, @finance, @inventory\n\nWhat aspect would you like to explore in depth?`;
+    }
+    
+    return {
       id: '1',
       type: 'bot',
-      content: `📊 **Segmentation Dashboard Update**\n\n**Portfolio**: 5,000 customers | **Active Segments**: 8 | **Revenue Distribution**: $2.5M\n${getHistoricalContext('portfolio', 5000)}\n\n**Top Segments:** Champions (32%), Loyal (28%), At Risk (15%), New (25%)\n\n**Available Intelligence Teams:** @sales, @customer, @finance, or @inventory for specialized insights.\n\n**Recommended Action:** Deploy @customer intelligence for segment optimization - historical data shows 23% revenue increase with targeted strategies.\n\nWhat would you like to explore - **segment performance**, **customer distribution**, or **growth opportunities**?`,
+      content,
       timestamp: new Date()
+    };
+  };
+
+  const [messages, setMessages] = useState<Message[]>([getInitialMessage('quick')]);
+
+  // Update welcome message when mode changes
+  useEffect(() => {
+    if (messages.length === 1 && messages[0].id === '1') {
+      // Only update if we still have just the initial message
+      setMessages([getInitialMessage(chatbotMode)]);
     }
-  ]);
+  }, [chatbotMode]);
 
   // Handle chart click context
   const handleChartClickContext = useCallback((clickData: any) => {
@@ -172,24 +196,147 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
     }));
   }, [conversationMemory.conversationContext.lastRegion]);
 
-  // Expose the function globally for chart integration
+  // Listen for custom events from AI insights
   useEffect(() => {
+    const handleOpenChatbot = (event: CustomEvent) => {
+      const { selectedPoints: points, context, message } = event.detail || {};
+      
+      // Open chatbot
+      setIsOpen(true);
+      
+      // Store selected points
+      if (points && points.length > 0) {
+        setSelectedPoints(points);
+        
+        // Format message exactly like churn dashboard
+        let formattedMessage = `## 📊 Selected Data Points Analysis\n\nYou've selected **${points.length} data point${points.length > 1 ? 's' : ''}** for analysis:\n`;
+        
+        points.forEach((point: any, idx: number) => {
+          formattedMessage += `\n**${idx + 1}. ${point.label || 'Data Point'}** - `;
+          formattedMessage += `${point.chartType || 'Unknown'} • `;
+          formattedMessage += `${point.value}${point.unit || ''}`;
+          
+          // Add segment-specific details
+          if (point.chartType === 'segment-profile' && point.metadata) {
+            const meta = point.metadata;
+            if (meta.avgSpend) formattedMessage += ` • $${meta.avgSpend} avg spend`;
+            if (meta.loyaltyScore) formattedMessage += ` • ${meta.loyaltyScore}% loyalty`;
+          } else if (point.chartType === 'kpi-tile') {
+            if (point.metadata?.trend) formattedMessage += ` • ${point.metadata.trend}`;
+          } else if (point.chartType === 'scatter' && point.metadata) {
+            if (point.metadata.y) formattedMessage += ` • Y: ${point.metadata.y}`;
+            if (point.metadata.segment) formattedMessage += ` • ${point.metadata.segment}`;
+          }
+          
+          if (point.trend) {
+            formattedMessage += ` • ${point.trend}`;
+          }
+        });
+        
+        formattedMessage += `\n\n**Analysis Modes:** Select below or ask me anything.`;
+        
+        const selectionMessage: Message = {
+          id: `selection_${Date.now()}`,
+          type: 'bot',
+          content: formattedMessage,
+          timestamp: new Date(),
+          contextData: { points, context }
+        };
+        setMessages(prev => [...prev, selectionMessage]);
+      }
+      
+      // If there's a specific message/question, add it to input
+      if (message) {
+        setInputValue(message);
+        // The user can then press enter or click send
+      }
+    };
+    
+    const handleChatbotMessage = (event: CustomEvent) => {
+      const { message, context } = event.detail || {};
+      
+      if (message) {
+        setIsOpen(true);
+        setInputValue(message);
+        // The user can then press enter or click send
+      }
+    };
+    
+    const handleMultiSelect = (event: CustomEvent) => {
+      const { selectedPoints: points, message } = event.detail || {};
+      
+      if (points && points.length > 0) {
+        setSelectedPoints(points);
+        
+        // Always open chatbot on multi-select
+        setIsOpen(true);
+        
+        // Format the points exactly like churn dashboard
+        let formattedMessage = `## 📊 Selected Data Points Analysis\n\nYou've selected **${points.length} data points** for analysis:\n`;
+        
+        points.forEach((point: any, idx: number) => {
+          formattedMessage += `\n**${idx + 1}. ${point.label || 'Data Point'}** - `;
+          formattedMessage += `${point.chartType || 'Unknown'} • `;
+          formattedMessage += `${point.value}${point.unit || ''}`;
+          
+          // Add segment-specific details
+          if (point.chartType === 'segment-profile' && point.metadata) {
+            const meta = point.metadata;
+            if (meta.avgSpend) formattedMessage += ` • $${meta.avgSpend} avg spend`;
+            if (meta.loyaltyScore) formattedMessage += ` • ${meta.loyaltyScore}% loyalty`;
+          } else if (point.chartType === 'kpi-tile') {
+            if (point.metadata?.trend) formattedMessage += ` • ${point.metadata.trend}`;
+          } else if (point.chartType === 'scatter' && point.metadata) {
+            if (point.metadata.y) formattedMessage += ` • Y: ${point.metadata.y}`;
+            if (point.metadata.segment) formattedMessage += ` • ${point.metadata.segment}`;
+          }
+          
+          if (point.trend) {
+            formattedMessage += ` • ${point.trend}`;
+          }
+        });
+        
+        formattedMessage += `\n\n**Analysis Modes:** Select below or ask me anything.`;
+        
+        const notificationMessage: Message = {
+          id: `notify_${Date.now()}`,
+          type: 'bot',
+          content: formattedMessage,
+          timestamp: new Date(),
+          contextData: { points }
+        };
+        setMessages(prev => [...prev, notificationMessage]);
+      }
+    };
+    
+    // Register event listeners
+    window.addEventListener('openSegmentationChatbot', handleOpenChatbot as any);
+    window.addEventListener('segmentationChatbotMessage', handleChatbotMessage as any);
+    window.addEventListener('segmentationMultiSelect', handleMultiSelect as any);
+    
+    // Also expose function globally
     if (typeof window !== 'undefined') {
       (window as any).addSegmentationInsightToChat = handleChartClickContext;
-      console.log('✅ Segmentation AI Insight handler registered globally');
+      console.log('✅ Segmentation AI Insight handler registered');
     }
     
     return () => {
+      window.removeEventListener('openSegmentationChatbot', handleOpenChatbot as any);
+      window.removeEventListener('segmentationChatbotMessage', handleChatbotMessage as any);
+      window.removeEventListener('segmentationMultiSelect', handleMultiSelect as any);
+      
       if (typeof window !== 'undefined') {
         delete (window as any).addSegmentationInsightToChat;
-        console.log('🔄 Segmentation AI Insight handler unregistered');
       }
     };
-  }, [handleChartClickContext]);
+  }, [handleChartClickContext, isOpen]);
 
   const sendMessage = async (messageText?: string) => {
     const textToSend = messageText || inputValue.trim();
     if (!textToSend) return;
+
+    // Get current mode configuration
+    const modeConfig = getChatbotModeConfig(chatbotMode);
 
     const userMessage: Message = {
       id: uuidv4(),
@@ -245,11 +392,21 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
         }
       }
     } else {
-      // Regular bot response
+      // Regular bot response adapted to mode
+      let responseContent = '';
+      
+      if (chatbotMode === 'quick') {
+        responseContent = `Quick insight on "${textToSend}":\n\n📊 **Key Metrics:** Active segments showing 15% growth\n⚡ **Action:** Focus on top-performing segments\n\n💡 Try @customer for segment-specific insights.`;
+      } else if (chatbotMode === 'strategic') {
+        responseContent = `Strategic analysis for "${textToSend}":\n\n📈 **Trend Analysis:** Customer segments show varying performance patterns\n🎯 **Strategic Focus:** Optimize high-value segments while nurturing growth segments\n📋 **Recommendations:**\n• Deploy targeted campaigns for Champions\n• Retention strategies for At Risk segment\n• Upselling opportunities in Loyal segment\n\n💡 Mention @sales, @customer, @finance, or @inventory for specialized strategic insights.`;
+      } else if (chatbotMode === 'deep-dive') {
+        responseContent = `Deep exploration of "${textToSend}":\n\n🔍 **Behavioral Patterns:** Analyzing customer journey across segments\n📊 **Correlations:** Purchase frequency correlates with engagement (r=0.72)\n🎯 **Hidden Insights:**\n• Segment transitions occur primarily during promotional periods\n• Cross-segment movement indicates 23% upgrade potential\n• Behavioral clustering reveals 3 distinct sub-segments\n\n📈 **Detailed Metrics:**\n• Segment stability: 78%\n• Migration rate: 12% quarterly\n• Value concentration: Top 20% drive 65% revenue\n\n💡 Use @customer or @finance agents for comprehensive deep-dive analysis.`;
+      }
+      
       const botMessage: Message = {
         id: uuidv4(),
         type: 'bot',
-        content: `I understand you're asking about "${textToSend}". Try mentioning one of our specialized agents for detailed insights:\n\n• @sales - Sales and revenue analysis\n• @customer - Customer behavior and segmentation\n• @finance - Financial metrics and profitability\n• @inventory - Stock and supply chain insights`,
+        content: responseContent,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, botMessage]);
@@ -273,6 +430,7 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
     <>
       {/* Chat Toggle Button */}
       <button
+        data-segmentation-chatbot="true"
         onClick={() => setIsOpen(!isOpen)}
         style={{
           position: 'fixed',
@@ -322,23 +480,61 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20
           }}>
-            <h3 style={{ 
-              margin: 0, 
-              color: 'white', 
-              fontSize: 20, 
-              fontWeight: 700,
-              letterSpacing: '-0.3px'
-            }}>
-              Segmentation AI Assistant
-            </h3>
-            <p style={{ 
-              margin: '6px 0 0', 
-              color: 'rgba(255, 255, 255, 0.95)', 
-              fontSize: 14,
-              fontWeight: 500
-            }}>
-              Mention @agents for specialized insights
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+              <div>
+                <h3 style={{ 
+                  margin: 0, 
+                  color: 'white', 
+                  fontSize: 20, 
+                  fontWeight: 700,
+                  letterSpacing: '-0.3px'
+                }}>
+                  Segmentation AI Assistant
+                </h3>
+                <p style={{ 
+                  margin: '6px 0 0', 
+                  color: 'rgba(255, 255, 255, 0.95)', 
+                  fontSize: 14,
+                  fontWeight: 500
+                }}>
+                  Mention @agents for specialized insights
+                </p>
+              </div>
+              
+              {/* Selected Points Indicator */}
+              {selectedPoints.length > 0 && (
+                <div style={{
+                  padding: '6px 12px',
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  borderRadius: 20,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}>
+                  <span style={{ fontSize: 16 }}>📊</span>
+                  <span style={{
+                    color: 'white',
+                    fontSize: 13,
+                    fontWeight: 600
+                  }}>
+                    {selectedPoints.length} selected
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mode Selector */}
+          <div style={{
+            padding: '12px 16px',
+            background: 'rgba(15, 23, 42, 0.95)',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
+          }}>
+            <ChatbotModeSelector
+              currentMode={chatbotMode}
+              onModeChange={setChatbotMode}
+              selectedPointsCount={selectedPoints.length}
+            />
           </div>
 
           {/* Messages */}

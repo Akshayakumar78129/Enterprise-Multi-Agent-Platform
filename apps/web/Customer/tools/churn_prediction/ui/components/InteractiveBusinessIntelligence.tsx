@@ -697,7 +697,7 @@ export function InteractiveBITrigger({ onClick }: { onClick: () => void }) {
           '0 12px 40px rgba(255, 107, 107, 0.4)',
         transform: isHovered ? 'scale(1.15) rotate(10deg)' : 'scale(1)',
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        zIndex: 9999, // Very high z-index to ensure visibility
+        zIndex: 1200, // Reduced to align with dashboard overlay stack
         animation: 'pulse 2s infinite, float 3s ease-in-out infinite',
         display: 'flex',
         alignItems: 'center',

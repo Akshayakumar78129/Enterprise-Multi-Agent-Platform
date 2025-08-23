@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { ChurnCustomer } from '../../types';
+import { handleChartClick } from '../../utils/chartSelectionHelper';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
@@ -30,18 +31,26 @@ export default function ProbabilityHistogram({
 }: ProbabilityHistogramProps) {
   const [hoveredBin, setHoveredBin] = useState<number | null>(null);
   
-  // Use customers from props, fallback to data prop
-  const customerData = customers.length > 0 ? customers : data;
-  const customerProbabilities = probabilities || customerData.map(c => c.churn_probability);
+  // Use customers from props, fallback to data prop, handle undefined
+  const customerData = (customers && customers.length > 0) ? customers : (data || []);
+  const customerProbabilities = probabilities?.length ? probabilities : 
+    (customerData.length > 0 ? customerData.map(c => c.churn_probability || 0) : []);
 
   const bins = useMemo(() => {
-    if (!customerProbabilities.length) return [];
+    // Always return at least empty bins to show the chart structure
+    if (!customerProbabilities || customerProbabilities.length === 0) {
+      return Array(binCount).fill(0);
+    }
     const min = 0, max = 1;
     const width = (max - min) / binCount;
     const counts = Array(binCount).fill(0);
     customerProbabilities.forEach(p => {
-      const idx = Math.min(Math.floor((p - min) / width), binCount - 1);
-      counts[idx]++;
+      if (typeof p === 'number' && !isNaN(p) && p >= 0 && p <= 1) {
+        const idx = Math.min(Math.floor((p - min) / width), binCount - 1);
+        if (idx >= 0 && idx < binCount) {
+          counts[idx]++;
+        }
+      }
     });
     return counts;
   }, [customerProbabilities, binCount]);
@@ -110,6 +119,23 @@ export default function ProbabilityHistogram({
       </div>
 
       <div style={{ flex: 1, position: 'relative', zIndex: 1 }}>
+        {!customerProbabilities || customerProbabilities.length === 0 ? (
+          <div style={{
+            height: 300,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'column',
+            gap: 12,
+            color: 'rgba(247, 249, 251, 0.6)'
+          }}>
+            <div style={{ fontSize: 48, opacity: 0.3 }}>📊</div>
+            <div style={{ fontSize: 16, fontWeight: 500 }}>No Data Available</div>
+            <div style={{ fontSize: 13, textAlign: 'center', maxWidth: 300 }}>
+              Clear filters or select different segments to view probability distribution
+            </div>
+          </div>
+        ) : (
         <Plot
           data={[{
             x: binEdges.slice(0, -1).map((b, i) => (b + binEdges[i + 1]) / 2),
@@ -211,24 +237,48 @@ export default function ProbabilityHistogram({
           }}
           onUnhover={() => setHoveredBin(null)}
           onClick={(event: any) => {
-            if (onBinClick && event.points && event.points[0]) {
+            if (event.points && event.points[0]) {
               const point = event.points[0];
               const binIndex = point.pointIndex;
               const binStart = binEdges[binIndex];
               const binEnd = binEdges[binIndex + 1];
               const customerCount = bins[binIndex];
               
-              const mockEvent = {
-                clientX: event.event?.clientX || window.innerWidth / 2,
-                clientY: event.event?.clientY || window.innerHeight / 2,
-                preventDefault: () => {},
-                stopPropagation: () => {}
-              } as React.MouseEvent;
+              const isShiftClick = event.event?.shiftKey;
               
-              onBinClick(binStart, binEnd, customerCount, mockEvent);
+              if (isShiftClick) {
+                // Shift+click: Use ChartSelectionManager for multi-selection
+                handleChartClick({
+                  chartId: 'probability-histogram',
+                  chartType: 'histogram',
+                  label: `${(binStart * 100).toFixed(0)}-${(binEnd * 100).toFixed(0)}%`,
+                  value: customerCount,
+                  unit: ' customers',
+                  index: binIndex,
+                  metadata: {
+                    binStart,
+                    binEnd,
+                    riskLevel: binStart < 0.25 ? 'Low' : binStart < 0.5 ? 'Medium' : binStart < 0.75 ? 'High' : 'Very High'
+                  }
+                }, event.event);
+              } else {
+                // Regular click: Call the original callback for AI insights
+                if (onBinClick) {
+                  const mockEvent = {
+                    clientX: event.event?.clientX || window.innerWidth / 2,
+                    clientY: event.event?.clientY || window.innerHeight / 2,
+                    preventDefault: () => {},
+                    stopPropagation: () => {},
+                    shiftKey: false
+                  } as React.MouseEvent;
+                  
+                  onBinClick(binStart, binEnd, customerCount, mockEvent);
+                }
+              }
             }
           }}
         />
+        )}
       </div>
 
       {/* Risk level legend */}

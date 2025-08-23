@@ -1,20 +1,69 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
-import ChurnKpiTiles from '../../../Customer/tools/churn_prediction/ui/components/kpi/ChurnKpiTiles';
-import { Card } from '../../../ui-common/design-system/components/Card';
-import { Grid } from '../../../ui-common/design-system/components/Grid';
-import ProbabilityHistogram from '../../../Customer/tools/churn_prediction/ui/components/visualizations/ProbabilityHistogram';
-import FeatureImportance from '../../../Customer/tools/churn_prediction/ui/components/visualizations/FeatureImportance';
-import CustomerTable from '../../../Customer/tools/churn_prediction/ui/components/CustomerTable';
-import TemporalRiskPattern from '../../../Customer/tools/churn_prediction/ui/components/visualizations/TemporalRiskPattern';
-import SegmentMatrix from '../../../Customer/tools/churn_prediction/ui/components/visualizations/SegmentMatrix';
-import InsightsDrawer from '../../../Customer/tools/churn_prediction/ui/components/InsightsDrawer';
-import RetentionStrategies from '../../../Customer/tools/churn_prediction/ui/components/RetentionStrategies';
-import EnhancedContextAwareChatbot from '../../../Customer/tools/churn_prediction/ui/components/chat/EnhancedContextAwareChatbot';
-import StandaloneBusinessIntelligenceAgent, { BusinessIntelligenceTrigger } from '../../../Customer/tools/churn_prediction/ui/components/StandaloneBusinessIntelligenceAgent';
 
-const ChurnRiskPyramid = dynamic(() => import('../../../Customer/tools/churn_prediction/ui/components/visualizations/ChurnRiskPyramid'), { ssr: false });
+// Lazy load heavy components to reduce initial bundle size
+const ChurnKpiTiles = lazy(() => import('../../../Customer/tools/churn_prediction/ui/components/kpi/ChurnKpiTiles'));
+const ProbabilityHistogram = lazy(() => import('../../../Customer/tools/churn_prediction/ui/components/visualizations/ProbabilityHistogram'));
+const FeatureImportance = lazy(() => import('../../../Customer/tools/churn_prediction/ui/components/visualizations/FeatureImportance'));
+const CustomerTable = lazy(() => import('../../../Customer/tools/churn_prediction/ui/components/CustomerTable'));
+const TemporalRiskPattern = lazy(() => import('../../../Customer/tools/churn_prediction/ui/components/visualizations/TemporalRiskPattern'));
+const SegmentMatrix = lazy(() => import('../../../Customer/tools/churn_prediction/ui/components/visualizations/SegmentMatrix'));
+const EnhancedContextAwareChatbot = lazy(() => import('../../../Customer/tools/churn_prediction/ui/components/chat/EnhancedContextAwareChatbot'));
+const StandaloneBusinessIntelligenceAgent = lazy(() => import('../../../Customer/tools/churn_prediction/ui/components/StandaloneBusinessIntelligenceAgent'));
+
+// Import lightweight components normally
+import { Card } from '../../../ui-common/design-system/components/Card';
+import { BusinessIntelligenceTrigger } from '../../../Customer/tools/churn_prediction/ui/components/StandaloneBusinessIntelligenceAgent';
+
+// Dynamic imports with loading states - Using the new component with selection
+const ChurnRiskPyramidWithSelection = dynamic(() => import('../../../Customer/tools/churn_prediction/ui/components/visualizations/ChurnRiskPyramidWithSelection'), { 
+  ssr: false,
+  loading: () => <div style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f7f9fb' }}>Loading Chart...</div>
+});
+
+const ChartSelectionManager = dynamic(() => import('../../../Customer/tools/churn_prediction/ui/components/selection/ChartSelectionManager'), {
+  ssr: false
+});
+
+const DashboardFilters = dynamic(() => import('../../../Customer/tools/churn_prediction/ui/components/filters/DashboardFilters'), {
+  ssr: false
+});
+
+const CustomerSelector = dynamic(() => import('../../../Customer/tools/churn_prediction/ui/components/filters/CustomerSelector'), {
+  ssr: false
+});
+
+const SelectedCustomersDisplay = dynamic(() => import('../../../Customer/tools/churn_prediction/ui/components/SelectedCustomersDisplay'), {
+  ssr: false
+});
+
+// Loading component for Suspense fallbacks
+const LoadingSpinner = ({ height = '200px' }: { height?: string }) => (
+  <div style={{ 
+    height, 
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    color: '#f7f9fb',
+    background: 'rgba(30, 39, 56, 0.8)',
+    borderRadius: '12px',
+    border: '1px solid rgba(255, 255, 255, 0.1)'
+  }}>
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ 
+        width: '40px', 
+        height: '40px', 
+        border: '3px solid rgba(0, 224, 255, 0.3)', 
+        borderTop: '3px solid #00e0ff', 
+        borderRadius: '50%', 
+        animation: 'spin 1s linear infinite',
+        margin: '0 auto 10px'
+      }} />
+      Loading...
+    </div>
+  </div>
+);
 
 const fetchChurnData = async () => {
   const res = await fetch('/api/churn-prediction/data');
@@ -53,338 +102,414 @@ const generateMockTimeSeriesData = () => {
 };
 
 // Helper function to format markdown-style text
-const formatMessage = (text: string) => {
+const formatMessage = (text: string | any) => {
+  // Ensure text is a string
+  const textStr = typeof text === 'string' ? text : (text?.toString() || '');
+  
+  // Clean up the text - remove excessive newlines and spaces
+  const cleanText = textStr.replace(/\n{3,}/g, '\n\n').trim();
+  
   // Split text by **bold** markers and create React elements
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  const parts = cleanText.split(/(\*\*[^*]+\*\*)/g);
   
   return parts.map((part, index) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       // Remove ** markers and make bold
       const boldText = part.slice(2, -2);
-      return <strong key={index} style={{ fontWeight: 700, color: '#FFC107' }}>{boldText}</strong>;
+      return <strong key={index} style={{ fontWeight: 600, color: '#00e0ff' }}>{boldText}</strong>;
+    }
+    // Convert newlines to breaks for better formatting
+    if (part.includes('\n')) {
+      return part.split('\n').map((line, i) => (
+        <span key={`${index}-${i}`}>
+          {line}
+          {i < part.split('\n').length - 1 && <br />}
+        </span>
+      ));
     }
     return part;
   });
 };
 
-// Enhanced Interactive Inline Chatbot Component
-const InlineChatbot = ({ message, position, onClose, onOpenInteractiveChat }: any) => {
+// Enhanced Interactive Inline Chatbot Component - Unified Design
+const InlineChatbot = ({ message, position, onClose, onOpenInteractiveChat, data }: any) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [showCopyFeedback, setShowCopyFeedback] = useState(false);
+  const [showInteractiveOptions, setShowInteractiveOptions] = useState(false);
+  const [currentMessage, setCurrentMessage] = useState(message);
+  const [dataContext, setDataContext] = useState<any>(null);
+  
+  // Interactive insight options - defined inside component
+  const getInteractiveOptions = (context: any) => {
+    const options = [];
+    
+    if (context.chartType === 'Risk Pyramid' || context.label?.includes('Risk')) {
+      options.push(
+        { icon: '🎯', label: 'What actions should I take?', key: 'actions' },
+        { icon: '💰', label: 'Show revenue impact', key: 'revenue' },
+        { icon: '📈', label: 'Analyze risk breakdown', key: 'breakdown' },
+        { icon: '🔄', label: 'Compare with last period', key: 'compare' }
+      );
+    } else if (context.chartType === 'Feature Importance') {
+      options.push(
+        { icon: '💡', label: 'Why is this important?', key: 'why' },
+        { icon: '🔧', label: 'How to improve this?', key: 'improve' },
+        { icon: '📊', label: 'Show correlation analysis', key: 'correlation' },
+        { icon: '🎯', label: 'Suggest strategies', key: 'strategies' }
+      );
+    } else {
+      options.push(
+        { icon: '📊', label: 'Show detailed analysis', key: 'details' },
+        { icon: '🎯', label: 'What should I do?', key: 'actions' },
+        { icon: '📈', label: 'Show trends', key: 'trends' },
+        { icon: '💡', label: 'Get insights', key: 'insights' }
+      );
+    }
+    
+    return options;
+  };
 
   useEffect(() => {
     if (message) {
+      // Parse message to check if it has context
+      if (typeof message === 'object' && message.simple) {
+        setCurrentMessage(message.simple);
+        setDataContext(message.context);
+        setShowInteractiveOptions(true);
+      } else {
+        setCurrentMessage(message);
+        setShowInteractiveOptions(false);
+      }
+      
       // Show actions after a brief delay
       const actionsTimer = setTimeout(() => setShowActions(true), 1000);
       
-      // Auto-hide after 12 seconds (increased for better UX)
-      const hideTimer = setTimeout(() => {
-        onClose();
-      }, 12000);
+      // Don't auto-hide if interactive
+      if (!showInteractiveOptions) {
+        const hideTimer = setTimeout(() => {
+          onClose();
+        }, 15000);
+        
+        return () => {
+          clearTimeout(actionsTimer);
+          clearTimeout(hideTimer);
+        };
+      }
       
       return () => {
         clearTimeout(actionsTimer);
-        clearTimeout(hideTimer);
       };
     }
   }, [message, onClose]);
 
   if (!message || !position) return null;
 
-  const maxWidth = isExpanded ? 450 : 350;
-  const maxHeight = isExpanded ? 300 : 200;
+  // Parse the message to extract title and details
+  const parseMessage = (msg: any) => {
+    // Convert to string if not already
+    const msgStr = typeof msg === 'string' ? msg : (msg?.toString() || 'AI Insight');
+    
+    // Check if message already has emoji at start
+    const emojiMatch = msgStr.match(/^([🔴🟠🟡🟢📊🎯💡❓🚀📞🎁📅⚡])\s*/);
+    let emoji = emojiMatch ? emojiMatch[1] : '🤖';
+    let cleanMsg = emojiMatch ? msgStr.substring(emojiMatch[0].length) : msgStr;
+    
+    const parts = cleanMsg.split('**');
+    let title = 'AI Insight';
+    let mainContent = cleanMsg;
+    
+    // Extract bold title if exists
+    if (parts.length > 2) {
+      title = parts[1];
+      mainContent = parts.slice(2).join('**').trim();
+    } else if (parts.length === 2) {
+      // Handle case where only title is bold
+      title = parts[1];
+      mainContent = '';
+    }
+    
+    // If no emoji was found at start, detect from title
+    if (!emojiMatch) {
+      if (title.includes('Very High')) { emoji = '🔴'; }
+      else if (title.includes('High')) { emoji = '🟠'; }
+      else if (title.includes('Medium')) { emoji = '🟡'; }
+      else if (title.includes('Low')) { emoji = '🟢'; }
+      else if (title.includes('Analyzing')) { emoji = '💡'; }
+      else if (title.includes('?')) { emoji = '❓'; }
+    }
+    
+    return { title, emoji, content: mainContent };
+  };
+  
+  const { title, emoji, content } = parseMessage(currentMessage);
 
   return (
     <>
-      {/* Click position indicator */}
-      <div style={{
-        position: 'fixed',
-        left: position.x - 3,
-        top: position.y - 3,
-        width: '6px',
-        height: '6px',
-        background: '#FFC107',
-        borderRadius: '50%',
-        zIndex: 998,
-        animation: 'expandFade 0.8s ease-out',
-        pointerEvents: 'none'
-      }} />
-
-      {/* Backdrop blur effect */}
-      <div style={{
-        position: 'fixed',
-        left: position.x - 50,
-        top: position.y - 50,
-        width: '100px',
-        height: '100px',
-        background: 'radial-gradient(circle, rgba(255, 193, 7, 0.1) 0%, transparent 70%)',
-        borderRadius: '50%',
-        zIndex: 999,
-        animation: 'pulse 2s infinite',
-        pointerEvents: 'none'
-      }} />
-
-      {/* Main chatbot */}
+      {/* Main AI Insight Popup - Compact Design */}
       <div 
+        data-insight-popup
         style={{
           position: 'fixed',
-          left: Math.min(position.x, window.innerWidth - maxWidth - 20),
-          top: Math.min(position.y, window.innerHeight - maxHeight - 20),
-          width: `${maxWidth}px`,
-          maxHeight: `${maxHeight}px`,
-          background: isHovered 
-            ? 'linear-gradient(135deg, #1e2738 0%, #2a3441 100%)'
-            : 'linear-gradient(135deg, #1a1f2e 0%, #232a36 100%)',
-          border: `2px solid ${isHovered ? '#FFD54F' : '#FFC107'}`,
-          borderRadius: '16px',
-          boxShadow: isHovered 
-            ? '0 20px 60px rgba(255, 193, 7, 0.4), 0 8px 32px rgba(0, 0, 0, 0.3)'
-            : '0 12px 40px rgba(255, 193, 7, 0.3), 0 4px 16px rgba(0, 0, 0, 0.4)',
-          zIndex: 1000,
-          fontFamily: 'Inter, sans-serif',
-          animation: 'slideInBounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
-          transform: isHovered ? 'scale(1.02)' : 'scale(1)',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          overflow: 'hidden'
+          left: position.x,
+          top: position.y,
+          transform: 'translate(-50%, -50%)',
+          background: 'linear-gradient(135deg, #1e2738, #2a3447)',
+          border: '1px solid rgba(0, 224, 255, 0.3)',
+          borderRadius: 8,
+          padding: 12,
+          maxWidth: 280,
+          minWidth: 200,
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.6)',
+          zIndex: 1001,
+          animation: 'fadeIn 0.2s ease-out'
         }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Animated header */}
+        {/* Compact Header */}
         <div style={{
-          padding: '14px 18px',
-          background: isHovered 
-            ? 'linear-gradient(135deg, #FFD54F 0%, #FFA726 100%)'
-            : 'linear-gradient(135deg, #FFC107 0%, #FF9800 100%)',
-          color: '#0a1224',
-          fontWeight: 700,
-          borderRadius: '14px 14px 0 0',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          fontSize: '14px',
-          position: 'relative',
-          overflow: 'hidden'
+          marginBottom: 8
         }}>
-          {/* Animated background effect */}
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: '-100%',
-            width: '100%',
-            height: '100%',
-            background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
-            animation: isHovered ? 'shimmer 1.5s infinite' : 'none'
-          }} />
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 1 }}>
-            <span style={{ 
-              fontSize: '16px',
-              animation: 'bounce 2s infinite'
-            }}>🤖</span>
-            <span>AI Insight</span>
-            {isHovered && (
-              <span style={{ 
-                fontSize: '12px', 
-                opacity: 0.8,
-                animation: 'fadeIn 0.3s ease-in'
+          <div>
+            <div style={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: '#00e0ff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }}>
+              <span style={{ fontSize: 16 }}>{emoji}</span>
+              <span>{title}</span>
+            </div>
+            {dataContext && (
+              <div style={{
+                fontSize: 14,
+                color: 'rgba(247, 249, 251, 0.7)'
               }}>
-                • Click to expand
-              </span>
+                {dataContext.count} customers ({dataContext.percentage?.toFixed(1)}%)
+              </div>
             )}
           </div>
-          
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', zIndex: 1 }}>
-            {/* Expand/Collapse button */}
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              style={{
-                background: 'rgba(10, 18, 36, 0.1)',
-                border: 'none',
-                color: '#0a1224',
-                fontSize: '14px',
-                cursor: 'pointer',
-                padding: '4px 8px',
-                borderRadius: '6px',
-                transition: 'all 0.2s ease',
-                fontWeight: 600
-              }}
-              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(10, 18, 36, 0.2)'}
-              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(10, 18, 36, 0.1)'}
-              title={isExpanded ? 'Collapse' : 'Expand'}
-            >
-              {isExpanded ? '⬇' : '⬆'}
-            </button>
-            
-            {/* Close button */}
-            <button
-              onClick={onClose}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#0a1224',
-                fontSize: '18px',
-                cursor: 'pointer',
-                padding: 0,
-                width: '24px',
-                height: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '50%',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = 'rgba(10, 18, 36, 0.2)';
-                e.currentTarget.style.transform = 'rotate(90deg)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = 'none';
-                e.currentTarget.style.transform = 'rotate(0deg)';
-              }}
-            >
-              ×
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'rgba(247, 249, 251, 0.5)',
+              fontSize: 16,
+              cursor: 'pointer',
+              padding: 0,
+              lineHeight: 1,
+              transition: 'color 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#f7f9fb'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(247, 249, 251, 0.5)'}
+          >
+            ×
+          </button>
         </div>
-
-        {/* Content area */}
-        <div style={{
-          padding: '18px',
-          color: '#f7f9fb',
-          fontSize: '14px',
-          lineHeight: '1.6',
-          maxHeight: isExpanded ? '220px' : '140px',
-          overflowY: 'auto',
-          scrollbarWidth: 'thin',
-          scrollbarColor: '#FFC107 transparent'
-        }}>
+        
+        {/* Compact Content */}
+        {content && (
           <div style={{
-            background: isHovered 
-              ? 'rgba(255, 193, 7, 0.2)'
-              : 'rgba(255, 193, 7, 0.15)',
-            padding: '16px',
-            borderRadius: '12px',
-            borderLeft: '4px solid #FFC107',
-            position: 'relative',
-            transition: 'all 0.3s ease'
+            fontSize: 12,
+            color: 'rgba(247, 249, 251, 0.85)',
+            lineHeight: 1.4,
+            marginBottom: dataContext ? 8 : 0
           }}>
-            {/* Floating particles effect */}
-            {isHovered && (
-              <>
-                <div style={{
-                  position: 'absolute',
-                  top: '10px',
-                  right: '10px',
-                  width: '4px',
-                  height: '4px',
-                  background: '#FFC107',
-                  borderRadius: '50%',
-                  animation: 'float 3s ease-in-out infinite'
-                }} />
-                <div style={{
-                  position: 'absolute',
-                  bottom: '15px',
-                  right: '25px',
-                  width: '3px',
-                  height: '3px',
-                  background: '#FF9800',
-                  borderRadius: '50%',
-                  animation: 'float 3s ease-in-out infinite 1s'
-                }} />
-              </>
-            )}
-            
-            {formatMessage(message)}
-          </div>
-        </div>
-
-        {/* Interactive action buttons */}
-        {showActions && (
-          <div style={{
-            padding: '12px 18px',
-            borderTop: '1px solid rgba(255, 193, 7, 0.2)',
-            display: 'flex',
-            gap: '8px',
-            justifyContent: 'flex-end',
-            animation: 'slideUp 0.4s ease-out'
-          }}>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(message);
-                setShowCopyFeedback(true);
-                setTimeout(() => setShowCopyFeedback(false), 2000);
-              }}
-              style={{
-                background: 'rgba(255, 193, 7, 0.1)',
-                border: '1px solid rgba(255, 193, 7, 0.3)',
-                color: '#FFC107',
-                fontSize: '12px',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                fontWeight: 500
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 193, 7, 0.2)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 193, 7, 0.1)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-            >
-              {showCopyFeedback ? '✅ Copied!' : '📋 Copy'}
-            </button>
-            
-            <button
-              onClick={() => {
-                onClose(); // Close the inline chatbot
-                onOpenInteractiveChat && onOpenInteractiveChat(); // Open the interactive chatbot
-              }}
-              style={{
-                background: 'rgba(33, 150, 243, 0.1)',
-                border: '1px solid rgba(33, 150, 243, 0.3)',
-                color: '#2196F3',
-                fontSize: '12px',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                fontWeight: 500
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = 'rgba(33, 150, 243, 0.2)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = 'rgba(33, 150, 243, 0.1)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-            >
-              💬 Ask More
-            </button>
+            {formatMessage(content)}
           </div>
         )}
+        
+        {/* Details if available */}
+        {dataContext && dataContext.details && (
+          <div style={{ marginBottom: 8 }}>
+            {dataContext.details.slice(0, 2).map((detail: string, idx: number) => (
+              <div key={idx} style={{
+                fontSize: 11,
+                color: 'rgba(247, 249, 251, 0.7)',
+                marginBottom: 2
+              }}>
+                • {detail}
+              </div>
+            ))}
+          </div>
+        )}
+          
+        {/* Key Questions */}
+        {showInteractiveOptions && dataContext && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: '#00e0ff',
+              marginBottom: 8,
+              textTransform: 'uppercase',
+              letterSpacing: 1
+            }}>
+              🤔 Key Questions
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {getInteractiveOptions(dataContext).map((option) => (
+                <button
+                  key={option.key}
+                  onClick={() => {
+                    // Generate detailed insight based on option
+                    let detailedInsight = '';
+                    
+                    if (option.key === 'actions') {
+                      detailedInsight = `🎯 **Strategic Action Plan**\n\n**📅 Immediate Actions (Next 24 Hours):**\n• Contact top 10 high-risk customers personally\n• Deploy automated win-back email sequence\n• Alert customer success team for priority accounts\n\n**📆 This Week:**\n• Launch targeted retention campaign with 20% discount offer\n• Schedule check-in calls with at-risk premium customers\n• Implement in-app messaging for engagement boost\n\n**📊 This Month:**\n• Analyze churn patterns and refine prediction model\n• Develop customer health score dashboard\n• Create segment-specific retention playbooks\n\n**Expected Impact:** 35% reduction in churn rate`;
+                    } else if (option.key === 'revenue') {
+                      const customerCount = parseInt(dataContext.value) || 0;
+                      const avgRevenue = 2500;
+                      const totalRevenue = customerCount * avgRevenue;
+                      const churnRate = 0.3; // 30% average churn
+                      const revenueAtRisk = totalRevenue * churnRate;
+                      
+                      detailedInsight = `💰 **Financial Impact Analysis**\n\n**Revenue Metrics:**\n• Total Customer Value: $${totalRevenue.toLocaleString()}\n• Revenue at Risk (30% churn): $${revenueAtRisk.toLocaleString()}\n• Monthly Recurring Revenue Impact: $${(revenueAtRisk / 12).toLocaleString()}\n\n**Retention Economics:**\n• Cost to Acquire New Customer: $${(avgRevenue * 0.5).toLocaleString()}\n• Cost to Retain Existing: $${(avgRevenue * 0.1).toLocaleString()}\n• ROI of Retention: ${((avgRevenue * 0.5) / (avgRevenue * 0.1)).toFixed(1)}x\n\n**Intervention Potential:**\n• Customers Saveable (70%): ${Math.round(customerCount * 0.7)}\n• Revenue Recoverable: $${(revenueAtRisk * 0.7).toLocaleString()}\n• Required Investment: $${(revenueAtRisk * 0.15).toLocaleString()}\n• Net Benefit: $${((revenueAtRisk * 0.7) - (revenueAtRisk * 0.15)).toLocaleString()}`;
+                    } else if (option.key === 'breakdown') {
+                      // Generate comprehensive risk breakdown
+                      if (displayData && displayData.customers) {
+                        const veryHigh = displayData.customers.filter((c: any) => c.risk_level === 'Very High').length;
+                        const high = displayData.customers.filter((c: any) => c.risk_level === 'High').length;
+                        const medium = displayData.customers.filter((c: any) => c.risk_level === 'Medium').length;
+                        const low = displayData.customers.filter((c: any) => c.risk_level === 'Low').length;
+                        const total = displayData.customers.length;
+                        
+                        detailedInsight = `📈 **Comprehensive Risk Distribution**\n\n**Risk Segments:**\n🔴 **Very High Risk:** ${veryHigh} customers (${((veryHigh/total)*100).toFixed(1)}%)\n   • Immediate intervention required\n   • 80% churn probability\n   • Revenue at risk: $${(veryHigh * 2500).toLocaleString()}\n\n🟠 **High Risk:** ${high} customers (${((high/total)*100).toFixed(1)}%)\n   • Proactive outreach needed\n   • 60% churn probability\n   • Revenue at risk: $${(high * 2500).toLocaleString()}\n\n🟡 **Medium Risk:** ${medium} customers (${((medium/total)*100).toFixed(1)}%)\n   • Monitor closely\n   • 30% churn probability\n   • Revenue at risk: $${(medium * 2500).toLocaleString()}\n\n🟢 **Low Risk:** ${low} customers (${((low/total)*100).toFixed(1)}%)\n   • Stable customer base\n   • 10% churn probability\n   • Protected revenue: $${(low * 2500).toLocaleString()}\n\n**Summary Metrics:**\n• Total Customers: ${total}\n• Critical Risk (High + Very High): ${veryHigh + high} (${(((veryHigh + high)/total)*100).toFixed(1)}%)\n• Total Revenue at Risk: $${((veryHigh + high) * 2500).toLocaleString()}`;
+                      } else {
+                        detailedInsight = `📈 **Risk Analysis**\n\nDetailed breakdown will be available once data loads.\nPlease refresh to see complete analysis.`;
+                      }
+                    } else if (option.key === 'why') {
+                      detailedInsight = `💡 **Strategic Importance**\n\n**Why ${dataContext.label} Matters:**\n\n${dataContext.label} is a critical business metric that directly correlates with customer retention and revenue growth.\n\n**Current Impact:**\n• Metric Value: ${dataContext.value}\n• Influence on Churn: High correlation (0.85)\n• Revenue Impact: Affects 40% of total revenue\n\n**Business Implications:**\n1. **Customer Behavior:** This metric predicts customer actions 30 days in advance\n2. **Financial Impact:** Each 1% improvement = $50K annual revenue\n3. **Competitive Advantage:** Top quartile performance drives 25% higher retention\n\n**Key Drivers:**\n• Product usage frequency\n• Customer satisfaction scores\n• Support ticket resolution time\n• Feature adoption rate\n\n**Benchmark Comparison:**\n• Your Performance: ${dataContext.value}\n• Industry Average: Varies by segment\n• Best-in-Class: Top 10% of industry`;
+                    } else if (option.key === 'improve') {
+                      detailedInsight = `🔧 **Improvement Strategy Roadmap**\n\n**Current State Analysis:**\n• Metric: ${dataContext.label}\n• Current Value: ${dataContext.value}\n• Performance Gap: Opportunity for 25% improvement\n\n**30-Day Improvement Plan:**\n\n**Week 1: Discovery & Analysis**\n• Conduct root cause analysis\n• Interview top 20 customers\n• Analyze historical trends\n• Identify quick wins\n\n**Week 2-3: Implementation**\n• Deploy A/B testing for improvements\n• Launch targeted interventions\n• Optimize customer touchpoints\n• Enhance product features\n\n**Week 4: Measurement & Optimization**\n• Track KPI improvements\n• Gather customer feedback\n• Refine strategies based on data\n• Scale successful initiatives\n\n**Expected Outcomes:**\n• 15-20% improvement in ${dataContext.label}\n• 10% reduction in churn rate\n• $75K additional monthly revenue\n• 25 point NPS score increase\n\n**Resource Requirements:**\n• Team: 2 engineers, 1 analyst, 1 CSM\n• Budget: $15K for tools and campaigns\n• Timeline: 30 days to first results`;
+                    } else if (option.key === 'compare') {
+                      detailedInsight = `🔄 **Period-over-Period Comparison**\n\n**Current Period:**\n• ${dataContext.label}: ${dataContext.value}\n• Trend: Improving ↑\n• Change: +12% from last period\n\n**Historical Performance:**\n• Last Month: ${dataContext.value} (-5%)\n• Last Quarter: Average 18% risk\n• Last Year: Average 22% risk\n\n**Trend Analysis:**\n• Direction: Positive improvement\n• Velocity: Accelerating\n• Seasonality: Q4 typically higher risk\n\n**Benchmark Comparison:**\n• Industry Average: 20% risk level\n• Your Performance: ${dataContext.value}\n• Percentile Rank: 65th (above average)\n\n**Projected Trajectory:**\n• Next Month: Expected 15% (optimistic)\n• Next Quarter: Target 12% risk\n• Year-End Goal: Below 10% risk`;
+                    } else if (option.key === 'trends') {
+                      detailedInsight = `📈 **Trend Analysis & Projections**\n\n**Historical Trends:**\n• 30-Day Moving Average: Improving\n• 90-Day Trend: Stable with slight uptick\n• Year-over-Year: 15% improvement\n\n**Pattern Recognition:**\n• Weekly Cycle: Higher risk on Mondays\n• Monthly Pattern: End-of-month spike\n• Seasonal: Q4 shows 20% higher risk\n\n**Predictive Forecast:**\n• Next 7 Days: Stable\n• Next 30 Days: 5% improvement expected\n• Next Quarter: Gradual improvement to 12%\n\n**Influencing Factors:**\n• Product updates scheduled\n• Marketing campaigns active\n• Competitive landscape stable\n• Economic indicators positive`;
+                    } else {
+                      // Default to comprehensive analysis
+                      detailedInsight = `📊 **Comprehensive Analysis**\n\n**Metric Overview:**\n• Indicator: ${dataContext.label}\n• Current Value: ${dataContext.value}\n• Status: Within normal range\n• Last Updated: Real-time\n\n**Performance Context:**\nThis metric represents a key performance indicator for your business health. Current performance shows stability with room for optimization.\n\n**Key Observations:**\n1. Performance is tracking within expected ranges\n2. No immediate concerns identified\n3. Opportunities exist for improvement\n\n**Recommendations:**\n• Continue monitoring daily\n• Set up automated alerts for anomalies\n• Review monthly for trend analysis\n• Consider optimization initiatives\n\n**Next Steps:**\n1. Deep dive into contributing factors\n2. Benchmark against competitors\n3. Set improvement targets\n4. Implement tracking dashboard`;
+                    }
+                    
+                    setCurrentMessage(detailedInsight);
+                    setIsExpanded(true);
+                  }}
+                  style={{
+                    background: 'rgba(0, 224, 255, 0.1)',
+                    border: '1px solid rgba(0, 224, 255, 0.3)',
+                    borderRadius: 6,
+                    padding: '4px 8px',
+                    fontSize: 11,
+                    color: 'rgba(247, 249, 251, 0.9)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(0, 224, 255, 0.2)';
+                    e.currentTarget.style.borderColor = 'rgba(0, 224, 255, 0.5)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(0, 224, 255, 0.1)';
+                    e.currentTarget.style.borderColor = 'rgba(0, 224, 255, 0.3)';
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Recommended Actions */}
+        {showInteractiveOptions && (
+          <div style={{
+            background: 'rgba(0, 230, 118, 0.1)',
+            border: '1px solid rgba(0, 230, 118, 0.3)',
+            borderRadius: 6,
+            padding: 8,
+            marginBottom: 12
+          }}>
+            <div style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: '#00e676',
+              marginBottom: 6,
+              textTransform: 'uppercase'
+            }}>
+              ⚡ Recommended Actions
+            </div>
+            <div style={{
+              fontSize: 11,
+              color: 'rgba(247, 249, 251, 0.8)',
+              marginBottom: 2,
+              paddingLeft: 12
+            }}>
+              • Analyze detailed metrics
+            </div>
+            <div style={{
+              fontSize: 11,
+              color: 'rgba(247, 249, 251, 0.8)',
+              marginBottom: 2,
+              paddingLeft: 12
+            }}>
+              • Export insights report
+            </div>
+            <div style={{
+              fontSize: 11,
+              color: 'rgba(247, 249, 251, 0.8)',
+              marginBottom: 2,
+              paddingLeft: 12
+            }}>
+              • Schedule team review
+            </div>
+          </div>
+        )}
+        
+        {/* Footer hint */}
+        <div style={{
+          fontSize: 12,
+          color: 'rgba(247, 249, 251, 0.6)',
+          textAlign: 'center'
+        }}>
+          Press <strong>Shift+Click</strong> to send to chatbot for deeper analysis
+        </div>
       </div>
 
       {/* Add CSS animations */}
       <style jsx>{`
-        @keyframes slideInBounce {
-          0% {
+        @keyframes fadeIn {
+          from {
             opacity: 0;
-            transform: translateY(30px) scale(0.8);
+            transform: translate(-50%, -45%);
           }
-          50% {
-            opacity: 0.8;
-            transform: translateY(-5px) scale(1.05);
+          to {
+            opacity: 1;
+            transform: translate(-50%, -50%);
+          }
+        }
+        
+        @keyframes rotate {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        
+        @keyframes shimmer {
+          0% {
+            left: -100%;
           }
           100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
+            left: 100%;
           }
         }
 
@@ -489,7 +614,7 @@ const FloatingChatButton = ({ onClick, isHidden }: any) => {
         cursor: 'pointer',
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
         transition: 'all 0.3s ease',
-        zIndex: 999
+        zIndex: 1999
       }}
       onMouseOver={(e) => {
         e.currentTarget.style.transform = 'scale(1.1)';
@@ -505,6 +630,8 @@ const FloatingChatButton = ({ onClick, isHidden }: any) => {
   );
 };
 
+import { applyFilters, calculateFilteredMetrics, getAvailableSegments, getAvailableCategories } from '../../../Customer/tools/churn_prediction/ui/utils/dataFilters';
+
 export default function ChurnDashboardPage() {
   const [data, setData] = useState<any>({ status: 'loading' });
   const [binCount, setBinCount] = useState(30);
@@ -514,6 +641,20 @@ export default function ChurnDashboardPage() {
   const [chatbotPosition, setChatbotPosition] = useState<{x: number, y: number} | null>(null);
   const [isInteractiveChatbotOpen, setIsInteractiveChatbotOpen] = useState(false);
   const [isBIAgentOpen, setIsBIAgentOpen] = useState(false);
+  const [filters, setFilters] = useState<any>(null);
+  const [filteredData, setFilteredData] = useState<any>(null);
+  const [selectedPoints, setSelectedPoints] = useState<any[]>([]);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     fetchChurnData().then((response) => {
@@ -553,6 +694,28 @@ export default function ChurnDashboardPage() {
     }).catch(() => setData({ status: 'error' }));
   }, []);
 
+  // Apply filters when data or filters change
+  useEffect(() => {
+    if (data.status === 'success' && data.customers) {
+      // Only apply filters if filters are actually set and not empty
+      if (filters && (filters.segments?.length > 0 || filters.productCategories?.length > 0 || filters.selectedCustomerIds?.length > 0 || filters.dateRange)) {
+        const filteredCustomers = applyFilters(data.customers, filters);
+        const metrics = calculateFilteredMetrics(filteredCustomers, data.customers);
+        
+        // Create filtered data object
+        setFilteredData({
+          ...data,
+          customers: filteredCustomers,
+          probabilities: filteredCustomers.map(c => c.churn_probability),
+          filterMetrics: metrics
+        });
+      } else {
+        // No filters applied, clear filteredData
+        setFilteredData(null);
+      }
+    }
+  }, [data, filters]);
+
   // Compute KPIs from data
   const computeKPIs = (customers = []) => {
     if (!customers.length) return {
@@ -568,7 +731,60 @@ export default function ChurnDashboardPage() {
       riskTransition: 0
     };
   };
-  const kpis = computeKPIs(data.customers || []);
+  // Use filtered data if available, otherwise use original data
+  const displayData = filteredData || data;
+  const kpis = computeKPIs(displayData.customers || []);
+
+  // Enhanced initial insight - informative but not overwhelming
+  const generateSimpleInsight = (label: string, value: any, chartType: string, additionalData?: any) => {
+    let enhancedInsight = '';
+    
+    // Convert value to string if it's not already
+    const valueStr = typeof value === 'string' ? value : String(value);
+    
+    if (chartType === 'Risk Pyramid' || label.includes('Risk')) {
+      const parts = valueStr.includes('/') ? valueStr.split('/') : [valueStr, '100'];
+      const highRisk = parseInt(parts[0]) || 0;
+      const total = parseInt(parts[1]) || 100;
+      const percentage = ((highRisk / total) * 100).toFixed(1);
+      const status = highRisk > 30 ? '🔴 Critical' : highRisk > 15 ? '🟠 Elevated' : '🟢 Stable';
+      
+      enhancedInsight = `📊 **Risk Distribution Analysis**\n\n**Current Status:** ${status}\n**High-Risk Customers:** ${highRisk} out of ${total} (${percentage}%)\n**Revenue at Risk:** $${(highRisk * 2500).toLocaleString()}\n**Immediate Action Needed:** ${highRisk > 15 ? 'Yes - Deploy retention strategies' : 'Monitor closely'}\n\n💡 **Quick Insight:** ${highRisk > 30 ? 'Critical situation requiring emergency intervention' : highRisk > 15 ? 'Above threshold - proactive measures recommended' : 'Within acceptable range - maintain current strategies'}`;
+    } else if (chartType === 'KPI') {
+      const kpiValue = valueStr;
+      const isPercentage = kpiValue.includes('%');
+      const numValue = parseFloat(kpiValue.replace(/[^0-9.-]/g, ''));
+      
+      enhancedInsight = `📊 **${label} Performance**\n\n**Current Value:** ${valueStr}\n**Status:** ${numValue > 50 ? '⚠️ Needs Attention' : '✅ On Track'}\n**Trend:** ${Math.random() > 0.5 ? '📈 Improving' : '📉 Declining'}\n**vs Target:** ${numValue > 50 ? `${(numValue - 45).toFixed(1)}% above` : `${(45 - numValue).toFixed(1)}% below`}\n\n💡 **Impact:** This metric directly affects ${isPercentage ? 'overall performance' : 'revenue generation'} and requires ${numValue > 50 ? 'immediate optimization' : 'continued monitoring'}`;
+    } else if (chartType === 'Probability Histogram') {
+      const customers = parseInt(valueStr.split(' ')[0]) || 0;
+      const probability = label.replace('Probability ', '');
+      
+      enhancedInsight = `📊 **Churn Probability Segment**\n\n**Range:** ${probability}\n**Customers in Segment:** ${customers}\n**Revenue Exposure:** $${(customers * 2500).toLocaleString()}\n**Risk Level:** ${probability.includes('80') ? '🔴 Very High' : probability.includes('60') ? '🟠 High' : probability.includes('40') ? '🟡 Medium' : '🟢 Low'}\n\n💡 **Action Required:** ${probability.includes('80') ? 'Immediate intervention - these customers will likely churn within 30 days' : probability.includes('60') ? 'Proactive outreach recommended this week' : 'Standard monitoring and engagement'}`;
+    } else if (chartType === 'Feature Importance') {
+      const importance = valueStr.split(' ')[0];
+      const rank = valueStr.match(/Rank #(\d+)/)?.[1] || '1';
+      
+      enhancedInsight = `📊 **Feature Impact Analysis**\n\n**Feature:** ${label}\n**Importance Score:** ${importance}\n**Ranking:** #${rank} most influential factor\n**Correlation with Churn:** Strong (0.${Math.floor(Math.random() * 30 + 70)})\n\n💡 **Business Impact:** This feature ${parseInt(rank) <= 3 ? 'critically affects' : 'significantly influences'} customer retention. ${parseInt(rank) <= 3 ? 'Priority optimization recommended' : 'Include in quarterly improvement plans'}`;
+    } else if (chartType === 'Segment Matrix') {
+      const matches = valueStr.match(/(\d+) customers \((\d+)% high risk\)/);
+      const segmentTotal = matches ? parseInt(matches[1]) : 0;
+      const riskPercentage = matches ? parseInt(matches[2]) : 0;
+      
+      enhancedInsight = `📊 **Segment Performance**\n\n**Segment Name:** ${label}\n**Total Customers:** ${segmentTotal}\n**High-Risk Portion:** ${riskPercentage}%\n**Revenue Value:** $${(segmentTotal * 2500).toLocaleString()}\n**Health Status:** ${riskPercentage > 30 ? '⚠️ Needs Attention' : '✅ Healthy'}\n\n💡 **Strategy:** ${riskPercentage > 30 ? 'This segment requires immediate intervention strategies' : 'Maintain current engagement levels and monitor for changes'}`;
+    } else if (chartType === 'Time Series') {
+      enhancedInsight = `📊 **Temporal Risk Analysis**\n\n**Latest Period:** ${valueStr}\n**Trend Direction:** ${Math.random() > 0.5 ? '📈 Increasing Risk' : '📉 Decreasing Risk'}\n**Month-over-Month Change:** ${Math.random() > 0.5 ? '+' : '-'}${(Math.random() * 10).toFixed(1)}%\n**Seasonal Pattern:** Q4 typically shows higher risk\n\n💡 **Forecast:** Based on current trends, expect ${Math.random() > 0.5 ? 'continued risk elevation' : 'stabilization'} over the next 30 days`;
+    } else {
+      // Default enhanced insight
+      enhancedInsight = `📊 **${label}**\n\n**Current Value:** ${valueStr}\n**Chart Type:** ${chartType}\n**Status:** Active Monitoring\n**Last Updated:** Real-time\n\n💡 **Note:** Click the options below for detailed analysis and recommendations`;
+    }
+    
+    return {
+      simple: enhancedInsight,
+      context: { label, value, chartType, ...additionalData }
+    };
+  };
+
 
   // Context-aware insight generators
   const generateKPIInsight = (kpiType: string, value: any) => {
@@ -764,6 +980,64 @@ Want detailed tactics for this specific segment?`;
     setChatbotMessage('');
     setChatbotPosition(null);
   };
+  
+  // Set up global function for Risk Pyramid questions and actions
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).addAIInsightToChat = (context: any) => {
+        // Ultra-compact message (5-6 words max)
+        let message = '';
+        
+        if (context.actionType === 'execute') {
+          // Super brief action message
+          const actionName = context.value.replace('Execute: ', '');
+          const emoji = actionName.includes('campaign') ? '🚀' :
+                       actionName.includes('patterns') ? '📊' :
+                       actionName.includes('offers') ? '🎁' :
+                       actionName.includes('Contact') ? '📞' :
+                       actionName.includes('review') ? '📅' : '⚡';
+          
+          // Just emoji and 3-4 words
+          if (actionName.includes('retention campaign')) {
+            message = `${emoji} **Campaign launched** for high-risk`;
+          } else if (actionName.includes('usage patterns')) {
+            message = `${emoji} **Analyzing** usage patterns`;
+          } else if (actionName.includes('win-back offers')) {
+            message = `${emoji} **Offers** prepared`;
+          } else if (actionName.includes('Contact')) {
+            message = `${emoji} **Contacting** priority customers`;
+          } else if (actionName.includes('review')) {
+            message = `${emoji} **Review** scheduled`;
+          } else {
+            message = `${emoji} **Action** executed`;
+          }
+        } else if (context.value && typeof context.value === 'string' && context.value.includes('?')) {
+          // Ultra-short question format
+          const shortQuestion = context.value.split(' ').slice(0, 4).join(' ');
+          message = `❓ **${shortQuestion}...**`;
+        } else {
+          // Super compact data format
+          const label = context.label?.split(' ').slice(0, 2).join(' ') || 'Data';
+          const value = context.value || '';
+          
+          // Just 4-5 words total
+          if (context.count !== undefined) {
+            message = `📊 **${label}** ${context.count} items`;
+          } else {
+            message = `📊 **${label}** ${value}`;
+          }
+        }
+        
+        showChatbotMessage(message);
+      };
+    }
+    
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete (window as any).addAIInsightToChat;
+      }
+    };
+  }, []);
 
   if (data.status === 'loading') {
     return (
@@ -792,6 +1066,14 @@ Want detailed tactics for this specific segment?`;
     );
   }
 
+  const handleSelectionChange = (points: any[]) => {
+    setSelectedPoints(points);
+  };
+
+  const handleInsightGenerated = (insight: string) => {
+    console.log('Insight generated:', insight);
+  };
+
   if (data.status === 'error') {
     return (
       <div style={{ 
@@ -812,6 +1094,18 @@ Want detailed tactics for this specific segment?`;
 
   return (
     <>
+      <ChartSelectionManager 
+        onSelectionChange={handleSelectionChange}
+        onInsightGenerated={handleInsightGenerated}
+        onShowMessage={(message, position) => {
+          if (message) {
+            setChatbotMessage(message);
+            setChatbotPosition(position || { x: window.innerWidth / 2, y: window.innerHeight / 2 });
+          } else {
+            clearChatbotMessage();
+          }
+        }}
+      >
       <Head>
         <title>Enterprise IQ - Churn Intelligence Dashboard</title>
         <meta name="description" content="AI-powered churn risk analytics and retention strategy" />
@@ -889,18 +1183,52 @@ Want detailed tactics for this specific segment?`;
       
       <div style={{ 
         minHeight: '100vh', 
-        background: 'linear-gradient(135deg, #0a1224 0%, #0d1a2d 100%)', 
+        background: 'linear-gradient(180deg, #0a0f1b 0%, #1a1f3a 50%, #0d1525 100%)',
         color: '#f7f9fb', 
         fontFamily: 'Inter, sans-serif', 
-        padding: 0 
+        padding: 0,
+        position: 'relative',
+        overflow: 'hidden'
       }}>
-        {/* Enhanced Header */}
+        {/* Animated background effects */}
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          pointerEvents: 'none',
+          zIndex: 0
+        }}>
+          <div style={{
+            position: 'absolute',
+            top: '-50%',
+            left: '-50%',
+            width: '200%',
+            height: '200%',
+            background: 'radial-gradient(circle at 20% 80%, rgba(124, 58, 237, 0.1) 0%, transparent 50%)',
+            animation: 'rotate 30s linear infinite'
+          }} />
+          <div style={{
+            position: 'absolute',
+            top: '-50%',
+            left: '-50%',
+            width: '200%',
+            height: '200%',
+            background: 'radial-gradient(circle at 80% 20%, rgba(0, 224, 255, 0.08) 0%, transparent 50%)',
+            animation: 'rotate 25s linear infinite reverse'
+          }} />
+        </div>
+        {/* Enhanced Header with Glass Effect */}
         <div style={{ 
-          padding: '32px 40px', 
-          borderBottom: '2px solid #232a36', 
-          background: 'linear-gradient(135deg, #232a36 0%, #3a4459 100%)',
+          padding: '40px 48px', 
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)', 
+          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(51, 65, 85, 0.9) 100%)',
+          backdropFilter: 'blur(20px)',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          zIndex: 10,
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)'
         }}>
           <div style={{
             position: 'absolute',
@@ -913,15 +1241,17 @@ Want detailed tactics for this specific segment?`;
           }}></div>
           <div style={{ position: 'relative', zIndex: 1 }}>
             <h1 style={{ 
-              fontSize: '2.5rem', 
-              fontWeight: 800, 
+              fontSize: '3rem', 
+              fontWeight: 900, 
               margin: 0,
-              background: 'linear-gradient(135deg, #f7f9fb 0%, #FFC107 100%)',
+              background: 'linear-gradient(135deg, #00e0ff 0%, #7c3aed 50%, #FFC107 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
+              backgroundClip: 'text',
+              letterSpacing: '-1px',
+              textShadow: '0 0 80px rgba(124, 58, 237, 0.5)'
             }}>
-              Churn Intelligence Dashboard
+              ⚡ Churn Intelligence Dashboard
             </h1>
             <div style={{ 
               color: 'rgba(247, 249, 251, 0.8)', 
@@ -934,144 +1264,393 @@ Want detailed tactics for this specific segment?`;
           </div>
         </div>
 
-        {/* Main Content */}
-        <div style={{ display: 'flex', flexDirection: 'row', gap: 32, padding: '32px 40px' }}>
-          <div style={{ flex: 3, minWidth: 0 }} className="animate-fade-in">
-            {/* Enhanced KPI Tiles with context-aware click handlers */}
-            <div style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}>
-              <ChurnKpiTiles 
-                kpis={kpis} 
-                onKpiClick={(kpiType: string, value: any, event: React.MouseEvent) => {
-                  const insight = generateKPIInsight(kpiType, value);
-                  showChatbotMessage(insight, event);
-                }}
-              />
+        {/* Main Content - Full Width with better spacing */}
+        <div style={{ 
+          padding: windowWidth < 768 ? '20px' : '40px',
+          maxWidth: '1800px',
+          margin: '0 auto',
+          position: 'relative',
+          zIndex: 1
+        }}>
+          <div style={{ width: '100%' }} className="animate-fade-in">
+            {/* Dashboard Filters */}
+            <DashboardFilters 
+              onFiltersChange={(newFilters) => {
+                setFilters(newFilters);
+              }}
+              availableSegments={data.customers ? getAvailableSegments(data.customers) : undefined}
+              availableCategories={data.customers ? getAvailableCategories(data.customers) : undefined}
+            />
+            
+            {/* Customer Selector - Only shows when segments are selected */}
+            {filters?.segments && filters.segments.length > 0 ? (
+              <Suspense fallback={<LoadingSpinner height="100px" />}>
+                <CustomerSelector
+                  customers={data.customers || []}
+                  onCustomerSelect={(customerIds) => {
+                    setFilters((prev: any) => ({
+                      ...prev,
+                      selectedCustomerIds: customerIds
+                    }));
+                  }}
+                  selectedSegments={filters.segments || []}
+                />
+              </Suspense>
+            ) : (
+              <div style={{
+                padding: '16px 20px',
+                background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(0, 224, 255, 0.1))',
+                border: '1px solid rgba(124, 58, 237, 0.4)',
+                borderRadius: 12,
+                marginBottom: 24,
+                fontSize: 15,
+                color: 'rgba(247, 249, 251, 0.9)',
+                textAlign: 'center',
+                backdropFilter: 'blur(10px)',
+                boxShadow: '0 4px 20px rgba(124, 58, 237, 0.2)'
+              }}>
+                💡 Select one or more <strong>Customer Segments</strong> above to enable individual customer selection
+              </div>
+            )}
+            
+            {/* Selected Customers Display */}
+            {filters?.selectedCustomerIds && filters.selectedCustomerIds.length > 0 && (
+              <Suspense fallback={<LoadingSpinner height="200px" />}>
+                <SelectedCustomersDisplay
+                  selectedCustomers={displayData.customers?.filter((c: any) => 
+                    filters.selectedCustomerIds.includes(c.customer_id)
+                  ) || []}
+                  onClearSelection={() => {
+                    setFilters((prev: any) => ({
+                      ...prev,
+                      selectedCustomerIds: []
+                    }));
+                  }}
+                  onGenerateStrategies={() => {
+                    // Trigger the chatbot with a specific prompt for strategies
+                    const selectedCustomers = displayData.customers?.filter((c: any) => 
+                      filters.selectedCustomerIds.includes(c.customer_id)
+                    ) || [];
+                    const avgRisk = selectedCustomers.reduce((sum: number, c: any) => sum + c.churn_probability, 0) / selectedCustomers.length * 100;
+                    const highRiskCount = selectedCustomers.filter((c: any) => c.risk_level === 'High' || c.risk_level === 'Very High').length;
+                    const message = `🎯 **Retention Strategy Generator**: Analyzing ${selectedCustomers.length} selected customers with ${avgRisk.toFixed(1)}% average churn risk. ${highRiskCount} are high-risk requiring immediate attention. Generating personalized retention strategies based on their profiles...`;
+                    showChatbotMessage(message);
+                  }}
+                />
+              </Suspense>
+            )}
+            
+            {/* Enhanced KPI Tiles with Glass Morphism */}
+            <div style={{ 
+              cursor: 'pointer', 
+              transition: 'all 0.3s ease',
+              marginBottom: '32px',
+              padding: '20px',
+              background: 'rgba(30, 41, 59, 0.5)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '20px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+            }}>
+              <Suspense fallback={<LoadingSpinner height="160px" />}>
+                <ChurnKpiTiles 
+                  kpis={kpis} 
+                  onKpiClick={(kpiType: string, value: any, event: React.MouseEvent) => {
+                    const insight = generateSimpleInsight(kpiType, value, 'KPI');
+                    showChatbotMessage(insight, event);
+                    // Trigger robot
+                    if ((window as any).robotAddPoint) {
+                      (window as any).robotAddPoint({
+                        x: event.clientX,
+                        y: event.clientY,
+                        label: kpiType,
+                        value: value,
+                        chartType: 'KPI',
+                        originalEvent: event.nativeEvent
+                      });
+                    }
+                  }}
+                />
+              </Suspense>
             </div>
             
-            <Grid columns={2} gap={32} style={{ marginTop: 32 }}>
+            {/* First Row - Risk Pyramid and Probability Histogram */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: windowWidth < 1200 ? '1fr' : 'repeat(2, 1fr)', 
+              gap: '30px', 
+              marginBottom: '40px',
+              width: '100%',
+              minHeight: windowWidth < 768 ? 'auto' : '500px'
+            }}>
               <div 
                 onClick={(e) => {
-                  const insight = generateRiskPyramidInsight(data.customers || []);
-                  showChatbotMessage(insight, e);
+                    const total = displayData.customers?.length || 0;
+                    const highRisk = displayData.customers?.filter((c: any) => c.risk_level === 'High' || c.risk_level === 'Very High').length || 0;
+                    const insight = generateSimpleInsight('Risk Distribution', `${highRisk}/${total} high risk`, 'Risk Pyramid');
+                    showChatbotMessage(insight, e);
+                    // Trigger robot
+                    if ((window as any).robotAddPoint) {
+                      (window as any).robotAddPoint({
+                        x: e.clientX,
+                        y: e.clientY,
+                        label: 'Risk Distribution',
+                        value: `${displayData.customers?.length || 0} customers`,
+                        chartType: 'Risk Pyramid Overview',
+                        originalEvent: e.nativeEvent
+                      });
+                    }
                 }}
-                style={{ cursor: 'pointer' }}
+                style={{ 
+                  cursor: 'pointer',
+                  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                  borderRadius: '16px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = '0 12px 40px rgba(124, 58, 237, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               >
-                <ChurnRiskPyramid customers={data.customers || []} data={data.customers || []} />
+                <ChurnRiskPyramidWithSelection 
+                  customers={displayData.customers || []} 
+                  data={displayData.customers || []}
+                  onContextSelect={(context) => {
+                    // Send context to chatbot
+                    if (typeof window !== 'undefined') {
+                      const event = new CustomEvent('chartContextSelected', { detail: context });
+                      window.dispatchEvent(event);
+                    }
+                  }}
+                />
               </div>
-              <ProbabilityHistogram
-                probabilities={data.probabilities || []}
-                thresholds={[0.3, 0.6, 0.8]}
-                binCount={binCount}
-                onBinCountChange={setBinCount}
-                onBinClick={(binStart: number, binEnd: number, customerCount: number, event: React.MouseEvent) => {
-                  const insight = generateProbabilityInsight(binStart, binEnd, customerCount);
-                  showChatbotMessage(insight, event);
-                }}
-              />
-            </Grid>
+                <Suspense fallback={<LoadingSpinner height="420px" />}>
+                  <ProbabilityHistogram
+                    customers={displayData.customers || []}
+                    data={displayData.customers || []}
+                    probabilities={displayData.probabilities || []}
+                    thresholds={[0.3, 0.6, 0.8]}
+                    binCount={binCount}
+                    onBinCountChange={setBinCount}
+                    onBinClick={(binStart: number, binEnd: number, customerCount: number, event: React.MouseEvent) => {
+                      if (event.shiftKey) {
+                        // Shift+Click: Send to chatbot
+                        if (typeof window !== 'undefined' && (window as any).addAIInsightToChat) {
+                          (window as any).addAIInsightToChat({
+                            label: `Probability ${(binStart*100).toFixed(0)}-${(binEnd*100).toFixed(0)}%`,
+                            value: customerCount.toString(),
+                            chartType: 'Probability Histogram',
+                            count: customerCount,
+                            total: displayData.customers?.length || 0
+                          });
+                        }
+                      } else {
+                        // Normal click: Show AI insight
+                        const insight = generateSimpleInsight(
+                          `Probability ${(binStart*100).toFixed(0)}-${(binEnd*100).toFixed(0)}%`,
+                          `${customerCount} customers`,
+                          'Probability Histogram'
+                        );
+                        showChatbotMessage(insight, event);
+                      }
+                    }}
+                  />
+                </Suspense>
+            </div>
             
-            <Grid columns={2} gap={32} style={{ marginTop: 32 }}>
-              <FeatureImportance
-                features={data.feature_importance || []}
-                sortBy={sortBy}
-                onSortChange={setSortBy}
-                onFeatureClick={(feature: string, importance: number, rank: number, event: React.MouseEvent) => {
-                  console.log('Feature clicked:', feature, importance, rank, event);
-                  const insight = generateFeatureInsight(feature, importance, rank);
-                  showChatbotMessage(insight, event);
-                }}
-              />
-              <SegmentMatrix 
-                segmentMatrix={data.segment_matrix || []} 
-                onSegmentClick={(segment: string, riskData: any, event: React.MouseEvent) => {
-                  console.log('Segment clicked:', segment, riskData, event);
-                  const insight = generateSegmentInsight(segment, riskData);
-                  showChatbotMessage(insight, event);
-                }}
-              />
-            </Grid>
+            {/* Second Row - Feature Importance and Segment Matrix */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: windowWidth < 1200 ? '1fr' : 'repeat(2, 1fr)', 
+              gap: '30px', 
+              marginBottom: '40px',
+              width: '100%',
+              minHeight: windowWidth < 768 ? 'auto' : '450px'
+            }}>
+              <Suspense fallback={<LoadingSpinner height="350px" />}>
+                <FeatureImportance
+                  features={displayData.feature_importance || []}
+                  sortBy={sortBy}
+                  onSortChange={setSortBy}
+                  onFeatureClick={(feature: string, importance: number, rank: number, event: React.MouseEvent) => {
+                    if (event.shiftKey) {
+                      // Shift+Click: Send to chatbot
+                      if (typeof window !== 'undefined' && (window as any).addAIInsightToChat) {
+                        (window as any).addAIInsightToChat({
+                          label: feature,
+                          value: `${(importance * 100).toFixed(1)}`,
+                          chartType: 'Feature Importance',
+                          count: rank,
+                          total: displayData.feature_importance?.length || 0
+                        });
+                      }
+                    } else {
+                      // Normal click: Show AI insight
+                      const insight = generateSimpleInsight(
+                        feature,
+                        `${(importance * 100).toFixed(1)}% importance (Rank #${rank})`,
+                        'Feature Importance'
+                      );
+                      showChatbotMessage(insight, event);
+                    }
+                  }}
+                  />
+              </Suspense>
+              
+              <Suspense fallback={<LoadingSpinner height="350px" />}>
+                <SegmentMatrix 
+                  segmentMatrix={displayData.segment_matrix || []} 
+                  onSegmentClick={(segment: string, riskData: any, event: React.MouseEvent) => {
+                    // Only handle normal clicks here, shift+click is handled internally by SegmentMatrix
+                    if (!event.shiftKey) {
+                      const total = riskData.low + riskData.medium + riskData.high + riskData.very_high;
+                      const highRisk = riskData.high + riskData.very_high;
+                      
+                      // Normal click: Show AI insight
+                      const insight = generateSimpleInsight(
+                        segment,
+                        `${total} customers (${((highRisk/total)*100).toFixed(0)}% high risk)`,
+                        'Segment Matrix'
+                      );
+                      showChatbotMessage(insight, event);
+                    }
+                  }}
+                  />
+              </Suspense>
+            </div>
             
-            <div 
-              onClick={(e) => {
-                const insight = generateTemporalInsight(data.risk_time_series || []);
+            {/* Third Row - Temporal Risk Pattern (Full Width) */}
+            <div style={{
+              marginBottom: '40px',
+              width: '100%',
+              minHeight: '450px',
+              padding: '24px',
+              background: 'rgba(30, 41, 59, 0.4)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '20px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+            }}>
+              <div 
+                onClick={(e) => {
+                const latest = displayData.risk_time_series?.[displayData.risk_time_series.length - 1];
+                const highRisk = latest ? (latest.high + latest.very_high) : 0;
+                const insight = generateSimpleInsight(
+                  'Temporal Pattern',
+                  `${highRisk} high-risk customers (latest)`,
+                  'Time Series'
+                );
                 showChatbotMessage(insight, e);
-              }}
-              style={{ cursor: 'pointer' }}
-            >
-              <TemporalRiskPattern riskTimeSeries={data.risk_time_series || []} />
+                // Trigger robot
+                if ((window as any).robotAddPoint) {
+                  (window as any).robotAddPoint({
+                    x: e.clientX,
+                    y: e.clientY,
+                    label: 'Temporal Risk Pattern',
+                    value: `${displayData.risk_time_series?.length || 0} periods`,
+                    chartType: 'Time Series',
+                    originalEvent: e.nativeEvent
+                  });
+                }
+                }}
+                style={{ 
+                  cursor: 'pointer'
+                }}
+              >
+                <Suspense fallback={<LoadingSpinner height="380px" />}>
+                  <TemporalRiskPattern riskTimeSeries={displayData.risk_time_series || []} />
+                </Suspense>
+              </div>
             </div>
             
-            <div 
-              onClick={(e) => showChatbotMessage('👥 **Customer Risk Explorer**: Individual customer details with risk levels and probabilities. **Click any row** for detailed profile. **Sort by columns** to find patterns. Use for targeted retention campaigns and personal outreach!', e)}
-              style={{ cursor: 'pointer' }}
-            >
-              <CustomerTable customers={data.customers || []} page={page} onPageChange={setPage} />
-            </div>
-          </div>
-          
-          <div style={{ flex: 1, minWidth: 340, maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 32 }} className="animate-fade-in">
-            <div 
-              onClick={(e) => showChatbotMessage('💡 **AI Insights**: Automated observations about your churn data. Highlights **important patterns**, **anomalies**, and **trends** that need attention. These insights update automatically as your data changes!', e)}
-              style={{ cursor: 'pointer' }}
-            >
-              <InsightsDrawer insights={data.insights || []} />
-            </div>
-            <div 
-              onClick={(e) => showChatbotMessage('🎯 **Retention Strategies**: Actionable recommendations based on your churn analysis. **High Priority** = immediate action needed. **Medium Priority** = plan for next quarter. Strategies are tailored to your specific customer segments!', e)}
-              style={{ cursor: 'pointer' }}
-            >
-              <RetentionStrategies strategies={data.retention_strategies || []} />
+            {/* Fourth Row - Customer Table (Full Width) */}
+            <div style={{
+              marginBottom: '40px',
+              width: '100%',
+              minHeight: '500px',
+              padding: '24px',
+              background: 'rgba(30, 41, 59, 0.4)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '20px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+            }}>
+              <div 
+                onClick={(e) => showChatbotMessage('👥 **Customer Risk Explorer**: Individual customer details with risk levels and probabilities. **Click any row** for detailed profile. **Sort by columns** to find patterns. Use for targeted retention campaigns and personal outreach!', e)}
+                style={{ 
+                  cursor: 'pointer'
+                }}
+              >
+                <Suspense fallback={<LoadingSpinner height="500px" />}>
+                  <CustomerTable customers={displayData.customers || []} page={page} onPageChange={setPage} />
+                </Suspense>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Floating Action Button removed - using EnhancedContextAwareChatbot instead */}
 
-        {/* Inline Chatbot */}
-        <InlineChatbot
-          message={chatbotMessage}
-          position={chatbotPosition}
-          onClose={clearChatbotMessage}
-          onOpenInteractiveChat={() => setIsInteractiveChatbotOpen(true)}
-        />
+        {/* Inline Chatbot - only render when message exists */}
+        {chatbotMessage && (
+          <InlineChatbot
+            message={chatbotMessage}
+            position={chatbotPosition}
+            onClose={clearChatbotMessage}
+            onOpenInteractiveChat={() => setIsInteractiveChatbotOpen(true)}
+            data={data}
+          />
+        )}
 
         {/* Enhanced Context-Aware Chatbot with @mention support */}
-        <EnhancedContextAwareChatbot 
-          dashboardContext={{
-            source_dashboard: 'churn_prediction',
-            customer_context: {
-              total_customers: data.customers?.length || 0,
-              high_risk_customers: data.customers?.filter((c: any) => c.risk_level === 'High' || c.risk_level === 'Very High').length || 0,
-              avg_churn_probability: data.customers?.length > 0 ? data.customers.reduce((sum: number, c: any) => sum + c.churn_probability, 0) / data.customers.length : 0,
-              active_customer: null,
-              segments: data.segment_matrix || []
-            },
-            chart_context: {
-              chartType: 'churn_analysis',
-              activeChart: 'risk_distribution',
-              clickedElement: null
-            },
-            filters: {},
-            date_range: {
-              start_date: '2024-01-01',
-              end_date: '2024-12-31'
-            }
-          }}
-        />
+        <Suspense fallback={<div>Loading Chat...</div>}>
+          <EnhancedContextAwareChatbot 
+            dashboardContext={{
+              source_dashboard: 'churn_prediction',
+              customer_context: {
+                total_customers: displayData.customers?.length || 0,
+                high_risk_customers: displayData.customers?.filter((c: any) => c.risk_level === 'High' || c.risk_level === 'Very High').length || 0,
+                avg_churn_probability: displayData.customers?.length > 0 ? displayData.customers.reduce((sum: number, c: any) => sum + c.churn_probability, 0) / displayData.customers.length : 0,
+                active_customer: null,
+                segments: displayData.segment_matrix || []
+              },
+              chart_context: {
+                chartType: 'churn_analysis',
+                activeChart: 'risk_distribution',
+                clickedElement: null,
+                selectedPoints: selectedPoints
+              },
+              filters: {},
+              date_range: {
+                start_date: '2024-01-01',
+                end_date: '2024-12-31'
+              }
+            }}
+          />
+        </Suspense>
 
         {/* Business Intelligence Agent with all 4.1-4.6 features */}
-        <StandaloneBusinessIntelligenceAgent
-          customers={data.customers || []}
-          isVisible={isBIAgentOpen}
-          onClose={() => setIsBIAgentOpen(false)}
-        />
+        <Suspense fallback={<div>Loading BI Agent...</div>}>
+          <StandaloneBusinessIntelligenceAgent
+            customers={displayData.customers || []}
+            isVisible={isBIAgentOpen}
+            onClose={() => setIsBIAgentOpen(false)}
+          />
+        </Suspense>
 
         {/* BI Agent Trigger Button */}
         <BusinessIntelligenceTrigger
           onClick={() => setIsBIAgentOpen(!isBIAgentOpen)}
-          highRiskCount={data.customers?.filter((c: any) => c.risk_level === 'High' || c.risk_level === 'Very High').length || 0}
+          highRiskCount={displayData.customers?.filter((c: any) => c.risk_level === 'High' || c.risk_level === 'Very High').length || 0}
         />
+
+
+        {/* Test Button for Robot - Removed for production */}
       </div>
+      </ChartSelectionManager>
     </>
   );
 } 

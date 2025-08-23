@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { handleChartClick } from '../../utils/chartSelectionHelper';
 
 interface KPIData {
   totalSegments: number;
@@ -120,7 +121,19 @@ const KpiTile = ({
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={onClick}
+      onClick={(e) => {
+        // Send to ChartSelectionManager
+        handleChartClick({
+          chartId: `kpi-tile-${label.toLowerCase().replace(/\s+/g, '-')}`,
+          chartType: 'kpi-tile',
+          label: label,
+          value: typeof value === 'number' ? value : 0,
+          metadata: { icon, trend, color }
+        }, e);
+        
+        // Call original onClick if provided
+        if (onClick) onClick(e);
+      }}
     >
       {/* Background glow effect */}
       <div style={{
@@ -252,8 +265,8 @@ const BeautifulSegmentKPITiles: React.FC<BeautifulSegmentKPITilesProps> = ({ kpi
       delay: 300
     },
     {
-      value: `${kpis.segmentStability || 0}%`,
-      label: 'Segment Stability',
+      value: Math.round(kpis.segmentStability || 0),
+      label: 'Segment Stability %',
       icon: '🔒',
       color: '#f59e0b',
       trend: kpis.segmentStability > 75 ? 'good' : 'fair',

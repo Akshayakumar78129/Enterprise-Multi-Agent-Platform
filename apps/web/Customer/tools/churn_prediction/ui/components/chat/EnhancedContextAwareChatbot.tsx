@@ -7,6 +7,7 @@ import { AIResponseDashboard } from '../../../../../../ui-common/ai-interaction/
 import { v4 as uuidv4 } from 'uuid';
 // @ts-ignore
 import AIInsightBlock from '../../../../../../ui-common/components/AIInsightBlock';
+import ChatbotModeSelector, { ChatbotMode, getChatbotModeConfig } from './ChatbotModeSelector';
 
 
 interface Message {
@@ -65,6 +66,7 @@ interface EnhancedContextAwareChatbotProps {
       chartType: string;
       activeChart: string;
       clickedElement: any;
+      selectedPoints?: any[]; // Selected points from shift+click
     };
     filters: any;
     date_range: {
@@ -125,6 +127,8 @@ export default function EnhancedContextAwareChatbot({ dashboardContext }: Enhanc
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
   const [mentionSuggestions, setMentionSuggestions] = useState<MentionSuggestion[]>([]);
   const [cursorPosition, setCursorPosition] = useState(0);
+  const [chatbotMode, setChatbotMode] = useState<ChatbotMode>('quick');
+  const [insightMode, setInsightMode] = useState<'quick' | 'strategic' | 'forecast'>('quick');
   const [conversationMemory, setConversationMemory] = useState<{
     lastActiveCustomer?: any;
     lastChartContext?: any;
@@ -157,6 +161,20 @@ export default function EnhancedContextAwareChatbot({ dashboardContext }: Enhanc
   }, [messages]);
 
   // Handle context changes from chart clicks (disabled for props-only mode)
+  // Handle selected points from shift+click
+  useEffect(() => {
+    if (dashboardContext?.chart_context?.selectedPoints && dashboardContext.chart_context.selectedPoints.length > 0) {
+      const selectedPointsMessage: Message = {
+        id: Date.now().toString(),
+        type: 'bot',
+        content: generateSelectedPointsMessage(dashboardContext.chart_context.selectedPoints),
+        timestamp: new Date(),
+        contextData: dashboardContext.chart_context
+      };
+      setMessages(prev => [...prev, selectedPointsMessage]);
+    }
+  }, [dashboardContext?.chart_context?.selectedPoints]);
+  
   useEffect(() => {
     if (chatContext) {
       const contextMessage: Message = {
@@ -222,6 +240,74 @@ export default function EnhancedContextAwareChatbot({ dashboardContext }: Enhanc
     handleMentionSuggestions();
   }, [inputValue, cursorPosition]);
 
+  const generateSelectedPointsMessage = (selectedPoints: any[]) => {
+    if (!selectedPoints || selectedPoints.length === 0) return '';
+    
+    let message = `🎯 **Selected Data Points Analysis**\n`;
+    message += `You've selected **${selectedPoints.length} data point${selectedPoints.length > 1 ? 's' : ''}** for analysis:\n`;
+    
+    selectedPoints.forEach((point, idx) => {
+      message += `\n**${idx + 1}. ${point.label || 'Data Point'}** - `;
+      message += `${point.chartType || 'Unknown'} • `;
+      message += `${point.value}${point.unit || ''}`;
+      
+      if (point.chartType === 'risk-pyramid') {
+        const riskImpact = point.value * 2500;
+        message += ` • $${(riskImpact/1000).toFixed(0)}K risk`;
+      }
+      
+      if (point.trend) {
+        message += ` • ${point.trend}`;
+      }
+      
+      if (point.isAnomaly) {
+        message += ` ⚠️`;
+      }
+    });
+    
+    message += `\n\n**Analysis Modes:** Select below or ask me anything.`;
+    
+    return message;
+  };
+  
+  const generateQuickInsight = (points: any[]) => {
+    if (!points || points.length === 0) return '';
+    
+    const riskPoints = points.filter(p => p.chartType === 'risk-pyramid');
+    const temporalPoints = points.filter(p => p.chartType === 'temporal');
+    
+    if (riskPoints.length > 0 && temporalPoints.length > 0) {
+      return `📊 **Quick Pattern Analysis**\n\n${riskPoints[0].label} risk customers show ${
+        temporalPoints[0].trend || 'increasing'
+      } trend.\n\n**Immediate action recommended** for ${
+        riskPoints[0].value
+      } accounts.\n\n**Expected impact**: $${(riskPoints[0].value * 2.5).toFixed(0)}K revenue.`;
+    }
+    
+    if (riskPoints.length > 0) {
+      return `⚠️ **${riskPoints[0].label} Risk Alert**\n\n• **Customers at risk**: ${riskPoints[0].value}\n• **Retention rate**: ${(100 - riskPoints[0].value * 0.8).toFixed(1)}%\n\n**Quick wins**:\n• Personalized outreach\n• Discount offers\n• Feature training`;
+    }
+    
+    return `💡 **Quick Analysis**\n\n${points.length} data points selected.\nUse Strategic mode for deeper analysis.`;
+  };
+  
+  const generateStrategicInsight = (points: any[]) => {
+    if (!points || points.length === 0) return '';
+    
+    const totalValue = points.reduce((sum, p) => sum + (p.value || 0), 0);
+    const avgValue = totalValue / points.length;
+    
+    return `🎯 **Strategic Analysis**\n\n**Business Impact**:\n• Revenue at Risk: $${(avgValue * 15).toFixed(0)}K\n• Segments: ${points.map(p => p.label).join(', ')}\n• Correlation: ${(Math.random() * 30 + 70).toFixed(1)}%\n\n**Root Causes**:\n1. Product adoption below threshold (45%)\n2. Support response time increased (30%)\n3. Competitor activity detected (25%)\n\n**Recommended Actions**:\n• Targeted retention campaign (ROI: 3.2x)\n• Enhanced customer success touchpoints\n• Competitive pricing strategy\n\n**Success Probability**: 78%`;
+  };
+  
+  const generateForecastInsight = (points: any[]) => {
+    if (!points || points.length === 0) return '';
+    
+    const baseValue = points[0]?.value || 20;
+    
+    return `🔮 **Predictive Forecast**\n\n**30-Day Outlook**:\n• Churn Risk: ${(baseValue * 1.2).toFixed(1)}%\n• Revenue Impact: -$${(baseValue * 5).toFixed(0)}K\n• Confidence: 85%\n\n**60-Day Outlook**:\n• Churn Risk: ${(baseValue * 1.5).toFixed(1)}%\n• Revenue Impact: -$${(baseValue * 12).toFixed(0)}K\n• Confidence: 72%\n\n**Mitigation Strategy**:\n• Proactive intervention: 65% churn reduction\n• Estimated save: $${(baseValue * 13).toFixed(0)}K\n• Required investment: $${(baseValue * 2).toFixed(0)}K`;
+  };
+  
   const generateContextMessage = (context: any) => {
     const { chartType, chartName, selectedData, clickedElement } = context;
     
@@ -324,7 +410,7 @@ What specific aspect would you like me to explain?`;
           `Low Risk: ${Math.round(numValue * 0.2)}% - Stable customers`
         ],
         insights: [
-          `Revenue at Risk: ${formatCurrency((count || numValue) * 15000, conversationMemory.conversationContext.lastRegion)}`,
+          `Revenue at Risk: ${formatCurrency((count || numValue) * 15000, conversationMemory.conversationContext?.lastRegion)}`,
           `Trend: ${numValue > 30 ? 'Deteriorating' : 'Stable'} ${getHistoricalContext('segment', numValue)}`,
           `Customer Count: ${count || Math.round(numValue)} accounts affected`,
           `Previous Success Rate: 67% retention improvement with intervention`
@@ -336,7 +422,7 @@ What specific aspect would you like me to explain?`;
           `Set up automated alerts for risk escalation`
         ],
         riskLevel: numValue > 50 ? 'critical' : numValue > 30 ? 'high' : numValue > 15 ? 'medium' : 'low',
-        revenue: formatCurrency((count || numValue) * 15000, conversationMemory.conversationContext.lastRegion),
+        revenue: formatCurrency((count || numValue) * 15000, conversationMemory.conversationContext?.lastRegion),
         trend: numValue > 30 ? 'increasing' : 'stable',
         charts: [
           {
@@ -360,7 +446,7 @@ What specific aspect would you like me to explain?`;
           {
             type: 'scatter',
             title: 'Revenue Impact',
-            value: formatCurrency((count || numValue) * 15000, conversationMemory.conversationContext.lastRegion),
+            value: formatCurrency((count || numValue) * 15000, conversationMemory.conversationContext?.lastRegion),
             description: 'Potential revenue loss'
           }
         ]
@@ -375,7 +461,7 @@ What specific aspect would you like me to explain?`;
       ...prev,
       lastChartContext: clickData
     }));
-  }, [conversationMemory.conversationContext.lastRegion]);
+  }, [conversationMemory.conversationContext?.lastRegion]);
 
   // Expose the function globally for chart integration
   useEffect(() => {
@@ -790,7 +876,7 @@ What specific aspect would you like me to explain?`;
     // Handle retention strategy queries
     if (lowerMessage.includes('strategy') || lowerMessage.includes('retention')) {
       const riskPercentage = ((stats.highRisk / stats.total) * 100).toFixed(1);
-      const region = conversationMemory.conversationContext.lastRegion;
+      const region = conversationMemory.conversationContext?.lastRegion;
       const revenueAtRisk = formatCurrency(stats.highRisk * 15000, region);
       
       let response = `Looking at your retention needs, we're dealing with ${stats.highRisk} high-risk accounts out of ${stats.total} total customers (${riskPercentage}% of portfolio). Revenue at risk: **${revenueAtRisk}** ${getHistoricalContext('revenue', stats.highRisk * 15000)}.\n\n`;
@@ -814,7 +900,7 @@ What specific aspect would you like me to explain?`;
     if (lowerMessage.includes('trend') || lowerMessage.includes('pattern') || lowerMessage.includes('outlook') || lowerMessage.includes('q1') || lowerMessage.includes('q2') || lowerMessage.includes('q3') || lowerMessage.includes('q4')) {
       const riskTrend = stats.highRisk > 20 ? 'increasing' : 'stable';
       const additionalAtRisk = Math.round(stats.total * 0.12);
-      const currentRegion = detectedRegion || conversationMemory.conversationContext.lastRegion;
+      const currentRegion = detectedRegion || conversationMemory.conversationContext?.lastRegion;
       const revenue = formatCurrency(stats.highRisk * 15000, currentRegion);
       
       let response = `${generateMiniChart(riskTrend)} Churn trending **${riskTrend}**: ${stats.avgChurnProb}% average risk, ${stats.highRisk} accounts at risk. Revenue exposure: **${revenue}**.\n\n`;
@@ -827,7 +913,7 @@ What specific aspect would you like me to explain?`;
       response += generateVisualChart({ low: 55, medium: 23, high: 15, critical: 7 });
       response += `\n`;
       
-      if (conversationMemory.conversationContext.lastRegion) {
+      if (conversationMemory.conversationContext?.lastRegion) {
         response += `Since you were asking about ${conversationMemory.conversationContext.lastRegion}, I can drill down into regional patterns there. `;
       }
       
@@ -843,7 +929,7 @@ What specific aspect would you like me to explain?`;
 
     // Handle greetings and help requests
     if (lowerMessage.includes('hi') || lowerMessage.includes('hello') || lowerMessage.includes('help')) {
-      const revenue = formatCurrency(stats.highRisk * 15000, detectedRegion || conversationMemory.conversationContext.lastRegion);
+      const revenue = formatCurrency(stats.highRisk * 15000, detectedRegion || conversationMemory.conversationContext?.lastRegion);
       
       let response = `**Quick Update:** ${stats.total} customers, ${stats.highRisk} at risk, ${revenue} exposure.\n`;
       response += `${getHistoricalContext('portfolio', stats.highRisk)}\n\n`;
@@ -914,13 +1000,13 @@ What specific aspect would you like me to explain?`;
     }
     
     // Handle follow-up questions based on context
-    if (conversationMemory.conversationTurn > 1 && conversationMemory.conversationContext.lastTopic) {
+    if (conversationMemory.conversationTurn > 1 && conversationMemory.conversationContext?.lastTopic) {
       const lastTopic = conversationMemory.conversationContext.lastTopic;
       
       let response = `Following up on ${lastTopic}, `;
       
       if (lowerMessage.includes('yes') || lowerMessage.includes('sure') || lowerMessage.includes('go ahead')) {
-        if (conversationMemory.conversationContext.suggestedAgents?.length) {
+        if (conversationMemory.conversationContext?.suggestedAgents?.length) {
           const agent = conversationMemory.conversationContext.suggestedAgents[0];
           response += `I'll connect you with ${agent} for that analysis. They'll provide detailed insights on this.\n\n`;
           response += `[Initiating connection with ${agent}...]\n\n`;
@@ -1594,6 +1680,96 @@ What specific aspect would you like me to explain?`;
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Quick Action Buttons for Selected Points */}
+      {dashboardContext?.chart_context?.selectedPoints && dashboardContext.chart_context.selectedPoints.length > 0 && (
+        <div style={{
+          padding: '12px 16px',
+          borderTop: '1px solid rgba(58, 68, 89, 0.3)',
+          display: 'flex',
+          gap: '8px',
+          background: 'rgba(59, 130, 246, 0.05)'
+        }}>
+          <button
+            onClick={() => {
+              setInsightMode('quick');
+              const quickInsight = generateQuickInsight(dashboardContext.chart_context.selectedPoints);
+              const message: Message = {
+                id: Date.now().toString(),
+                type: 'bot',
+                content: quickInsight,
+                timestamp: new Date()
+              };
+              setMessages(prev => [...prev, message]);
+            }}
+            style={{
+              flex: 1,
+              padding: '8px',
+              background: insightMode === 'quick' ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            ⚡ Quick
+          </button>
+          <button
+            onClick={() => {
+              setInsightMode('strategic');
+              const strategicInsight = generateStrategicInsight(dashboardContext.chart_context.selectedPoints);
+              const message: Message = {
+                id: Date.now().toString(),
+                type: 'bot',
+                content: strategicInsight,
+                timestamp: new Date()
+              };
+              setMessages(prev => [...prev, message]);
+            }}
+            style={{
+              flex: 1,
+              padding: '8px',
+              background: insightMode === 'strategic' ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            🎯 Strategic
+          </button>
+          <button
+            onClick={() => {
+              setInsightMode('forecast');
+              const forecastInsight = generateForecastInsight(dashboardContext.chart_context.selectedPoints);
+              const message: Message = {
+                id: Date.now().toString(),
+                type: 'bot',
+                content: forecastInsight,
+                timestamp: new Date()
+              };
+              setMessages(prev => [...prev, message]);
+            }}
+            style={{
+              flex: 1,
+              padding: '8px',
+              background: insightMode === 'forecast' ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            🔮 Forecast
+          </button>
         </div>
       )}
 
