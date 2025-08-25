@@ -1,4 +1,4 @@
-# Sales Trend Analyzer
+﻿# Sales Trend Analyzer
 
 A comprehensive time-series analytics tool that provides deep insights into sales patterns and trends over different time periods.
 
@@ -14,7 +14,7 @@ A comprehensive time-series analytics tool that provides deep insights into sale
 
 ## Components
 
-### 1. Time Series Explorer (760px × 480px)
+### 1. Time Series Explorer (760px Ã— 480px)
 - Main trend visualization with interactive analysis
 - Multiple metric support (revenue, units, AOV, margin)
 - Moving average overlay
@@ -22,14 +22,14 @@ A comprehensive time-series analytics tool that provides deep insights into sale
 - Metric selection
 - Time range filtering
 
-### 2. Seasonal Pattern Analyzer (720px × 460px)
+### 2. Seasonal Pattern Analyzer (720px Ã— 460px)
 - Seasonal decomposition view
 - Pattern detection and visualization
 - Year-over-year comparison
 - Seasonal heatmap
 - Pattern strength indicators
 
-### 3. Growth Rate Visualizer (680px × 420px)
+### 3. Growth Rate Visualizer (680px Ã— 420px)
 - Growth rate bar chart
 - Average growth line
 - Growth distribution
@@ -129,24 +129,24 @@ Run tests with: `npm test`
 
 ## Best Practices
 
-1. **Data Loading**
+1. <strong>Data Loading</strong>
    - Use appropriate time granularity for the date range
    - Implement data caching for frequently accessed periods
    - Handle loading states gracefully
 
-2. **Visualization**
+2. <strong>Visualization</strong>
    - Follow Enterprise IQ color scheme
    - Ensure responsive behavior
    - Provide clear loading and error states
    - Add proper tooltips and legends
 
-3. **Performance**
+3. <strong>Performance</strong>
    - Optimize database queries
    - Use appropriate indexes
    - Implement data pagination
    - Cache calculation results
 
-4. **Accessibility**
+4. <strong>Accessibility</strong>
    - Provide keyboard navigation
    - Add proper ARIA labels
    - Ensure sufficient color contrast
@@ -156,18 +156,18 @@ Run tests with: `npm test`
 
 Common issues and solutions:
 
-1. **No Data Displayed**
+1. <strong>No Data Displayed</strong>
    - Check date range filters
    - Verify database connection
    - Check for deleted/excluded flags
 
-2. **Performance Issues**
+2. <strong>Performance Issues</strong>
    - Reduce time range
    - Use appropriate granularity
    - Check database query performance
    - Monitor client-side rendering
 
-3. **Visualization Errors**
+3. <strong>Visualization Errors</strong>
    - Verify data format
    - Check for null values
    - Ensure proper data transformation
@@ -183,4 +183,4 @@ Common issues and solutions:
 
 ## License
 
-Copyright © 2024 Enterprise IQ. All rights reserved. 
+Copyright Â© 2024 Enterprise IQ. All rights reserved. 

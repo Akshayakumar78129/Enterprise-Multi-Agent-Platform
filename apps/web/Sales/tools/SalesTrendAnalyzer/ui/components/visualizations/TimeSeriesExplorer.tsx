@@ -20,14 +20,26 @@ const TimeSeriesExplorer: React.FC<TimeSeriesExplorerProps> = ({
   filters,
   onFilterChange,
   onDataPointClick,
-  onInfoIconClick
+  onInfoIconClick,
+  selectedPoints = new Set()
 }) => {
   const chartData = useMemo((): Data[] | null => {
     if (!data?.length) return null;
 
     const formatValue = filters.metric === 'revenue' ? formatCurrency : formatNumber;
     
-    // Main series
+    // Create marker colors and sizes based on selection state
+    const markerColors = data.map(d => {
+      const pointId = `timeseries-${d.period}-${filters.metric}`;
+      return selectedPoints.has(pointId) ? THEME.colors.energyYellow : THEME.colors.primary;
+    });
+    
+    const markerSizes = data.map(d => {
+      const pointId = `timeseries-${d.period}-${filters.metric}`;
+      return selectedPoints.has(pointId) ? 10 : 6;
+    });
+    
+    // Main series with dynamic marker styling for selections
     const mainSeries: Data = {
       x: data.map(d => d.period),
       y: data.map(d => Number(d[filters.metric])),
@@ -35,12 +47,20 @@ const TimeSeriesExplorer: React.FC<TimeSeriesExplorerProps> = ({
       mode: 'lines+markers',
       name: filters.metric.toUpperCase(),
       line: {
-        color: THEME.colors.primary,
+        color: THEME.colors.primary, // Electric Cyan for primary series
         width: 3
       },
       marker: {
-        color: THEME.colors.primary,
-        size: 6
+        color: markerColors,
+        size: markerSizes,
+        line: {
+          color: selectedPoints.size > 0 ? 
+            data.map(d => {
+              const pointId = `timeseries-${d.period}-${filters.metric}`;
+              return selectedPoints.has(pointId) ? THEME.colors.signalMagenta : 'transparent';
+            }) : 'transparent',
+          width: 2
+        }
       }
     };
 
@@ -66,7 +86,7 @@ const TimeSeriesExplorer: React.FC<TimeSeriesExplorerProps> = ({
     };
 
     return [mainSeries, movingAvgSeries];
-  }, [data, filters.metric]);
+  }, [data, filters.metric, selectedPoints]);
 
   const layout = {
     height: THEME.dimensions.timeSeriesExplorer.height,

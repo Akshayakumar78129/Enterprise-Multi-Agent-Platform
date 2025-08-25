@@ -56,56 +56,56 @@ export const lightTheme = {
 };
 
 export const darkTheme = {
-  // Background colors
+  // Background colors (aligned to Sales dashboard palette)
   bg: {
-    primary: '#0f172a',
-    secondary: '#1e293b',
-    tertiary: '#334155',
-    card: '#1e293b',
-    glass: 'rgba(30, 41, 59, 0.85)',
-    overlay: 'rgba(255, 255, 255, 0.1)'
+    primary: '#232a36',     // Base Background (Graphite)
+    secondary: '#2c3341',   // Container Background
+    tertiary: '#0a1224',    // Interactive Background
+    card: '#2c3341',
+    glass: 'rgba(44, 51, 65, 0.95)',
+    overlay: 'rgba(247, 249, 251, 0.08)'
   },
   
   // Text colors
   text: {
-    primary: '#f8fafc',
-    secondary: '#cbd5e1',
-    tertiary: '#94a3b8',
-    inverse: '#1e293b'
+    primary: '#f7f9fb',
+    secondary: 'rgba(247, 249, 251, 0.75)',
+    tertiary: 'rgba(247, 249, 251, 0.6)',
+    inverse: '#0a1224'
   },
   
   // Border colors
   border: {
-    light: '#334155',
-    medium: '#475569',
-    strong: '#64748b'
+    light: 'rgba(255, 255, 255, 0.08)',
+    medium: 'rgba(255, 255, 255, 0.12)',
+    strong: 'rgba(255, 255, 255, 0.2)'
   },
   
-  // Accent colors (slightly brighter for dark mode)
+  // Accent colors
   accent: {
-    primary: '#60a5fa',
-    secondary: '#a78bfa',
-    success: '#34d399',
-    warning: '#fbbf24',
-    error: '#f87171',
+    primary: '#00e0ff',
+    secondary: '#e930ff',
+    success: '#22c55e',
+    warning: '#f59e0b',
+    error: '#ef4444',
     info: '#22d3ee'
   },
   
   // Chat specific colors
   chat: {
-    userMessage: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-    botMessage: 'rgba(30, 41, 59, 0.95)',
-    agentMessage: 'rgba(30, 41, 59, 0.98)',
-    panel: 'rgba(15, 23, 42, 0.95)',
-    shadow: 'rgba(0, 0, 0, 0.3)'
+    userMessage: 'linear-gradient(135deg, #00e0ff, #e930ff)',
+    botMessage: 'rgba(44, 51, 65, 0.95)',
+    agentMessage: 'rgba(44, 51, 65, 0.98)',
+    panel: 'rgba(35, 42, 54, 0.95)',
+    shadow: 'rgba(0, 0, 0, 0.35)'
   },
   
-  // Agent colors (slightly brighter for dark mode)
+  // Agent colors
   agents: {
-    sales: '#60a5fa',     // Brighter blue
-    customer: '#34d399',  // Brighter green
-    finance: '#a78bfa',   // Brighter purple
-    inventory: '#fbbf24'  // Brighter amber
+    sales: '#00e0ff',
+    customer: '#22c55e',
+    finance: '#a78bfa',
+    inventory: '#f59e0b'
   }
 };
 

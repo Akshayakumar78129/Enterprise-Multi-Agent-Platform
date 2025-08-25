@@ -5,7 +5,7 @@ const PROJECT_ROOT = process.cwd();
 
 // Database configuration
 const DATABASE = {
-  path: path.resolve(PROJECT_ROOT, 'Customer', 'database', 'customers.db')
+  path: path.resolve(PROJECT_ROOT, 'Sales', 'database', 'sales_agent.db')
 };
 
 // Logging configuration

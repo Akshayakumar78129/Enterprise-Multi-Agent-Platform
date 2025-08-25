@@ -15,7 +15,7 @@ export const MAIN_AGENTS: AgentInfo[] = [
     displayName: 'Sales Agent',
     avatar: '📊',
     description: 'Sales performance analysis and revenue insights',
-    color: '#3b82f6',
+    color: '#00e0ff',
     department: 'Sales',
     capabilities: ['revenue analysis', 'sales trends', 'performance metrics', 'forecasting']
   },
@@ -24,7 +24,7 @@ export const MAIN_AGENTS: AgentInfo[] = [
     displayName: 'Customer Agent',
     avatar: '👥',
     description: 'Customer behavior and segmentation analysis',
-    color: '#10b981',
+    color: '#22c55e',
     department: 'Customer',
     capabilities: ['customer segmentation', 'behavior analysis', 'retention', 'lifetime value']
   },
@@ -33,7 +33,7 @@ export const MAIN_AGENTS: AgentInfo[] = [
     displayName: 'Finance Agent',
     avatar: '💰',
     description: 'Financial analysis and cost optimization',
-    color: '#f59e0b',
+    color: '#e930ff',
     department: 'Finance',
     capabilities: ['financial analysis', 'cost optimization', 'ROI analysis', 'budget planning']
   },
@@ -42,7 +42,7 @@ export const MAIN_AGENTS: AgentInfo[] = [
     displayName: 'Inventory Agent',
     avatar: '📦',
     description: 'Inventory management and optimization',
-    color: '#8b5cf6',
+    color: '#f59e0b',
     department: 'Inventory',
     capabilities: ['inventory optimization', 'stock analysis', 'demand planning', 'cost analysis']
   }
