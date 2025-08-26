@@ -96,10 +96,11 @@ export const queryAgent = async (
       setTimeout(() => reject(new Error('Request timeout')), timeoutMs);
     });
 
-    // Use unified agent query endpoint
-    const endpoint = agentConfig.endpoint;
+    // Use backend AI service endpoint with /run_sse
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_AI_URL || 'http://127.0.0.1:5000';
+    const endpoint = `${backendUrl}/run_sse`;
     
-    console.log('🌐 Making API call:', {
+    console.log('🌐 Making API call to backend AI:', {
       endpoint,
       method: 'POST',
       agentName,
@@ -109,20 +110,30 @@ export const queryAgent = async (
       hasContext: !!payload.context
     });
     
-    // Create fetch promise with POST method for unified endpoint
+    // Format request for backend AI service (matching aiResponse.js format)
+    const formattedQuery = `@${agentName} ${payload.query}`;
+    const backendPayload = {
+      user_query: formattedQuery,
+      session_id: payload.request_id,
+      user_id: payload.context.user_id || 'dashboard_user',
+      app_name: 'churn_dashboard',
+      is_canvas: false,
+      context: {
+        dashboard: payload.context.source_dashboard,
+        customer_context: payload.context.customer_context,
+        filters: payload.context.filters_applied,
+        timestamp: payload.context.timestamp
+      }
+    };
+    
+    // Create fetch promise with format matching backend expectations
     const fetchOptions: RequestInit = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${agentConfig.authToken}`,
-        'X-Request-ID': payload.request_id,
-        'X-Source-Dashboard': payload.context.source_dashboard,
-        'X-Agent-Priority': payload.priority,
-        'X-Churn-Context': 'true', // Flag to indicate this is from churn dashboard
-        'X-Agent-Name': agentName,
-        'X-Agent-Category': agentConfig.category
+        'Accept': 'text/event-stream'
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(backendPayload)
     };
 
     const fetchPromise = fetch(endpoint, fetchOptions);
