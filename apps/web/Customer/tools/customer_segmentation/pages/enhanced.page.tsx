@@ -252,7 +252,7 @@ const EnhancedSegmentationDashboardInner: React.FC = () => {
                 customerCount: seg.count || 0,
                 avgSpend: seg.avg_total_spend || 0,
                 frequency: Math.round((seg.avg_order_value || 0) / 100),
-                recency: seg.avg_recency || 0,
+                recency: Math.round(seg.avg_recency || 0),
                 loyaltyScore: Math.round(Math.random() * 30 + 60),
                 engagementRate: Math.round(Math.random() * 25 + 65),
                 regions: seg.regions || [],

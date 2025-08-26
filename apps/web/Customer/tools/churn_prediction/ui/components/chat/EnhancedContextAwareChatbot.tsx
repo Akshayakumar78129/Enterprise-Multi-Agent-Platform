@@ -132,6 +132,7 @@ export default function EnhancedContextAwareChatbot({ dashboardContext }: Enhanc
   const [conversationMemory, setConversationMemory] = useState<{
     lastActiveCustomer?: any;
     lastChartContext?: any;
+    selectedPoints?: any[];
     mentionHistory: string[];
     conversationContext: {
       lastTopic?: string;
@@ -161,19 +162,19 @@ export default function EnhancedContextAwareChatbot({ dashboardContext }: Enhanc
   }, [messages]);
 
   // Handle context changes from chart clicks (disabled for props-only mode)
-  // Handle selected points from shift+click
-  useEffect(() => {
-    if (dashboardContext?.chart_context?.selectedPoints && dashboardContext.chart_context.selectedPoints.length > 0) {
-      const selectedPointsMessage: Message = {
-        id: Date.now().toString(),
-        type: 'bot',
-        content: generateSelectedPointsMessage(dashboardContext.chart_context.selectedPoints),
-        timestamp: new Date(),
-        contextData: dashboardContext.chart_context
-      };
-      setMessages(prev => [...prev, selectedPointsMessage]);
-    }
-  }, [dashboardContext?.chart_context?.selectedPoints]);
+  // Handle selected points from shift+click - DISABLED to use minimal display only
+  // useEffect(() => {
+  //   if (dashboardContext?.chart_context?.selectedPoints && dashboardContext.chart_context.selectedPoints.length > 0) {
+  //     const selectedPointsMessage: Message = {
+  //       id: Date.now().toString(),
+  //       type: 'bot',
+  //       content: generateSelectedPointsMessage(dashboardContext.chart_context.selectedPoints),
+  //       timestamp: new Date(),
+  //       contextData: dashboardContext.chart_context
+  //     };
+  //     setMessages(prev => [...prev, selectedPointsMessage]);
+  //   }
+  // }, [dashboardContext?.chart_context?.selectedPoints]);
   
   useEffect(() => {
     if (chatContext) {
@@ -393,75 +394,44 @@ What specific aspect would you like me to explain?`;
 
   // Handle chart click context - expose globally for integration  
   const handleChartClickContext = useCallback((clickData: any) => {
-    const { label, value, chartType, count, total } = clickData;
+    const { label, value, chartType, count, total, originalEvent } = clickData;
     const numValue = parseFloat(value) || 0;
+    const isShiftKey = originalEvent?.shiftKey || false;
     
-    // Create AI insight message
-    const insightMessage: Message = {
-      id: `insight_${Date.now()}`,
-      type: 'ai-insight',
-      timestamp: new Date(),
-      insightData: {
-        title: `📊 ${chartType || 'Risk'} Analysis - ${label} (${value}%)`,
-        breakdown: [
-          `Very High Risk: ${Math.round(numValue * 0.25)}% - Immediate action required`,
-          `High Risk: ${Math.round(numValue * 0.3)}% - Urgent intervention needed`,
-          `Medium Risk: ${Math.round(numValue * 0.25)}% - Proactive monitoring`,
-          `Low Risk: ${Math.round(numValue * 0.2)}% - Stable customers`
-        ],
-        insights: [
-          `Revenue at Risk: ${formatCurrency((count || numValue) * 15000, conversationMemory.conversationContext?.lastRegion)}`,
-          `Trend: ${numValue > 30 ? 'Deteriorating' : 'Stable'} ${getHistoricalContext('segment', numValue)}`,
-          `Customer Count: ${count || Math.round(numValue)} accounts affected`,
-          `Previous Success Rate: 67% retention improvement with intervention`
-        ],
-        actionPlan: [
-          `Contact top ${Math.round((count || numValue) * 0.25)} high-value accounts immediately`,
-          `Deploy @customer intelligence for retention strategy within 48 hours`,
-          `Schedule weekly review with @sales for revenue impact assessment`,
-          `Set up automated alerts for risk escalation`
-        ],
-        riskLevel: numValue > 50 ? 'critical' : numValue > 30 ? 'high' : numValue > 15 ? 'medium' : 'low',
-        revenue: formatCurrency((count || numValue) * 15000, conversationMemory.conversationContext?.lastRegion),
-        trend: numValue > 30 ? 'increasing' : 'stable',
-        charts: [
-          {
-            type: 'bar',
-            title: 'Risk Distribution',
-            value: `${numValue}%`,
-            description: 'Current risk across segments'
-          },
-          {
-            type: 'line',
-            title: 'Trend Analysis',
-            value: numValue > 30 ? '+12%' : '-3%',
-            description: 'Monthly change rate'
-          },
-          {
-            type: 'pie',
-            title: 'Customer Segments',
-            value: `${count || Math.round(numValue)}`,
-            description: 'Affected accounts'
-          },
-          {
-            type: 'scatter',
-            title: 'Revenue Impact',
-            value: formatCurrency((count || numValue) * 15000, conversationMemory.conversationContext?.lastRegion),
-            description: 'Potential revenue loss'
-          }
-        ]
+    // NO CHAT MESSAGE - just update the selected points display
+    console.log('📊 Chart click received, updating selection:', { 
+      label, 
+      value: count || value,
+      chartType,
+      isShiftKey 
+    });
+    
+    // Store chart context - handle multi-selection with shift key
+    setConversationMemory(prev => {
+      const newPoint = {
+        label,
+        value: count || value,
+        chartType,
+        unit: clickData.unit || ''
+      };
+      
+      if (isShiftKey && prev.selectedPoints) {
+        // Add to existing selection
+        return {
+          ...prev,
+          lastChartContext: clickData,
+          selectedPoints: [...prev.selectedPoints, newPoint]
+        };
+      } else {
+        // Replace selection
+        return {
+          ...prev,
+          lastChartContext: clickData,
+          selectedPoints: [newPoint]
+        };
       }
-    };
-    
-    console.log('📊 Chart click received, creating AI insight:', { clickData, insightMessage });
-    setMessages(prev => [...prev, insightMessage]);
-    
-    // Store chart context for follow-up questions
-    setConversationMemory(prev => ({
-      ...prev,
-      lastChartContext: clickData
-    }));
-  }, [conversationMemory.conversationContext?.lastRegion]);
+    });
+  }, []);
 
   // Expose the function globally for chart integration
   useEffect(() => {
@@ -1683,8 +1653,8 @@ What specific aspect would you like me to explain?`;
         </div>
       )}
 
-      {/* Quick Action Buttons for Selected Points */}
-      {dashboardContext?.chart_context?.selectedPoints && dashboardContext.chart_context.selectedPoints.length > 0 && (
+      {/* Quick Action Buttons for Selected Points - DISABLED to use minimal display only */}
+      {false && dashboardContext?.chart_context?.selectedPoints && dashboardContext.chart_context.selectedPoints.length > 0 && (
         <div style={{
           padding: '12px 16px',
           borderTop: '1px solid rgba(58, 68, 89, 0.3)',
@@ -1773,10 +1743,160 @@ What specific aspect would you like me to explain?`;
         </div>
       )}
 
+      {/* Selected Points Display - Clean hover style above input */}
+      {conversationMemory?.selectedPoints && conversationMemory.selectedPoints.length > 0 && (
+        <div style={{
+          padding: '10px 20px',
+          background: 'rgba(0, 224, 255, 0.03)',
+          borderTop: '1px solid rgba(0, 224, 255, 0.1)',
+          borderBottom: '1px solid rgba(0, 224, 255, 0.1)',
+          maxHeight: conversationMemory.selectedPoints.length > 2 ? '80px' : 'auto',
+          overflowY: conversationMemory.selectedPoints.length > 2 ? 'auto' : 'visible',
+          transition: 'all 0.3s ease'
+        }}>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px'
+          }}>
+            {/* Header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '12px',
+              color: 'rgba(247, 249, 251, 0.6)',
+              marginBottom: '4px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ 
+                  color: '#00e0ff', 
+                  fontSize: '8px',
+                  animation: 'pulse 2s infinite'
+                }}>●</span>
+                <span>Selected Points ({conversationMemory.selectedPoints.length})</span>
+                {conversationMemory.selectedPoints.length > 1 && (
+                  <span style={{ fontSize: '10px', opacity: 0.5 }}>
+                    Shift+click to add more
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => setConversationMemory(prev => ({ 
+                  ...prev, 
+                  lastChartContext: undefined,
+                  selectedPoints: []
+                }))}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'rgba(247, 249, 251, 0.4)',
+                  cursor: 'pointer',
+                  padding: '2px 6px',
+                  fontSize: '16px',
+                  lineHeight: 1,
+                  transition: 'color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = 'rgba(247, 249, 251, 0.8)'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(247, 249, 251, 0.4)'}
+                title="Clear selection"
+              >
+                ×
+              </button>
+            </div>
+            
+            {/* Selected points list */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px'
+            }}>
+              {conversationMemory.selectedPoints.map((point, index) => (
+                <div 
+                  key={index}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '13px',
+                    color: '#f8fafc',
+                    padding: '4px 8px',
+                    background: 'rgba(0, 224, 255, 0.05)',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(0, 224, 255, 0.1)',
+                    position: 'relative',
+                    paddingRight: '32px'
+                  }}
+                >
+                  <span style={{ 
+                    fontSize: '11px', 
+                    opacity: 0.5,
+                    minWidth: '16px'
+                  }}>
+                    {index + 1}.
+                  </span>
+                  <span style={{ fontWeight: 500 }}>
+                    {point.label}: {point.value}{point.unit}
+                  </span>
+                  {point.chartType && (
+                    <span style={{
+                      fontSize: '10px',
+                      padding: '2px 6px',
+                      background: 'rgba(0, 224, 255, 0.1)',
+                      borderRadius: '4px',
+                      color: '#00e0ff',
+                      marginLeft: 'auto',
+                      marginRight: '24px'
+                    }}>
+                      {point.chartType}
+                    </span>
+                  )}
+                  {/* Individual remove button */}
+                  <button
+                    onClick={() => {
+                      setConversationMemory(prev => ({
+                        ...prev,
+                        selectedPoints: prev.selectedPoints?.filter((_, i) => i !== index) || []
+                      }));
+                    }}
+                    style={{
+                      position: 'absolute',
+                      right: '4px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'rgba(247, 249, 251, 0.3)',
+                      cursor: 'pointer',
+                      padding: '2px 4px',
+                      fontSize: '14px',
+                      lineHeight: 1,
+                      transition: 'all 0.2s',
+                      borderRadius: '4px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#ff4444';
+                      e.currentTarget.style.background = 'rgba(255, 68, 68, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = 'rgba(247, 249, 251, 0.3)';
+                      e.currentTarget.style.background = 'transparent';
+                    }}
+                    title="Remove this point"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Input */}
       <div style={{
         padding: '20px',
-        borderTop: '1px solid rgba(58, 68, 89, 0.3)',
+        borderTop: (conversationMemory?.selectedPoints && conversationMemory.selectedPoints.length > 0) ? 'none' : '1px solid rgba(58, 68, 89, 0.3)',
         background: 'linear-gradient(135deg, rgba(26, 31, 46, 0.9), rgba(42, 47, 62, 0.9))',
         backdropFilter: 'blur(10px)'
       }}>

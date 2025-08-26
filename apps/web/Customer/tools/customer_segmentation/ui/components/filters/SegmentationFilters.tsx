@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import EnhancedDateRangeFilter, { DateRangeConfig } from '../../../../shared/components/filters/EnhancedDateRangeFilter';
 
 interface FilterState {
-  dateRange: {
-    type: 'week' | 'month' | 'quarter' | 'year' | 'custom';
-    startDate: Date;
-    endDate: Date;
-  };
+  dateRange: DateRangeConfig;
   segments: string[];
   valueCategories: string[];
   behaviorTypes: string[];
@@ -18,13 +15,7 @@ interface SegmentationFiltersProps {
   availableBehaviorTypes?: string[];
 }
 
-// Date ranges for segmentation analysis
-const DATE_RANGES = {
-  week: { label: 'Last 7 Days', days: 7 },
-  month: { label: 'Last 30 Days', days: 30 },
-  quarter: { label: 'Last 90 Days', days: 90 },
-  year: { label: 'Last 365 Days', days: 365 }
-};
+// Removed DATE_RANGES as we use EnhancedDateRangeFilter now
 
 // Customer segments based on RFM and value
 const CUSTOMER_SEGMENTS = [
@@ -63,11 +54,14 @@ export default function SegmentationFilters({
   availableValueCategories = VALUE_CATEGORIES,
   availableBehaviorTypes = BEHAVIOR_TYPES
 }: SegmentationFiltersProps) {
+  // Use dates that match the database (2019-2021)
   const [filters, setFilters] = useState<FilterState>({
     dateRange: {
-      type: 'month',
-      startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-      endDate: new Date()
+      type: 'year',
+      granularity: 'monthly',
+      startDate: new Date('2021-01-01'),
+      endDate: new Date('2021-12-31'),
+      label: 'Year 2021'
     },
     segments: [],
     valueCategories: [],
@@ -75,60 +69,67 @@ export default function SegmentationFilters({
   });
 
   const [isExpanded, setIsExpanded] = useState(false);
+  
+  // Remove the automatic useEffect completely - only trigger on user actions
 
-  useEffect(() => {
-    onFiltersChange(filters);
-  }, [filters]);
-
-  const handleDateRangeChange = (type: 'week' | 'month' | 'quarter' | 'year') => {
-    const days = DATE_RANGES[type].days;
-    const endDate = new Date();
-    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const handleDateRangeChange = (dateRange: DateRangeConfig) => {
+    const newFilters = {
+      ...filters,
+      dateRange
+    };
     
-    setFilters(prev => ({
-      ...prev,
-      dateRange: { type, startDate, endDate }
-    }));
+    setFilters(newFilters);
+    onFiltersChange(newFilters); // Call only on user action
   };
 
   const handleSegmentToggle = (segment: string) => {
-    setFilters(prev => ({
-      ...prev,
-      segments: prev.segments.includes(segment)
-        ? prev.segments.filter(s => s !== segment)
-        : [...prev.segments, segment]
-    }));
+    const newFilters = {
+      ...filters,
+      segments: filters.segments.includes(segment)
+        ? filters.segments.filter(s => s !== segment)
+        : [...filters.segments, segment]
+    };
+    setFilters(newFilters);
+    onFiltersChange(newFilters);
   };
 
   const handleValueCategoryToggle = (category: string) => {
-    setFilters(prev => ({
-      ...prev,
-      valueCategories: prev.valueCategories.includes(category)
-        ? prev.valueCategories.filter(c => c !== category)
-        : [...prev.valueCategories, category]
-    }));
+    const newFilters = {
+      ...filters,
+      valueCategories: filters.valueCategories.includes(category)
+        ? filters.valueCategories.filter(c => c !== category)
+        : [...filters.valueCategories, category]
+    };
+    setFilters(newFilters);
+    onFiltersChange(newFilters);
   };
 
   const handleBehaviorTypeToggle = (type: string) => {
-    setFilters(prev => ({
-      ...prev,
-      behaviorTypes: prev.behaviorTypes.includes(type)
-        ? prev.behaviorTypes.filter(t => t !== type)
-        : [...prev.behaviorTypes, type]
-    }));
+    const newFilters = {
+      ...filters,
+      behaviorTypes: filters.behaviorTypes.includes(type)
+        ? filters.behaviorTypes.filter(t => t !== type)
+        : [...filters.behaviorTypes, type]
+    };
+    setFilters(newFilters);
+    onFiltersChange(newFilters);
   };
 
   const clearFilters = () => {
-    setFilters({
+    const newFilters = {
       dateRange: {
-        type: 'month',
-        startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-        endDate: new Date()
+        type: 'year',
+        granularity: 'monthly',
+        startDate: new Date('2021-01-01'),
+        endDate: new Date('2021-12-31'),
+        label: 'Year 2021'
       },
       segments: [],
       valueCategories: [],
       behaviorTypes: []
-    });
+    };
+    setFilters(newFilters);
+    onFiltersChange(newFilters);
   };
 
   const activeFilterCount = filters.segments.length + filters.valueCategories.length + 
@@ -219,71 +220,15 @@ export default function SegmentationFilters({
 
       {isExpanded && (
         <div style={{ animation: 'slideDown 0.3s ease-out' }}>
-          {/* Date Range */}
+          {/* Enhanced Date Range */}
           <div style={{ marginBottom: 20 }}>
-            <div style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: 'rgba(247, 249, 251, 0.7)',
-              marginBottom: 10,
-              textTransform: 'uppercase',
-              letterSpacing: 1
-            }}>
-              📅 Analysis Period
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {Object.entries(DATE_RANGES).map(([key, value]) => (
-                <button
-                  key={key}
-                  onClick={() => handleDateRangeChange(key as any)}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: 8,
-                    border: '1px solid',
-                    borderColor: filters.dateRange.type === key 
-                      ? 'rgba(59, 130, 246, 0.5)' 
-                      : 'rgba(255, 255, 255, 0.1)',
-                    background: filters.dateRange.type === key
-                      ? 'rgba(59, 130, 246, 0.1)'
-                      : 'transparent',
-                    color: filters.dateRange.type === key
-                      ? '#3b82f6'
-                      : 'rgba(247, 249, 251, 0.8)',
-                    fontSize: 13,
-                    fontWeight: filters.dateRange.type === key ? 600 : 400,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (filters.dateRange.type !== key) {
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (filters.dateRange.type !== key) {
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                    }
-                  }}
-                >
-                  {value.label}
-                </button>
-              ))}
-            </div>
-            <div style={{
-              marginTop: 8,
-              fontSize: 11,
-              color: 'rgba(247, 249, 251, 0.5)'
-            }}>
-              {filters.dateRange.startDate.toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
-              })} - {filters.dateRange.endDate.toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
-              })}
-            </div>
+            <EnhancedDateRangeFilter
+              value={filters.dateRange}
+              onChange={handleDateRangeChange}
+              minDate={new Date('2019-01-01')}
+              maxDate={new Date('2021-12-31')}
+              theme="segmentation"
+            />
           </div>
 
           {/* Customer Segments */}

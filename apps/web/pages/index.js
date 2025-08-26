@@ -226,6 +226,41 @@ export default function ConversationalCanvas() {
     }
   }, [userSelectedChartPoints]);
 
+  // Set up global handler for shift-click chart selections
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.addAIInsightToChat = (clickData) => {
+        const { label, value, chartType, originalEvent } = clickData;
+        const isShiftKey = originalEvent?.shiftKey || false;
+        
+        const newPoint = {
+          label,
+          value: clickData.count || value,
+          chartType,
+          unit: clickData.unit || ''
+        };
+        
+        setUserSelectedChartPoints(prev => {
+          if (isShiftKey && prev.length > 0) {
+            // Add to existing selection
+            return [...prev, newPoint];
+          } else {
+            // Replace selection
+            return [newPoint];
+          }
+        });
+      };
+      
+      console.log('✅ Global addAIInsightToChat handler registered');
+    }
+    
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete window.addAIInsightToChat;
+      }
+    };
+  }, []);
+
   // Auto-load disabled - no dashboard on page load
 
   // Auto-play audio when received

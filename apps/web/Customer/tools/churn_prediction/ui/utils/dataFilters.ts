@@ -8,6 +8,7 @@ export interface FilterState {
   };
   segments: string[];
   productCategories: string[];
+  riskLevels: string[];
   selectedCustomerIds?: number[];
 }
 
@@ -54,6 +55,13 @@ export function applyFilters(
         customerCategory.includes(cat)
       );
     });
+  }
+
+  // Apply risk level filter
+  if (filters.riskLevels && filters.riskLevels.length > 0) {
+    filteredCustomers = filteredCustomers.filter(customer => 
+      filters.riskLevels.includes(customer.risk_level)
+    );
   }
 
   // Apply individual customer selection filter

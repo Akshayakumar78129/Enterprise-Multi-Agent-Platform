@@ -91,9 +91,9 @@ export default async function handler(req, res) {
       return {
         segment,
         count: members.length,
-        avg_order_value: members.reduce((a, b) => a + b.avg_order_value, 0) / members.length,
-        avg_recency: members.reduce((a, b) => a + b.recency, 0) / members.length,
-        avg_total_spend: members.reduce((a, b) => a + b.total_spend, 0) / members.length,
+        avg_order_value: Math.round(members.reduce((a, b) => a + b.avg_order_value, 0) / members.length),
+        avg_recency: Math.round(members.reduce((a, b) => a + b.recency, 0) / members.length),
+        avg_total_spend: Math.round(members.reduce((a, b) => a + b.total_spend, 0) / members.length),
         customer_types: [...new Set(members.map(m => m.customer_type))],
         regions: [...new Set(members.map(m => m.region))],
       };

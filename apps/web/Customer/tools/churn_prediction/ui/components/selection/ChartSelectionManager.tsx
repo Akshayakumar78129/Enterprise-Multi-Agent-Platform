@@ -31,29 +31,39 @@ export const ChartSelectionManager: React.FC<ChartSelectionManagerProps> = ({
   const [isShiftPressed, setIsShiftPressed] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [scrollOffset, setScrollOffset] = useState({ x: 0, y: 0 });
   const selectionRef = useRef<SelectedPoint[]>([]);
 
 
   // Handle chart point selection
   const handlePointSelection = useCallback((point: SelectedPoint, isMultiSelect: boolean) => {
+    // Convert viewport coordinates to page coordinates
+    const pointWithPageCoords = {
+      ...point,
+      coordinates: point.coordinates ? {
+        x: point.coordinates.x + window.scrollX,
+        y: point.coordinates.y + window.scrollY
+      } : undefined
+    };
+
     let newSelection: SelectedPoint[];
 
     if (isMultiSelect) {
       // Check if point already selected
       const existingIndex = selectionRef.current.findIndex(
-        p => p.chartId === point.chartId && p.dataIndex === point.dataIndex
+        p => p.chartId === pointWithPageCoords.chartId && p.dataIndex === pointWithPageCoords.dataIndex
       );
 
       if (existingIndex >= 0) {
         // Remove if already selected
         newSelection = selectionRef.current.filter((_, idx) => idx !== existingIndex);
       } else {
-        // Add to selection
-        newSelection = [...selectionRef.current, point];
+        // Add to selection with page coordinates
+        newSelection = [...selectionRef.current, pointWithPageCoords];
       }
     } else {
       // Single selection - replace all
-      newSelection = [point];
+      newSelection = [pointWithPageCoords];
     }
 
     selectionRef.current = newSelection;
@@ -96,7 +106,7 @@ export const ChartSelectionManager: React.FC<ChartSelectionManagerProps> = ({
     onShowMessage?.(''); // Clear message
   }, [onSelectionChange, onShowMessage]);
 
-  // Handle keyboard events for shift key and ESC
+  // Handle keyboard events for shift key and ESC, and track scroll
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Shift') {
@@ -113,12 +123,19 @@ export const ChartSelectionManager: React.FC<ChartSelectionManagerProps> = ({
       }
     };
 
+    const handleScroll = () => {
+      // Force re-render by updating scroll offset state
+      setScrollOffset({ x: window.scrollX, y: window.scrollY });
+    };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('scroll', handleScroll, true); // Use capture phase
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('scroll', handleScroll, true);
     };
   }, [clearSelection]);
   
@@ -189,18 +206,8 @@ export const ChartSelectionManager: React.FC<ChartSelectionManagerProps> = ({
     <>
       <style>
         {`
-          .selection-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
-            z-index: 9999;
-          }
-
           .selection-indicator {
-            position: absolute;
+            position: fixed;
             width: 16px;
             height: 16px;
             border: 3px solid #39ff14;
@@ -209,6 +216,7 @@ export const ChartSelectionManager: React.FC<ChartSelectionManagerProps> = ({
             animation: pulse-selection 1.5s infinite;
             pointer-events: none;
             box-shadow: 0 0 20px #39ff14;
+            z-index: 9999;
           }
 
           @keyframes pulse-selection {
@@ -271,21 +279,20 @@ export const ChartSelectionManager: React.FC<ChartSelectionManagerProps> = ({
         `}
       </style>
 
-      {/* Selection Overlay for visual indicators */}
-      <div className="selection-overlay">
-        {selectedPoints.map((point, idx) => (
-          point.coordinates && (
-            <div
-              key={`${point.chartId}-${point.dataIndex}-${idx}`}
-              className="selection-indicator"
-              style={{
-                left: point.coordinates.x,
-                top: point.coordinates.y
-              }}
-            />
-          )
-        ))}
-      </div>
+      {/* Selection indicators rendered directly without overlay */}
+      {selectedPoints.map((point, idx) => (
+        point.coordinates && (
+          <div
+            key={`${point.chartId}-${point.dataIndex}-${idx}`}
+            className="selection-indicator"
+            style={{
+              // Convert page coordinates back to viewport coordinates
+              left: point.coordinates.x - scrollOffset.x - 8,
+              top: point.coordinates.y - scrollOffset.y - 8
+            }}
+          />
+        )
+      ))}
 
       {/* Shift Mode Indicator */}
       {isShiftPressed && (

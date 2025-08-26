@@ -55,7 +55,7 @@ export default function EnhancedRiskPyramid({ customers, data }: EnhancedRiskPyr
     };
   }, [customerData]);
 
-  const handleBarClick = (data: any) => {
+  const handleBarClick = (data: any, event?: any) => {
     const contextData = {
       chartType: 'risk-pyramid',
       chartName: 'Risk Distribution Pyramid',
@@ -66,14 +66,16 @@ export default function EnhancedRiskPyramid({ customers, data }: EnhancedRiskPyr
 
     dispatch(setChatContext(contextData));
     
-    // Trigger AI insight in chatbot
+    // Trigger AI insight in chatbot with event for shift-click detection
     if (typeof window !== 'undefined' && (window as any).addAIInsightToChat) {
       (window as any).addAIInsightToChat({
         label: data.name,
         value: ((data.count / chartData.reduce((a, b) => a + b.count, 0)) * 100).toFixed(1),
         chartType: 'Risk Pyramid',
         count: data.count,
-        total: chartData.reduce((a, b) => a + b.count, 0)
+        total: chartData.reduce((a, b) => a + b.count, 0),
+        unit: '',
+        originalEvent: event
       });
     }
   };
@@ -152,7 +154,7 @@ export default function EnhancedRiskPyramid({ customers, data }: EnhancedRiskPyr
           }}
           onMouseEnter={() => setHoveredBar(payload.name)}
           onMouseLeave={() => setHoveredBar(null)}
-          onClick={() => handleBarClick(payload)}
+          onClick={(e) => handleBarClick(payload, e)}
         />
         
         {/* Emoji overlay */}
@@ -263,6 +265,7 @@ export default function EnhancedRiskPyramid({ customers, data }: EnhancedRiskPyr
               tick={{ fill: '#64748b', fontSize: 12 }}
               axisLine={{ stroke: 'rgba(148, 163, 184, 0.3)' }}
               tickLine={{ stroke: 'rgba(148, 163, 184, 0.3)' }}
+              tickFormatter={(value) => Math.round(value).toString()}
             />
             <YAxis 
               type="category" 

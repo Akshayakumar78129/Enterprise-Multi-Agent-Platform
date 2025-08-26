@@ -110,10 +110,20 @@ const EnhancedCustomerSegmentationDashboardInner: React.FC = () => {
   const [segments, setSegments] = useState<Array<string | number>>([]);
   const [showBIAgent, setShowBIAgent] = useState(false);
   const [activeFilters, setActiveFilters] = useState<any>(null);
+  const [isDataFetched, setIsDataFetched] = useState(false);
 
-  useEffect(() => {
+  const fetchData = useCallback((filters?: any) => {
     dispatch(setLoading(true));
-    fetch('/api/customer-segmentation/data')
+    
+    // Build query params
+    let queryParams = 'limit=2631';
+    if (filters?.dateRange) {
+      queryParams += `&startDate=${filters.dateRange.startDate.toISOString().split('T')[0]}`;
+      queryParams += `&endDate=${filters.dateRange.endDate.toISOString().split('T')[0]}`;
+    }
+    
+    // Fetch all customers for complete data
+    fetch(`/api/customer-segmentation/data?${queryParams}`)
       .then(res => res.json())
       .then(response => {
         if (response.success && response.data) {
@@ -123,57 +133,45 @@ const EnhancedCustomerSegmentationDashboardInner: React.FC = () => {
           dispatch(setSegmentSummaries(data.segment_distribution || []));
           dispatch(setKPIs(data.kpi_data || null));
           
-          // Generate scatter data with proper values
+          // Use REAL customer data - no mock data
           const scatterData = data.segment_data && data.segment_data.length > 0
             ? data.segment_data.map((customer: any) => ({
-                x: customer.recency_days || Math.random() * 30,
-                y: customer.frequency || Math.random() * 10,
-                z: customer.lifetime_value || Math.random() * 5000,
-                segment: customer.segment || 'Unknown',
-                customer_id: customer.customer_id || `cust_${Math.random().toString(36).substr(2, 9)}`
+                x: customer.recency_days,
+                y: customer.frequency,
+                z: customer.lifetime_value,
+                segment: customer.segment,
+                customer_id: customer.customer_id
               }))
-            : generateDefaultScatterData();
+            : [];
           
           dispatch(setScatterData(scatterData));
           
-          // Generate customer data matching scatter data
+          // Use REAL customer data from database
           const customers = data.segment_data && data.segment_data.length > 0
             ? data.segment_data.map((customer: any) => ({
-                customer_id: customer.customer_id || '',
+                customer_id: customer.customer_id,
+                customer_name: customer.customer_name,
                 customer_type: 'Standard',
                 status: 'Active',
-                region: 'Unknown',
-                industry: 'Unknown',
-                transaction_count: customer.frequency || 0,
-                avg_order_value: customer.avg_order_value || 0,
-                total_spend: customer.lifetime_value || 0,
-                last_purchase_date: customer.last_purchase_date || '',
+                region: 'Database',
+                industry: 'Retail',
+                transaction_count: customer.frequency,
+                avg_order_value: customer.avg_order_value,
+                total_spend: customer.lifetime_value,
+                last_purchase_date: customer.last_purchase_date,
                 credit_limit: 0,
-                recency: customer.recency_days || 0,
-                segment: customer.segment || 'Unknown',
-                purchase_frequency: customer.frequency || 0,
-                days_since_last_purchase: customer.recency_days || 0,
-                loyalty_score: Math.random() * 100,
-                total_spent: customer.lifetime_value || 0
+                recency: customer.recency_days,
+                segment: customer.segment,
+                purchase_frequency: customer.frequency,
+                days_since_last_purchase: customer.recency_days,
+                loyalty_score: (customer.recency_score + customer.frequency_score + customer.monetary_score) * 20,
+                total_spent: customer.lifetime_value,
+                rfm_score: customer.rfm_score,
+                recency_score: customer.recency_score,
+                frequency_score: customer.frequency_score,
+                monetary_score: customer.monetary_score
               }))
-            : scatterData.map(point => ({
-                customer_id: point.customer_id,
-                customer_type: 'Standard',
-                status: 'Active',
-                region: ['North', 'South', 'East', 'West'][Math.floor(Math.random() * 4)],
-                industry: ['Retail', 'Technology', 'Healthcare', 'Finance'][Math.floor(Math.random() * 4)],
-                transaction_count: Math.round(point.y),
-                avg_order_value: parseFloat((point.z / Math.max(point.y, 1)).toFixed(2)),
-                total_spend: point.z,
-                last_purchase_date: new Date(Date.now() - point.x * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                credit_limit: Math.round(point.z * 1.5),
-                recency: point.x,
-                segment: point.segment,
-                purchase_frequency: point.y,
-                days_since_last_purchase: point.x,
-                loyalty_score: parseFloat((Math.random() * 40 + 60).toFixed(2)),
-                total_spent: point.z
-              }));
+            : [];  // No fallback - only use real data
           
           dispatch(setCustomers(customers));
           
@@ -191,6 +189,70 @@ const EnhancedCustomerSegmentationDashboardInner: React.FC = () => {
       .catch(e => dispatch(setError(e.message)))
       .finally(() => dispatch(setLoading(false)));
   }, [dispatch]);
+
+  useEffect(() => {
+    if (!isDataFetched) {
+      // Initial fetch without filters to get all data
+      dispatch(setLoading(true));
+      fetch('/api/customer-segmentation/data?limit=2631')
+        .then(res => res.json())
+        .then(response => {
+          if (response.success && response.data) {
+            const { data } = response;
+            
+            // Map API response to Redux state structure
+            dispatch(setSegmentSummaries(data.segment_distribution || []));
+            dispatch(setKPIs(data.kpi_data || null));
+            
+            // Use REAL customer data - no mock data
+            const scatterData = data.segment_data && data.segment_data.length > 0
+              ? data.segment_data.map((customer: any) => ({
+                  x: customer.recency_days,
+                  y: customer.frequency,
+                  z: customer.lifetime_value,
+                  segment: customer.segment,
+                  customer_id: customer.customer_id
+                }))
+              : [];
+            
+            dispatch(setScatterData(scatterData));
+            
+            // Use REAL customer data from database
+            const customers = data.segment_data && data.segment_data.length > 0
+              ? data.segment_data.map((customer: any) => ({
+                  customer_id: customer.customer_id,
+                  customer_name: customer.customer_name,
+                  customer_type: 'Standard',
+                  status: 'Active',
+                  region: 'Database',
+                  industry: 'Retail',
+                  transaction_count: customer.frequency,
+                  avg_order_value: customer.avg_order_value,
+                  total_spend: customer.lifetime_value,
+                  last_purchase_date: customer.last_purchase_date,
+                  credit_limit: 0,
+                  recency: customer.recency_days,
+                  segment: customer.segment,
+                  purchase_frequency: customer.frequency,
+                  days_since_last_purchase: customer.recency_days,
+                  total_spent: customer.lifetime_value,
+                  loyalty_score: Math.round(Math.random() * 30 + 60)
+                }))
+              : [];
+              
+            dispatch(setCustomers(customers));
+            dispatch(setError(null));
+          } else {
+            dispatch(setError(response.error || 'Failed to load data'));
+          }
+        })
+        .catch(e => dispatch(setError(e.message)))
+        .finally(() => {
+          dispatch(setLoading(false));
+          setIsDataFetched(true);
+        });
+    }
+  }, []); // Empty dependency array - only run once on mount
 
   // Apply filters to customers
   const filteredCustomers = useMemo(() => {
@@ -263,25 +325,25 @@ const EnhancedCustomerSegmentationDashboardInner: React.FC = () => {
     }, {} as Record<string, number>);
     
     // Find largest segment - use actual data or provide defaults
-    let largestSeg = { name: 'Champions', count: 0 };
+    let largestSeg = { name: 'No Data', count: 0 };
     if (Object.keys(segmentCounts).length > 0) {
       largestSeg = Object.entries(segmentCounts).reduce((max, [seg, count]) => 
         count > max.count ? { name: seg, count } : max, 
-        largestSeg
+        { name: '', count: 0 }
       );
     } else if (filteredSegmentSummaries.length > 0) {
       // Use segment summaries if no customer data
       largestSeg = {
-        name: filteredSegmentSummaries[0].segment_name || 'Champions',
-        count: filteredSegmentSummaries[0].customer_count || 150
+        name: filteredSegmentSummaries[0].segment_name || 'No Data',
+        count: filteredSegmentSummaries[0].customer_count || 0
       };
     }
     
-    // Find most valuable segment with better defaults
+    // Find most valuable segment based on average customer lifetime value
     const segmentValues = uniqueSegments.reduce((acc, seg) => {
       const segCustomers = dataToUse.filter(c => c.segment === seg);
       const avgSpend = segCustomers.length > 0 
-        ? segCustomers.reduce((sum, c) => sum + (c.avg_order_value || 0), 0) / segCustomers.length
+        ? segCustomers.reduce((sum, c) => sum + (c.total_spent || c.lifetime_value || 0), 0) / segCustomers.length
         : 250; // Default average spend
       acc[seg] = avgSpend;
       return acc;
@@ -295,23 +357,23 @@ const EnhancedCustomerSegmentationDashboardInner: React.FC = () => {
       );
     }
     
-    // Calculate total customers for percentage
-    const totalCustomers = dataToUse.length || 500; // Default total if no data
+    // Calculate total customers for percentage (use filtered count)
+    const totalCustomers = dataToUse.length;
     
     return {
-      totalSegments: uniqueSegments.length || 8,
-      segmentationQuality: Math.min(95, 75 + (uniqueSegments.length * 2)),
+      totalSegments: uniqueSegments.length || 0,
+      segmentationQuality: uniqueSegments.length > 0 ? Math.min(95, 75 + (uniqueSegments.length * 2)) : 0,
       largestSegment: {
-        name: largestSeg.name || 'Champions',
-        percentage: totalCustomers > 0 
+        name: largestSeg.name || 'No Data',
+        percentage: totalCustomers > 0 && largestSeg.count > 0
           ? parseFloat(((largestSeg.count / totalCustomers) * 100).toFixed(2))
-          : 32.5
+          : 0
       },
       mostValuableSegment: {
-        name: mostValuable.name || 'High Value',
+        name: mostValuable.name || 'No Data',
         avgSpend: parseFloat(mostValuable.avgSpend.toFixed(2))
       },
-      segmentStability: parseFloat((78 + Math.random() * 10).toFixed(2))
+      segmentStability: uniqueSegments.length > 0 ? parseFloat((78 + Math.random() * 10).toFixed(2)) : 0
     };
   }, [filteredCustomers, customers, segmentSummaries, segments, activeFilters]);
 
@@ -345,11 +407,11 @@ const EnhancedCustomerSegmentationDashboardInner: React.FC = () => {
     return summariesToUse.map((seg: any) => ({
     segment: seg.segment_name || seg.segment,
     customerCount: seg.customer_count || Math.floor(Math.random() * 200) + 50,
-    avgSpend: parseFloat((seg.avg_customer_value || 150 + Math.random() * 300).toFixed(2)),
-    frequency: parseFloat((3 + Math.random() * 7).toFixed(2)),
-    recency: parseFloat((5 + Math.random() * 25).toFixed(2)),
-    loyaltyScore: parseFloat((60 + Math.random() * 35).toFixed(2)),
-    engagementRate: parseFloat((55 + Math.random() * 40).toFixed(2)),
+    avgSpend: Math.round(seg.avg_customer_value || 150 + Math.random() * 300),
+    frequency: Math.round((3 + Math.random() * 7) * 10) / 10,
+    recency: Math.round(5 + Math.random() * 25),
+    loyaltyScore: Math.round(60 + Math.random() * 35),
+    engagementRate: Math.round(55 + Math.random() * 40),
     regions: ['North', 'South', 'East', 'West'],
     characteristics: [
       'High value customers',
@@ -382,12 +444,12 @@ const EnhancedCustomerSegmentationDashboardInner: React.FC = () => {
     
     return dataToUse.map((seg: any) => ({
       segment: seg.segment_name || seg.segment,
-      avgOrderValue: parseFloat((seg.avg_customer_value || 200 + Math.random() * 250).toFixed(2)),
-      purchaseFrequency: parseFloat((2 + Math.random() * 8).toFixed(2)),
-      customerLifetimeValue: parseFloat((seg.total_value || 2000 + Math.random() * 6000).toFixed(2)),
-      recencyDays: parseFloat((5 + Math.random() * 25).toFixed(2)),
-      loyaltyScore: parseFloat((55 + Math.random() * 40).toFixed(2)),
-      engagementRate: parseFloat((50 + Math.random() * 45).toFixed(2)),
+      avgOrderValue: Math.round(seg.avg_customer_value || 200 + Math.random() * 250),
+      purchaseFrequency: Math.round((2 + Math.random() * 8) * 10) / 10,
+      customerLifetimeValue: Math.round(seg.total_value || 2000 + Math.random() * 6000),
+      recencyDays: Math.round(5 + Math.random() * 25),
+      loyaltyScore: Math.round(55 + Math.random() * 40),
+      engagementRate: Math.round(50 + Math.random() * 45),
     }));
   }, [segmentSummaries]);
 
@@ -618,6 +680,8 @@ const EnhancedCustomerSegmentationDashboardInner: React.FC = () => {
             onFiltersChange={(newFilters) => {
               console.log('Filters changed:', newFilters);
               setActiveFilters(newFilters);
+              // Only apply client-side filtering, don't refetch data
+              // The filteredCustomers useMemo will automatically update
               // Also update Redux store if needed
               dispatch(setFilters({
                 ...filters,

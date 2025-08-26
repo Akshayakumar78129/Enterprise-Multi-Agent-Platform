@@ -54,6 +54,18 @@ export const handleChartClick = (
   // Add point to selection
   selectionAPI.addPoint(point);
   
+  // ALSO send to chatbot for display in minimal format
+  if (typeof window !== 'undefined' && (window as any).addAIInsightToChat) {
+    (window as any).addAIInsightToChat({
+      label: data.label,
+      value: data.value,
+      chartType: data.chartType,
+      count: data.value,
+      unit: data.unit || '',
+      originalEvent: event
+    });
+  }
+  
   return true;
 };
 

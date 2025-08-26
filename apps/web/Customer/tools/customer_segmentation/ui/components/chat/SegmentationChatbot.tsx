@@ -74,6 +74,7 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
   // Conversation memory for context
   const [conversationMemory, setConversationMemory] = useState({
     lastChartContext: null as any,
+    selectedPoints: [] as any[],
     conversationContext: {
       lastSegment: null as string | null,
       lastMetric: null as string | null,
@@ -131,8 +132,49 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
     }
   }, [chatbotMode]);
 
-  // Handle chart click context
+  // Handle chart click context for shift-click multi-selection
   const handleChartClickContext = useCallback((clickData: any) => {
+    const { label, value, chartType, count, total, originalEvent } = clickData;
+    const numValue = parseFloat(value) || 0;
+    const isShiftKey = originalEvent?.shiftKey || false;
+    
+    // NO CHAT MESSAGE - just update the selected points display
+    console.log('📊 Chart click received, updating selection:', { 
+      label, 
+      value: count || value,
+      chartType,
+      isShiftKey 
+    });
+    
+    // Store chart context - handle multi-selection with shift key
+    setConversationMemory(prev => {
+      const newPoint = {
+        label,
+        value: count || value,
+        chartType,
+        unit: clickData.unit || ''
+      };
+      
+      if (isShiftKey && prev.selectedPoints) {
+        // Add to existing selection
+        return {
+          ...prev,
+          lastChartContext: clickData,
+          selectedPoints: [...prev.selectedPoints, newPoint]
+        };
+      } else {
+        // Replace selection
+        return {
+          ...prev,
+          lastChartContext: clickData,
+          selectedPoints: [newPoint]
+        };
+      }
+    });
+  }, []);
+
+  // Original handler preserved for backwards compatibility
+  const handleChartClickContextOld = useCallback((clickData: any) => {
     const { label, value, chartType, count, total } = clickData;
     const numValue = parseFloat(value) || 0;
     
@@ -214,42 +256,7 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
       // Store selected points
       if (points && points.length > 0) {
         setSelectedPoints(points);
-        
-        // Format message exactly like churn dashboard
-        let formattedMessage = `## 📊 Selected Data Points Analysis\n\nYou've selected **${points.length} data point${points.length > 1 ? 's' : ''}** for analysis:\n`;
-        
-        points.forEach((point: any, idx: number) => {
-          formattedMessage += `\n**${idx + 1}. ${point.label || 'Data Point'}** - `;
-          formattedMessage += `${point.chartType || 'Unknown'} • `;
-          formattedMessage += `${point.value}${point.unit || ''}`;
-          
-          // Add segment-specific details
-          if (point.chartType === 'segment-profile' && point.metadata) {
-            const meta = point.metadata;
-            if (meta.avgSpend) formattedMessage += ` • $${meta.avgSpend} avg spend`;
-            if (meta.loyaltyScore) formattedMessage += ` • ${meta.loyaltyScore}% loyalty`;
-          } else if (point.chartType === 'kpi-tile') {
-            if (point.metadata?.trend) formattedMessage += ` • ${point.metadata.trend}`;
-          } else if (point.chartType === 'scatter' && point.metadata) {
-            if (point.metadata.y) formattedMessage += ` • Y: ${point.metadata.y}`;
-            if (point.metadata.segment) formattedMessage += ` • ${point.metadata.segment}`;
-          }
-          
-          if (point.trend) {
-            formattedMessage += ` • ${point.trend}`;
-          }
-        });
-        
-        formattedMessage += `\n\n**Analysis Modes:** Select below or ask me anything.`;
-        
-        const selectionMessage: Message = {
-          id: `selection_${Date.now()}`,
-          type: 'bot',
-          content: formattedMessage,
-          timestamp: new Date(),
-          contextData: { points, context }
-        };
-        setMessages(prev => [...prev, selectionMessage]);
+        // NO CHAT MESSAGE - points are displayed above input area
       }
       
       // If there's a specific message/question, add it to input
@@ -278,41 +285,7 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
         // Always open chatbot on multi-select
         setIsOpen(true);
         
-        // Format the points exactly like churn dashboard
-        let formattedMessage = `## 📊 Selected Data Points Analysis\n\nYou've selected **${points.length} data points** for analysis:\n`;
-        
-        points.forEach((point: any, idx: number) => {
-          formattedMessage += `\n**${idx + 1}. ${point.label || 'Data Point'}** - `;
-          formattedMessage += `${point.chartType || 'Unknown'} • `;
-          formattedMessage += `${point.value}${point.unit || ''}`;
-          
-          // Add segment-specific details
-          if (point.chartType === 'segment-profile' && point.metadata) {
-            const meta = point.metadata;
-            if (meta.avgSpend) formattedMessage += ` • $${meta.avgSpend} avg spend`;
-            if (meta.loyaltyScore) formattedMessage += ` • ${meta.loyaltyScore}% loyalty`;
-          } else if (point.chartType === 'kpi-tile') {
-            if (point.metadata?.trend) formattedMessage += ` • ${point.metadata.trend}`;
-          } else if (point.chartType === 'scatter' && point.metadata) {
-            if (point.metadata.y) formattedMessage += ` • Y: ${point.metadata.y}`;
-            if (point.metadata.segment) formattedMessage += ` • ${point.metadata.segment}`;
-          }
-          
-          if (point.trend) {
-            formattedMessage += ` • ${point.trend}`;
-          }
-        });
-        
-        formattedMessage += `\n\n**Analysis Modes:** Select below or ask me anything.`;
-        
-        const notificationMessage: Message = {
-          id: `notify_${Date.now()}`,
-          type: 'bot',
-          content: formattedMessage,
-          timestamp: new Date(),
-          contextData: { points }
-        };
-        setMessages(prev => [...prev, notificationMessage]);
+        // NO CHAT MESSAGE - points are displayed above input area
       }
     };
     
@@ -321,10 +294,10 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
     window.addEventListener('segmentationChatbotMessage', handleChatbotMessage as any);
     window.addEventListener('segmentationMultiSelect', handleMultiSelect as any);
     
-    // Also expose function globally
+    // Also expose function globally - matching the name used in chartSelectionHelper
     if (typeof window !== 'undefined') {
-      (window as any).addSegmentationInsightToChat = handleChartClickContext;
-      console.log('✅ Segmentation AI Insight handler registered');
+      (window as any).addSegmentInsightToChat = handleChartClickContext;
+      console.log('✅ Segmentation AI Insight handler registered globally');
     }
     
     return () => {
@@ -333,10 +306,26 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
       window.removeEventListener('segmentationMultiSelect', handleMultiSelect as any);
       
       if (typeof window !== 'undefined') {
-        delete (window as any).addSegmentationInsightToChat;
+        delete (window as any).addSegmentInsightToChat;
       }
     };
   }, [handleChartClickContext, isOpen]);
+
+  // Add ESC key handler to clear selections
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setConversationMemory(prev => ({
+          ...prev,
+          selectedPoints: [],
+          lastChartContext: undefined
+        }));
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const sendMessage = async (messageText?: string) => {
     const textToSend = messageText || inputValue.trim();
@@ -654,6 +643,156 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
             ))}
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Selected Points Display - Clean hover style above input */}
+          {conversationMemory?.selectedPoints && conversationMemory.selectedPoints.length > 0 && (
+            <div style={{
+              padding: '10px 20px',
+              background: 'rgba(102, 126, 234, 0.05)',
+              borderTop: '1px solid rgba(102, 126, 234, 0.2)',
+              borderBottom: '1px solid rgba(102, 126, 234, 0.2)',
+              maxHeight: conversationMemory.selectedPoints.length > 2 ? '80px' : 'auto',
+              overflowY: conversationMemory.selectedPoints.length > 2 ? 'auto' : 'visible',
+              transition: 'all 0.3s ease'
+            }}>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px'
+              }}>
+                {/* Header */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: '12px',
+                  color: 'rgba(247, 249, 251, 0.6)',
+                  marginBottom: '4px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ 
+                      color: '#667eea', 
+                      fontSize: '8px',
+                      animation: 'pulse 2s infinite'
+                    }}>●</span>
+                    <span>Selected Points ({conversationMemory.selectedPoints.length})</span>
+                    {conversationMemory.selectedPoints.length > 1 && (
+                      <span style={{ fontSize: '10px', opacity: 0.5 }}>
+                        Shift+click to add more
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setConversationMemory(prev => ({ 
+                      ...prev, 
+                      lastChartContext: undefined,
+                      selectedPoints: []
+                    }))}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'rgba(247, 249, 251, 0.4)',
+                      cursor: 'pointer',
+                      padding: '2px 6px',
+                      fontSize: '16px',
+                      lineHeight: 1,
+                      transition: 'color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'rgba(247, 249, 251, 0.8)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(247, 249, 251, 0.4)'}
+                    title="Clear all selections"
+                  >
+                    ×
+                  </button>
+                </div>
+                
+                {/* Selected points list */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px'
+                }}>
+                  {conversationMemory.selectedPoints.map((point, index) => (
+                    <div 
+                      key={index}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '13px',
+                        color: '#f8fafc',
+                        padding: '4px 8px',
+                        background: 'rgba(102, 126, 234, 0.08)',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(102, 126, 234, 0.2)',
+                        position: 'relative',
+                        paddingRight: '32px'
+                      }}
+                    >
+                      <span style={{ 
+                        fontSize: '11px', 
+                        opacity: 0.5,
+                        minWidth: '16px'
+                      }}>
+                        {index + 1}.
+                      </span>
+                      <span style={{ fontWeight: 500 }}>
+                        {point.label}: {point.value}{point.unit}
+                      </span>
+                      {point.chartType && (
+                        <span style={{
+                          fontSize: '10px',
+                          padding: '2px 6px',
+                          background: 'rgba(102, 126, 234, 0.15)',
+                          borderRadius: '4px',
+                          color: '#a78bfa',
+                          marginLeft: 'auto',
+                          marginRight: '24px'
+                        }}>
+                          {point.chartType}
+                        </span>
+                      )}
+                      {/* Individual remove button */}
+                      <button
+                        onClick={() => {
+                          setConversationMemory(prev => ({
+                            ...prev,
+                            selectedPoints: prev.selectedPoints?.filter((_, i) => i !== index) || []
+                          }));
+                        }}
+                        style={{
+                          position: 'absolute',
+                          right: '4px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'rgba(247, 249, 251, 0.3)',
+                          cursor: 'pointer',
+                          padding: '2px 4px',
+                          fontSize: '14px',
+                          lineHeight: 1,
+                          transition: 'all 0.2s',
+                          borderRadius: '4px'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = '#ff4444';
+                          e.currentTarget.style.background = 'rgba(255, 68, 68, 0.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = 'rgba(247, 249, 251, 0.3)';
+                          e.currentTarget.style.background = 'transparent';
+                        }}
+                        title="Remove this point"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Input */}
           <div style={{

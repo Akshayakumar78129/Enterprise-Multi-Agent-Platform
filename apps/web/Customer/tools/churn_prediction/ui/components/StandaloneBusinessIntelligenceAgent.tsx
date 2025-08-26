@@ -342,7 +342,7 @@ export default function StandaloneBusinessIntelligenceAgent({
               border: '1px solid rgba(239, 68, 68, 0.3)'
             }}>
               <div style={{ fontSize: '28px', fontWeight: '700', color: '#ef4444', marginBottom: '8px' }}>
-                ₹{(totalRevenueAtRisk / 100000).toFixed(1)}L at Risk
+                ${(totalRevenueAtRisk / 1000).toFixed(0)}K at Risk
               </div>
               <div style={{ fontSize: '14px', color: '#f8fafc' }}>
                 {highRiskCustomers.length} customers likely to churn in next 3 months
@@ -435,7 +435,7 @@ export default function StandaloneBusinessIntelligenceAgent({
             </div>
             
             {[
-              { label: 'Revenue at Risk', value: `₹${(riskAssessment.revenueAtRisk / 100000).toFixed(1)}L`, severity: 'high', desc: 'Expected revenue loss' },
+              { label: 'Revenue at Risk', value: `$${(riskAssessment.revenueAtRisk / 1000).toFixed(0)}K`, severity: 'high', desc: 'Expected revenue loss' },
               { label: 'Customers Affected', value: `${riskAssessment.affectedCustomers} customers`, severity: 'medium', desc: `${((riskAssessment.affectedCustomers/customers.length)*100).toFixed(1)}% of total base` },
               { label: 'Segment Value', value: riskAssessment.segmentValue, severity: 'low', desc: 'Primary affected segments' },
               { label: 'Brand Impact', value: 'Moderate to Severe', severity: 'high', desc: 'Reputation & loyalty damage' }
@@ -525,7 +525,7 @@ export default function StandaloneBusinessIntelligenceAgent({
                       fontWeight: '600',
                       color: outcome.revenueImpact < 0 ? '#ef4444' : '#10b981'
                     }}>
-                      -₹{(Math.abs(outcome.revenueImpact) / 100000).toFixed(1)}L
+                      -${(Math.abs(outcome.revenueImpact) / 1000).toFixed(0)}K
                     </div>
                   </div>
                   <div>
@@ -642,7 +642,7 @@ export default function StandaloneBusinessIntelligenceAgent({
                   }}>
                     <div style={{ fontSize: '10px', color: '#94a3b8' }}>Cost</div>
                     <div style={{ fontSize: '14px', fontWeight: '700', color: '#f59e0b' }}>
-                      ₹{(strategy.implementationCost/1000).toFixed(0)}K
+                      ${(strategy.implementationCost/1000).toFixed(0)}K
                     </div>
                   </div>
                   <div style={{
@@ -748,7 +748,7 @@ export default function StandaloneBusinessIntelligenceAgent({
                           💰 Preserved LTV
                         </div>
                         <div style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>
-                          ₹{(simulation.preservedLTV / 100000).toFixed(1)}L
+                          ${(simulation.preservedLTV / 1000).toFixed(0)}K
                         </div>
                       </div>
                       <div style={{
@@ -784,7 +784,7 @@ export default function StandaloneBusinessIntelligenceAgent({
                           💸 Investment
                         </div>
                         <div style={{ fontSize: '18px', fontWeight: '700', color: '#ef4444' }}>
-                          ₹{(selectedStrategy.implementationCost / 1000).toFixed(0)}K
+                          ${(selectedStrategy.implementationCost / 1000).toFixed(0)}K
                         </div>
                       </div>
                     </div>
@@ -809,7 +809,7 @@ export default function StandaloneBusinessIntelligenceAgent({
                 If no action is taken:
               </div>
               <ul style={{ margin: 0, paddingLeft: '20px', color: '#ef4444', fontSize: '13px', lineHeight: '1.8' }}>
-                <li>💔 Revenue loss: <strong>₹{(totalRevenueAtRisk * 0.7 / 100000).toFixed(1)}L</strong> (70% of at-risk revenue)</li>
+                <li>💔 Revenue loss: <strong>${(totalRevenueAtRisk * 0.7 / 1000).toFixed(0)}K</strong> (70% of at-risk revenue)</li>
                 <li>📉 Customer churn: <strong>{Math.floor(highRiskCustomers.length * 0.65)} customers</strong> will leave</li>
                 <li>😞 Brand damage: <strong>Severe impact</strong> on reputation & trust</li>
                 <li>🏃 Competitive loss: Customers will switch to competitors</li>

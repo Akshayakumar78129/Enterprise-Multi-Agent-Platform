@@ -93,8 +93,8 @@ const KpiTile = ({
   return (
     <div
       style={{
-        minWidth: 200,
-        height: 160,
+        minWidth: 180,
+        height: 140,
         background: isHovered 
           ? `linear-gradient(135deg, rgba(30, 39, 56, 0.95) 0%, rgba(60, 68, 89, 0.95) 100%)`
           : `linear-gradient(135deg, rgba(30, 39, 56, 0.8) 0%, rgba(35, 42, 54, 0.8) 100%)`,
@@ -148,8 +148,8 @@ const KpiTile = ({
 
       {/* Icon */}
       <div style={{
-        fontSize: 32,
-        marginBottom: 8,
+        fontSize: 24,
+        marginBottom: 6,
         transform: isVisible ? 'scale(1) rotate(0deg)' : 'scale(0.5) rotate(-180deg)',
         transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
         transitionDelay: `${delay + 200}ms`
@@ -159,9 +159,9 @@ const KpiTile = ({
 
       {/* Value */}
       <div style={{
-        fontSize: 36,
-        fontWeight: 800,
-        marginBottom: 4,
+        fontSize: 22,
+        fontWeight: 700,
+        marginBottom: 3,
         background: `linear-gradient(135deg, ${color}, ${color}CC)`,
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
@@ -176,11 +176,11 @@ const KpiTile = ({
 
       {/* Label */}
       <div style={{
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: 600,
         color: 'rgba(247, 249, 251, 0.8)',
         textAlign: 'center',
-        marginBottom: trend ? 8 : 0,
+        marginBottom: trend ? 6 : 0,
         transform: isVisible ? 'translateY(0)' : 'translateY(10px)',
         opacity: isVisible ? 1 : 0,
         transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -194,13 +194,13 @@ const KpiTile = ({
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 4,
-          fontSize: 12,
+          gap: 3,
+          fontSize: 10,
           fontWeight: 600,
           color: getTrendColor(),
           background: `${getTrendColor()}15`,
-          padding: '4px 8px',
-          borderRadius: 12,
+          padding: '3px 6px',
+          borderRadius: 10,
           border: `1px solid ${getTrendColor()}30`,
           transform: isVisible ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.8)',
           opacity: isVisible ? 1 : 0,

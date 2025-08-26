@@ -19,7 +19,7 @@ export default function SimpleInteractiveBI({ onClose }: SimpleInteractiveBIProp
     },
     {
       question: "What's your budget for retention?",
-      options: ["₹1L+ 💎", "₹50K-1L 💼", "₹25-50K 📊", "<₹25K 🔍"]
+      options: ["$100K+ 💎", "$50K-100K 💼", "$25-50K 📊", "<$25K 🔍"]
     },
     {
       question: "When do you need results?",

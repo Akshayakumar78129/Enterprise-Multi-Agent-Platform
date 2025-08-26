@@ -76,7 +76,7 @@ export default function EnhancedProbabilityHistogram({ customers, data }: Enhanc
     };
   }, [customerData]);
 
-  const handleBarClick = (data: any) => {
+  const handleBarClick = (data: any, event?: any) => {
     const contextData = {
       chartType: 'probability-histogram',
       chartName: 'Churn Probability Distribution',
@@ -87,7 +87,7 @@ export default function EnhancedProbabilityHistogram({ customers, data }: Enhanc
 
     dispatch(setChatContext(contextData));
     
-    // Trigger AI insight in chatbot
+    // Trigger AI insight in chatbot with event for shift-click detection
     if (typeof window !== 'undefined' && (window as any).addAIInsightToChat) {
       const total = histogramData.reduce((sum, item) => sum + item.count, 0);
       (window as any).addAIInsightToChat({
@@ -95,7 +95,9 @@ export default function EnhancedProbabilityHistogram({ customers, data }: Enhanc
         value: ((data.count / total) * 100).toFixed(1),
         chartType: 'Probability Distribution',
         count: data.count,
-        total: total
+        total: total,
+        unit: ' customers',
+        originalEvent: event
       });
     }
   };
@@ -199,7 +201,7 @@ export default function EnhancedProbabilityHistogram({ customers, data }: Enhanc
           }}
           onMouseEnter={() => setHoveredBar(index)}
           onMouseLeave={() => setHoveredBar(null)}
-          onClick={() => handleBarClick(payload)}
+          onClick={(e) => handleBarClick(payload, e)}
         />
         
         {/* Sparkle effect on hover */}

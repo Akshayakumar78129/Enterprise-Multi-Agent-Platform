@@ -69,7 +69,7 @@ export default function InteractiveBusinessIntelligence() {
   const questions: Question[] = [
     {
       id: 'risk-tolerance',
-      question: `You have ${highRiskCustomers.length} customers at high risk (₹${(totalRevenueAtRisk/100000).toFixed(1)}L revenue). How concerned are you?`,
+      question: `You have ${highRiskCustomers.length} customers at high risk ($${(totalRevenueAtRisk/1000).toFixed(0)}K revenue). How concerned are you?`,
       category: 'risk',
       icon: '🎯',
       options: [
@@ -97,10 +97,10 @@ export default function InteractiveBusinessIntelligence() {
       category: 'action',
       icon: '💰',
       options: [
-        { id: 'high', label: '₹1L+ (Aggressive)', value: 100000, color: '#10b981', icon: '💎' },
-        { id: 'medium', label: '₹50K-1L (Moderate)', value: 75000, color: '#3b82f6', icon: '💼' },
-        { id: 'low', label: '₹25-50K (Conservative)', value: 35000, color: '#f59e0b', icon: '📊' },
-        { id: 'minimal', label: '<₹25K (Minimal)', value: 15000, color: '#94a3b8', icon: '🔍' }
+        { id: 'high', label: '$100K+ (Aggressive)', value: 100000, color: '#10b981', icon: '💎' },
+        { id: 'medium', label: '$50K-100K (Moderate)', value: 75000, color: '#3b82f6', icon: '💼' },
+        { id: 'low', label: '$25-50K (Conservative)', value: 35000, color: '#f59e0b', icon: '📊' },
+        { id: 'minimal', label: '<$25K (Minimal)', value: 15000, color: '#94a3b8', icon: '🔍' }
       ]
     },
     {
@@ -143,20 +143,20 @@ export default function InteractiveBusinessIntelligence() {
     switch (questionId) {
       case 'risk-tolerance':
         if (answer.value === 'critical') {
-          return `🚨 **Critical Alert Acknowledged!**\n\nWith ${highRiskCustomers.length} customers at risk, you're facing potential revenue loss of ₹${(totalRevenueAtRisk/100000).toFixed(1)}L. This requires immediate action.\n\n**My Analysis:**\n• Customer churn could spike 65% in 30 days\n• Brand reputation at serious risk\n• Competitors actively targeting these customers\n\n**Immediate Actions Required:**\n1. Launch emergency retention task force\n2. CEO/exec calls to top 10 accounts\n3. Implement same-day intervention protocol\n\nShall we explore specific retention strategies?`;
+          return `🚨 **Critical Alert Acknowledged!**\n\nWith ${highRiskCustomers.length} customers at risk, you're facing potential revenue loss of $${(totalRevenueAtRisk/1000).toFixed(0)}K. This requires immediate action.\n\n**My Analysis:**\n• Customer churn could spike 65% in 30 days\n• Brand reputation at serious risk\n• Competitors actively targeting these customers\n\n**Immediate Actions Required:**\n1. Launch emergency retention task force\n2. CEO/exec calls to top 10 accounts\n3. Implement same-day intervention protocol\n\nShall we explore specific retention strategies?`;
         } else if (answer.value === 'moderate') {
-          return `⚠️ **Moderate Risk Assessment**\n\nYour concern is justified. With ₹${(totalRevenueAtRisk/100000).toFixed(1)}L at stake, proactive measures are wise.\n\n**Current Situation:**\n• Risk is manageable with timely action\n• 45% of at-risk customers can be saved\n• Window of opportunity: 2-3 weeks\n\n**Recommended Approach:**\n• Prioritize top 20% high-value customers\n• Implement targeted retention campaigns\n• Monitor daily for risk escalation\n\nWhat retention approach fits your style?`;
+          return `⚠️ **Moderate Risk Assessment**\n\nYour concern is justified. With $${(totalRevenueAtRisk/1000).toFixed(0)}K at stake, proactive measures are wise.\n\n**Current Situation:**\n• Risk is manageable with timely action\n• 45% of at-risk customers can be saved\n• Window of opportunity: 2-3 weeks\n\n**Recommended Approach:**\n• Prioritize top 20% high-value customers\n• Implement targeted retention campaigns\n• Monitor daily for risk escalation\n\nWhat retention approach fits your style?`;
         } else {
-          return `✅ **Risk Under Control**\n\nYour confidence suggests strong fundamentals. However, ₹${(totalRevenueAtRisk/100000).toFixed(1)}L is still at play.\n\n**Opportunity Analysis:**\n• Convert concern into competitive advantage\n• Strengthen relationships proactively\n• Build loyalty before issues arise\n\nLet's explore growth-oriented retention strategies.`;
+          return `✅ **Risk Under Control**\n\nYour confidence suggests strong fundamentals. However, $${(totalRevenueAtRisk/1000).toFixed(0)}K is still at play.\n\n**Opportunity Analysis:**\n• Convert concern into competitive advantage\n• Strengthen relationships proactively\n• Build loyalty before issues arise\n\nLet's explore growth-oriented retention strategies.`;
         }
 
       case 'action-preference':
         if (answer.value === 'discount') {
-          return `🎯 **Discount Strategy Selected**\n\n**Recommended Discount Framework:**\n• Tier 1 (Very High Risk): 30% off + free upgrade\n• Tier 2 (High Risk): 20% off for 3 months\n• Tier 3 (Medium Risk): 15% loyalty discount\n\n**Expected Results:**\n• Save 60% of at-risk customers\n• ROI: 320% over 6 months\n• Cost: ₹${(totalRevenueAtRisk * 0.15 / 100000).toFixed(1)}L\n\n**Implementation Speed:** 48 hours\n\nWhat's your budget for this campaign?`;
+          return `🎯 **Discount Strategy Selected**\n\n**Recommended Discount Framework:**\n• Tier 1 (Very High Risk): 30% off + free upgrade\n• Tier 2 (High Risk): 20% off for 3 months\n• Tier 3 (Medium Risk): 15% loyalty discount\n\n**Expected Results:**\n• Save 60% of at-risk customers\n• ROI: 320% over 6 months\n• Cost: $${(totalRevenueAtRisk * 0.15 / 100000).toFixed(1)}L\n\n**Implementation Speed:** 48 hours\n\nWhat's your budget for this campaign?`;
         } else if (answer.value === 'outreach') {
           return `📞 **Personal Touch Strategy**\n\n**VIP Outreach Program:**\n• CEO calls for top 5 accounts\n• Account manager calls for next 20\n• Personalized video messages for rest\n\n**Success Metrics:**\n• 85% response rate expected\n• 70% retention probability\n• Builds long-term relationships\n\n**Resources Needed:**\n• 3 executives × 2 hours\n• 5 account managers × 1 day\n• Video production team\n\nHow quickly can you mobilize the team?`;
         } else if (answer.value === 'loyalty') {
-          return `🏆 **Loyalty Enhancement Program**\n\n**Exclusive Benefits Package:**\n• Double points on all purchases\n• VIP support hotline\n• Early access to new features\n• Quarterly business reviews\n\n**Projected Impact:**\n• 55% retention improvement\n• Increased CLV by 40%\n• Creates exit barriers\n\n**Investment:** ₹${(totalRevenueAtRisk * 0.10 / 100000).toFixed(1)}L upfront\n\nWhat's your implementation timeline?`;
+          return `🏆 **Loyalty Enhancement Program**\n\n**Exclusive Benefits Package:**\n• Double points on all purchases\n• VIP support hotline\n• Early access to new features\n• Quarterly business reviews\n\n**Projected Impact:**\n• 55% retention improvement\n• Increased CLV by 40%\n• Creates exit barriers\n\n**Investment:** $${(totalRevenueAtRisk * 0.10 / 100000).toFixed(1)}L upfront\n\nWhat's your implementation timeline?`;
         } else {
           return `🚀 **Product-Led Retention**\n\n**Enhancement Roadmap:**\n• Fix top 3 customer pain points\n• Launch requested features\n• Improve onboarding flow\n• Add integration capabilities\n\n**Development Timeline:**\n• Quick fixes: 1 week\n• Major features: 4-6 weeks\n• Full rollout: 8 weeks\n\n**Expected Outcome:**\n• 65% reduction in churn drivers\n• Competitive differentiation\n• Long-term retention solution\n\nWhat's your development capacity?`;
         }
@@ -164,7 +164,7 @@ export default function InteractiveBusinessIntelligence() {
       case 'budget-range':
         const budget = answer.value as number;
         const roi = (budget * 3.5 / 100000).toFixed(1);
-        return `💰 **Budget Allocation Strategy**\n\n**Your ₹${(budget/1000).toFixed(0)}K Investment Plan:**\n\n**Recommended Split:**\n• Direct incentives: ${(budget * 0.4 / 1000).toFixed(0)}K (40%)\n• Outreach programs: ${(budget * 0.3 / 1000).toFixed(0)}K (30%)\n• Product improvements: ${(budget * 0.2 / 1000).toFixed(0)}K (20%)\n• Analytics & monitoring: ${(budget * 0.1 / 1000).toFixed(0)}K (10%)\n\n**Expected Returns:**\n• ROI: ₹${roi}L (350% return)\n• Customers saved: ${Math.floor(budget / 2000)}\n• Payback period: 3 months\n\n**Risk Assessment:**\n${budget >= 75000 ? '✅ Budget sufficient for comprehensive strategy' : '⚠️ Focus on highest-impact activities'}\n\nWhen do you need to see results?`;
+        return `💰 **Budget Allocation Strategy**\n\n**Your $${(budget/1000).toFixed(0)}K Investment Plan:**\n\n**Recommended Split:**\n• Direct incentives: ${(budget * 0.4 / 1000).toFixed(0)}K (40%)\n• Outreach programs: ${(budget * 0.3 / 1000).toFixed(0)}K (30%)\n• Product improvements: ${(budget * 0.2 / 1000).toFixed(0)}K (20%)\n• Analytics & monitoring: ${(budget * 0.1 / 1000).toFixed(0)}K (10%)\n\n**Expected Returns:**\n• ROI: $${(roi/1000).toFixed(0)}K (350% return)\n• Customers saved: ${Math.floor(budget / 2000)}\n• Payback period: 3 months\n\n**Risk Assessment:**\n${budget >= 75000 ? '✅ Budget sufficient for comprehensive strategy' : '⚠️ Focus on highest-impact activities'}\n\nWhen do you need to see results?`;
 
       case 'timeline':
         const days = answer.value as number;
@@ -178,7 +178,7 @@ export default function InteractiveBusinessIntelligence() {
 
       case 'worst-outcome':
         if (answer.value === 'revenue') {
-          return `💸 **Revenue Protection Strategy**\n\n**Financial Impact Analysis:**\n• Current MRR at risk: ₹${(totalRevenueAtRisk/12/100000).toFixed(1)}L/month\n• Annual impact: ₹${(totalRevenueAtRisk/100000).toFixed(1)}L\n• 3-year CLV loss: ₹${(totalRevenueAtRisk*3/100000).toFixed(1)}L\n\n**Revenue Recovery Plan:**\n1. **Immediate:** Lock in annual contracts (15% discount)\n2. **Week 1:** Upsell stable customers (+20% revenue)\n3. **Month 1:** Win back lost accounts (30% success rate)\n\n**Profit Protection:** Maintain 65% gross margin\n\n✅ **Action Required:** Shall I create a detailed financial recovery plan?`;
+          return `💸 **Revenue Protection Strategy**\n\n**Financial Impact Analysis:**\n• Current MRR at risk: $${(totalRevenueAtRisk/12/1000).toFixed(0)}K/month\n• Annual impact: $${(totalRevenueAtRisk/1000).toFixed(0)}K\n• 3-year CLV loss: $${(totalRevenueAtRisk*3/1000).toFixed(0)}K\n\n**Revenue Recovery Plan:**\n1. **Immediate:** Lock in annual contracts (15% discount)\n2. **Week 1:** Upsell stable customers (+20% revenue)\n3. **Month 1:** Win back lost accounts (30% success rate)\n\n**Profit Protection:** Maintain 65% gross margin\n\n✅ **Action Required:** Shall I create a detailed financial recovery plan?`;
         } else if (answer.value === 'brand') {
           return `😰 **Brand Reputation Defense**\n\n**Reputation Risk Mitigation:**\n• Monitor social media sentiment (hourly)\n• Prepare PR response templates\n• Mobilize customer success team\n• Create positive case studies\n\n**Proactive Measures:**\n1. **Today:** Reach out to vocal customers\n2. **This week:** Launch satisfaction survey\n3. **This month:** Publish success stories\n\n**Damage Control:**\n• Response time: <2 hours for complaints\n• Executive apologies for VIP issues\n• Public commitment to improvements\n\n🛡️ **Protection Level:** Maximum\n\nShall we draft communication templates?`;
         } else if (answer.value === 'competition') {
@@ -257,7 +257,7 @@ Based on our conversation, here's your optimal strategy:
                             strategy === 'loyalty' ? '🏆 Enhanced Loyalty Program' :
                             '🚀 Product-Led Retention'}
 
-**Budget Allocation:** ₹${((budget as number) / 1000).toFixed(0)}K
+**Budget Allocation:** $${((budget as number) / 1000).toFixed(0)}K
 **Timeline:** ${timeline === 7 ? 'Immediate (7 days)' :
                 timeline === 30 ? '1 Month Sprint' :
                 timeline === 90 ? 'Quarterly Program' : 'Strategic Long-term'}
@@ -266,7 +266,7 @@ Based on our conversation, here's your optimal strategy:
 • Retention Rate: ${risk === 'critical' ? '65%' : '80%'}+
 • ROI: ${((budget as number) * 3.5 / (budget as number) * 100).toFixed(0)}%
 • Customers Saved: ${Math.floor((budget as number) / 2000)}
-• Revenue Protected: ₹${(totalRevenueAtRisk * 0.65 / 100000).toFixed(1)}L
+• Revenue Protected: $${(totalRevenueAtRisk * 0.65 / 100000).toFixed(1)}L
 
 **Next Steps:**
 1. ✅ Accept and implement this plan

@@ -56,13 +56,17 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
           segment.loyaltyScore || 0,
           segment.engagementRate || 0,
         ],
-        backgroundColor: `${getSegmentColor(segment.segment - 1)}30`,
+        backgroundColor: `${getSegmentColor(segment.segment - 1)}50`, // Semi-transparent fill
         borderColor: getSegmentColor(segment.segment - 1),
-        borderWidth: 2,
+        borderWidth: 4, // Thicker lines for better visibility
         pointBackgroundColor: getSegmentColor(segment.segment - 1),
-        pointBorderColor: '#fff',
-        pointHoverBackgroundColor: '#fff',
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 3,
+        pointRadius: 6, // Larger points
+        pointHoverRadius: 8,
+        pointHoverBackgroundColor: '#ffffff',
         pointHoverBorderColor: getSegmentColor(segment.segment - 1),
+        pointHoverBorderWidth: 4,
       },
     ],
   });
@@ -75,26 +79,52 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
         display: false,
       },
       tooltip: {
-        enabled: false,
+        enabled: true,
+        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+        titleColor: '#ffffff',
+        bodyColor: '#ffffff',
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+        borderWidth: 1,
+        titleFont: {
+          size: 14,
+          weight: 'bold',
+        },
+        bodyFont: {
+          size: 13,
+        },
+        padding: 12,
+        cornerRadius: 6,
       },
     },
     scales: {
       r: {
         angleLines: {
-          color: 'rgba(255, 255, 255, 0.1)',
+          color: 'rgba(255, 255, 255, 0.3)', // More visible grid lines
+          lineWidth: 2,
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)',
+          color: 'rgba(255, 255, 255, 0.2)',
+          lineWidth: 1.5,
         },
         pointLabels: {
-          color: segmentationTheme.colors.textTertiary,
+          color: '#ffffff', // White labels for high contrast
           font: {
-            size: 10,
+            size: 13, // Larger font for elderly users
+            weight: 'bold',
           },
+          padding: 10,
         },
         ticks: {
-          display: false,
+          display: true,
+          color: 'rgba(255, 255, 255, 0.6)',
+          font: {
+            size: 11,
+          },
+          backdropColor: 'transparent',
+          stepSize: 25,
         },
+        min: 0,
+        max: 100,
       },
     },
   };
@@ -322,10 +352,26 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
               marginBottom: segmentationTheme.spacing.md,
             }}>
               {[
-                { label: 'Avg Spend', value: `$${(segment.avgSpend || 0).toLocaleString()}` },
-                { label: 'Frequency', value: `${segment.frequency || 0}/mo` },
-                { label: 'Recency', value: `${segment.recency || 0} days` },
-                { label: 'Loyalty', value: `${segment.loyaltyScore || 0}%` },
+                { 
+                  label: 'Avg Spend', 
+                  value: `$${(segment.avgSpend || 0).toLocaleString()}`,
+                  indicator: segment.avgSpend > 500 ? '🟢' : segment.avgSpend > 200 ? '🟡' : '🔴'
+                },
+                { 
+                  label: 'Frequency', 
+                  value: `${segment.frequency || 0}/mo`,
+                  indicator: segment.frequency > 7 ? '🟢' : segment.frequency > 4 ? '🟡' : '🔴'
+                },
+                { 
+                  label: 'Recency', 
+                  value: `${segment.recency || 0} days`,
+                  indicator: segment.recency < 10 ? '🟢' : segment.recency < 20 ? '🟡' : '🔴'
+                },
+                { 
+                  label: 'Loyalty', 
+                  value: `${segment.loyaltyScore || 0}%`,
+                  indicator: segment.loyaltyScore > 80 ? '🟢' : segment.loyaltyScore > 60 ? '🟡' : '🔴'
+                },
               ].map((metric) => (
                 <div
                   key={metric.label}
@@ -343,19 +389,32 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
                     {metric.label}
                   </div>
                   <div style={{
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    color: getSegmentColor(segment.segment - 1),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
                   }}>
-                    {metric.value}
+                    <div style={{
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      color: getSegmentColor(segment.segment - 1),
+                    }}>
+                      {metric.value}
+                    </div>
+                    <span style={{ fontSize: '14px' }}>{metric.indicator}</span>
                   </div>
                 </div>
               ))}
             </div>
 
             <div style={{
-              height: '180px',
+              height: '200px',
               marginBottom: segmentationTheme.spacing.md,
+              background: 'rgba(0, 0, 0, 0.3)',
+              borderRadius: '12px',
+              padding: '10px',
+              position: 'relative',
+              boxShadow: `0 0 20px ${getSegmentColor(segment.segment - 1)}30`,
+              border: `1px solid ${getSegmentColor(segment.segment - 1)}40`,
             }}>
               <Radar data={getRadarData(segment)} options={radarOptions} />
             </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Card } from "../../../../../../ui-common/design-system/components/Card";
 import dynamic from "next/dynamic";
+import { handleUniversalChartClick } from "../../../../shared/utils/universalChartHelper";
 
 // Dynamic import for Plotly to avoid SSR issues
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
@@ -185,14 +186,35 @@ const DualAxisTimeSeries = ({
   };
 
   const handlePlotClick = (event) => {
-    if (!onDataPointClick || !event.points || event.points.length === 0) return;
+    if (!event.points || event.points.length === 0) return;
     
     const point = event.points[0];
     const clickedDate = point.x;
     const dataPoint = data.find(d => d.date === clickedDate);
     
     if (dataPoint) {
-      onDataPointClick(dataPoint);
+      // Use universal chart click handler for shift-click support
+      const value = point.data.name === 'Transaction Volume' 
+        ? dataPoint.transaction_count 
+        : dataPoint.avg_amount;
+      
+      const unit = point.data.name === 'Transaction Volume' 
+        ? ' transactions'
+        : '';
+      
+      handleUniversalChartClick({
+        chartId: 'dual-axis-time-series',
+        chartType: 'time-series',
+        label: `${clickedDate} - ${point.data.name}`,
+        value: value,
+        unit: unit,
+        metadata: dataPoint
+      }, event.event);
+      
+      // Also call original handler if provided
+      if (onDataPointClick) {
+        onDataPointClick(dataPoint);
+      }
     }
   };
 

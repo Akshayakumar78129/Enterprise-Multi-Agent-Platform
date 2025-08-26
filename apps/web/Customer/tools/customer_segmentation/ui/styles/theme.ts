@@ -18,15 +18,15 @@ export const segmentationTheme = {
     accentBlue: '#3b82f6',
     accentMagenta: '#e930ff',
     
-    // Segment Colors
-    segment1: '#00e0ff',
-    segment2: '#e930ff',
-    segment3: '#5fd4d6',
-    segment4: '#aa45dd',
-    segment5: '#43cad0',
-    segment6: '#ff6b6b',
-    segment7: '#ffd93d',
-    segment8: '#6bcf7f',
+    // Segment Colors - Accessible bright colors for dark theme
+    segment1: '#4FC3F7', // Bright Blue
+    segment2: '#66BB6A', // Green
+    segment3: '#FFA726', // Orange
+    segment4: '#FFD600', // Yellow
+    segment5: '#00BFFF', // Deep Sky Blue
+    segment6: '#00E676', // Light Green
+    segment7: '#FF9800', // Deep Orange
+    segment8: '#FFEB3B', // Amber
     
     // Status Colors
     success: '#00E676',
