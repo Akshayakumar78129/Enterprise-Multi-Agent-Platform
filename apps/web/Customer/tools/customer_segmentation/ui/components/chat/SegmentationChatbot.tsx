@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { parseMentions, hasMentions, extractQueryContext } from '../../../../churn_prediction/ui/utils/mentionParser';
 import { packDashboardContext, createAgentQueryPayload, optimizeContextForQuery } from '../../../../churn_prediction/ui/utils/contextPacker';
-import { queryAgent, mockAgentResponse, AgentResult } from '../../../../churn_prediction/ui/services/agentCommunication';
+import { mockAgentResponse, AgentResult } from '../../../../churn_prediction/ui/services/agentCommunication';
+import { queryAgent } from '../../services/agentCommunication';
 import { getAgentConfig, getActiveAgents, isValidAgent } from '../../../../churn_prediction/ui/config/agentRegistry';
 import { AIResponseDashboard } from '../../../../../../ui-common/ai-interaction/aiResponse';
 import { v4 as uuidv4 } from 'uuid';
@@ -346,8 +347,9 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
 
     // Check for mentions
     if (hasMentions(textToSend)) {
-      const mentions = parseMentions(textToSend);
-      for (const agentName of mentions) {
+      const parsedMessage = parseMentions(textToSend);
+      const agentNames = parsedMessage.mentions.map(m => m.agentName);
+      for (const agentName of agentNames) {
         if (isValidAgent(agentName)) {
           const agentConfig = getAgentConfig(agentName);
           if (agentConfig) {
@@ -365,11 +367,60 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
             setMessages(prev => [...prev, loadingMessage]);
 
             try {
-              const context = packDashboardContext(dashboardContext || {});
-              const queryPayload = createAgentQueryPayload(textToSend, context, agentConfig);
+              // Pack the dashboard context properly
+              const context = dashboardContext ? {
+                source_dashboard: 'customer_segmentation',
+                segment_context: dashboardContext.segment_context || {},
+                filters_applied: dashboardContext.filters_applied || {},
+                timestamp: new Date().toISOString(),
+                user_id: 'segmentation_user'
+              } : {
+                source_dashboard: 'customer_segmentation',
+                segment_context: {},
+                filters_applied: {},
+                timestamp: new Date().toISOString(),
+                user_id: 'segmentation_user'
+              };
               
-              // Simulate agent response
-              const response = await mockAgentResponse(agentConfig, textToSend);
+              // Create proper payload matching churn implementation
+              const payload = {
+                query: textToSend,
+                context: context,
+                request_id: uuidv4(),
+                priority: 'normal' as const,
+                mentioned_agent: agentName
+              };
+              
+              // Use real backend by default, only mock if explicitly enabled
+              const USE_MOCK_RESPONSES = process.env.NEXT_PUBLIC_USE_MOCK_AGENTS === 'true';
+              
+              console.log('🔧 Segmentation agent call:', {
+                agentName,
+                USE_MOCK_RESPONSES,
+                payload: { ...payload, query: payload.query.substring(0, 50) + '...' }
+              });
+              
+              let response;
+              if (USE_MOCK_RESPONSES) {
+                console.log('🎭 Using mock agent response');
+                response = await mockAgentResponse(agentConfig, textToSend);
+              } else {
+                console.log('🌐 Using real backend for agent:', agentName);
+                // Call queryAgent with proper payload structure
+                const agentResult = await queryAgent(agentName, payload, 10000);
+                
+                console.log('📦 Agent result received:', {
+                  success: agentResult.success,
+                  hasText: !!agentResult.response_text,
+                  error: agentResult.error_message
+                });
+                
+                response = {
+                  answer: agentResult.success ? agentResult.response_text : 
+                         `❌ Error: ${agentResult.error_message || 'Failed to get response from agent'}`,
+                  metadata: agentResult.metadata || {}
+                };
+              }
               
               // Update with actual response
               setMessages(prev => prev.map(msg => 
@@ -377,10 +428,16 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
                   ? { ...msg, content: response.answer, isLoading: false, metadata: response.metadata }
                   : msg
               ));
-            } catch (error) {
+            } catch (error: any) {
+              console.error('❌ Error in segmentation agent query:', error);
               setMessages(prev => prev.map(msg => 
                 msg.id === loadingMessage.id 
-                  ? { ...msg, content: 'Sorry, I encountered an error processing your request.', isLoading: false, error: error.message }
+                  ? { 
+                      ...msg, 
+                      content: `Sorry, I encountered an error: ${error.message || 'Failed to contact agent'}`, 
+                      isLoading: false, 
+                      error: error.message 
+                    }
                   : msg
               ));
             }

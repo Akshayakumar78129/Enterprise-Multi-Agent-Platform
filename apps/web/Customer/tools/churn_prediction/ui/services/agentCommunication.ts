@@ -96,7 +96,7 @@ export const queryAgent = async (
       setTimeout(() => reject(new Error('Request timeout')), timeoutMs);
     });
 
-    // Use backend AI service endpoint with /run_sse
+    // Use backend AI service endpoint with /run_sse - fallback to port 5000 for simpler backend
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_AI_URL || 'http://127.0.0.1:5000';
     const endpoint = `${backendUrl}/run_sse`;
     
@@ -110,7 +110,7 @@ export const queryAgent = async (
       hasContext: !!payload.context
     });
     
-    // Format request for backend AI service (matching aiResponse.js format)
+    // Format request for simpler backend service (port 5000 style)
     const formattedQuery = `@${agentName} ${payload.query}`;
     const backendPayload = {
       user_query: formattedQuery,
@@ -176,16 +176,86 @@ export const queryAgent = async (
       };
     }
 
-    let responseData: any;
+    let responseData: any = {};
     try {
-      responseData = await response.json();
+      // Handle SSE response format
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Response body is not readable');
+      }
+      
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let fullResponse = '';
+      
+      // Read the SSE stream
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.replace('data: ', '').trim();
+            
+            if (data === '[DONE]' || data === '') continue;
+            
+            try {
+              const jsonData = JSON.parse(data);
+              console.log('📦 SSE chunk received:', jsonData);
+              
+              // Accumulate response data
+              if (jsonData.agent_name) responseData.agent_name = jsonData.agent_name;
+              if (jsonData.response) fullResponse += jsonData.response;
+              if (jsonData.text) fullResponse += jsonData.text;
+              if (jsonData.output) fullResponse += jsonData.output; // Handle output field
+              if (jsonData.data) responseData.data = jsonData.data;
+              if (jsonData.confidence) responseData.confidence = jsonData.confidence;
+              if (jsonData.sources) responseData.sources = jsonData.sources;
+              if (jsonData.is_visualisation !== undefined) responseData.is_visualisation = jsonData.is_visualisation;
+              
+            } catch (parseErr) {
+              console.warn('Failed to parse SSE chunk:', data);
+            }
+          }
+        }
+      }
+      
+      // Format and clean the response text
+      let formattedResponse = fullResponse || 'No response text provided';
+      
+      // Clean up any duplicate content or formatting issues
+      formattedResponse = formattedResponse
+        .replace(/<output>/g, '\n')  // Remove output tags
+        .replace(/<\/output>/g, '\n')
+        .replace(/<is_visualisation>.*?<\/is_visualisation>/g, '') // Remove visualization tags
+        .trim();
+      
+      // Ensure proper markdown formatting for better display
+      formattedResponse = formattedResponse
+        .replace(/([A-Z][a-z]+ \d+:)/g, '\n**$1**')  // Bold headers like "Segment 1:"
+        .replace(/I have analyzed/g, '\n## 📊 Analysis Results\n\nI have analyzed')
+        .replace(/I am analyzing/g, '\n## 🔍 Analysis in Progress\n\nI am analyzing')
+        .replace(/To leverage/g, '\n## 💡 Recommendations\n\nTo leverage')
+        .replace(/Would you like/g, '\n\n❓ **Next Steps:** Would you like')
+        .replace(/\n\n\n+/g, '\n\n');  // Remove excessive line breaks
+      
+      // Set the formatted response
+      responseData.response = formattedResponse;
+      responseData.success = true;
+      
+      console.log('📦 Final aggregated response:', responseData);
+      
     } catch (e) {
-      console.error('❌ Failed to parse JSON response:', e);
+      console.error('❌ Failed to parse SSE response:', e);
       return {
         success: false,
         agent_name: agentName,
         error_type: 'server_error',
-        error_message: 'Invalid JSON response from agent',
+        error_message: 'Failed to parse SSE response from agent',
         request_id: payload.request_id,
         timestamp: new Date().toISOString()
       };
@@ -213,6 +283,14 @@ export const queryAgent = async (
       };
     }
 
+    // Check if we got an empty or mock-like response from backend
+    const hasValidResponse = responseData.response || responseData.response_text || responseData.message;
+    
+    // If backend returns empty/invalid, log warning and use what we have
+    if (!hasValidResponse) {
+      console.warn('⚠️ Backend returned empty response, check server implementation for agent:', agentName);
+    }
+
     return {
       success: true,
       agent_name: agentName,
@@ -224,7 +302,7 @@ export const queryAgent = async (
       timestamp: new Date().toISOString(),
       metadata: {
         confidence_score: responseData.confidence || responseData.confidence_score || 0.85,
-        data_sources: responseData.sources || responseData.data_sources || ['API Gateway'],
+        data_sources: responseData.sources || responseData.data_sources || ['Backend AI Service'],
         recommendations: responseData.recommendations || [],
         follow_up_questions: responseData.follow_up_questions || []
       }

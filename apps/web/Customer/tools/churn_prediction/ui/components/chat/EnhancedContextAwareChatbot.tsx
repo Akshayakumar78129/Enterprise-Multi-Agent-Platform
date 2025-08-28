@@ -598,8 +598,7 @@ What specific aspect would you like me to explain?`;
         const payload = createAgentQueryPayload(optimizedContext, query, agentName);
 
         // Use real API Gateway calls by default, only use mock if explicitly enabled
-        const USE_MOCK_RESPONSES = process.env.NEXT_PUBLIC_USE_MOCK_AGENTS === 'true' || 
-                                  process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_FORCE_REAL_AGENTS !== 'true';
+        const USE_MOCK_RESPONSES = process.env.NEXT_PUBLIC_USE_MOCK_AGENTS === 'true';
         
         console.log('🔧 Environment check:', {
           NODE_ENV: process.env.NODE_ENV,
