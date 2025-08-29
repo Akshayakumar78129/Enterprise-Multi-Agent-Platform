@@ -1,10 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { DashboardState } from '../../types';
+import { DashboardState, THEME } from '../../types';
 import { MAIN_AGENTS, getAgentByName, getAgentSuggestions } from '../../config/agentRegistry';
 import { parseMentions, getMentionSuggestions, insertMention } from '../../utils/mentionParser';
 import { packSalesContext } from '../../utils/contextPacker';
 import { sendMessageToAgent, suggestBestAgent, AgentMessage } from '../../services/agentCommunication';
 import { useTheme } from '../../contexts/ThemeContext';
+import { chartSelectionManager } from '../../utils/ChartSelectionManager';
+import { v4 as uuidv4 } from 'uuid';
+import { AIResponseDashboard } from '../../../../../../ui-common/ai-interaction/aiResponse';
 
 interface EnhancedContextAwareChatbotProps {
   dashboardState: DashboardState;
@@ -51,6 +54,26 @@ const EnhancedContextAwareChatbot: React.FC<EnhancedContextAwareChatbotProps> = 
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Selected Points panel state
+  const [showSelectedPanel, setShowSelectedPanel] = useState(true);
+  const [selectedSummaries, setSelectedSummaries] = useState<string[]>([]);
+
+  // Subscribe to selection changes to update the panel
+  useEffect(() => {
+    const unsubscribe = chartSelectionManager.subscribe((selections) => {
+      const summaries = selections.map((p, i) => {
+        const month = (p.month && /\d{2}/.test(String(p.month))) ?
+          ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Math.max(0, Math.min(11, parseInt(String(p.month), 10) - 1))] :
+          (p.date || '').slice(0,7);
+        const yr = p.year || (p.date || '').slice(0,4);
+        const metric = (p.metricName || 'value').replace(/_/g,' ');
+        return `${i+1}. ${month ? month + ' ' : ''}${yr ? yr + ' ' : ''}${metric}: ${Math.round(p.value).toLocaleString()}`.trim();
+      });
+      setSelectedSummaries(summaries);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Predefined dashboard-specific questions
   const predefinedQuestions = [
@@ -407,7 +430,21 @@ Consistency Improvement Strategy:
   // Generate welcome message based on context
   const createWelcomeMessage = useCallback((): ChatMessage => {
     if (lastClickedPoint) {
-      // Context-aware welcome when data point was clicked
+      // Support multi-selection seeded from dashboard Explain button
+      if (lastClickedPoint.type === 'multi-selection') {
+        const summaries: string[] = Array.isArray(lastClickedPoint.summaries) ? lastClickedPoint.summaries : [];
+        const insights: string[] = Array.isArray(lastClickedPoint.insights) ? lastClickedPoint.insights : [];
+        const summaryList = summaries.slice(0, 8).map(s => `• ${s}`).join('\n');
+        const insightList = insights.slice(0, 8).map(s => `• ${s}`).join('\n');
+        return {
+          id: `welcome-multi-${Date.now()}`,
+          type: 'bot',
+          content: `🧠 Multi‑Selection Analysis\n\nCombined insights:\n${insightList || '• (no combined insights)'}\n\nAsk me to:\n• Compare these points and explain drivers\n• Identify common factors across selections\n• Recommend actions and experiments\n\nAvailable Experts:\n📊 @sales • 👥 @customer • 💰 @finance • 📦 @inventory\n\nType @ to mention an expert, or ask a question.`,
+          timestamp: new Date()
+        };
+      }
+
+      // Context-aware welcome when single data point was clicked
       const change = lastClickedPoint.percentChange !== undefined 
         ? ` (${lastClickedPoint.percentChange >= 0 ? '+' : ''}${lastClickedPoint.percentChange.toFixed(1)}%)`
         : '';
@@ -417,7 +454,7 @@ Consistency Improvement Strategy:
         type: 'bot',
         content: `🎯 Data Point Analysis
 
-I see you clicked on ${lastClickedPoint.date} showing **${lastClickedPoint.metricName}: $${lastClickedPoint.value.toLocaleString()}${change}**
+I see you clicked on ${lastClickedPoint.date} showing ${lastClickedPoint.metricName}: $${lastClickedPoint.value.toLocaleString()}${change}
 
 Ask me about:
 • Why this change happened
@@ -501,25 +538,40 @@ Type @ to see available experts or describe what you'd like to explore!`,
   }, [onNewChart, currentSessionId, messages]);
 
   // Initialize welcome message when chatbot opens OR when lastClickedPoint changes
+  // Track last processed multi-selection to avoid duplicate appends
+  const lastProcessedContextRef = useRef<number | null>(null);
+
   useEffect(() => {
     console.log('🤖 Chatbot effect triggered - isOpen:', isOpen, 'lastClickedPoint:', lastClickedPoint);
     
-    if (isOpen) {
-      // Clear loading state and reset chatbot for new data point
-      setIsLoading(false);
-      setInputValue('');
-      setShowMentionSuggestions(false);
-      
-      // Check if we have messages for current session
-      const sessionMessages = chatSessions[currentSessionId];
-      if (sessionMessages && sessionMessages.length > 0) {
-        setMessages(sessionMessages);
-      } else {
-        // Always update the welcome message when a new data point is clicked
-        const newWelcomeMessage = createWelcomeMessage();
-        console.log('🤖 Creating new welcome message:', newWelcomeMessage);
-        setMessages([newWelcomeMessage]);
-      }
+    if (!isOpen) return;
+
+    // Clear loading state and reset UI toggles
+    setIsLoading(false);
+    setInputValue('');
+    setShowMentionSuggestions(false);
+
+    const sessionMessages = chatSessions[currentSessionId];
+
+    // If multi-selection context arrives, only append once per unique contextId
+    const isMulti = lastClickedPoint && lastClickedPoint.type === 'multi-selection';
+    const incomingId: number | undefined = isMulti ? Number(lastClickedPoint.contextId) : undefined;
+
+    if (!sessionMessages || sessionMessages.length === 0) {
+      const newWelcomeMessage = createWelcomeMessage();
+      setMessages([newWelcomeMessage]);
+      if (isMulti && incomingId) lastProcessedContextRef.current = incomingId;
+      return;
+    }
+
+    // We already have messages. If new multi-selection context is provided and not processed yet, append one message.
+    if (isMulti && incomingId && lastProcessedContextRef.current !== incomingId) {
+      const newWelcomeMessage = createWelcomeMessage();
+      setMessages(prev => [...prev, newWelcomeMessage]);
+      lastProcessedContextRef.current = incomingId;
+    } else {
+      // Otherwise just restore session messages without adding anything
+      setMessages(sessionMessages);
     }
   }, [isOpen, lastClickedPoint, createWelcomeMessage, chatSessions, currentSessionId]);
 
@@ -561,6 +613,41 @@ Type @ to see available experts or describe what you'd like to explore!`,
       const parsedMentions = parseMentions(inputValue);
       const context = packSalesContext(dashboardState, lastClickedPoint, inputValue);
 
+      // Build an ADK-compatible session (matches pages/index.js usage)
+      const session = {
+        session_id: uuidv4(),
+        user_id: 'pihu',
+        app_name: 'sales_agent'
+      };
+
+      // Helper: stream from ADK and progressively update a loading message; fallback to legacy on failure
+      const streamFromAdk = async (loadingId: string, agentNameForFallback?: string, messageTextForFallback?: string, contextForFallback?: any) => {
+        try {
+          const response = AIResponseDashboard(parsedMentions.cleanedMessage || inputValue, session);
+          for await (const chunk of response as any) {
+            if (chunk === '[DONE]') break;
+            if (chunk === '[ERROR]') {
+              throw new Error('ADK stream returned [ERROR]');
+            }
+            const delta = typeof chunk === 'object' && chunk?.text ? String(chunk.text) : String(chunk ?? '');
+            setMessages(prev => prev.map(m => m.id === loadingId ? { ...m, content: (m.content || '') + delta } : m));
+          }
+          setMessages(prev => prev.map(m => m.id === loadingId ? { ...m, isLoading: false } : m));
+        } catch (e) {
+          // Fallback to legacy agentCommunication to keep existing behavior intact
+          if (agentNameForFallback && messageTextForFallback) {
+            try {
+              const resp = await sendMessageToAgent(agentNameForFallback, messageTextForFallback, contextForFallback);
+              setMessages(prev => prev.map(m => m.id === loadingId ? { ...m, content: resp.success ? resp.content : `Sorry, I encountered an error: ${resp.error}`, isLoading: false } : m));
+            } catch (fallbackErr) {
+              setMessages(prev => prev.map(m => m.id === loadingId ? { ...m, content: 'Error: failed to get AI response.', isLoading: false } : m));
+            }
+          } else {
+            setMessages(prev => prev.map(m => m.id === loadingId ? { ...m, content: 'Error: failed to get AI response.', isLoading: false } : m));
+          }
+        }
+      };
+
       if (parsedMentions.hasValidMentions && parsedMentions.primaryAgent) {
         // User mentioned specific agent(s)
         const agentName = parsedMentions.primaryAgent;
@@ -582,26 +669,11 @@ Type @ to see available experts or describe what you'd like to explore!`,
 
           setMessages(prev => [...prev, loadingMessage]);
 
-          // Send to specific agent
-          const response = await sendMessageToAgent(
-            agentName,
-            parsedMentions.cleanedMessage,
-            context
-          );
-
-          // Update the loading message with the response
-          setMessages(prev => prev.map(msg => 
-            msg.id === loadingMessage.id
-              ? {
-                  ...msg,
-                  content: response.success ? response.content : `Sorry, I encountered an error: ${response.error}`,
-                  isLoading: false
-                }
-              : msg
-          ));
+          // Prefer ADK streaming path; fallback to legacy if needed later
+          await streamFromAdk(loadingMessage.id);
         }
       } else {
-        // No specific agent mentioned, suggest best agent and use it
+        // No specific agent mentioned; suggest best agent for UI metadata only
         const suggestedAgent = suggestBestAgent(inputValue, context);
         const agent = getAgentByName(suggestedAgent);
 
@@ -621,23 +693,8 @@ Type @ to see available experts or describe what you'd like to explore!`,
 
           setMessages(prev => [...prev, loadingMessage]);
 
-          // Send to suggested agent
-          const response = await sendMessageToAgent(
-            suggestedAgent,
-            inputValue,
-            context
-          );
-
-          // Update the loading message with the response
-          setMessages(prev => prev.map(msg => 
-            msg.id === loadingMessage.id
-              ? {
-                  ...msg,
-                  content: response.success ? response.content : `Sorry, I encountered an error: ${response.error}`,
-                  isLoading: false
-                }
-              : msg
-          ));
+          // Prefer ADK streaming path; matches pages/index.js calling pattern
+          await streamFromAdk(loadingMessage.id);
         }
       }
     } catch (error) {
@@ -1223,6 +1280,102 @@ Type @ to see available experts or describe what you'd like to explore!`,
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* SELECTED POINTS BAR ABOVE INPUT */}
+      {selectedSummaries.length > 0 && (
+        <div className="glass-card" style={{
+          padding: '12px 20px',
+          borderTopLeftRadius: 0,
+          borderTopRightRadius: 0,
+          background: THEME.colors.panelBackground || theme.bg.glass,
+          border: THEME.glass.border,
+          borderTop: `1px solid ${theme.border.light}`
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <button
+                onClick={() => setShowSelectedPanel(!showSelectedPanel)}
+                className="glass-card"
+                style={{
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  color: theme.text.secondary,
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8
+                }}
+                aria-label={showSelectedPanel ? 'Collapse selected points' : 'Expand selected points'}
+                title={showSelectedPanel ? 'Collapse' : 'Expand'}
+              >
+                {showSelectedPanel ? '▾' : '▸'}
+              </button>
+              <span style={{ color: theme.text.primary, fontWeight: 600 }}>
+                Selected Points ({selectedSummaries.length})
+              </span>
+              <span style={{ color: theme.text.tertiary, fontSize: '12px' }}>Shift+click to add more</span>
+            </div>
+            <button
+              onClick={() => chartSelectionManager.clearSelections()}
+              className="glass-card"
+              style={{
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                color: theme.text.secondary,
+                cursor: 'pointer',
+                fontSize: '12px',
+                padding: '6px 10px',
+                borderRadius: 8
+              }}
+              aria-label="Clear selections"
+              title="Clear selections"
+            >
+              Clear
+            </button>
+          </div>
+          {showSelectedPanel && (
+            <div style={{ marginTop: '10px', maxHeight: '160px', overflowY: 'auto', display: 'grid', rowGap: '10px' }}>
+              {selectedSummaries.map((s, idx) => (
+                <div key={idx} className="glass-card" style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: 'rgba(44, 51, 65, 0.35)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  borderRadius: 12,
+                  padding: '10px 12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                    <div style={{
+                      width: '28px', height: '28px', borderRadius: '8px',
+                      background: THEME.colors.primary20,
+                      color: THEME.colors.text.primary,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700
+                    }}>{idx + 1}</div>
+                    <div style={{ color: theme.text.primary, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {s}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="glass-card" style={{
+                      padding: '4px 10px',
+                      borderRadius: 999,
+                      background: THEME.colors.primary20,
+                      border: '1px solid rgba(59,130,246,0.35)',
+                      color: THEME.colors.text.primary,
+                      fontSize: 12,
+                      fontWeight: 600
+                    }}>
+                      Selected
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

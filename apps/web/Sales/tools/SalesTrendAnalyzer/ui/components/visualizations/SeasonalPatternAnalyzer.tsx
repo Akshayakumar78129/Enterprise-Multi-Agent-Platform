@@ -30,21 +30,23 @@ const SeasonalPatternAnalyzer: React.FC<SeasonalPatternAnalyzerProps> = ({
     // Create a trace for each year with selection highlighting
     const traces: any[] = Object.entries(yearGroups).map(([year, points], idx) => {
       const paletteColor = THEME.colors.categorical[idx % THEME.colors.categorical.length];
+      const darkRed = '#b91c1c';
       // Create marker colors and sizes based on selection state
       const markerColors = points.map(p => {
         // Use ID format consistent with selection manager: seasonal-YYYY-MM-metric
         const pointId = `seasonal-${year}-${String(p.month).padStart(2, '0')}-revenue`;
-        return selectedPoints.has(pointId) ? THEME.colors.energyYellow : paletteColor;
+        // Match theme's dark red highlight for selected points
+        return selectedPoints.has(pointId) ? darkRed : paletteColor;
       });
       
       const markerSizes = points.map(p => {
         const pointId = `seasonal-${year}-${String(p.month).padStart(2, '0')}-revenue`;
-        return selectedPoints.has(pointId) ? 10 : 6;
+        return selectedPoints.has(pointId) ? 11 : 6; // slightly larger for emphasis
       });
       
       const markerBorderColors = points.map(p => {
         const pointId = `seasonal-${year}-${String(p.month).padStart(2, '0')}-revenue`;
-        return selectedPoints.has(pointId) ? THEME.colors.signalMagenta : 'transparent';
+        return selectedPoints.has(pointId) ? darkRed : 'transparent';
       });
 
       return {

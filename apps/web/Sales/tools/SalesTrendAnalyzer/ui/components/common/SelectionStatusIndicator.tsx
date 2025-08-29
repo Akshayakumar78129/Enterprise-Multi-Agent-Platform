@@ -5,16 +5,43 @@ interface SelectionStatusIndicatorProps {
   selectionCount: number;
   isVisible: boolean;
   onClearSelections: () => void;
+  onExplainSelections?: () => void; // New: open enhanced AI with context
 }
 
 const SelectionStatusIndicator: React.FC<SelectionStatusIndicatorProps> = ({
   selectionCount,
   isVisible,
-  onClearSelections
+  onClearSelections,
+  onExplainSelections
 }) => {
   if (!isVisible || selectionCount === 0) {
     return null;
   }
+
+  const baseBtn: React.CSSProperties = {
+    background: 'rgba(255, 255, 255, 0.2)',
+    border: '1px solid rgba(255,255,255,0.2)',
+    color: THEME.colors.text.white,
+    padding: '6px 12px',
+    borderRadius: '6px',
+    fontSize: '12px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    fontWeight: '500'
+  };
+
+  const hoverHandlers = {
+    onMouseEnter: (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.currentTarget.style.borderColor = THEME.colors.primary;
+      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.28)';
+      e.currentTarget.style.boxShadow = `0 0 0 3px ${THEME.colors.primary20}`;
+    },
+    onMouseLeave: (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+      e.currentTarget.style.boxShadow = 'none';
+    }
+  };
 
   return (
     <div
@@ -47,42 +74,23 @@ const SelectionStatusIndicator: React.FC<SelectionStatusIndicatorProps> = ({
       </div>
       
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {onExplainSelections && (
+          <button
+            onClick={onExplainSelections}
+            style={{ ...baseBtn }}
+            {...hoverHandlers}
+          >
+            Explain
+          </button>
+        )}
+
         <button
           onClick={onClearSelections}
-          style={{
-            background: 'rgba(255, 255, 255, 0.2)',
-            border: '1px solid rgba(255,255,255,0.2)',
-            color: THEME.colors.text.white,
-            padding: '6px 12px',
-            borderRadius: '6px',
-            fontSize: '12px',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            fontWeight: '500'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = THEME.colors.primary;
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.28)';
-            e.currentTarget.style.boxShadow = `0 0 0 3px ${THEME.colors.primary20}`;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
+          style={{ ...baseBtn }}
+          {...hoverHandlers}
         >
-          Clear All
+          Clear (ESC)
         </button>
-        
-        <div 
-          style={{
-            fontSize: '11px',
-            opacity: 0.8,
-            whiteSpace: 'nowrap'
-          }}
-        >
-          ESC to clear
-        </div>
       </div>
 
       {/* CSS for animations */}
@@ -99,12 +107,8 @@ const SelectionStatusIndicator: React.FC<SelectionStatusIndicatorProps> = ({
         }
         
         @keyframes pulse {
-          0%, 100% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0.7;
-          }
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
         }
       `}</style>
     </div>

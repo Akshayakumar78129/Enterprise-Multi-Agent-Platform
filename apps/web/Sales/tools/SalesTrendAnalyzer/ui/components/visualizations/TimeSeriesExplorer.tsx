@@ -36,7 +36,7 @@ const TimeSeriesExplorer: React.FC<TimeSeriesExplorerProps> = ({
     
     const markerSizes = data.map(d => {
       const pointId = `timeseries-${d.period}-${filters.metric}`;
-      return selectedPoints.has(pointId) ? 10 : 6;
+      return selectedPoints.has(pointId) ? 11 : 6;
     });
     
     // Main series with dynamic marker styling for selections

@@ -167,6 +167,17 @@ const QuickInsightsAssistant: React.FC<QuickInsightsAssistantProps> = ({
                 const dev = avg !== 0 ? ((value - avg) / avg) * 100 : 0;
                 insights.push(`• Seasonal baseline: typical ${getMonthName(month)} is $${Math.round(avg).toLocaleString()} (${dev >= 0 ? '+' : ''}${toPct(dev)} vs baseline).`);
 
+                // Extra seasonal context vs overall monthly average
+                const allMonthValues = seasonality
+                  .map((s: any) => Number(s.revenue))
+                  .filter((v: number) => isFinite(v));
+                if (allMonthValues.length >= 6) {
+                  const overallAvg = allMonthValues.reduce((a: number, b: number) => a + b, 0) / allMonthValues.length;
+                  const liftPct = overallAvg !== 0 ? ((avg - overallAvg) / overallAvg) * 100 : 0;
+                  const strength = Math.abs(liftPct) >= 20 ? 'strong' : Math.abs(liftPct) >= 10 ? 'moderate' : 'weak';
+                  insights.push(`• Seasonality: ${strength} for ${getMonthName(month)} (${liftPct >= 0 ? '+' : ''}${toPct(liftPct)} vs overall monthly avg ~$${Math.round(overallAvg).toLocaleString()}).`);
+                }
+
                 // Best and worst years for this month
                 const best = monthRows.reduce((m, r) => (r.revenue > m.revenue ? r : m), monthRows[0]);
                 const worst = monthRows.reduce((m, r) => (r.revenue < m.revenue ? r : m), monthRows[0]);
@@ -184,6 +195,13 @@ const QuickInsightsAssistant: React.FC<QuickInsightsAssistantProps> = ({
                 const std = Math.sqrt(Math.max(0, variance));
                 const cv = avg !== 0 ? (std / avg) * 100 : 0;
                 insights.push(`• Volatility: σ≈$${Math.round(std).toLocaleString()} (CV ${toPct(cv)}).`);
+
+                // Confidence label and anomaly flag
+                const confidence = cv < 20 ? 'high' : cv < 40 ? 'medium' : 'low';
+                insights.push(`• Confidence: ${confidence} (based on volatility).`);
+                if (std > 0 && Math.abs(value - avg) > 1.5 * std) {
+                  insights.push(`• Outside seasonal band: current is unusually ${value > avg ? 'high' : 'low'} vs baseline (>|1.5σ|).`);
+                }
 
                 // YoY comparison for the same month
                 if (year) {
@@ -342,28 +360,27 @@ const QuickInsightsAssistant: React.FC<QuickInsightsAssistantProps> = ({
     const popupWidth = 400;
     const popupHeight = 300;
     const margin = 20;
+
+    // Account for window scroll so the tooltip tracks the page content
+    const scrollX = window.scrollX || document.documentElement.scrollLeft || 0;
+    const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
     
-    let left = position.x;
-    let top = position.y;
+    let left = (position.x || 0) + scrollX;
+    let top = (position.y || 0) + scrollY;
     
-    // Adjust horizontal position if too close to right edge
-    if (left + popupWidth > window.innerWidth - margin) {
-      left = window.innerWidth - popupWidth - margin;
+    // Clamp within viewport bounds plus scroll offsets
+    if (left + popupWidth > scrollX + window.innerWidth - margin) {
+      left = scrollX + window.innerWidth - popupWidth - margin;
+    }
+    if (left < scrollX + margin) {
+      left = scrollX + margin;
     }
     
-    // Adjust horizontal position if too close to left edge
-    if (left < margin) {
-      left = margin;
+    if (top + popupHeight > scrollY + window.innerHeight - margin) {
+      top = scrollY + window.innerHeight - popupHeight - margin;
     }
-    
-    // Adjust vertical position if too close to bottom edge
-    if (top + popupHeight > window.innerHeight - margin) {
-      top = window.innerHeight - popupHeight - margin;
-    }
-    
-    // Adjust vertical position if too close to top edge
-    if (top < margin) {
-      top = margin;
+    if (top < scrollY + margin) {
+      top = scrollY + margin;
     }
     
     return { left, top };
@@ -374,7 +391,7 @@ const QuickInsightsAssistant: React.FC<QuickInsightsAssistantProps> = ({
   return (
     <div
       style={{
-        position: 'fixed',
+        position: 'absolute',
         left: smartPosition.left,
         top: smartPosition.top,
         zIndex: 10000,

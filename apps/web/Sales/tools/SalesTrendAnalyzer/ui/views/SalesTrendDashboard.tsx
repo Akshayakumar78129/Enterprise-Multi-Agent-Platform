@@ -95,7 +95,11 @@ const SalesTrendDashboardInner: React.FC = () => {
     setUiFilters(prev => ({ ...prev, date_from: state.filters.startDate, date_to: state.filters.endDate }));
   }, [state.filters.startDate, state.filters.endDate]);
 
+  // Legacy API fetch (kept for reference); replaced by SalesFilterDataBridge which drives state.
   const fetchData = async () => {
+    // If DataBridge is active, skip legacy fetch to avoid double updates
+    // This keeps state in sync with ui-common filters (dates + dims)
+    if (true) return;
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
@@ -178,20 +182,9 @@ const SalesTrendDashboardInner: React.FC = () => {
       setSelectedPoints(selectionIds);
       setIsMultiSelectMode(selections.length > 0);
 
-      // Show combined analysis if multiple points selected
+      // Hide Quick Insights for combined (multi-selection) mode
       if (selections.length > 1) {
-        const analysis = chartSelectionManager.analyzeSelections();
-        if (analysis) {
-          // Show analysis in Quick Insights
-          setQuickInsightsData({
-            isMultiSelection: true,
-            analysis: analysis
-          });
-          setQuickInsightsChartInfo(null);
-          setQuickInsightsChartType('multi-selection');
-          setQuickInsightsPosition({ x: window.innerWidth / 2 - 200, y: 100 });
-          setQuickInsightsVisible(true);
-        }
+        setQuickInsightsVisible(false);
       }
     });
 
@@ -331,10 +324,10 @@ const SalesTrendDashboardInner: React.FC = () => {
         // Clear any existing multi-selections
         chartSelectionManager.clearSelections();
         
-        // Show Quick Insights Assistant at click position
+        // Show Quick Insights Assistant anchored to viewport near the click
         const x = domEvent?.clientX ?? Math.round(window.innerWidth / 2);
         const y = domEvent?.clientY ?? 120;
-        setQuickInsightsPosition({ x: x + 10, y: y - 10 });
+        setQuickInsightsPosition({ x: x + 10, y: y + 10 });
         setQuickInsightsData(clickedPoint);
         setQuickInsightsChartInfo(null);
         setQuickInsightsChartType(chartType);
@@ -848,6 +841,45 @@ const SalesTrendDashboardInner: React.FC = () => {
         selectionCount={selectedPoints.size}
         isVisible={isMultiSelectMode}
         onClearSelections={() => chartSelectionManager.clearSelections()}
+        onExplainSelections={() => {
+          // Build short 5-word descriptors and combined insights
+          const selections = chartSelectionManager.getSelections();
+          const analysis = chartSelectionManager.analyzeSelections();
+
+          const toFiveWords = (s: string) => {
+            const words = s.split(/\s+/).filter(Boolean);
+            return words.slice(0, 5).join(' ');
+          };
+
+          const pointSummaries = selections.map(p => {
+            // e.g., "Jan 2025 revenue spike" style
+            const month = (() => {
+              const m = (p.month || (p.date?.match(/\d{4}-(\d{2})/)?.[1])) || '';
+              const map = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+              const n = parseInt(String(m), 10);
+              return isFinite(n) && n >= 1 && n <= 12 ? map[n-1] : (p.date || '').slice(0,7);
+            })();
+            const yr = p.year || p.date?.slice(0,4) || '';
+            const metric = (p.metricName || 'value').toLowerCase();
+            const noun = /revenue|sales/.test(metric) ? 'sales' : /units/.test(metric) ? 'units' : /margin|profit/.test(metric) ? 'margin' : metric;
+            const tone = p.percentChange && Math.abs(p.percentChange) > 15 ? (p.percentChange > 0 ? 'surge' : 'drop') : 'change';
+            const raw = `${month} ${yr} ${noun} ${tone}`.trim();
+            return toFiveWords(raw);
+          });
+
+          // Open chat and seed context
+          setIsChatOpen(true);
+          // Ensure Quick Insights is hidden for combined insights
+          setQuickInsightsVisible(false);
+
+          // Set lastClickedPoint as a seed message with selections context for EnhancedContextAwareChatbot
+          setLastClickedPoint({
+            type: 'multi-selection',
+            contextId: Date.now(), // unique per Explain click
+            summaries: pointSummaries,
+            insights: analysis?.insights || [],
+          } as any);
+        }}
       />
 
       {/* Multi-Selection Guide */}

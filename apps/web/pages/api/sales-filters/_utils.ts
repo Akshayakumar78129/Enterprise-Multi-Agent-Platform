@@ -1,10 +1,17 @@
 import path from 'path';
 import sqlite3 from 'sqlite3';
+import fs from 'fs';
 
-export const DB_PATH = path.join(__dirname, '../../../../../Sales/database/sales_agent.db');
+// Resolve strictly to apps/web/Sales/database/sales_agent.db under the project root
+// Using process.cwd() (Next server working dir is apps/web) ensures the exact path:
+// E:\multiagent-agency\apps\web\Sales\database\sales_agent.db
+export const DB_PATH = path.resolve(process.cwd(), 'Sales', 'database', 'sales_agent.db');
 
 export function openDb() {
-  console.log("DB_PATH", DB_PATH);
+  console.log('[sales-filters] DB_PATH', DB_PATH);
+  if (!fs.existsSync(DB_PATH)) {
+    console.error('[sales-filters] Database not found at', DB_PATH);
+  }
   sqlite3.verbose();
   return new sqlite3.Database(DB_PATH, sqlite3.OPEN_READONLY);
 }
