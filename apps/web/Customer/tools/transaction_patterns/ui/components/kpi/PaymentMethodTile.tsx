@@ -136,7 +136,6 @@ export const PaymentMethodTile: React.FC<PaymentMethodTileProps> = ({ className 
     <KpiTile
       title="Top Payment Method"
       value={topMethod}
-      prefix="💼"
       subValue={formatPercentage(topPercentage)}
       icon={<div style={{ display: 'flex', alignItems: 'center' }}>
         <PaymentIcon />

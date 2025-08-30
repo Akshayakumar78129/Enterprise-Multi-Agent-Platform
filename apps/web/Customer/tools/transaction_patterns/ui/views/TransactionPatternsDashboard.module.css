@@ -11,163 +11,79 @@
   padding: 2rem 2rem 4rem; /* Add more padding at the bottom */
 }
 
-/* Header Styles */
+/* Header Styles with Glassmorphism */
 .header {
   text-align: center;
-  margin-bottom: 2rem;
-}
-
-.title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin: 0;
-  text-shadow: 0 0 30px rgba(251, 191, 36, 0.3);
-}
-
-/* Filter Section */
-.filterSection {
+  margin-bottom: 3rem;
+  padding: 2.5rem;
+  background: rgba(30, 41, 59, 0.3);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 30px;
+  border: 1px solid rgba(251, 191, 36, 0.1);
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.3),
+    0 0 40px rgba(251, 191, 36, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  animation: slideDown 0.8s ease-out;
   position: relative;
-  z-index: 1650;
-  margin-bottom: 24px;
+  overflow: hidden;
 }
 
-.dateRangeContainer {
-  background: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(12px);
-  border-radius: 16px;
-  border: 1px solid rgba(0, 224, 255, 0.2);
-  padding: 16px 20px;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-}
-
-.dateRangeContainer:hover {
-  border-color: rgba(0, 224, 255, 0.4);
-  box-shadow: 0 8px 32px rgba(0, 224, 255, 0.1);
-}
-
-.filterHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.filterTitle {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #00e0ff;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.filterStats {
-  font-size: 0.75rem;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.loadingOverlay {
+.header::before {
+  content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  background: rgba(15, 23, 42, 0.8);
-  backdrop-filter: blur(4px);
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(251, 191, 36, 0.5) 50%, 
+    transparent 100%);
+  animation: shimmerLine 3s ease-in-out infinite;
 }
 
-.loadingSpinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid rgba(0, 224, 255, 0.2);
-  border-top: 2px solid #00e0ff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.title {
+  font-size: 3.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 0.75rem 0;
+  text-shadow: 0 0 50px rgba(251, 191, 36, 0.5);
+  letter-spacing: -0.02em;
+  animation: shimmer 3s ease-in-out infinite;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.subtitle {
+  font-size: 1.125rem;
+  color: #cbd5e1;
+  font-weight: 400;
+  margin: 0;
+  opacity: 0.95;
+  animation: fadeIn 1s ease-out 0.3s both;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-
-
-/* Brain Icon Button - positioned on top of FloatingAI */
-.brainIconContainer {
-  position: fixed;
-  bottom: 140px; /* Position above the FloatingAI chat button */
-  right: 24px;
-  z-index: 1000;
-}
-
-.brainIconButton {
-  width: 56px;
-  height: 56px;
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  color: white;
-  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-  border: 2px solid rgba(255, 255, 255, 0.1);
+/* Main Content */
+.mainContent {
   position: relative;
+  z-index: 10;
+  animation: fadeInUp 0.8s ease-out 0.2s both;
 }
 
-.selectionCounter {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  background: #ef4444;
-  color: white;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: bold;
-  border: 2px solid white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.brainIconButton:hover:not(.disabled) {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 6px 25px rgba(59, 130, 246, 0.5);
-  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-}
-
-.brainIconButton.disabled {
-  opacity: 0.6;
-  cursor: pointer; /* Still clickable to show the message */
-  background: rgba(148, 163, 184, 0.5);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-}
-
-.brainIconButton.disabled:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  opacity: 0.8;
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Charts Grid */
@@ -178,22 +94,26 @@
   margin-top: 2rem; /* Added top margin for spacing from KPIs */
 }
 
-/* Glassmorphism Card Styles */
+/* Enhanced Glassmorphism Card Styles */
 .dashboardCard {
-  background: rgba(30, 41, 59, 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 20px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(135deg, 
+    rgba(30, 41, 59, 0.5) 0%, 
+    rgba(51, 65, 85, 0.3) 100%);
+  backdrop-filter: blur(30px) saturate(150%);
+  -webkit-backdrop-filter: blur(30px) saturate(150%);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 2rem;
   position: relative;
-  /* Allow dropdowns/popups to escape the card */
-  overflow: visible;
+  overflow: hidden;
   box-shadow: 
-    0 4px 6px rgba(0, 0, 0, 0.1),
-    0 0 20px rgba(251, 191, 36, 0.05);
-  transition: all 0.3s ease;
-  min-height: 450px; /* Ensure card has enough height */
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(251, 191, 36, 0.02),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 450px;
+  animation: cardEntry 0.6s ease-out backwards;
 }
 
 .dashboardCard::before {
@@ -202,31 +122,47 @@
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  background: radial-gradient(circle at 50% 0%, rgba(251, 191, 36, 0.1), transparent 60%);
-  pointer-events: none;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(139, 92, 246, 0.5) 50%, 
+    transparent 100%);
+  animation: shimmerLine 3s ease-in-out infinite;
 }
 
 .dashboardCard:hover {
-  transform: translateY(-2px);
+  transform: translateY(-8px) scale(1.02);
   box-shadow: 
-    0 8px 25px rgba(0, 0, 0, 0.2),
-    0 0 30px rgba(251, 191, 36, 0.1);
-  border-color: rgba(251, 191, 36, 0.3);
+    0 30px 80px rgba(0, 0, 0, 0.4),
+    0 0 60px rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.3);
 }
+
+.dashboardCard:nth-child(1) { animation-delay: 0.1s; }
+.dashboardCard:nth-child(2) { animation-delay: 0.2s; }
+.dashboardCard:nth-child(3) { animation-delay: 0.3s; }
+.dashboardCard:nth-child(4) { animation-delay: 0.4s; }
 
 /* Chart Title Styles */
 .chartTitle {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 600;
   margin-bottom: 1.5rem;
-  background: linear-gradient(135deg, #f8fafc 0%, #cbd5e1 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-align: center;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   position: relative;
   z-index: 1;
+}
+
+.chartTitle::before {
+  content: '';
+  width: 4px;
+  height: 20px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border-radius: 2px;
+  animation: pulse 2s ease-in-out infinite;
 }
 
 /* Loading States */
@@ -280,6 +216,30 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Glow Effects */
+.glowEffect {
+  position: relative;
+}
+
+.glowEffect::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.glowEffect:hover::after {
+  opacity: 1;
 }
 
 .heading-primary {
@@ -462,147 +422,168 @@
   gap: 24px;
 }
 
-/* Small side insight panel */
-.smallInsightPanel {
-  position: fixed;
-  right: 16px;
-  top: 96px;
-  max-width: 320px;
-  background: rgba(35,42,54,0.96);
-  border: 1px solid rgba(255,255,255,0.09);
-  border-radius: 8px;
-  padding: 12px 14px;
-  color: #dbe7ff;
-  z-index: 1000;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+.loadingSpinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(139, 92, 246, 0.2);
+  border-top: 4px solid #8b5cf6;
+  border-radius: 50%;
+  animation: spin 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
 }
-.smallInsightTitle {
-  color: #a5b4fc;
-  font-weight: 600;
-  margin: 0 0 6px 0;
-  font-size: 13px;
+
+.loadingText {
+  font-size: 1.125rem;
+  color: #94a3b8;
+  animation: pulse 1.5s ease-in-out infinite;
 }
-.smallInsightList {
-  margin: 0;
-  padding-left: 16px;
-  font-size: 12px;
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
-.smallInsightClose {
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  background: transparent;
-  color: #c9d5ee;
-  border: none;
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cardEntry {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0%, 100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.9;
+    filter: brightness(1.2);
+  }
+}
+
+@keyframes shimmerLine {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* KPI Tiles */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.kpi-tile-wrapper {
   cursor: pointer;
+}
+
+.kpi-tile-custom {
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--border-radius-lg) !important;
+  padding: var(--spacing-md) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  box-shadow: var(--shadow-lg) !important;
+  transition: transform 0.3s var(--transition-timing), box-shadow 0.3s var(--transition-timing) !important;
+  height: 100%;
+}
+
+.kpi-tile-custom:hover {
+  transform: translateY(-5px) scale(1.03) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4) !important;
+  border-color: var(--accent-primary-hover) !important;
+}
+
+.kpi-tile-custom .kpi-label {
+  color: var(--text-secondary) !important;
   font-size: 14px;
 }
 
-/* =============================
-   BI Agents Popup (matches FloatingAIChat UI)
-   ============================= */
-.biSlidingPanel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 420px;
-  height: 100vh;
-  background: linear-gradient(135deg, rgba(26, 31, 46, 0.98), rgba(42, 47, 62, 0.98));
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-left: 1px solid rgba(59, 130, 246, 0.3);
-  z-index: 1002;
-  display: flex;
-  flex-direction: column;
-  box-shadow: -20px 0 60px rgba(0, 0, 0, 0.3);
-  overflow: hidden;
-}
-
-/* Mode accents (optional) */
-.quick .biPanelHeader { background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(20, 184, 166, 0.12)); border-bottom: 1px solid rgba(16, 185, 129, 0.25); }
-.strategic .biPanelHeader { background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(139, 92, 246, 0.12)); border-bottom: 1px solid rgba(59, 130, 246, 0.3); }
-.forecast .biPanelHeader { background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(99, 102, 241, 0.12)); border-bottom: 1px solid rgba(99, 102, 241, 0.3); }
-.intelligence .biPanelHeader { background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(251, 191, 36, 0.12)); border-bottom: 1px solid rgba(245, 158, 11, 0.3); }
-
-.biPanelHeader {
-  padding: 20px 24px;
-  border-bottom: 1px solid rgba(58, 68, 89, 0.5);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.biIcon {
-  margin-right: 8px;
-  font-size: 20px;
-}
-
-.biPanelHeader h4 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
+.kpi-tile-custom .kpi-value {
+  color: var(--text-primary) !important;
+  font-size: 28px;
   font-weight: 700;
-  font-size: 16px;
-  color: #f8fafc;
-}
-
-.closePanelButton {
-  background: none;
-  border: none;
-  color: #94a3b8;
-  font-size: 20px;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-}
-.closePanelButton:hover { color: #f8fafc; }
-
-.biPanelContent {
-  padding: 16px 20px;
-  overflow-y: auto;
-  flex: 1;
-}
-
-.biHeader {
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.3px;
-  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  background: var(--text-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  margin: 10px 0 8px 0;
 }
 
-.biBulletPoint {
+.kpi-tile-custom .kpi-subvalue {
+  color: var(--text-secondary) !important;
+  font-size: 14px;
+}
+
+.kpi-tile-custom .kpi-trend {
+  font-weight: 600;
+}
+
+/* Dashboard Cards */
+.dashboard-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-lg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-lg);
+}
+
+.card-header {
   display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  background: rgba(30, 39, 56, 0.6);
-  border: 1px solid rgba(58, 68, 89, 0.3);
-  border-radius: 10px;
-  padding: 10px 12px;
-  margin: 8px 0;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
-.bulletIcon {
-  color: #10b981;
-  font-weight: 900;
+.card-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--accent-gradient);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
 }
 
-.bulletContent { display: flex; gap: 6px; flex-wrap: wrap; }
-.bulletTitle { font-weight: 700; color: #e2e8f0; font-size: 13px; }
-.bulletText { color: #cbd5e1; font-size: 13px; }
-
-.biRegularText { color: #e2e8f0; font-size: 13px; line-height: 1.5; margin: 6px 0; }
-
-.biPanelFooter {
-  padding: 10px 20px;
-  border-top: 1px solid rgba(58, 68, 89, 0.5);
-  font-size: 12px;
-  color: #94a3b8;
-  background: rgba(59, 130, 246, 0.06);
+.card-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  background: var(--text-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }

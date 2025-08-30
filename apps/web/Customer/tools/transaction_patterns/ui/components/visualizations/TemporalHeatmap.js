@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import { handleChartClick } from '../../utils/chartSelectionHelper';
 import { Card } from "../../../../../../ui-common/design-system/components/Card";
 import dynamic from "next/dynamic";
+import { handleChartClick } from "../../utils/chartSelectionHelper";
 
 // Dynamic import for Plotly to avoid SSR issues
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
@@ -11,15 +11,12 @@ const TemporalHeatmap = ({
   isLoading = false,
   width = 600,
   height = 400,
-  onCellClick = null,
   highlightCells = [],
   colorScale = null
 }) => {
   const [plotData, setPlotData] = useState(null);
   const [keyPoints, setKeyPoints] = useState([]);
   const plotRef = useRef(null);
-
-  const selectedLookup = new Set((highlightCells||[]).map(h => `${h.day}|${h.hour}`));
 
   useEffect(() => {
     if (!data || data.length === 0) return;
@@ -32,46 +29,19 @@ const TemporalHeatmap = ({
     const matrix = days.map(day => 
       hours.map(hour => {
         const point = data.find(d => d.day === day && d.hour === hour);
-        const base = point ? point.transactionCount : 0;
-        // Slightly boost selected cells to emphasize highlight via color
-        return selectedLookup.has(`${day}|${hour}`) ? base * 1.05 : base;
+        return point ? point.transactionCount : 0;
       })
     );
 
-    // Custom text for hover with business explanations
+    // Custom text for hover
     const hoverText = days.map(day => 
       hours.map(hour => {
         const point = data.find(d => d.day === day && d.hour === hour);
-        const timeLabel = hour === 0 ? '12:00 AM' : hour < 12 ? `${hour}:00 AM` : hour === 12 ? '12:00 PM' : `${hour-12}:00 PM`;
-        
         if (!point || point.transactionCount === 0) {
-          return `📅 <b>${day} at ${timeLabel}</b><br>` +
-                 `📊 No transactions recorded<br>` +
-                 `💡 <i>This time slot shows no customer activity</i><br>` +
-                 `🎯 <i>Consider this for maintenance windows</i>`;
+          return `${day} ${hour}:00<br>No transactions`;
         }
-        
         const avgAmount = point.avgAmount || 0;
-        const totalValue = point.transactionCount * avgAmount;
-        
-        // Determine business context
-        let context = '';
-        if (hour >= 9 && hour <= 17) {
-          context = '💼 <i>Business hours - peak activity expected</i>';
-        } else if (hour >= 18 && hour <= 22) {
-          context = '🌆 <i>Evening hours - leisure shopping time</i>';
-        } else if (hour >= 6 && hour <= 8) {
-          context = '🌅 <i>Morning hours - commuter activity</i>';
-        } else {
-          context = '🌙 <i>Off-hours - limited activity expected</i>';
-        }
-        
-        return `📅 <b>${day} at ${timeLabel}</b><br>` +
-               `📊 <b>Transactions:</b> ${point.transactionCount.toLocaleString()}<br>` +
-               `💰 <b>Average Value:</b> $${avgAmount.toFixed(2)}<br>` +
-               `💵 <b>Total Revenue:</b> $${totalValue.toLocaleString()}<br>` +
-               `${context}<br>` +
-               `🔍 <i>Click to analyze this time period in detail</i>`;
+        return `${day} ${hour}:00<br>Transactions: ${point.transactionCount}<br>Avg Amount: $${avgAmount.toFixed(2)}`;
       })
     );
 
@@ -90,7 +60,7 @@ const TemporalHeatmap = ({
       type: 'heatmap',
       colorscale: colorScale || defaultColorScale,
       hoverongaps: false,
-      hoverinfo: 'skip',
+      hovertemplate: '%{text}<extra></extra>',
       text: hoverText,
       showscale: true,
       colorbar: {
@@ -132,7 +102,7 @@ const TemporalHeatmap = ({
     ]);
 
     setPlotData([trace,]);
-  }, [data, colorScale, highlightCells]);
+  }, [data, colorScale]);
 
   const layout = {
     title: {
@@ -161,9 +131,7 @@ const TemporalHeatmap = ({
       gridcolor: '#3a4a5c',
       showgrid: true,
       zeroline: false
-    },
-    hovermode: 'closest',
-    clickmode: 'event+select'
+    }
   };
 
   // Add an annotation for the peak cell for quick visual cue
@@ -196,51 +164,40 @@ const TemporalHeatmap = ({
     responsive: true
   };
 
-  // Local mini insight shown atop the heatmap
-  const [miniInsight, setMiniInsight] = useState(null); // { title, bullets: string[] }
-
-
-
   const handlePlotClick = (event) => {
     if (!event.points || event.points.length === 0) return;
-
-    const nativeEvt = event?.event || event?.nativeEvent || event;
-    const isShiftClick = !!(nativeEvt?.shiftKey);
-
+    
     const point = event.points[0];
     const day = point.y;
     const hour = parseInt(point.x.split(':')[0]);
-
-    if (isShiftClick) {
-      // Minimal inline insight on Shift selection
-      const bullets = [];
-      const baseText = point?.text;
-      if (typeof baseText === 'string') {
-        const txMatch = baseText.match(/Transactions:\s*([\d,]+)/i);
-        const avgMatch = baseText.match(/Average Value:\s*\$([\d,.]+)/i);
-        if (txMatch) bullets.push(`Transactions: ${txMatch[1]}`);
-        if (avgMatch) bullets.push(`Avg value: $${avgMatch[1]}`);
-      }
-      if (bullets.length === 0) bullets.push(`Selected ${day} ${hour}:00`);
-      setMiniInsight({ title: `Activity for ${day} at ${hour}:00`, bullets: bullets.slice(0,3) });
-
-      // Multi-select via helper
-      try {
-        handleChartClick({
-          chartId: 'heatmap',
-          chartType: 'heatmap',
-          label: `${day} ${hour}:00`,
-          value: point.z,
-          unit: ' tx',
-          index: hour,
-          metadata: { day, hour }
-        }, nativeEvt);
-      } catch {}
-      return;
+    const value = point.z;
+    
+    // Find the actual data point to get avgAmount
+    const dataPoint = data.find(d => d.day === day && d.hour === hour);
+    const avgAmount = dataPoint?.avgAmount || 0;
+    
+    // Get the actual mouse event with coordinates
+    const mouseEvent = event.event || {};
+    // If no clientX/Y, try to get from the Plotly event
+    if (!mouseEvent.clientX && event.event) {
+      mouseEvent.clientX = event.event.pageX || event.event.x || window.innerWidth / 2;
+      mouseEvent.clientY = event.event.pageY || event.event.y || window.innerHeight / 2;
     }
-
-    // Regular click behavior (no selection)
-    if (onCellClick) onCellClick(day, hour, nativeEvt);
+    
+    // Use the chart selection helper for multi-select support
+    handleChartClick({
+      chartId: 'temporal-heatmap',
+      chartType: 'Temporal Heatmap',
+      label: `${day} ${hour}:00`,
+      value: value,
+      unit: ' transactions',
+      metadata: {
+        day,
+        hour,
+        avgAmount: avgAmount,
+        formattedAvgAmount: `$${avgAmount.toFixed(2)}`
+      }
+    }, mouseEvent);
   };
 
   if (!data || data.length === 0) {
@@ -269,14 +226,8 @@ const TemporalHeatmap = ({
       title="Transaction Heatmap"
       subtitle={`${totalTransactions.toLocaleString()} total transactions • Peak: ${maxTransactions} transactions`}
       isLoading={isLoading}
-      tooltip="Shows transaction patterns by day of week and hour.\nDarker colors indicate higher transaction volumes. Click cells for detailed analysis."
     >
-      <div 
-        data-type="chart" 
-        data-title="Transaction Temporal Heatmap" 
-        data-value={`${totalTransactions.toLocaleString()} total transactions`}
-        style={{ width: '100%', height: '100%' }}
-      >
+      <div style={{ width: '100%', height: '100%' }}>
         {plotData && (
           <Plot
             ref={plotRef}
@@ -286,26 +237,6 @@ const TemporalHeatmap = ({
             onClick={handlePlotClick}
             style={{ width: '100%', height: '100%' }}
           />
-        )}
-        {miniInsight && (
-          <div style={{
-            position: 'absolute',
-            top: 8,
-            left: 12,
-            background: 'rgba(35,42,54,0.92)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 8,
-            padding: '8px 10px',
-            color: '#dbe7ff',
-            fontSize: 12,
-            zIndex: 5,
-            maxWidth: 320
-          }}>
-            <div style={{ fontWeight: 600, marginBottom: 4, color: '#a5b4fc' }}>{miniInsight.title}</div>
-            <ul style={{ margin: 0, paddingLeft: 16 }}>
-              {miniInsight.bullets.map((b, i)=>(<li key={i} style={{ marginBottom: 2 }}>{b}</li>))}
-            </ul>
-          </div>
         )}
       </div>
       {keyPoints && keyPoints.length > 0 && (

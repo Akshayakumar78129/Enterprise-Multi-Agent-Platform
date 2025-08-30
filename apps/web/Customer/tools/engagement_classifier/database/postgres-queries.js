@@ -1,33 +1,37 @@
-const sqlite3 = require("sqlite3").verbose();
-const path = require("path");
+const { Pool } = require('pg');
 
-class EngagementClassifierQueries {
+class EngagementClassifierPostgresQueries {
   constructor() {
-    this.dbPath = path.resolve(
-      process.cwd(),
-      "Customer/database/customers.db"
-    );
+    this.pool = new Pool({
+      connectionString: process.env.POSTGRES_DATABASE_URL,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    });
   }
 
   async getEngagementData(filters = {}) {
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(this.dbPath);
-      
+    try {
       // Build date filter if provided
       let dateFilter = "";
+      const params = [];
+      let paramCount = 0;
+
       if (filters.startDate && filters.endDate) {
-        dateFilter = `AND cl."Last Activity Date" BETWEEN '${filters.startDate}' AND '${filters.endDate}'`;
+        params.push(filters.startDate, filters.endDate);
+        dateFilter = `AND cl."Last Activity Date" BETWEEN $${++paramCount} AND $${++paramCount}`;
       }
 
       // Build engagement level filter if provided
       let engagementFilter = "";
       if (filters.engagementLevels && filters.engagementLevels.length > 0) {
-        const levels = filters.engagementLevels.map(l => `'${l}'`).join(',');
+        const levels = filters.engagementLevels.map((_, i) => `$${++paramCount + params.length}`);
+        params.push(...filters.engagementLevels);
         engagementFilter = `AND (CASE 
           WHEN cl."Days Since Last Activity" <= 30 THEN 'High'
           WHEN cl."Days Since Last Activity" <= 90 THEN 'Medium'
           ELSE 'Low'
-        END) IN (${levels})`;
+        END) IN (${levels.join(',')})`;
       }
 
       const query = `
@@ -58,9 +62,9 @@ class EngagementClassifierQueries {
               ELSE 3
             END as engagement_sort
           FROM 
-            dbo_D_Customer c
+            dbo_d_customer c
           LEFT JOIN 
-            dbo_F_Customer_Loyalty cl ON c."Customer Key" = cl."Entity Key"
+            dbo_f_customer_loyalty cl ON c."Customer Key" = cl."Entity Key"
           WHERE 
             cl."Days Since Last Activity" IS NOT NULL
             ${dateFilter}
@@ -84,27 +88,27 @@ class EngagementClassifierQueries {
           engagement_level,
           engagement_sort
         FROM CustomerEngagementData
-        ORDER BY engagement_sort, "Days Since Last Activity";
+        ORDER BY engagement_sort, "Days Since Last Activity"
+        LIMIT 5000;
       `;
 
-      db.all(query, (err, rows) => {
-        db.close();
-        if (err) {
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-    });
+      const result = await this.pool.query(query, params);
+      return result.rows;
+    } catch (error) {
+      console.error('Error in getEngagementData:', error);
+      throw error;
+    }
   }
 
   async getKPIData(filters = {}) {
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(this.dbPath);
-      
+    try {
       let dateFilter = "";
+      const params = [];
+      let paramCount = 0;
+
       if (filters.startDate && filters.endDate) {
-        dateFilter = `AND cl."Last Activity Date" BETWEEN '${filters.startDate}' AND '${filters.endDate}'`;
+        params.push(filters.startDate, filters.endDate);
+        dateFilter = `AND cl."Last Activity Date" BETWEEN $${++paramCount} AND $${++paramCount}`;
       }
 
       const query = `
@@ -118,11 +122,11 @@ class EngagementClassifierQueries {
             COUNT(CASE WHEN cl."Days Since Last Activity" > 90 THEN 1 END) as low_engagement_count,
             AVG(cl."Avg Sales Amount") as avg_purchase_value,
             AVG(cl."Number Sales Txns") as avg_transaction_frequency,
-            COUNT(CASE WHEN cl."Loyalty Status" IN ('Active', 'Loyal') AND cl."Days Since Last Activity" > 90 THEN 1 END) as reengagement_opportunities
+            COUNT(CASE WHEN cl."Loyalty Status" IN ('Active', 'Loyal', 'Active, Loyal') AND cl."Days Since Last Activity" > 90 THEN 1 END) as reengagement_opportunities
           FROM 
-            dbo_D_Customer c
+            dbo_d_customer c
           LEFT JOIN 
-            dbo_F_Customer_Loyalty cl ON c."Customer Key" = cl."Entity Key"
+            dbo_f_customer_loyalty cl ON c."Customer Key" = cl."Entity Key"
           WHERE 
             cl."Days Since Last Activity" IS NOT NULL
             ${dateFilter}
@@ -130,41 +134,42 @@ class EngagementClassifierQueries {
         SELECT * FROM EngagementKPIs;
       `;
 
-      db.get(query, (err, row) => {
-        db.close();
-        if (err) {
-          reject(err);
-        } else {
-          // Calculate engagement trend (simplified as positive/negative based on score)
-          const engagementTrend = row.avg_engagement_score > 7 ? 'Improving' : 
-                                 row.avg_engagement_score > 5 ? 'Stable' : 'Declining';
-          
-          resolve({
-            total_customers: row.total_customers || 0,
-            avg_engagement_score: Math.round(row.avg_engagement_score || 0),
-            avg_days_since_activity: Math.round(row.avg_days_since_activity || 0),
-            engagement_trend: engagementTrend,
-            reengagement_opportunities: row.reengagement_opportunities || 0,
-            engagement_distribution: {
-              high: row.high_engagement_count || 0,
-              medium: row.medium_engagement_count || 0,
-              low: row.low_engagement_count || 0
-            },
-            avg_purchase_value: row.avg_purchase_value || 0,
-            avg_transaction_frequency: row.avg_transaction_frequency || 0
-          });
-        }
-      });
-    });
+      const result = await this.pool.query(query, params);
+      const row = result.rows[0];
+      
+      // Calculate engagement trend
+      const engagementTrend = parseFloat(row.avg_engagement_score) > 7 ? 'Improving' : 
+                             parseFloat(row.avg_engagement_score) > 5 ? 'Stable' : 'Declining';
+      
+      return {
+        total_customers: parseInt(row.total_customers) || 0,
+        avg_engagement_score: Math.round(parseFloat(row.avg_engagement_score) || 0),
+        avg_days_since_activity: Math.round(parseFloat(row.avg_days_since_activity) || 0),
+        engagement_trend: engagementTrend,
+        reengagement_opportunities: parseInt(row.reengagement_opportunities) || 0,
+        engagement_distribution: {
+          high: parseInt(row.high_engagement_count) || 0,
+          medium: parseInt(row.medium_engagement_count) || 0,
+          low: parseInt(row.low_engagement_count) || 0
+        },
+        avg_purchase_value: parseFloat(row.avg_purchase_value) || 0,
+        avg_transaction_frequency: parseFloat(row.avg_transaction_frequency) || 0
+      };
+    } catch (error) {
+      console.error('Error in getKPIData:', error);
+      throw error;
+    }
   }
 
   async getEngagementDistribution(filters = {}) {
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(this.dbPath);
-      
+    try {
       let dateFilter = "";
+      const params = [];
+      let paramCount = 0;
+
       if (filters.startDate && filters.endDate) {
-        dateFilter = `AND cl."Last Activity Date" BETWEEN '${filters.startDate}' AND '${filters.endDate}'`;
+        params.push(filters.startDate, filters.endDate);
+        dateFilter = `AND cl."Last Activity Date" BETWEEN $${++paramCount} AND $${++paramCount}`;
       }
 
       const query = `
@@ -180,12 +185,12 @@ class EngagementClassifierQueries {
             AVG(cl."Avg Sales Amount") as avg_purchase_value,
             AVG(cl."Days Since Last Activity") as avg_days_since_activity,
             AVG(cl."RFM Score") as avg_rfm_score,
-            COUNT(CASE WHEN cl."Loyalty Status" = 'Loyal' THEN 1 END) as loyal_customers,
+            COUNT(CASE WHEN cl."Loyalty Status" LIKE '%Loyal%' THEN 1 END) as loyal_customers,
             SUM(COALESCE(cl."LTD Sales Amount", 0)) as total_ltd_sales
           FROM 
-            dbo_D_Customer c
+            dbo_d_customer c
           LEFT JOIN 
-            dbo_F_Customer_Loyalty cl ON c."Customer Key" = cl."Entity Key"
+            dbo_f_customer_loyalty cl ON c."Customer Key" = cl."Entity Key"
           WHERE 
             cl."Days Since Last Activity" IS NOT NULL
             ${dateFilter}
@@ -195,44 +200,47 @@ class EngagementClassifierQueries {
               WHEN cl."Days Since Last Activity" <= 90 THEN 'Medium'
               ELSE 'Low'
             END
+        ),
+        TotalCount AS (
+          SELECT SUM(customer_count) as total FROM EngagementDistribution
         )
         SELECT 
-          engagement_level,
-          customer_count,
-          avg_transactions,
-          avg_purchase_value,
-          avg_days_since_activity,
-          avg_rfm_score,
-          loyal_customers,
-          total_ltd_sales,
-          ROUND((customer_count * 100.0 / (SELECT SUM(customer_count) FROM EngagementDistribution)), 2) as percentage
-        FROM EngagementDistribution
+          ed.engagement_level,
+          ed.customer_count::int,
+          ed.avg_transactions,
+          ed.avg_purchase_value,
+          ed.avg_days_since_activity,
+          ed.avg_rfm_score,
+          ed.loyal_customers::int,
+          ed.total_ltd_sales,
+          ROUND((ed.customer_count * 100.0 / NULLIF(tc.total, 0)), 2) as percentage
+        FROM EngagementDistribution ed
+        CROSS JOIN TotalCount tc
         ORDER BY 
-          CASE engagement_level
+          CASE ed.engagement_level
             WHEN 'High' THEN 1
             WHEN 'Medium' THEN 2
             WHEN 'Low' THEN 3
           END;
       `;
 
-      db.all(query, (err, rows) => {
-        db.close();
-        if (err) {
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-    });
+      const result = await this.pool.query(query, params);
+      return result.rows;
+    } catch (error) {
+      console.error('Error in getEngagementDistribution:', error);
+      throw error;
+    }
   }
 
   async getRFMAnalysis(filters = {}) {
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(this.dbPath);
-      
+    try {
       let dateFilter = "";
+      const params = [];
+      let paramCount = 0;
+
       if (filters.startDate && filters.endDate) {
-        dateFilter = `AND cl."Last Activity Date" BETWEEN '${filters.startDate}' AND '${filters.endDate}'`;
+        params.push(filters.startDate, filters.endDate);
+        dateFilter = `AND cl."Last Activity Date" BETWEEN $${++paramCount} AND $${++paramCount}`;
       }
 
       const query = `
@@ -243,15 +251,15 @@ class EngagementClassifierQueries {
               WHEN cl."Days Since Last Activity" <= 90 THEN 'Medium'
               ELSE 'Low'
             END as engagement_level,
-            cl."Recency Band",
-            cl."Frequency Band",
-            cl."Monetary Band",
+            cl."Recency Band" as recency_band,
+            cl."Frequency Band" as frequency_band,
+            cl."Monetary Band" as monetary_band,
             COUNT(*) as customer_count,
             AVG(cl."RFM Score") as avg_rfm_score
           FROM 
-            dbo_D_Customer c
+            dbo_d_customer c
           LEFT JOIN 
-            dbo_F_Customer_Loyalty cl ON c."Customer Key" = cl."Entity Key"
+            dbo_f_customer_loyalty cl ON c."Customer Key" = cl."Entity Key"
           WHERE 
             cl."Days Since Last Activity" IS NOT NULL
             AND cl."Recency Band" IS NOT NULL
@@ -259,27 +267,37 @@ class EngagementClassifierQueries {
             AND cl."Monetary Band" IS NOT NULL
             ${dateFilter}
           GROUP BY 
-            engagement_level, cl."Recency Band", cl."Frequency Band", cl."Monetary Band"
+            CASE 
+              WHEN cl."Days Since Last Activity" <= 30 THEN 'High'
+              WHEN cl."Days Since Last Activity" <= 90 THEN 'Medium'
+              ELSE 'Low'
+            END, 
+            cl."Recency Band", 
+            cl."Frequency Band", 
+            cl."Monetary Band"
         )
-        SELECT * FROM RFMAnalysis
-        ORDER BY engagement_level, avg_rfm_score DESC;
+        SELECT 
+          engagement_level,
+          recency_band,
+          frequency_band,
+          monetary_band,
+          customer_count::int,
+          avg_rfm_score
+        FROM RFMAnalysis
+        ORDER BY engagement_level, avg_rfm_score DESC
+        LIMIT 50;
       `;
 
-      db.all(query, (err, rows) => {
-        db.close();
-        if (err) {
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-    });
+      const result = await this.pool.query(query, params);
+      return result.rows;
+    } catch (error) {
+      console.error('Error in getRFMAnalysis:', error);
+      throw error;
+    }
   }
 
   async getReengagementOpportunities(filters = {}) {
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(this.dbPath);
-      
+    try {
       const query = `
         WITH ReengagementOpportunities AS (
           SELECT 
@@ -295,7 +313,7 @@ class EngagementClassifierQueries {
               WHEN cl."LTD Sales Amount" > 10000 AND cl."Days Since Last Activity" BETWEEN 31 AND 180 THEN 'High Value Winback'
               WHEN cl."LTD Sales Amount" > 5000 AND cl."Days Since Last Activity" BETWEEN 31 AND 120 THEN 'Medium Value Nurture'
               WHEN cl."Number Sales Txns" > 5 AND cl."Days Since Last Activity" BETWEEN 31 AND 90 THEN 'Frequent Buyer Reactivation'
-              WHEN cl."Loyalty Status" = 'Loyal' AND cl."Days Since Last Activity" > 60 THEN 'Loyal Customer Recovery'
+              WHEN cl."Loyalty Status" LIKE '%Loyal%' AND cl."Days Since Last Activity" > 60 THEN 'Loyal Customer Recovery'
               ELSE 'Standard Reengagement'
             END as opportunity_type,
             CASE 
@@ -309,9 +327,9 @@ class EngagementClassifierQueries {
               ELSE 'Low'
             END as reengagement_potential
           FROM 
-            dbo_D_Customer c
+            dbo_d_customer c
           LEFT JOIN 
-            dbo_F_Customer_Loyalty cl ON c."Customer Key" = cl."Entity Key"
+            dbo_f_customer_loyalty cl ON c."Customer Key" = cl."Entity Key"
           WHERE 
             cl."Days Since Last Activity" > 30
             AND cl."Days Since Last Activity" <= 365
@@ -321,30 +339,25 @@ class EngagementClassifierQueries {
           opportunity_type,
           value_tier,
           reengagement_potential,
-          COUNT(*) as customer_count,
+          COUNT(*)::int as customer_count,
           AVG("LTD Sales Amount") as avg_customer_value,
           AVG("Days Since Last Activity") as avg_days_inactive
         FROM ReengagementOpportunities
         GROUP BY opportunity_type, value_tier, reengagement_potential
-        ORDER BY customer_count DESC;
+        ORDER BY customer_count DESC
+        LIMIT 50;
       `;
 
-      db.all(query, (err, rows) => {
-        db.close();
-        if (err) {
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-    });
+      const result = await this.pool.query(query);
+      return result.rows;
+    } catch (error) {
+      console.error('Error in getReengagementOpportunities:', error);
+      throw error;
+    }
   }
 
   async getEngagementTimeline(filters = {}) {
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(this.dbPath);
-      
-      // For timeline, we'll simulate temporal data by grouping by activity date ranges
+    try {
       const query = `
         WITH EngagementTimeline AS (
           SELECT 
@@ -361,15 +374,27 @@ class EngagementClassifierQueries {
               WHEN cl."Days Since Last Activity" <= 90 THEN 'Medium'
               ELSE 'Low'
             END as engagement_level,
-            COUNT(*) as customer_count
+            COUNT(*)::int as customer_count
           FROM 
-            dbo_D_Customer c
+            dbo_d_customer c
           LEFT JOIN 
-            dbo_F_Customer_Loyalty cl ON c."Customer Key" = cl."Entity Key"
+            dbo_f_customer_loyalty cl ON c."Customer Key" = cl."Entity Key"
           WHERE 
             cl."Days Since Last Activity" IS NOT NULL
           GROUP BY 
-            time_period, engagement_level
+            CASE 
+              WHEN cl."Days Since Last Activity" <= 7 THEN 'This Week'
+              WHEN cl."Days Since Last Activity" <= 30 THEN 'This Month'
+              WHEN cl."Days Since Last Activity" <= 90 THEN 'Last 3 Months'
+              WHEN cl."Days Since Last Activity" <= 180 THEN 'Last 6 Months'
+              WHEN cl."Days Since Last Activity" <= 365 THEN 'Last Year'
+              ELSE 'Over 1 Year'
+            END,
+            CASE 
+              WHEN cl."Days Since Last Activity" <= 30 THEN 'High'
+              WHEN cl."Days Since Last Activity" <= 90 THEN 'Medium'
+              ELSE 'Low'
+            END
         )
         SELECT 
           time_period,
@@ -387,16 +412,17 @@ class EngagementClassifierQueries {
         ORDER BY sort_order, engagement_level;
       `;
 
-      db.all(query, (err, rows) => {
-        db.close();
-        if (err) {
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-    });
+      const result = await this.pool.query(query);
+      return result.rows;
+    } catch (error) {
+      console.error('Error in getEngagementTimeline:', error);
+      throw error;
+    }
+  }
+
+  async close() {
+    await this.pool.end();
   }
 }
 
-module.exports = { EngagementClassifierQueries }; 
+module.exports = { EngagementClassifierPostgresQueries };

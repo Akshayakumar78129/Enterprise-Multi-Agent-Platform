@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from './TransactionKPICards.module.css';
+import { handleChartClick } from '../../utils/chartSelectionHelper';
 
 const TransactionKPICards = ({ kpis, isLoading = false, onKPIClick = null }) => {
   if (!kpis) return null;
@@ -100,9 +101,24 @@ const TransactionKPICards = ({ kpis, isLoading = false, onKPIClick = null }) => 
     }
   ];
 
-  const handleCardClick = (cardId) => {
+  const handleCardClick = (card, event) => {
+    // Use the chart selection helper for multi-select support
+    handleChartClick({
+      chartId: 'kpi-cards',
+      chartType: 'KPI Card',
+      label: card.label,
+      value: parseFloat(card.value.replace(/[^0-9.-]/g, '')) || 0,
+      unit: '',
+      metadata: {
+        cardId: card.id,
+        variant: card.variant,
+        rawValue: card.value
+      }
+    }, event);
+    
+    // Still call the original handler if provided
     if (onKPIClick) {
-      onKPIClick(cardId);
+      onKPIClick(card.id);
     }
   };
 
@@ -124,7 +140,7 @@ const TransactionKPICards = ({ kpis, isLoading = false, onKPIClick = null }) => 
         <div 
           key={card.id}
           className={`${styles.kpiCard} ${styles[card.variant]}`}
-          onClick={() => handleCardClick(card.id)}
+          onClick={(e) => handleCardClick(card, e)}
           style={{
             '--card-color': card.color,
             '--card-bg-color': card.bgColor

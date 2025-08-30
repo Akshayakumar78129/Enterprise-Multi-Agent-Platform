@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Card } from "../../../../../../ui-common/design-system/components/Card";
 
 const OpportunityFinder = ({ 
   opportunities = [], 
@@ -13,27 +14,22 @@ const OpportunityFinder = ({
     value: valueThreshold,
     potential: potentialThreshold
   });
-  
-  const [contextMenu, setContextMenu] = useState({
-    visible: false,
-    opportunity: null,
-    contextPoints: [],
-    position: { x: 0, y: 0 }
-  });
 
   if (!opportunities || opportunities.length === 0) {
     return (
-      <div className="glass-chart-container">
-        <div className="chart-header">
-          <div>
-            <h3 className="chart-title">Re-engagement Opportunity Finder</h3>
-            <p className="chart-subtitle">High-value customer re-engagement opportunities</p>
-          </div>
+      <Card title="Re-engagement Opportunity Finder" isLoading={isLoading}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "400px",
+            color: "#5891cb",
+          }}
+        >
+          No re-engagement opportunities available
         </div>
-        <div className="chart-loading">
-          {isLoading ? 'Loading...' : 'No re-engagement opportunities available'}
-        </div>
-      </div>
+      </Card>
     );
   }
 
@@ -80,101 +76,7 @@ const OpportunityFinder = ({
     }
   };
 
-  // Generate context points for chatbot
-  const generateContextPoints = (opportunity) => {
-    const quadrant = getQuadrant(opportunity);
-    const contextPoints = [
-      `🎯 Opportunity: ${opportunity.segment_name || 'Customer Segment'}`,
-      `💰 Average Customer Value: $${opportunity.avg_customer_value?.toLocaleString() || 'N/A'}`,
-      `⏰ Days Inactive: ${opportunity.avg_days_inactive || 'N/A'} days average`,
-      `👥 Customer Count: ${opportunity.customer_count?.toLocaleString() || 'N/A'} customers`,
-      `📊 Quadrant: ${quadrant.name} (Priority ${quadrant.priority})`
-    ];
-
-    // Add quadrant-specific insight
-    switch (quadrant.name) {
-      case 'Priority Re-engage':
-        contextPoints.push(`💡 Insight: High-value, recently active customers - immediate re-engagement campaigns`);
-        break;
-      case 'Nurture':
-        contextPoints.push(`💡 Insight: High-value but inactive - nurture with premium offers and personal touch`);
-        break;
-      case 'Bulk Activation':
-        contextPoints.push(`💡 Insight: Lower value but active - bulk email campaigns and automated sequences`);
-        break;
-      case 'Monitor':
-        contextPoints.push(`💡 Insight: Lower priority - monitor for changes and include in general campaigns`);
-        break;
-    }
-
-    return contextPoints;
-  };
-
-  const showContextMenu = (e, opportunity) => {
-    console.log('showContextMenu called for opportunity:', opportunity);
-    
-    let x = 100;
-    let y = 100;
-    
-    if (e && e.currentTarget) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const menuWidth = 320;
-      const menuHeight = 330;
-      
-      x = rect.left + (rect.width / 2) - (menuWidth / 2);
-      y = rect.top - menuHeight - 15;
-      
-      if (x < 10) x = 10;
-      if (x + menuWidth > window.innerWidth - 10) x = window.innerWidth - menuWidth - 10;
-      if (y < 10) y = rect.bottom + 15;
-      if (y + menuHeight > window.innerHeight - 10) y = window.innerHeight - menuHeight - 10;
-    } else if (e && e.clientX) {
-      const menuWidth = 320;
-      const menuHeight = 330;
-      
-      x = e.clientX - (menuWidth / 2);
-      y = e.clientY - menuHeight - 15;
-      
-      if (x < 10) x = 10;
-      if (x + menuWidth > window.innerWidth - 10) x = window.innerWidth - menuWidth - 10;
-      if (y < 10) y = e.clientY + 15;
-      if (y + menuHeight > window.innerHeight - 10) y = window.innerHeight - menuHeight - 10;
-    }
-    
-    const contextPoints = generateContextPoints(opportunity);
-    
-    setContextMenu({
-      visible: true,
-      opportunity: opportunity,
-      contextPoints: contextPoints,
-      position: { x, y }
-    });
-    
-    console.log('Context points for chatbot:', contextPoints);
-  };
-
-  const handleOpportunityClick = (e, opportunity) => {
-    // Check if Shift key was pressed
-    const isShiftClick = e && e.shiftKey;
-    
-    if (isShiftClick) {
-      // Directly send context to chat (no popup)
-      try {
-        const contextPoints = generateContextPoints(opportunity);
-        if (window.attachContextTags) {
-          contextPoints.forEach(point => window.attachContextTags(point));
-          if (window.openChatPanel) window.openChatPanel();
-        } else if (window.sendContextToChat) {
-          window.sendContextToChat(contextPoints);
-        }
-      } catch (err) {
-        console.error('Error sending context to chat:', err);
-      }
-      return;
-    }
-
-    // Regular click - select opportunity
-    console.log('Regular click detected - selecting opportunity:', opportunity);
+  const handleOpportunityClick = (opportunity) => {
     setSelectedOpportunity(opportunity);
     if (onOpportunitySelect) {
       onOpportunitySelect(opportunity);
@@ -304,7 +206,7 @@ const OpportunityFinder = ({
               color: '#f7f9fb',
               fontWeight: '600'
             }}
-            onClick={(e) => handleOpportunityClick(e, item)}
+            onClick={() => handleOpportunityClick(item)}
             title={`${item.opportunity_type}\nCustomers: ${item.customer_count}\nAvg Value: $${Math.round(item.avg_customer_value)}\nDays Inactive: ${Math.round(item.avg_days_inactive)}`}
           >
             {item.customer_count}
@@ -345,7 +247,7 @@ const OpportunityFinder = ({
             transition: 'all 0.3s ease',
             transform: isSelected ? 'scale(1.02)' : 'scale(1)'
           }}
-          onClick={(e) => handleOpportunityClick(e, opp)}
+          onClick={() => handleOpportunityClick(opp)}
         >
           {/* Header */}
           <div style={{
@@ -436,15 +338,12 @@ const OpportunityFinder = ({
   };
 
   return (
-    <div className="glass-chart-container">
-      <div className="chart-header">
-        <div>
-          <h3 className="chart-title">Re-engagement Opportunity Finder</h3>
-          <p className="chart-subtitle">Identify high-value re-engagement targets</p>
-        </div>
-      </div>
-      
-      <div style={{ padding: 'var(--spacing-md)' }}>
+    <Card 
+      title="Re-engagement Opportunity Finder" 
+      subtitle="Identify high-value re-engagement targets"
+      isLoading={isLoading}
+    >
+      <div style={{ padding: '16px' }}>
         {/* Threshold Controls */}
         <div style={{
           display: 'flex',
@@ -576,151 +475,8 @@ const OpportunityFinder = ({
             </div>
           </div>
         )}
-
-        {/* Context Menu for Chatbot */}
-        {contextMenu.visible && (
-          <>
-            <div style={{
-              position: 'fixed',
-              top: contextMenu.position.y,
-              left: contextMenu.position.x,
-              zIndex: 9999,
-              maxWidth: '320px',
-              backgroundColor: '#0a1224',
-              borderRadius: '12px',
-              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(233, 48, 255, 0.3)',
-              border: '1px solid rgba(233, 48, 255, 0.3)',
-              overflow: 'hidden',
-              animation: 'fadeIn 0.3s ease',
-              transform: 'translateY(-100%)'
-            }}>
-              {/* Header */}
-              <div style={{
-                padding: '10px 12px',
-                backgroundColor: 'rgba(233, 48, 255, 0.1)',
-                borderBottom: '1px solid rgba(233, 48, 255, 0.2)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <div style={{
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '50%',
-                    backgroundColor: 'rgba(233, 48, 255, 0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '1px solid rgba(233, 48, 255, 0.5)'
-                  }}>
-                    <span style={{ fontSize: '12px' }}>🎯</span>
-                  </div>
-                  <div style={{
-                    color: '#e930ff',
-                    fontSize: '14px',
-                    fontWeight: '600'
-                  }}>
-                    Context for Chat
-                  </div>
-                </div>
-                <button
-                  onClick={() => setContextMenu(prev => ({ ...prev, visible: false }))}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#5891cb',
-                    cursor: 'pointer',
-                    fontSize: '16px',
-                    padding: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '50%',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(88, 145, 203, 0.1)';
-                    e.currentTarget.style.color = '#f7f9fb';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = '#5891cb';
-                  }}
-                >
-                  ✕
-                </button>
-              </div>
-              
-              {/* Context Points */}
-              <div style={{
-                padding: '12px 16px',
-                color: '#f7f9fb',
-                fontSize: '13px',
-                lineHeight: '1.6'
-              }}>
-                {contextMenu.contextPoints.map((point, index) => (
-                  <div key={index} style={{
-                    marginBottom: '8px',
-                    padding: '6px 8px',
-                    backgroundColor: 'rgba(233, 48, 255, 0.05)',
-                    borderRadius: '6px',
-                    border: '1px solid rgba(233, 48, 255, 0.1)'
-                  }}>
-                    {point}
-                  </div>
-                ))}
-              </div>
-              
-              {/* Add Context Tags Button */}
-              <div style={{
-                padding: '12px 16px',
-                borderTop: '1px solid rgba(233, 48, 255, 0.2)',
-                backgroundColor: 'rgba(233, 48, 255, 0.05)'
-              }}>
-                <button
-                  onClick={() => {
-                    console.log('Sending context to chatbot:', contextMenu.contextPoints);
-                    if (window.attachContextTags) {
-                      window.attachContextTags(contextMenu.contextPoints);
-                    } else if (window.sendContextToChat) {
-                      window.sendContextToChat(contextMenu.contextPoints);
-                    }
-                    setContextMenu(prev => ({ ...prev, visible: false }));
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '8px 16px',
-                    backgroundColor: '#e930ff',
-                    color: '#f7f9fb',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#d020e6';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#e930ff';
-                  }}
-                >
-                  🏷️ Add Context Tags
-                </button>
-              </div>
-            </div>
-          </>
-        )}
       </div>
-    </div>
+    </Card>
   );
 };
 
