@@ -1,0 +1,352 @@
+/* CSS Module for Regional Sales Analyzer Dashboard - Standard Enterprise IQ Styling */
+.regionalSalesAnalyzerDashboard {
+  min-height: 100vh;
+  background: #0a1224;
+  color: #f7f9fb;
+  font-family: 'Inter', sans-serif;
+  position: relative;
+  overflow-x: hidden;
+  padding: 24px;
+}
+
+.mainContent {
+  position: relative;
+  z-index: 1;
+}
+
+.header {
+  margin-bottom: 32px;
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* Wrap to position the glow behind the heading */
+.titleWrap {
+  position: relative;
+  display: inline-block;
+}
+.titleWrap::before {
+  content: none;
+}
+
+/* Darken from top-left corner */
+.titleWrap::after {
+  content: none;
+}
+
+.title {
+  margin-bottom: 8px;
+  color: #f7f9fb;
+  font-size: 32px;
+  font-weight: 700;
+  font-family: 'Inter', sans-serif;
+}
+
+@keyframes goldSweep {
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+.subtitle {
+  color: #f7f9fb;
+  font-size: 16px;
+  margin: 0;
+  opacity: 0.8;
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+}
+
+.section {
+  margin-bottom: 24px;
+}
+
+.filtersSection {
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 150ms both;
+}
+
+.mapSection {
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 600ms both;
+}
+
+.timeSeriesSection {
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 750ms both;
+}
+
+.opportunitySection {
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 900ms both;
+}
+
+.footer {
+  margin-top: 32px;
+  padding: 16px;
+  text-align: center;
+  color: #f7f9fb;
+  font-size: 12px;
+  border-top: 1px solid #3a4459;
+  opacity: 0.7;
+  font-family: 'Inter', sans-serif;
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 1200ms both;
+}
+
+/* Animation Keyframes */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes counterUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes float {
+  0%, 100% { 
+    transform: translateY(0px); 
+    opacity: 1; 
+  }
+  50% { 
+    transform: translateY(-8px); 
+    opacity: 0.7; 
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(-80%); }
+  to { transform: translateY(-100%); }
+}
+
+/* Glass morphism background for visualizations */
+.glassBackground {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 24px;
+  min-height: 480px;
+  position: relative;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(18px) saturate(160%);
+  background:
+    radial-gradient(1200px 500px at 0% 0%, rgba(0, 224, 255, 0.24), rgba(0, 224, 255, 0) 60%),
+    radial-gradient(1200px 500px at 100% 100%, rgba(233, 48, 255, 0.24), rgba(233, 48, 255, 0) 60%),
+    /* subtle global green tint (half brightness of corners) */
+    linear-gradient(0deg, rgba(95, 212, 214, 0.06), rgba(95, 212, 214, 0.06)),
+    linear-gradient(135deg, rgba(10, 15, 30, 0.45), rgba(5, 10, 20, 0.45));
+  box-shadow: 0 10px 35px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+/* KPI Tiles Grid */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 300ms both;
+}
+
+/* Standard KPI Tile Styling */
+.standardKpiTile {
+  background: linear-gradient(135deg, rgba(35, 42, 54, 0.9), rgba(23, 28, 38, 0.9));
+  border: 1px solid rgba(58, 68, 89, 0.6);
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.standardKpiTile:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0, 224, 255, 0.5);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(0, 224, 255, 0.2);
+}
+
+.standardKpiTile::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 224, 255, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.standardKpiTile:hover::before {
+  left: 100%;
+}
+
+/* KPI Header */
+.kpiHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.kpiLabel {
+  font-size: 12px;
+  color: #9fb7d8;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kpiIcon {
+  font-size: 16px;
+  opacity: 0.7;
+}
+
+/* KPI Value */
+.kpiValue {
+  font-size: 22px;
+  font-weight: 700;
+  color: #f7f9fb;
+  margin-bottom: 6px;
+  line-height: 1.2;
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+}
+
+/* KPI Trend */
+.kpiTrend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.kpiTrend.positive {
+  color: #5fd4d6;
+}
+
+.kpiTrend.negative {
+  color: #e930ff;
+}
+
+.kpiTrend.neutral {
+  color: #9fb7d8;
+}
+
+/* KPI Variants */
+.kpiPrimary {
+  border-color: rgba(0, 224, 255, 0.6);
+}
+
+.kpiPrimary:hover {
+  border-color: rgba(0, 224, 255, 0.8);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 25px rgba(0, 224, 255, 0.3);
+}
+
+.kpiSecondary {
+  border-color: rgba(233, 48, 255, 0.6);
+}
+
+.kpiSecondary:hover {
+  border-color: rgba(233, 48, 255, 0.8);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 25px rgba(233, 48, 255, 0.3);
+}
+
+.kpiAccent {
+  border-color: rgba(95, 212, 214, 0.6);
+}
+
+.kpiAccent:hover {
+  border-color: rgba(95, 212, 214, 0.8);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 25px rgba(95, 212, 214, 0.3);
+}
+
+.kpiDefault {
+  border-color: rgba(58, 68, 89, 0.6);
+}
+
+.kpiDefault:hover {
+  border-color: rgba(88, 145, 203, 0.6);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(88, 145, 203, 0.2);
+}
+
+/* Loading state */
+.chartLoading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 120px;
+  color: #5891cb;
+  font-size: 14px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .regionalSalesAnalyzerDashboard {
+    padding: 16px;
+  }
+  
+  .title {
+    font-size: 24px !important;
+  }
+  
+  .kpiGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .regionalSalesAnalyzerDashboard {
+    padding: 20px;
+  }
+  
+  .kpiGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .regionalSalesAnalyzerDashboard {
+    padding: 24px;
+  }
+  
+  .kpiGrid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+@media (min-width: 1400px) {
+  .regionalSalesAnalyzerDashboard {
+    padding: 32px;
+  }
+}

@@ -2,6 +2,9 @@ import React, { useState, useMemo } from "react";
 import { Card } from "../../../../../../ui-common/design-system/components/Card";
 import dynamic from "next/dynamic";
 
+// Import CSS Module for glass background
+import styles from "../../styles/RegionalSalesAnalyzerDashboard.module.css";
+
 // Dynamic import for charts to avoid SSR issues
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
@@ -10,14 +13,58 @@ const RegionalPerformanceMap = ({
   countryData = [],
   selectedMetric = 'totalSales',
   selectedRegions = [],
+  onMetricChange = null,
   onRegionSelect = null,
   onRegionHover = null,
+  onShowAIInsight = null,
   filters = {},
   onFilterChange = null,
   isLoading = false
 }) => {
   const [viewMode, setViewMode] = useState('choropleth'); // 'choropleth', 'scatter', 'bubble'
   const [selectedCountry, setSelectedCountry] = useState(null);
+
+  // Handle region click with AI insight support
+  const handleRegionClick = (e, region) => {
+    // Call the global addAIInsightToChat if available (for Shift+Click multi-selection)
+    if (typeof window !== 'undefined' && window.addAIInsightToChat) {
+      const metricValue = region[selectedMetric] || 0;
+      const formattedValue = formatMetricValue(metricValue, selectedMetric);
+      
+      window.addAIInsightToChat({
+        label: `${region.state}, ${region.country}`,
+        value: formattedValue,
+        chartType: 'Regional Map',
+        metric: getMetricLabel(selectedMetric),
+        originalEvent: e,
+        metadata: {
+          ...region,
+          selectedMetric,
+          timestamp: new Date().toISOString()
+        }
+      });
+      
+      console.log('📍 Region clicked for AI Insight:', {
+        region: `${region.state}, ${region.country}`,
+        metric: selectedMetric,
+        value: formattedValue,
+        shiftKey: e.shiftKey
+      });
+    }
+    
+    // Keep existing callbacks for compatibility
+    if (onShowAIInsight) {
+      const regionData = {
+        ...region,
+        selectedMetric,
+        metricValue: region[selectedMetric],
+        metricLabel: getMetricLabel(selectedMetric)
+      };
+      onShowAIInsight(e, 'region', `${region.country}-${region.state}`, regionData);
+    } else if (onRegionSelect) {
+      onRegionSelect(region.country, region.state);
+    }
+  };
 
   // Helper functions - defined before they're used
   const getMetricLabel = (metric) => {
@@ -116,15 +163,14 @@ const RegionalPerformanceMap = ({
     // For demo purposes, we'll create a simplified representation
     // In a real implementation, you'd use proper geographic data with state/country boundaries
     return (
-      <div style={{
-        width: '100%',
-        height: '500px',
-        backgroundColor: '#0a1224',
-        border: '1px solid #3a4459',
-        borderRadius: '8px',
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
+      <div 
+        className={styles.glassBackground}
+        style={{
+          width: '100%',
+          height: '500px',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
         {/* Header with metric selector */}
         <div style={{
           position: 'absolute',
@@ -139,7 +185,7 @@ const RegionalPerformanceMap = ({
           {['totalSales', 'profitMargin', 'customerCount', 'transactionCount'].map(metric => (
             <button
               key={metric}
-              onClick={() => setSelectedMetric?.(metric)}
+              onClick={() => onMetricChange && onMetricChange(metric)}
               style={{
                 padding: '6px 12px',
                 backgroundColor: selectedMetric === metric ? '#00e0ff' : '#232a36',
@@ -182,7 +228,7 @@ const RegionalPerformanceMap = ({
             return (
               <div
                 key={`${region.country}-${region.state}`}
-                onClick={() => onRegionSelect && onRegionSelect(region.country, region.state)}
+                onClick={(e) => handleRegionClick(e, region)}
                 onMouseEnter={() => onRegionHover && onRegionHover(region.country, region.state)}
                 style={{
                   width: `${80 + intensity * 40}px`,
@@ -201,7 +247,7 @@ const RegionalPerformanceMap = ({
                   transition: 'all 0.2s',
                   position: 'relative'
                 }}
-                title={region.hoverText?.replace(/<br\/>/g, '\n')}
+                title={`${region.hoverText?.replace(/<br\/>/g, '\n')}\n\nClick for AI insight`}
               >
                 <div style={{
                   fontSize: '10px',
@@ -310,15 +356,17 @@ const RegionalPerformanceMap = ({
     };
 
     return (
-      <Plot
-        data={[trace]}
-        layout={layout}
-        style={{ width: '100%', height: '500px' }}
-        config={{
-          displayModeBar: false,
-          responsive: true
-        }}
-      />
+      <div className={styles.glassBackground}>
+        <Plot
+          data={[trace]}
+          layout={layout}
+          style={{ width: '100%', height: '500px' }}
+          config={{
+            displayModeBar: false,
+            responsive: true
+          }}
+        />
+      </div>
     );
   };
 

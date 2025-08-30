@@ -12,11 +12,16 @@ const RegionalTimeSeriesExplorer = ({
   onTimeRangeChange = null,
   onRegionToggle = null,
   onAggregationChange = null,
+  onShowAIInsight = null,
   isLoading = false
 }) => {
   const [metric, setMetric] = useState('totalSales');
   const [showTrend, setShowTrend] = useState(false);
   const [viewMode, setViewMode] = useState('lines'); // 'lines', 'area', 'bars'
+  // Fallback internal selection when parent doesn't control selectedRegions
+  const [internalSelected, setInternalSelected] = useState(selectedRegions || []);
+  // Normalize selected list for this render
+  const activeSelected = useMemo(() => (onRegionToggle ? selectedRegions : internalSelected) || [], [onRegionToggle, selectedRegions, internalSelected]);
 
   // Helper functions - defined before they're used
   const getMetricLabel = (metric) => {
@@ -93,7 +98,7 @@ const RegionalTimeSeriesExplorer = ({
 
     let traces = [];
 
-    if (selectedRegions.length === 0 || selectedRegions.includes('overall')) {
+    if (activeSelected.length === 0 || activeSelected.includes('overall')) {
       // Show overall trend
       const overallTrace = {
         x: data.byPeriod.map(d => d.period),
@@ -110,11 +115,11 @@ const RegionalTimeSeriesExplorer = ({
     }
 
     // Add regional traces
-    if (data.byRegion && selectedRegions.length > 0) {
+    if (data.byRegion) {
       const filteredRegions = data.byRegion.filter(region => 
-        selectedRegions.includes(`${region.country}-${region.state}`) ||
-        selectedRegions.includes(region.country) ||
-        selectedRegions.includes(region.state)
+        activeSelected.includes(`${region.country}-${region.state}`) ||
+        activeSelected.includes(region.country) ||
+        activeSelected.includes(region.state)
       );
 
       filteredRegions.forEach((region, index) => {
@@ -185,7 +190,7 @@ const RegionalTimeSeriesExplorer = ({
     };
 
     return { traces, layout };
-  }, [data, selectedRegions, metric, viewMode, showTrend, aggregation]);
+  }, [data, activeSelected, metric, viewMode, showTrend, aggregation]);
 
 
 
@@ -202,8 +207,17 @@ const RegionalTimeSeriesExplorer = ({
   const toggleRegion = (regionKey) => {
     if (onRegionToggle) {
       onRegionToggle(regionKey);
+    } else {
+      // Fallback internal toggle so UI remains interactive without a parent handler
+      setInternalSelected(prev => {
+        const exists = prev.includes(regionKey);
+        const next = exists ? prev.filter(k => k !== regionKey) : [...prev, regionKey];
+        return next;
+      });
     }
   };
+
+
 
   if (!data || (!data.byPeriod?.length && !data.byRegion?.length)) {
     return (
@@ -334,8 +348,8 @@ const RegionalTimeSeriesExplorer = ({
               onClick={() => toggleRegion('overall')}
               style={{
                 padding: '4px 8px',
-                backgroundColor: selectedRegions.includes('overall') ? '#00e0ff' : '#0a1224',
-                color: selectedRegions.includes('overall') ? '#0a1224' : '#f7f9fb',
+                backgroundColor: activeSelected.includes('overall') ? '#00e0ff' : '#0a1224',
+                color: activeSelected.includes('overall') ? '#0a1224' : '#f7f9fb',
                 border: '1px solid #3a4459',
                 borderRadius: '4px',
                 fontSize: '12px',
@@ -378,8 +392,8 @@ const RegionalTimeSeriesExplorer = ({
                 onClick={() => toggleRegion(region.key)}
                 style={{
                   padding: '4px 8px',
-                  backgroundColor: selectedRegions.includes(region.key) ? '#00e0ff' : '#0a1224',
-                  color: selectedRegions.includes(region.key) ? '#0a1224' : '#f7f9fb',
+                  backgroundColor: activeSelected.includes(region.key) ? '#00e0ff' : '#0a1224',
+                  color: activeSelected.includes(region.key) ? '#0a1224' : '#f7f9fb',
                   border: '1px solid #3a4459',
                   borderRadius: '4px',
                   fontSize: '11px',
@@ -409,6 +423,74 @@ const RegionalTimeSeriesExplorer = ({
               displayModeBar: true,
               modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
               responsive: true
+            }}
+            onInitialized={(figure, graphDiv) => {
+              graphDiv.on('plotly_click', (data) => {
+                if (data.points && data.points.length > 0) {
+                  const point = data.points[0];
+                  const event = data.event; // Get the original event for shift key detection
+                  
+                  // Format the value based on metric type
+                  const formattedValue = metric === 'profitMargin' || metric === 'growthRate' 
+                    ? `${point.y.toFixed(1)}%`
+                    : metric === 'customerCount' || metric === 'transactionCount'
+                    ? point.y.toLocaleString()
+                    : formatCurrency(point.y);
+                  
+                  // Call the global addAIInsightToChat for Shift+Click multi-selection
+                  if (typeof window !== 'undefined' && window.addAIInsightToChat) {
+                    window.addAIInsightToChat({
+                      label: `${point.data.name} - ${point.x}`,
+                      value: formattedValue,
+                      chartType: 'Time Series',
+                      metric: getMetricLabel(metric),
+                      originalEvent: event,
+                      metadata: {
+                        traceName: point.data.name,
+                        period: point.x,
+                        rawValue: point.y,
+                        aggregation,
+                        pointIndex: point.pointIndex,
+                        isOverall: point.data.name === 'Overall'
+                      }
+                    });
+                    
+                    console.log('📈 Time series point clicked:', {
+                      trace: point.data.name,
+                      period: point.x,
+                      value: formattedValue,
+                      shiftKey: event?.shiftKey
+                    });
+                  }
+                  
+                  // Create data point context for AI insight
+                  const dataPointContext = {
+                    traceName: point.data.name,
+                    period: point.x,
+                    value: point.y,
+                    metric,
+                    metricLabel: getMetricLabel(metric),
+                    aggregation,
+                    pointIndex: point.pointIndex,
+                    isOverall: point.data.name === 'Overall',
+                    regionInfo: point.data.name !== 'Overall' ? {
+                      name: point.data.name,
+                      type: 'region'
+                    } : null
+                  };
+                  
+                  // Pass the original event with Shift key state
+                  if (onShowAIInsight) {
+                    onShowAIInsight(data, 'chart', `${point.data.name}-${point.x}`, dataPointContext);
+                  }
+                }
+              });
+            }}
+            onHover={(event) => {
+              // Add cursor pointer on hover to indicate clickability
+              if (event.event && event.event.target) {
+                event.event.target.style.cursor = 'pointer';
+              }
             }}
           />
         ) : (
