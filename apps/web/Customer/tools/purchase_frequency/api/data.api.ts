@@ -1,26 +1,17 @@
 // Data API for Purchase Frequency Analyzer
 import { KPIData, HistogramData, IntervalData, CustomerSegment, RegularityData, ValueSegment } from '../ui/types';
+import { callDashboardAPI } from '../../../ui-common/utils/apiUtils.js';
 
 // Function to fetch purchase frequency data from backend
 export async function fetchPurchaseFrequencyData(startDate: string, endDate: string, segments?: string[]) {
   try {
-    const response = await fetch('/api/purchase-frequency/data', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        start_date: startDate,
-        end_date: endDate,
-        customer_segments: segments || [],
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch purchase frequency data');
-    }
-
-    return await response.json();
+    const payload = {
+      start_date: startDate,
+      end_date: endDate,
+      customer_segments: segments || [],
+    };
+    
+    return await callDashboardAPI('purchase-frequency', payload);
   } catch (error) {
     console.error('Error fetching purchase frequency data:', error);
     throw error;

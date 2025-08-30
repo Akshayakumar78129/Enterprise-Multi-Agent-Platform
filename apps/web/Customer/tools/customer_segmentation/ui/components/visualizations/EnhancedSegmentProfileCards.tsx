@@ -11,7 +11,7 @@ import {
   Legend,
 } from 'chart.js';
 import { segmentationTheme, getSegmentColor } from '../../styles/theme';
-import { handleChartClick } from '../../utils/chartSelectionHelper';
+// Removed unused import - handleChartClick
 
 ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
@@ -26,6 +26,7 @@ interface SegmentProfile {
   regions: string[];
   characteristics: string[];
   recommendations: string[];
+  isSelected?: boolean; // Add flag for filter selection
 }
 
 interface EnhancedSegmentProfileCardsProps {
@@ -203,26 +204,27 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
         gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
         gap: segmentationTheme.spacing.lg,
       }}>
-        {segments.map((segment, index) => (
+        {segments.map((segment, index) => {
+          // Check if segment is selected (default to true if not specified)
+          const isSegmentSelected = segment.isSelected !== false;
+          
+          return (
           <motion.div
             key={segment.segment}
             initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            animate={{ 
+              opacity: isSegmentSelected ? 1 : 0.4, // Dim unselected segments
+              x: 0 
+            }}
             transition={{ delay: index * 0.1 }}
-            whileHover={{ scale: 1.02 }}
+            whileHover={{ scale: isSegmentSelected ? 1.02 : 1 }} // Only scale if selected
             onClick={(e: React.MouseEvent) => {
-              // Send to ChartSelectionManager
-              handleChartClick({
-                chartId: `segment-card-${segment.segment}`,
-                chartType: 'segment-profile',
-                label: `Segment ${segment.segment}`,
-                value: segment.customerCount,
-                unit: 'customers',
-                metadata: segment
-              }, e);
+              // Stop event propagation to prevent chatbot from opening
+              e.stopPropagation();
+              e.preventDefault();
               
               if (e.shiftKey) {
-                // Shift+Click for multi-selection
+                // Shift+Click for multi-selection - send to dashboard context
                 const selectionAPI = (window as any).chartSelectionAPI;
                 if (selectionAPI) {
                   selectionAPI.addPoint({
@@ -236,7 +238,40 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
                   });
                 }
               } else {
-                // Regular click - just expand card
+                // Regular click - show internal AI insight popup (don't send to chatbot)
+                const insight = {
+                  emoji: '🎯',
+                  title: `Segment ${segment.segment}`,
+                  subtitle: `${segment.customerCount} customers`,
+                  summary: `Average spend: $${segment.avgSpend.toLocaleString()} | Frequency: ${segment.frequency} | Loyalty: ${segment.loyaltyScore} | Engagement: ${segment.engagementRate}%`,
+                  details: [
+                    `👥 Customer Count: ${segment.customerCount}`,
+                    `💰 Average Spend: $${segment.avgSpend.toLocaleString()}`,
+                    `📊 Frequency Score: ${segment.frequency}`,
+                    `⭐ Loyalty Score: ${segment.loyaltyScore}`,
+                    `📈 Engagement Rate: ${segment.engagementRate}%`
+                  ],
+                  characteristics: segment.characteristics,
+                  recommendations: segment.recommendations,
+                  questions: [
+                    'What drives loyalty in this segment?',
+                    'How can we increase engagement?',
+                    'Which products resonate most?',
+                    'What are the growth opportunities?'
+                  ],
+                  actions: [
+                    'Launch targeted campaign',
+                    'Create personalized offers',
+                    'Analyze purchase patterns',
+                    'Export segment data'
+                  ]
+                };
+                
+                setAiInsightContent(insight);
+                setInsightPosition({ x: e.clientX, y: e.clientY });
+                setShowAIInsight(true);
+                
+                // Also expand card
                 setExpandedCard(expandedCard === segment.segment ? null : segment.segment);
                 onSelect?.(segment.segment);
               }
@@ -249,18 +284,23 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
               WebkitBackdropFilter: segmentationTheme.effects.backdropBlur,
               borderRadius: segmentationTheme.borderRadius.xl,
               border: `2px solid ${
-                selectedSegment === segment.segment 
-                  ? getSegmentColor(segment.segment - 1) 
-                  : 'rgba(255, 255, 255, 0.1)'
+                isSegmentSelected
+                  ? selectedSegment === segment.segment 
+                    ? getSegmentColor(segment.segment - 1)
+                    : 'rgba(255, 255, 255, 0.1)'
+                  : 'rgba(255, 255, 255, 0.05)' // Dimmer border for unselected
               }`,
-              boxShadow: selectedSegment === segment.segment 
-                ? `${segmentationTheme.effects.glassShadow}, 0 0 30px ${getSegmentColor(segment.segment - 1)}40`
-                : segmentationTheme.effects.tileShadow,
+              boxShadow: isSegmentSelected 
+                ? selectedSegment === segment.segment 
+                  ? `${segmentationTheme.effects.glassShadow}, 0 0 30px ${getSegmentColor(segment.segment - 1)}40`
+                  : segmentationTheme.effects.tileShadow
+                : 'none', // No shadow for unselected
               padding: segmentationTheme.spacing.lg,
-              cursor: 'pointer',
+              cursor: isSegmentSelected ? 'pointer' : 'not-allowed',
               position: 'relative',
               overflow: 'hidden',
               transition: segmentationTheme.animation.normal,
+              filter: isSegmentSelected ? 'none' : 'grayscale(50%)', // Grayscale unselected
             }}
           >
             <div style={{
@@ -496,11 +536,12 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
               pointerEvents: 'none',
             }} />
           </motion.div>
-        ))}
+        );
+        })}
       </div>
 
-      {/* AI Insight Popup removed - using ChartSelectionManager instead */}
-      {false && (
+      {/* AI Insight Popup */}
+      {showAIInsight && aiInsightContent && (
         <div
           style={{
             position: 'fixed',
@@ -591,13 +632,7 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (typeof window !== 'undefined' && (window as any).addAIInsightToChat) {
-                      (window as any).addAIInsightToChat({
-                        label: `${aiInsightContent.title} - Question`,
-                        value: question,
-                        actionType: 'question'
-                      });
-                    }
+                    // Just close the AI insight popup - questions are for display only
                     setShowAIInsight(false);
                   }}
                 >
@@ -634,13 +669,7 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (typeof window !== 'undefined' && (window as any).addAIInsightToChat) {
-                      (window as any).addAIInsightToChat({
-                        label: `${aiInsightContent.title} - Action`,
-                        value: `Execute: ${action}`,
-                        actionType: 'execute'
-                      });
-                    }
+                    // Just close the AI insight popup - actions are for display only
                     setShowAIInsight(false);
                   }}
                 >

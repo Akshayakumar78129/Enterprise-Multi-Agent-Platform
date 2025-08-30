@@ -126,6 +126,7 @@ const KPITilesRow = forwardRef<any, KPITilesRowProps>(({
         title="Total Customers"
         value={data.total_customers}
         trend={totalCustomersTrend}
+        format="number"
         width={tileWidth}
         height={120}
         onClick={() => onTileClick?.('total_customers')}
@@ -134,7 +135,7 @@ const KPITilesRow = forwardRef<any, KPITilesRowProps>(({
       <KPITile
         ref={avgPurchaseFrequencyRef}
         title="Avg. Purchase Frequency"
-        value={data.avg_purchase_frequency}
+        value={`${data.avg_purchase_frequency}`}
         trend={avgPurchaseFrequencyTrend}
         format="decimal"
         isCritical={isFrequencyCritical}
@@ -147,7 +148,7 @@ const KPITilesRow = forwardRef<any, KPITilesRowProps>(({
       <KPITile
         ref={avgIntervalDaysRef}
         title="Avg. Days Between"
-        value={data.avg_interval_days}
+        value={`${data.avg_interval_days}`}
         trend={avgIntervalDaysTrend}
         format="decimal"
         isCritical={isIntervalCritical}
@@ -159,9 +160,9 @@ const KPITilesRow = forwardRef<any, KPITilesRowProps>(({
       <KPITile
         ref={activeCustomersRef}
         title="Active Customers (90d)"
-        value={data.active_customers_percentage}
+        value={`${data.active_customers_percentage}%`}
         trend={activeCustomersTrend}
-        format="percentage"
+        format="number"
         isCritical={isActiveCritical}
         width={tileWidth}
         height={120}
@@ -171,13 +172,20 @@ const KPITilesRow = forwardRef<any, KPITilesRowProps>(({
       <KPITile
         ref={highValueCustomersRef}
         title="High Value Customers"
-        value={data.high_value_customers_percentage}
+        value={`${data.high_value_customers_percentage}%`}
         trend={highValueCustomersTrend}
-        format="percentage"
+        format="number"
         showSpark
         width={tileWidth}
         height={120}
         onClick={() => onTileClick?.('high_value_customers_percentage')}
+      />
+      <KPITile
+        title="Avg Customer Value"
+        value={`$${data.avg_customer_value}`}
+        format="number"
+        width={tileWidth}
+        height={120}
       />
     </div>
   );

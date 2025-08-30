@@ -315,8 +315,20 @@ const EnhancedCustomerSegmentationDashboardInner: React.FC = () => {
       return activeFilters.segments.includes(seg.segment_name);
     }) || segmentSummaries || [];
     
-    // Calculate from filtered data
-    const uniqueSegments = [...new Set(dataToUse.map(c => c?.segment).filter(Boolean))];
+    // Use segment summaries for total count to match visualization
+    // If we have segment summaries, use those; otherwise use unique segments from data
+    const defaultSegmentNames = ['Champions', 'Loyal Customers', 'Potential Loyalists', 'New Customers', 
+                                 'At Risk', "Can't Lose Them", 'Hibernating', 'Lost'];
+    
+    const segmentNamesFromSummaries = segmentSummaries?.map(s => s.segment_name) || [];
+    const segmentNamesFromData = [...new Set(dataToUse.map(c => c?.segment).filter(Boolean))];
+    
+    // Use summaries if available, then data, then defaults
+    const uniqueSegments = segmentNamesFromSummaries.length > 0 
+      ? segmentNamesFromSummaries 
+      : segmentNamesFromData.length > 0 
+        ? segmentNamesFromData 
+        : defaultSegmentNames;
     
     // Calculate segment sizes
     const segmentCounts = uniqueSegments.reduce((acc, seg) => {
@@ -397,12 +409,8 @@ const EnhancedCustomerSegmentationDashboardInner: React.FC = () => {
       ? segmentSummaries 
       : defaultSegments;
     
-    // Filter segment summaries based on active filters
-    if (activeFilters?.segments && activeFilters.segments.length > 0) {
-      summariesToUse = summariesToUse.filter(seg => 
-        activeFilters.segments.includes(seg.segment_name)
-      );
-    }
+    // Don't filter segment summaries for visualization - keep all segments visible
+    // Just mark which ones are selected
     
     return summariesToUse.map((seg: any) => ({
     segment: seg.segment_name || seg.segment,
@@ -422,6 +430,10 @@ const EnhancedCustomerSegmentationDashboardInner: React.FC = () => {
       'Target with premium product offerings',
       'Implement loyalty rewards program'
     ],
+    // Add flag to indicate if this segment is selected in filter
+    isSelected: activeFilters?.segments && activeFilters.segments.length > 0 
+      ? activeFilters.segments.includes(seg.segment_name || seg.segment)
+      : true // If no filter applied, all segments are considered selected
   }));
   }, [segmentSummaries, filteredCustomers, customers, activeFilters]);
 

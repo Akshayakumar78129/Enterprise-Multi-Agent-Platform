@@ -28,7 +28,147 @@
   text-shadow: 0 0 30px rgba(251, 191, 36, 0.3);
 }
 
+/* Filter Section */
+.filterSection {
+  position: relative;
+  z-index: 1650;
+  margin-bottom: 24px;
+}
 
+.dateRangeContainer {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  border: 1px solid rgba(0, 224, 255, 0.2);
+  padding: 16px 20px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.dateRangeContainer:hover {
+  border-color: rgba(0, 224, 255, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 224, 255, 0.1);
+}
+
+.filterHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.filterTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #00e0ff;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterStats {
+  font-size: 0.75rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.loadingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(4px);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.loadingSpinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(0, 224, 255, 0.2);
+  border-top: 2px solid #00e0ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+
+
+/* Brain Icon Button - positioned on top of FloatingAI */
+.brainIconContainer {
+  position: fixed;
+  bottom: 140px; /* Position above the FloatingAI chat button */
+  right: 24px;
+  z-index: 1000;
+}
+
+.brainIconButton {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+}
+
+.selectionCounter {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ef4444;
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.brainIconButton:hover:not(.disabled) {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 25px rgba(59, 130, 246, 0.5);
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+}
+
+.brainIconButton.disabled {
+  opacity: 0.6;
+  cursor: pointer; /* Still clickable to show the message */
+  background: rgba(148, 163, 184, 0.5);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.brainIconButton.disabled:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  opacity: 0.8;
+}
 
 /* Charts Grid */
 .chartsGrid {
@@ -47,7 +187,8 @@
   border: 1px solid rgba(148, 163, 184, 0.2);
   padding: 2rem;
   position: relative;
-  overflow: hidden;
+  /* Allow dropdowns/popups to escape the card */
+  overflow: visible;
   box-shadow: 
     0 4px 6px rgba(0, 0, 0, 0.1),
     0 0 20px rgba(251, 191, 36, 0.05);
@@ -321,123 +462,147 @@
   gap: 24px;
 }
 
-.loading-spinner {
-  width: 80px;
-  height: 80px;
-  border: 4px solid var(--accent-primary-transparent);
-  border-top-color: var(--accent-primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-.loading-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-  text-align: center;
-}
-
-.loading-subtitle {
-  font-size: 14px;
-  color: var(--text-secondary);
-  text-align: center;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* KPI Tiles */
-.kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.kpi-tile-wrapper {
-  cursor: pointer;
-}
-
-.kpi-tile-custom {
-  background: var(--glass-bg) !important;
-  border: 1px solid var(--glass-border) !important;
-  border-radius: var(--border-radius-lg) !important;
-  padding: var(--spacing-md) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  box-shadow: var(--shadow-lg) !important;
-  transition: transform 0.3s var(--transition-timing), box-shadow 0.3s var(--transition-timing) !important;
-  height: 100%;
-}
-
-.kpi-tile-custom:hover {
-  transform: translateY(-5px) scale(1.03) !important;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4) !important;
-  border-color: var(--accent-primary-hover) !important;
-}
-
-.kpi-tile-custom .kpi-label {
-  color: var(--text-secondary) !important;
-  font-size: 14px;
-}
-
-.kpi-tile-custom .kpi-value {
-  color: var(--text-primary) !important;
-  font-size: 28px;
-  font-weight: 700;
-  background: var(--text-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.kpi-tile-custom .kpi-subvalue {
-  color: var(--text-secondary) !important;
-  font-size: 14px;
-}
-
-.kpi-tile-custom .kpi-trend {
-  font-weight: 600;
-}
-
-/* Dashboard Cards */
-.dashboard-card {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--border-radius-lg);
-  padding: var(--spacing-lg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: var(--shadow-lg);
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.card-icon {
-  width: 32px;
-  height: 32px;
-  background: var(--accent-gradient);
+/* Small side insight panel */
+.smallInsightPanel {
+  position: fixed;
+  right: 16px;
+  top: 96px;
+  max-width: 320px;
+  background: rgba(35,42,54,0.96);
+  border: 1px solid rgba(255,255,255,0.09);
   border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
+  padding: 12px 14px;
+  color: #dbe7ff;
+  z-index: 1000;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+}
+.smallInsightTitle {
+  color: #a5b4fc;
+  font-weight: 600;
+  margin: 0 0 6px 0;
+  font-size: 13px;
+}
+.smallInsightList {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+}
+.smallInsightClose {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: transparent;
+  color: #c9d5ee;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
 }
 
-.card-title {
+/* =============================
+   BI Agents Popup (matches FloatingAIChat UI)
+   ============================= */
+.biSlidingPanel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 420px;
+  height: 100vh;
+  background: linear-gradient(135deg, rgba(26, 31, 46, 0.98), rgba(42, 47, 62, 0.98));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(59, 130, 246, 0.3);
+  z-index: 1002;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -20px 0 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+/* Mode accents (optional) */
+.quick .biPanelHeader { background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(20, 184, 166, 0.12)); border-bottom: 1px solid rgba(16, 185, 129, 0.25); }
+.strategic .biPanelHeader { background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(139, 92, 246, 0.12)); border-bottom: 1px solid rgba(59, 130, 246, 0.3); }
+.forecast .biPanelHeader { background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(99, 102, 241, 0.12)); border-bottom: 1px solid rgba(99, 102, 241, 0.3); }
+.intelligence .biPanelHeader { background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(251, 191, 36, 0.12)); border-bottom: 1px solid rgba(245, 158, 11, 0.3); }
+
+.biPanelHeader {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(58, 68, 89, 0.5);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.biIcon {
+  margin-right: 8px;
+  font-size: 20px;
+}
+
+.biPanelHeader h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
-  font-size: 18px;
   font-weight: 700;
-  background: var(--text-gradient);
+  font-size: 16px;
+  color: #f8fafc;
+}
+
+.closePanelButton {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+.closePanelButton:hover { color: #f8fafc; }
+
+.biPanelContent {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.biHeader {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  margin: 10px 0 8px 0;
+}
+
+.biBulletPoint {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: rgba(30, 39, 56, 0.6);
+  border: 1px solid rgba(58, 68, 89, 0.3);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 8px 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.bulletIcon {
+  color: #10b981;
+  font-weight: 900;
+}
+
+.bulletContent { display: flex; gap: 6px; flex-wrap: wrap; }
+.bulletTitle { font-weight: 700; color: #e2e8f0; font-size: 13px; }
+.bulletText { color: #cbd5e1; font-size: 13px; }
+
+.biRegularText { color: #e2e8f0; font-size: 13px; line-height: 1.5; margin: 6px 0; }
+
+.biPanelFooter {
+  padding: 10px 20px;
+  border-top: 1px solid rgba(58, 68, 89, 0.5);
+  font-size: 12px;
+  color: #94a3b8;
+  background: rgba(59, 130, 246, 0.06);
 }

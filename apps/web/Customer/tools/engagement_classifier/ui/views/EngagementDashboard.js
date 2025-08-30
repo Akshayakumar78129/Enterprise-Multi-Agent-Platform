@@ -1,23 +1,125 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useDispatch, useSelector } from 'react-redux';
+import { 
+  fetchEngagementData, 
+  setFilters as setReduxFilters, 
+  setChatContext as setReduxChatContext,
+  toggleChat as toggleReduxChat,
+  setKPIs,
+  setHighlights
+} from '../state/engagementClassifierSlice';
 import EngagementKPITiles from "../components/kpi/EngagementKPITiles";
 import EngagementPyramid from "../components/visualizations/EngagementPyramid";
 import EngagementTimeline from "../components/visualizations/EngagementTimeline";
 import OpportunityFinder from "../components/visualizations/OpportunityFinder";
+import EngagementFilters from "../components/filters/EngagementFilters";
+import CustomerDetailModal from "../components/modals/CustomerDetailModal";
+import CustomerSearchAnalytics from "../components/search/CustomerSearchAnalytics";
+import EngagementChatbot from "../components/chat/EngagementChatbot";
+import EngagementChatButton from "../components/chat/EngagementChatButton";
+import CustomerBusinessAgent from "../components/CustomerBusinessAgent";
 
 const EngagementDashboard = () => {
+  const dispatch = useDispatch();
+  const { customers, loading: isLoading, error, filters, kpis, highlights, chatContext, isChatOpen: isChatVisible } = useSelector((state) => state.engagementClassifier);
+  
+  // Local state for UI-specific items
   const [data, setData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [filters, setFilters] = useState({});
   const [selectedEngagementLevel, setSelectedEngagementLevel] = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState(null);
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [modalCustomers, setModalCustomers] = useState([]);
+  const [modalTitle, setModalTitle] = useState("");
+  const [hasNewChatMessage, setHasNewChatMessage] = useState(false);
+  const chatbotRef = useRef(null);
+  
+  // Debug chat state changes
+  useEffect(() => {
+    console.log('🎭 Chat state changed to:', isChatVisible);
+  }, [isChatVisible]);
+  
+  // Toggle chat visibility
+  const toggleChat = () => {
+    dispatch(toggleReduxChat());
+  };
+
+  // Handle chat context updates
+  const handleChatContextUpdate = (newContext) => {
+    dispatch(setReduxChatContext({ ...chatContext, ...newContext }));
+  };
+
+  // Update chat context when dashboard state changes
+  useEffect(() => {
+    dispatch(setReduxChatContext({
+      selectedEngagementLevel,
+      selectedPeriod,
+      filters,
+      data: kpis ? {
+        totalCustomers: kpis.totalCustomers || 0,
+        avgEngagementScore: kpis.avgEngagementScore || 0,
+        reengagementOpportunities: kpis.reengagement_opportunities || 0,
+        daysSinceActivity: kpis.avg_days_since_activity || 0
+      } : null,
+      timestamp: new Date().toISOString()
+    }));
+  }, [selectedEngagementLevel, selectedPeriod, filters, kpis, dispatch]);
+
+  // Global function to send context to chatbot (legacy support)
+  const sendContextToChat = (contextPoints) => {
+    console.log('🎯 sendContextToChat called with:', contextPoints);
+    
+    // Format context points into a readable message
+    const contextMessage = "📊 **Dashboard Context:**\n\n" + contextPoints.join('\n');
+    console.log('💬 Formatted message:', contextMessage);
+    
+    // Open chat and add context
+    dispatch(toggleReduxChat(true));
+    setHasNewChatMessage(true);
+    
+    // Add context to chat context
+    dispatch(setReduxChatContext({
+      ...chatContext,
+      contextMessage,
+      timestamp: new Date().toISOString()
+    }));
+  };
+  
+  // Make sendContextToChat globally available
+  useEffect(() => {
+    console.log('🌐 Setting up global sendContextToChat function');
+    window.sendContextToChat = sendContextToChat;
+    return () => {
+      console.log('🧹 Cleaning up global sendContextToChat function');
+      delete window.sendContextToChat;
+    };
+  }, [sendContextToChat]);
 
   useEffect(() => {
-    fetchData();
-  }, [filters]);
+    dispatch(fetchEngagementData(filters));
+  }, [filters, dispatch]);
+
+  // Update local data state when Redux state changes
+  useEffect(() => {
+    if (customers && kpis) {
+      setData({
+        customers,
+        kpis,
+        highlights,
+        data: highlights
+      });
+    }
+  }, [customers, kpis, highlights]);
 
   const fetchData = async () => {
-    setIsLoading(true);
+    dispatch(fetchEngagementData(filters));
+  };
+
+  const handleFiltersChange = (newFilters) => {
+    dispatch(setReduxFilters(newFilters));
+  };
+
+  const oldFetchData = async () => {
+    // Keep old fetch for backward compatibility if needed
     try {
       const response = await fetch("/api/engagement-classifier/data", {
         method: "POST",
@@ -25,16 +127,48 @@ const EngagementDashboard = () => {
         body: JSON.stringify(filters),
       });
 
-      if (!response.ok) throw new Error("Failed to fetch engagement data");
+      if (!response.ok) {
+        const errText = await response.text().catch(() => "");
+        console.error(`API Error ${response.status}:`, errText);
+        throw new Error(`Failed to fetch engagement data (${response.status}) ${errText?.slice(0, 200)}`);
+      }
 
-      const result = await response.json();
+      let result;
+      try {
+        // Get the response as text first, then parse as JSON
+        const responseText = await response.text();
+        
+        if (!responseText.trim()) {
+          console.warn('Empty response received, using fallback data');
+          result = { data: null };
+        } else {
+          result = JSON.parse(responseText);
+        }
+      } catch (jsonError) {
+        console.warn('JSON Parse Error (using fallback):', jsonError.message);
+        // Use fallback data structure to prevent crashes
+        result = {
+          data: {
+            customers: [],
+            kpis: {
+              total_customers: 0,
+              avg_engagement_score: 0,
+              avg_days_since_activity: 0,
+              reengagement_opportunities: 0
+            },
+            distribution: [],
+            timeline: { periods: [], high: [], medium: [], low: [] }
+          }
+        };
+      }
+
       setData(result.data);
       console.log('Dashboard data loaded:', result.data);
     } catch (err) {
       console.error('Dashboard error:', err);
-      setError(err.message);
+      // Error is handled by Redux now
     } finally {
-      setIsLoading(false);
+      // Loading state is handled by Redux now
     }
   };
 
@@ -47,7 +181,15 @@ const EngagementDashboard = () => {
     } else {
       newFilters.engagementLevels = [level];
     }
-    setFilters(newFilters);
+    dispatch(setReduxFilters(newFilters));
+    
+    // Open customer detail modal for this engagement level
+    if (data?.customers) {
+      const levelCustomers = data.customers.filter(customer => customer.engagement_level === level);
+      setModalCustomers(levelCustomers);
+      setModalTitle(`${level} Engagement Customers`);
+      setIsCustomerModalOpen(true);
+    }
   };
 
   const handlePeriodClick = (period) => {
@@ -56,7 +198,36 @@ const EngagementDashboard = () => {
 
   const handleKPITileClick = (metric) => {
     console.log('KPI tile clicked:', metric);
-    // Could implement specific actions for each KPI metric
+    
+    // Open customer modal based on KPI metric clicked
+    if (data?.customers) {
+      let customers = [];
+      let title = "";
+      
+      switch (metric) {
+        case 'total_customers':
+          customers = data.customers;
+          title = "All Customers";
+          break;
+        case 'avg_engagement_score':
+          customers = data.customers.filter(c => c["RFM Score"] >= 7);
+          title = "High RFM Score Customers";
+          break;
+        case 'reengagement_opportunities':
+          customers = data.customers.filter(c => 
+            c.engagement_level === 'Low' && c["LTD Sales Amount"] > 1000
+          );
+          title = "Re-engagement Opportunities";
+          break;
+        default:
+          customers = data.customers;
+          title = "Customer Details";
+      }
+      
+      setModalCustomers(customers);
+      setModalTitle(title);
+      setIsCustomerModalOpen(true);
+    }
   };
 
   const handleOpportunitySelect = (opportunity) => {
@@ -87,33 +258,26 @@ const EngagementDashboard = () => {
   }
 
   return (
-    <div
-      style={{
-        padding: "24px",
-        backgroundColor: "#0a1224",
-        minHeight: "100vh",
-        color: "#f7f9fb",
-        fontFamily: "Inter, sans-serif"
-      }}
-    >
+    <div className="engagement-dashboard">
       {/* Header */}
-      <div style={{ marginBottom: "32px" }}>
-        <h1 style={{ 
-          marginBottom: "8px", 
-          color: "#00e0ff",
-          fontSize: "32px",
-          fontWeight: "700"
-        }}>
+      <div className="dashboard-header">
+        <h1 className="dashboard-title">
           Customer Engagement Intelligence
         </h1>
-        <p style={{
-          color: "#5891cb",
-          fontSize: "16px",
-          margin: 0,
-          opacity: 0.9
-        }}>
+        <p className="dashboard-subtitle">
           Analyze customer engagement patterns, identify opportunities, and optimize re-engagement strategies
         </p>
+      </div>
+
+      {/* Advanced Filters */}
+      <div className="glass-panel" style={{ 
+        marginBottom: "var(--spacing-2xl)"
+      }}>
+        <h2 className="section-header">Filters & Controls</h2>
+        <EngagementFilters 
+          onFiltersChange={handleFiltersChange}
+          currentFilters={filters}
+        />
       </div>
 
       {/* KPI Section */}
@@ -124,14 +288,7 @@ const EngagementDashboard = () => {
       />
 
       {/* Main Visualizations Grid */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "600px 1fr",
-          gap: "24px",
-          marginBottom: "24px"
-        }}
-      >
+      <div className="chart-grid">
         {/* Engagement Pyramid */}
         <EngagementPyramid
           distribution={data?.distribution}
@@ -149,8 +306,29 @@ const EngagementDashboard = () => {
         />
       </div>
 
+      {/* Customer Search & Analytics Section */}
+      <div className="glass-panel" style={{ 
+        marginBottom: "var(--spacing-2xl)"
+      }}>
+        <h2 className="section-header">Customer Analytics</h2>
+        <CustomerSearchAnalytics
+          onCustomerSelect={(customer) => {
+            console.log('Customer selected for analysis:', customer);
+            // Open chat with customer context
+            dispatch(setReduxChatContext({
+              currentView: 'customer_detail',
+              customer: customer
+            }));
+            dispatch(toggleReduxChat(true));
+          }}
+        />
+      </div>
+
       {/* Opportunity Finder Section */}
-      <div style={{ marginBottom: "24px" }}>
+      <div className="glass-panel" style={{ 
+        marginBottom: "var(--spacing-2xl)"
+      }}>
+        <h2 className="section-header">Re-engagement Opportunities</h2>
         <OpportunityFinder
           opportunities={data?.opportunities}
           isLoading={isLoading}
@@ -313,20 +491,48 @@ const EngagementDashboard = () => {
 
       {/* Footer */}
       <div style={{
-        marginTop: "32px",
-        padding: "16px",
+        marginTop: "var(--spacing-2xl)",
+        padding: "var(--spacing-lg)",
         textAlign: "center",
-        color: "#5891cb",
+        color: "var(--cloud-white)",
+        opacity: 0.7,
         fontSize: "12px",
-        borderTop: "1px solid #3a4459"
+        borderTop: "1px solid var(--graphite-light)"
       }}>
         Last updated: {data ? new Date().toLocaleString() : '--'}
         {filters && Object.keys(filters).length > 0 && (
-          <span style={{ marginLeft: "16px" }}>
+          <span style={{ marginLeft: "var(--spacing-md)" }}>
             • Active filters: {Object.keys(filters).join(', ')}
           </span>
         )}
       </div>
+
+      {/* Chatbot Components */}
+      <EngagementChatButton 
+        onClick={toggleChat}
+        isActive={isChatVisible}
+        hasNewMessage={hasNewChatMessage}
+        messageCount={0}
+      />
+      
+      <EngagementChatbot
+        isVisible={isChatVisible}
+        onToggle={toggleChat}
+        dashboardContext={chatContext}
+        onContextUpdate={handleChatContextUpdate}
+      />
+      
+      {/* Customer Business Agent */}
+      <CustomerBusinessAgent />
+
+      {/* Customer Detail Modal */}
+      <CustomerDetailModal
+        isOpen={isCustomerModalOpen}
+        onClose={() => setIsCustomerModalOpen(false)}
+        customers={modalCustomers}
+        engagementLevel={selectedEngagementLevel}
+        title={modalTitle}
+      />
     </div>
   );
 };

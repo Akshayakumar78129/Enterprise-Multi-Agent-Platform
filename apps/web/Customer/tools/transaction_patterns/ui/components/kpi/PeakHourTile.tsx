@@ -130,6 +130,7 @@ export const PeakHourTile: React.FC<PeakHourTileProps> = ({ className }) => {
     <KpiTile
       title="Peak Transaction Hour"
       value={peakHour}
+      prefix="⏰"
       subValue={<HourSparkline />}
       className={className}
     />

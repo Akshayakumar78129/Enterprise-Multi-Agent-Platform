@@ -91,6 +91,7 @@ export const AnomalyRateTile: React.FC<AnomalyRateTileProps> = ({
     <KpiTile
       title="Anomaly Rate"
       value={formatPercentage(anomalyRate)}
+      prefix="⚠️"
       variant={variant}
       icon={<CircularProgress />}
       className={className}

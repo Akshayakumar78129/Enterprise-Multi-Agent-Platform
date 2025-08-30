@@ -2,6 +2,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1.5rem;
+  margin-bottom: 120px; /* Space for insights below */
 }
 
 .kpi-tile-custom {
@@ -14,6 +15,8 @@
   text-align: left;
   transition: all 0.3s ease;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  position: relative;
+  overflow: hidden;
 }
 
 .kpi-tile-custom :global(.kpi-value) {
@@ -30,4 +33,169 @@
   transform: translateY(-12px) scale(1.02);
   background: linear-gradient(135deg, rgba(30, 39, 56, 0.95) 0%, rgba(60, 68, 89, 0.95) 100%);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(0, 224, 255, 0.3);
+  cursor: help;
+}
+
+/* Enhanced tooltip styling for KPI tiles */
+.kpi-tile-custom[title] {
+  position: relative;
+}
+
+.kpi-tile-custom[title]:hover {
+  border-color: rgba(0, 224, 255, 0.6);
+}
+
+/* Add shimmer effect on hover */
+.kpi-tile-custom::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(0, 224, 255, 0.1),
+    transparent
+  );
+  transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  transition: transform 0.6s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.kpi-tile-custom:hover::after {
+  transform: translateX(100%) translateY(100%) rotate(45deg);
+}
+
+/* Enhanced icon animation */
+.kpi-tile-custom:hover :global(.kpi-icon) {
+  transform: scale(1.1) rotate(5deg);
+  transition: transform 0.3s ease;
+}
+
+/* Value number glow effect */
+.kpi-tile-custom:hover :global(.kpi-value) {
+  text-shadow: 0 0 20px rgba(0, 224, 255, 0.5);
+  transition: text-shadow 0.3s ease;
+}
+
+/* Subtle pulse animation for tooltip indication */
+.kpi-tile-custom[title] {
+  animation: subtle-pulse 3s ease-in-out infinite;
+}
+
+/* Add a small help indicator for tiles with tooltips */
+.kpi-tile-custom[title]::before {
+  content: '?';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 16px;
+  height: 16px;
+  background: rgba(0, 224, 255, 0.2);
+  border: 1px solid rgba(0, 224, 255, 0.4);
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: bold;
+  color: rgba(0, 224, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: all 0.3s ease;
+  z-index: 2;
+}
+
+.kpi-tile-custom[title]:hover::before {
+  opacity: 1;
+  background: rgba(0, 224, 255, 0.3);
+  border-color: rgba(0, 224, 255, 0.8);
+  color: rgba(0, 224, 255, 1);
+  transform: scale(1.1);
+}
+
+@keyframes subtle-pulse {
+  0%, 100% {
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  }
+  50% {
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), 0 0 0 1px rgba(0, 224, 255, 0.1);
+  }
+}
+
+/* Insight Overlay Styles */
+.insight-overlay {
+  animation: insight-fade-in 0.3s ease-out;
+  filter: drop-shadow(0 8px 32px rgba(0, 0, 0, 0.4));
+}
+
+.insight-content {
+  background: linear-gradient(135deg, rgba(30, 39, 56, 0.98) 0%, rgba(60, 68, 89, 0.98) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 224, 255, 0.3);
+  border-radius: 16px;
+  padding: 16px 20px;
+  max-width: 320px;
+  color: #f7f9fb;
+  font-size: 14px;
+  line-height: 1.5;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(0, 224, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
+}
+
+.insight-content::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid rgba(0, 224, 255, 0.3);
+}
+
+.insight-content::after {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 7px solid rgba(30, 39, 56, 0.98);
+}
+
+@keyframes insight-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+/* Enhanced insight styling with emoji support */
+.insight-content {
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Add subtle glow to insight text */
+.insight-content:hover {
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(0, 224, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }

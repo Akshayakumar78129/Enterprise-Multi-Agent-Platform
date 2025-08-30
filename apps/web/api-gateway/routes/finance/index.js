@@ -5,6 +5,7 @@ const { authorizePermission } = require('../../middleware/auth/authMiddleware');
 const { ApiSchema, QuerySchemas } = require('../../schemas/ApiSchema');
 const { QueryBuilder, CommonQueries, DataTransformer } = require('../../utils/QueryBuilder');
 const { ConnectorRegistry } = require('../../connectors/ConnectorRegistry');
+const arAgingRouter = require('./ar-aging');
 
 /**
  * GET /api/v1/finance/reports
@@ -612,6 +613,86 @@ router.get('/profitability', authorizePermission('read:finance'), async (req, re
   }
 });
 
+/**
+ * GET /api/v1/finance/cash-flow
+ * Cash flow analysis data
+ */
+router.get('/cash-flow', async (req, res) => {
+  try {
+    const cashFlowApi = require('../../../Finance/tools/cash_flow_analysis/api/data.api');
+    await cashFlowApi.getCashFlowData(req, res);
+  } catch (error) {
+    logger.error('Cash flow data query failed:', error);
+    res.status(500).json(
+      ApiSchema.createErrorResponse(
+        'Failed to retrieve cash flow data',
+        'QUERY_ERROR',
+        { error: error.message }
+      )
+    );
+  }
+});
+
+/**
+ * GET /api/v1/finance/cash-flow/waterfall
+ * Cash flow waterfall analysis
+ */
+router.get('/cash-flow/waterfall', async (req, res) => {
+  try {
+    const cashFlowApi = require('../../../Finance/tools/cash_flow_analysis/api/data.api');
+    await cashFlowApi.getWaterfallData(req, res);
+  } catch (error) {
+    logger.error('Cash flow waterfall query failed:', error);
+    res.status(500).json(
+      ApiSchema.createErrorResponse(
+        'Failed to retrieve waterfall data',
+        'QUERY_ERROR',
+        { error: error.message }
+      )
+    );
+  }
+});
+
+/**
+ * GET /api/v1/finance/cash-flow/scenarios
+ * Cash flow scenario analysis
+ */
+router.get('/cash-flow/scenarios', async (req, res) => {
+  try {
+    const cashFlowApi = require('../../../Finance/tools/cash_flow_analysis/api/data.api');
+    await cashFlowApi.getScenarioAnalysis(req, res);
+  } catch (error) {
+    logger.error('Cash flow scenarios query failed:', error);
+    res.status(500).json(
+      ApiSchema.createErrorResponse(
+        'Failed to retrieve scenario analysis',
+        'QUERY_ERROR',
+        { error: error.message }
+      )
+    );
+  }
+});
+
+/**
+ * GET /api/v1/finance/cash-flow/variance
+ * Cash flow variance analysis
+ */
+router.get('/cash-flow/variance', async (req, res) => {
+  try {
+    const cashFlowApi = require('../../../Finance/tools/cash_flow_analysis/api/data.api');
+    await cashFlowApi.getVarianceAnalysis(req, res);
+  } catch (error) {
+    logger.error('Cash flow variance query failed:', error);
+    res.status(500).json(
+      ApiSchema.createErrorResponse(
+        'Failed to retrieve variance analysis',
+        'QUERY_ERROR',
+        { error: error.message }
+      )
+    );
+  }
+});
+
 // Health check for finance domain
 router.get('/health', (req, res) => {
   try {
@@ -625,7 +706,11 @@ router.get('/health', (req, res) => {
         endpoints: {
           'reports': 'active',
           'ar-analysis': 'active',
-          'profitability': 'active'
+          'profitability': 'active',
+          'cash-flow': 'active',
+          'cash-flow/waterfall': 'active',
+          'cash-flow/scenarios': 'active',
+          'cash-flow/variance': 'active'
         }
       })
     );
@@ -639,5 +724,8 @@ router.get('/health', (req, res) => {
     );
   }
 });
+
+// Mount AR aging routes
+router.use('/ar-aging', arAgingRouter);
 
 module.exports = router;

@@ -11,11 +11,11 @@ export async function* AIResponseDashboard(query, session) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
             body: JSON.stringify({ 
-                new_message: { role: "user", parts: [{ text: query }] },
+                user_query: query,
                 session_id: session.session_id, 
                 user_id: session.user_id, 
                 app_name: session.app_name, 
-                streaming: true 
+                is_canvas: false 
             })
         });
         
@@ -81,11 +81,11 @@ export async function* AIResponseDashboardWithViz(query, session) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
             body: JSON.stringify({ 
-                new_message: { role: "user", parts: [{ text: query }] },
+                user_query: query,
                 session_id: session.session_id, 
                 user_id: session.user_id, 
                 app_name: session.app_name, 
-                streaming: true 
+                is_canvas: false 
             })
         });
         

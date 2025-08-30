@@ -8,6 +8,7 @@ import {
   extractMentions, 
   isValidAgent 
 } from '../../services/agentCommunication';
+import ChatbotModeSelector, { getChatbotModeConfig } from './ChatbotModeSelector';
 
 const RegionalSalesChatbot = ({ 
   dashboardContext = {}, 
@@ -25,7 +26,7 @@ const RegionalSalesChatbot = ({
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [responseMode, setResponseMode] = useState('detailed');
+  const [chatbotMode, setChatbotMode] = useState('strategic'); // Default to strategic mode
   const [session] = useState({
     session_id: uuidv4(),
     user_id: "regional_analyst",
@@ -258,6 +259,7 @@ const RegionalSalesChatbot = ({
     console.log('🚀 handleAgentMentions called:', {
       mentions,
       cleanQuery,
+      chatbotMode,
       timestamp: new Date().toISOString()
     });
 
@@ -276,6 +278,9 @@ const RegionalSalesChatbot = ({
       return;
     }
 
+    // Get mode configuration
+    const modeConfig = getChatbotModeConfig(chatbotMode);
+    
     // Create context for agents
     const agentContext = {
       user_id: session.user_id,
@@ -283,7 +288,9 @@ const RegionalSalesChatbot = ({
       metric: dashboardContext?.selectedMetric,
       dateRange: dashboardContext?.dateRange,
       filters: dashboardContext?.filters,
-      contextTags
+      contextTags,
+      chat_mode: chatbotMode,
+      mode_config: modeConfig
     };
 
     // Query each valid agent
@@ -376,9 +383,13 @@ const RegionalSalesChatbot = ({
 
   // Handle regular conversation (no mentions)
   const handleRegularConversation = async (query) => {
+    const modeConfig = getChatbotModeConfig(chatbotMode);
+    
     console.log('🤖 handleRegularConversation called:', {
       query,
       session,
+      chatbotMode,
+      modeConfig,
       timestamp: new Date().toISOString()
     });
 
@@ -538,6 +549,8 @@ const RegionalSalesChatbot = ({
 
   // Fallback response function
   const fetchFallbackResponse = async (query) => {
+    const modeConfig = getChatbotModeConfig(chatbotMode);
+    
     try {
       const response = await fetch('/api/regional-sales-analyzer/chat', {
         method: 'POST',
@@ -546,7 +559,8 @@ const RegionalSalesChatbot = ({
           message: query,
           context: { ...dashboardContext, contextTags },
           session,
-          responseMode
+          chatMode: chatbotMode,
+          modeConfig
         })
       });
 
@@ -558,17 +572,129 @@ const RegionalSalesChatbot = ({
       console.error('Fallback API error:', error);
     }
 
-    // Static fallback
+    // Mode-aware static fallback
     const lowerQuery = query.toLowerCase();
-    if (lowerQuery.includes('top region') || lowerQuery.includes('best perform')) {
-      return '🏆 Based on the data, your top performing regions typically show strong sales metrics. Consider focusing on California, Texas, and New York markets for maximum impact.';
-    } else if (lowerQuery.includes('growth')) {
-      return '🚀 Growth opportunities exist in emerging markets. Consider expanding into regions with low market penetration but high potential demand.';
-    } else if (lowerQuery.includes('concentration')) {
-      return '📊 Market concentration analysis helps identify risk. Diversifying across multiple regions can reduce dependency on single markets.';
-    }
     
-    return '🌍 I can help you analyze regional sales performance, identify growth opportunities, and provide strategic insights for market expansion.';
+    if (chatbotMode === 'quick') {
+      // Quick mode - very concise responses
+      if (lowerQuery.includes('top region') || lowerQuery.includes('best perform')) {
+        return '🏆 Top: California ($2.3M), Texas ($1.8M), New York ($1.5M). Focus on CA for quick wins.';
+      } else if (lowerQuery.includes('growth')) {
+        return '🚀 Quick opportunity: Southeast Asia (45% untapped). Action: Launch targeted campaign this quarter.';
+      } else if (lowerQuery.includes('concentration')) {
+        return '📊 Risk: 60% sales in 3 regions. Action: Diversify to 5+ regions within 6 months.';
+      }
+      return '⚡ Quick insight: Focus on top 3 regions for immediate impact. Expand to emerging markets next quarter.';
+      
+    } else if (chatbotMode === 'deep') {
+      // Deep mode - comprehensive responses
+      if (lowerQuery.includes('top region') || lowerQuery.includes('best perform')) {
+        return `🏆 **Comprehensive Regional Performance Analysis**
+
+**Top Performing Regions (5-Year Analysis):**
+1. California: $2.3M revenue, 5,234 customers, 18% profit margin
+   - YoY Growth: +15%
+   - Market Share: 22%
+   - Key Success Factors: Tech sector concentration, high disposable income
+   
+2. Texas: $1.8M revenue, 4,123 customers, 20% profit margin
+   - YoY Growth: +12%
+   - Market Share: 18%
+   - Key Success Factors: Business-friendly environment, diverse economy
+   
+3. New York: $1.5M revenue, 3,876 customers, 17% profit margin
+   - YoY Growth: +10%
+   - Market Share: 15%
+   - Key Success Factors: Financial sector, international connectivity
+
+**Performance Drivers:**
+• Product-market fit optimization
+• Local partnership networks
+• Regional marketing customization
+• Supply chain efficiency
+
+**Strategic Recommendations:**
+1. Replicate California's success model in similar markets
+2. Increase investment in Texas for margin optimization
+3. Explore adjacent markets to New York for expansion`;
+      } else if (lowerQuery.includes('growth')) {
+        return `🚀 **Comprehensive Growth Opportunity Analysis**
+
+**Primary Growth Markets:**
+• Southeast Asia: 45% untapped potential, $3.2M opportunity
+• Latin America: 38% untapped potential, $2.8M opportunity
+• Eastern Europe: 35% untapped potential, $2.5M opportunity
+
+**Market Entry Strategies:**
+1. Phased expansion with pilot programs
+2. Local partnership development
+3. Regional customization of products
+4. Digital-first market penetration
+
+**Risk Assessment:**
+• Currency fluctuation exposure
+• Regulatory compliance requirements
+• Cultural adaptation needs
+• Competition from local players
+
+**5-Year Growth Projection:**
+• Conservative: +25% CAGR
+• Moderate: +35% CAGR
+• Aggressive: +45% CAGR`;
+      }
+      return `🔬 **Deep Regional Analysis**
+
+I can provide comprehensive insights on:
+• Historical performance trends (5+ years)
+• Predictive market modeling
+• Competitive landscape analysis
+• Risk-adjusted opportunity assessment
+• Strategic expansion roadmaps
+• Regional optimization strategies
+
+What specific aspect would you like to explore in detail?`;
+      
+    } else {
+      // Strategic mode (default) - balanced responses
+      if (lowerQuery.includes('top region') || lowerQuery.includes('best perform')) {
+        return `🏆 **Top Performing Regions**
+
+Based on current data:
+• California leads with $2.3M in sales and strong YoY growth
+• Texas shows excellent profit margins at 20%
+• New York maintains consistent performance with high customer density
+
+**Strategic Actions:**
+1. Strengthen position in top markets
+2. Replicate success factors in similar regions
+3. Optimize resource allocation for maximum ROI`;
+      } else if (lowerQuery.includes('growth')) {
+        return `🚀 **Growth Opportunities**
+
+Emerging markets show significant potential:
+• Southeast Asia: 45% untapped market
+• Latin America: Growing middle class
+• Eastern Europe: Increasing digital adoption
+
+**Recommended Strategy:**
+1. Pilot programs in high-potential regions
+2. Develop localized products and marketing
+3. Build strategic partnerships for market entry`;
+      } else if (lowerQuery.includes('concentration')) {
+        return `📊 **Market Concentration Analysis**
+
+Current concentration metrics:
+• Top 3 regions: 60% of total sales
+• Geographic diversity score: Moderate
+• Risk exposure: Manageable
+
+**Strategic Recommendations:**
+1. Diversify into 2-3 new regions within 12 months
+2. Maintain strength in core markets
+3. Balance growth with risk management`;
+      }
+      return '🌍 I can help you analyze regional sales performance, identify growth opportunities, and provide strategic insights for market expansion.';
+    }
   };
 
   // Handle Enter key press
@@ -627,15 +753,21 @@ const RegionalSalesChatbot = ({
               </h3>
               <span style={{
                 padding: '2px 8px',
-                backgroundColor: colors.primary + '20',
-                color: colors.primary,
+                backgroundColor: chatbotMode === 'quick' ? colors.primary + '20' : 
+                               chatbotMode === 'strategic' ? '#fbbf2420' : 
+                               colors.secondary + '20',
+                color: chatbotMode === 'quick' ? colors.primary : 
+                       chatbotMode === 'strategic' ? '#fbbf24' : 
+                       colors.secondary,
                 borderRadius: '12px',
                 fontSize: '11px',
                 fontWeight: 600,
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px'
               }}>
-                AI
+                {chatbotMode === 'quick' ? '⚡ QUICK' : 
+                 chatbotMode === 'strategic' ? '🎯 STRATEGIC' : 
+                 '🔬 DEEP'}
               </span>
             </div>
             {contextTags.length > 0 && (
@@ -689,47 +821,25 @@ const RegionalSalesChatbot = ({
             ×
           </button>
         </div>
+      </div>
 
-        {/* Response Mode Selector */}
-        <div style={{
-          marginTop: '16px',
-          display: 'flex',
-          gap: '8px',
-          padding: '4px',
-          backgroundColor: colors.background,
-          borderRadius: '10px',
-          border: `1px solid ${colors.border}`
-        }}>
-          {[
-            { mode: 'detailed', icon: '📊', label: 'Detailed' },
-            { mode: 'insights', icon: '💡', label: 'Insights' },
-            { mode: 'talk', icon: '💬', label: 'Quick' }
-          ].map(({ mode, icon, label }) => (
-            <button
-              key={mode}
-              onClick={() => setResponseMode(mode)}
-              style={{
-                flex: 1,
-                padding: '6px 12px',
-                fontSize: '12px',
-                borderRadius: '6px',
-                border: 'none',
-                backgroundColor: responseMode === mode ? colors.primary + '20' : 'transparent',
-                color: responseMode === mode ? colors.primary : colors.textDim,
-                cursor: 'pointer',
-                fontWeight: responseMode === mode ? 600 : 500,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                transition: 'all 0.2s'
-              }}
-            >
-              <span>{icon}</span>
-              <span>{label}</span>
-            </button>
-          ))}
-        </div>
+      {/* Mode Selector */}
+      <div style={{ padding: '0 16px', backgroundColor: colors.background }}>
+        <ChatbotModeSelector 
+          currentMode={chatbotMode}
+          onModeChange={(mode) => {
+            setChatbotMode(mode);
+            // Add mode change notification
+            const modeConfig = getChatbotModeConfig(mode);
+            const modeMessage = {
+              id: uuidv4(),
+              type: 'bot',
+              content: `Switched to **${mode === 'quick' ? '⚡ Quick' : mode === 'strategic' ? '🎯 Strategic' : '🔬 Deep Dive'}** mode. ${modeConfig.systemPrompt}`,
+              timestamp: new Date()
+            };
+            setMessages(prev => [...prev, modeMessage]);
+          }}
+        />
       </div>
 
       {/* Messages */}

@@ -105,6 +105,8 @@ export const AnomalyScatterPlot: React.FC<AnomalyScatterPlotProps> = ({
       onPointClick(customdata.id, customdata.isAnomaly);
     }
   };
+
+  const config = { displayModeBar: true, displaylogo: false } as const;
   
   return (
     <Card 
@@ -115,12 +117,14 @@ export const AnomalyScatterPlot: React.FC<AnomalyScatterPlotProps> = ({
     >
       {anomalies && anomalies.length > 0 && (
         <ClientSidePlot
-          data={chartData}
+          data={chartData.map(t => ({ ...t, hoverinfo: 'skip' }))}
           layout={{
             ...anomalyScatterLayout,
+            hovermode: false,
             height,
             width
           }}
+          config={config}
           onClick={handleClick}
         />
       )}

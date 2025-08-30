@@ -71,6 +71,11 @@ const initialState: PurchaseFrequencyState = {
   },
   selectedSegments: [],
   frequencyRange: { min: 0 },
+  // Additional filters (local UI only; kept in page state)
+  // markets: string[];
+  // monetary: string[];
+  // loyalty: string[];
+  // countries: string[];
   isLoading: false,
   
   kpiData: null,
@@ -106,6 +111,10 @@ export const purchaseFrequencySlice = createSlice({
     setDateRange: (state, action: PayloadAction<DateRange>) => {
       state.dateRange = action.payload;
       state.isLoading = true;
+    },
+    // Clear all highlighted selections (used by ESC)
+    clearAllSelections: (state) => {
+      state.highlightedElements = {};
     },
     setSelectedSegments: (state, action: PayloadAction<string[]>) => {
       state.selectedSegments = action.payload;

@@ -1,7 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import dynamic from 'next/dynamic';
 import { fetchPurchaseFrequencyData, transformKPIData } from '../api/data.api';
+import EnhancedFilterContainer from '../../transaction_patterns/ui/components/filters/EnhancedFilterContainer';
+import { handleChartClick } from '../ui/utils/chartSelectionHelper';
 import {
   setDateRange,
   setKPIData,
@@ -14,34 +16,34 @@ import {
   toggleIntelligencePanel
 } from '../ui/state/purchaseFrequencySlice';
 import { DateRange, KPIData } from '../ui/types';
-
-// Dynamic imports for components
-const KPITilesRow = dynamic(() => import('../ui/components/kpi/KPITilesRow'), { ssr: false });
-const FrequencyHistogram = dynamic(() => import('../ui/components/visualizations/FrequencyHistogram'), { ssr: false });
-const IntervalHeatmap = dynamic(() => import('../ui/components/visualizations/IntervalHeatmap'), { ssr: false });
-const SegmentQuadrant = dynamic(() => import('../ui/components/visualizations/SegmentQuadrant'), { ssr: false });
-const RegularityChart = dynamic(() => import('../ui/components/visualizations/RegularityChart'), { ssr: false });
-const ValueTreemap = dynamic(() => import('../ui/components/visualizations/ValueTreemap'), { ssr: false });
-const PatternIntelligence = dynamic(() => import('../ui/components/PatternIntelligence'), { ssr: false });
-const DateRangePicker = dynamic(() => import('../ui/components/controls/DateRangePicker'), { ssr: false });
-const FilterControl = dynamic(() => import('../ui/components/controls/FilterControl'), { ssr: false });
-
-export default function PurchaseFrequencyDashboard() {
-  const dispatch = useDispatch();
-  
-  // Access state from Redux store
-  const {
-    dateRange,
-    selectedSegments,
-    kpiData,
-    histogramData,
-    meanFrequency,
-    highThreshold,
+  return (
+    <div 
+      className="purchase-frequency-dashboard"
+      style={{
+        background: '#181e2a',
+        color: '#f7f9fb',
+        minHeight: '100vh',
+        fontFamily: 'Inter, sans-serif',
+        padding: 0
+      }}
+      ref={containerRef}
+    >
+      <header
+        style={{
+          marginBottom: '24px',
+          padding: '32px 40px 0 40px',
+          borderBottom: '2px solid #232a36',
+          background: '#232a36'
+        }}
+      >
+        <h1 style={{ fontSize: 32, fontWeight: 800, margin: 0 }}>Purchase Frequency Analyzer</h1>
+        <div style={{ color: '#b0b8c9', marginTop: 4, marginBottom: 16 }}>AI-powered purchase frequency analytics</div>
+      </header>
     lowThreshold,
     intervalData,
     customerSegments,
     regularityData,
-    valueSegments,
+    // valueSegments, // removed with ValueTreemap
     isLoading,
     intelligencePanelExpanded,
     intelligenceResponse,
@@ -55,7 +57,7 @@ export default function PurchaseFrequencyDashboard() {
   const heatmapRef = useRef<any>(null);
   const quadrantRef = useRef<any>(null);
   const regularityChartRef = useRef<any>(null);
-  const treemapRef = useRef<any>(null);
+  // const treemapRef = useRef<any>(null); // removed with ValueTreemap
   const dateRangePickerRef = useRef<any>(null);
   const filterControlRef = useRef<any>(null);
   const intelligenceRef = useRef<any>(null);
@@ -181,102 +183,349 @@ export default function PurchaseFrequencyDashboard() {
 
   // Handle KPI tile click
   const handleKpiTileClick = (metric: string) => {
-    // Show intelligence panel with information about the selected metric
-    dispatch(toggleIntelligencePanel());
-    
-    // Highlight the selected tile
+    // No-op: removed intelligence panel behavior per request
     kpiTilesRef.current?.highlightTile(metric);
-    
-    // Set a query about this metric
-    if (intelligenceRef.current) {
-      const query = `What does the ${metric} metric tell us about our customers?`;
-      intelligenceRef.current.setQuery(query);
-      intelligenceRef.current.submitQuery(query);
-    }
   };
   
   // Handle intelligence query submission
   const handleIntelligenceQuery = (query: string) => {
-    // In a real implementation, this would call an API to get AI-powered insights
-    console.log('Intelligence query:', query);
-    
-    // Simulate a response after a delay
-    setTimeout(() => {
-      // This is where you would set the response from the API
-      // dispatch(setIntelligenceResponse('Sample response...'));
-    }, 1500);
+    // No-op: removed popup/intelligence behavior per request
+    return;
   };
   
-  // Sample customer segments for the filter
-  const availableSegments = [
-    'champions',
-    'loyal',
-    'big_spenders',
-    'at_risk',
-    'others'
-  ];
+
+  // Import new filter components
+  // import EnhancedFilterContainer from transaction-patterns
+  // import DateRangeFilter from transaction-patterns
+  // import ProductCategoryFilter from transaction-patterns (if needed)
+  // import CustomerSegmentFilter from transaction-patterns (if needed)
+  // import styles from transaction-patterns EnhancedFilterContainer.module.css
+
+  // Sample available segments and categories (replace with actual data as needed)
+  // Enhanced segments structure for segmented chips in the filter UI
+  const availableSegments = {
+    // Legacy buckets (still shown inside CustomerSegmentFilter)
+    champions: [{ id: 'champions', label: 'Champions', count: 1200 }],
+    loyal: [{ id: 'loyal', label: 'Loyal', count: 800 }],
+    big_spenders: [{ id: 'big_spenders', label: 'Big Spenders', count: 500 }],
+    at_risk: [{ id: 'at_risk', label: 'At Risk', count: 300 }],
+    others: [{ id: 'others', label: 'Others', count: 2000 }],
+
+    // New segment groups used by EnhancedFilterContainer chip groups
+    market: [
+      { id: 'discounters', label: 'Discounters', description: 'Price-focused retail chains', count: 0 },
+      { id: 'general_sports', label: 'General Sports Shops', description: 'Multi-sport retail stores', count: 0 },
+      { id: 'specialty_bike', label: 'Specialty Bike Shops', description: 'Dedicated cycling retailers', count: 0 },
+      { id: 'clubs_resorts', label: 'Clubs & Resorts', description: 'Hospitality and recreation', count: 0 },
+      { id: 'department_stores', label: 'Department Stores', description: 'Large format retailers', count: 0 },
+      { id: 'wholesalers', label: 'Wholesalers', description: 'B2B distribution partners', count: 0 }
+    ],
+    monetary: [
+      { id: 'top', label: 'Top Tier', description: 'Highest value customers', count: 0, color: '#10b981' },
+      { id: 'big', label: 'Big Spenders', description: 'High value customers', count: 0, color: '#3b82f6' },
+      { id: 'medium', label: 'Medium Value', description: 'Regular customers', count: 0, color: '#f59e0b' },
+      { id: 'small', label: 'Small Value', description: 'Lower spend customers', count: 0, color: '#ef4444' },
+      { id: 'inactive', label: 'Inactive', description: 'Dormant customers', count: 0, color: '#6b7280' }
+    ],
+    loyalty: [
+      { id: 'champion', label: 'Champions', description: 'High value, high frequency', count: 0, color: '#10b981' },
+      { id: 'loyal', label: 'Loyal Customers', description: 'Regular repeat buyers', count: 0, color: '#3b82f6' },
+      { id: 'potential', label: 'Potential Loyalists', description: 'Recent high-value customers', count: 0, color: '#8b5cf6' },
+      { id: 'new', label: 'New Customers', description: 'Recent acquisitions', count: 0, color: '#06b6d4' },
+      { id: 'at_risk', label: 'At Risk', description: 'Declining engagement', count: 0, color: '#f59e0b' },
+      { id: 'hibernating', label: 'Hibernating', description: 'Low recent activity', count: 0, color: '#ef4444' }
+    ],
+    geography: [
+      { id: 'north_america', label: 'North America', description: 'US and Canada', count: 0 },
+      { id: 'europe', label: 'Europe', description: 'European markets', count: 0 },
+      { id: 'asia_pacific', label: 'Asia Pacific', description: 'APAC region', count: 0 },
+      { id: 'latin_america', label: 'Latin America', description: 'Central and South America', count: 0 },
+      { id: 'other', label: 'Other Regions', description: 'Emerging markets', count: 0 }
+    ]
+  };
+  const availableCategories = {
+    bikes: [{ id: 'bikes', label: 'Bicycles', revenue: 2500000 }],
+    accessories: [{ id: 'accessories', label: 'Accessories', revenue: 1800000 }],
+    components: [{ id: 'components', label: 'Components', revenue: 1200000 }],
+    apparel: [{ id: 'apparel', label: 'Apparel', revenue: 900000 }]
+  };
+
+  // Filters state
+  const [filters, setFilters] = useState({
+    dateRange: dateRange,
+    customerSegments: [],
+    productCategories: [],
+    markets: [],
+    monetary: [],
+    loyalty: [],
+    countries: []
+  });
+
+  // Sync Redux dateRange with local filters
+  useEffect(() => {
+    setFilters((prev) => ({ ...prev, dateRange }));
+  }, [dateRange]);
+
+  // Handler for EnhancedFilterContainer (segments, categories, date)
+  const handleEnhancedFiltersChange = (newFilters) => {
+    setFilters((prev) => ({ ...prev, ...newFilters }));
+    // Combine all selected segment-like filters into a single segment id list
+    const combinedSegmentIds = [
+      ...((newFilters.customerSegments || []).map((s: any) => s.id)),
+      ...((newFilters.markets || []).map((s: any) => s.id)),
+      ...((newFilters.monetary || []).map((s: any) => s.id)),
+      ...((newFilters.loyalty || []).map((s: any) => s.id)),
+      ...((newFilters.countries || []).map((s: any) => s.id)),
+    ];
+    handleSegmentFilterChange(combinedSegmentIds);
+  };
+
+  // Handler for date range change from EnhancedFilterContainer
+  const handleEnhancedDateRangeChange = (newRange) => {
+    handleDateRangeChange(newRange);
+  };
+
+  // Client-side filtered datasets (productCategories apply here; segments handled by API fetch via handleSegmentFilterChange)
+  const filteredHistogram = useMemo(() => {
+    if (!histogramData) return [];
+    // If categories are selected and data contains category keys, filter; else pass-through
+    const categoryIds = (filters.productCategories || []).map((c: any) => c.id);
+    if (categoryIds.length === 0) return histogramData;
+    // Expecting histogramData as array of bins; if contains categoryId, filter; else pass-through
+    return (histogramData as any[]).filter((bin: any) => !bin.categoryId || categoryIds.includes(bin.categoryId));
+  }, [histogramData, filters.productCategories]);
+
+  const filteredInterval = useMemo(() => {
+    if (!intervalData) return [];
+    const categoryIds = (filters.productCategories || []).map((c: any) => c.id);
+    if (categoryIds.length === 0) return intervalData;
+    return (intervalData as any[]).filter((row: any) => !row.categoryId || categoryIds.includes(row.categoryId));
+  }, [intervalData, filters.productCategories]);
+
+  const filteredCustomerSegments = useMemo(() => {
+    if (!customerSegments) return [];
+    const categoryIds = (filters.productCategories || []).map((c: any) => c.id);
+    if (categoryIds.length === 0) return customerSegments;
+    return (customerSegments as any[]).filter((seg: any) => !seg.categoryId || categoryIds.includes(seg.categoryId));
+  }, [customerSegments, filters.productCategories]);
+
+  const filteredRegularity = useMemo(() => {
+    if (!regularityData) return [];
+    const categoryIds = (filters.productCategories || []).map((c: any) => c.id);
+    if (categoryIds.length === 0) return regularityData;
+    return (regularityData as any[]).filter((r: any) => !r.categoryId || categoryIds.includes(r.categoryId));
+  }, [regularityData, filters.productCategories]);
 
   return (
     <div 
       className="purchase-frequency-dashboard"
       style={{
-        backgroundColor: '#0a1224',
-        color: '#f7f9fb',
-        padding: '24px',
         minHeight: '100vh',
-        fontFamily: 'Inter, sans-serif'
+        padding: '40px 60px',
+        position: 'relative',
+        background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%, #f8fafc 100%)'
       }}
     >
+      {/* Subtle animated background like churn_prediction */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        pointerEvents: 'none',
+        overflow: 'hidden',
+        zIndex: 0,
+        background: `
+          radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
+          radial-gradient(circle at 80% 20%, rgba(147, 51, 234, 0.05) 0%, transparent 50%),
+          radial-gradient(circle at 40% 40%, rgba(16, 185, 129, 0.03) 0%, transparent 50%)
+        `,
+        animation: 'float 20s ease-in-out infinite'
+      }} />
       <header
         style={{
-          marginBottom: '24px'
+          marginBottom: 48,
+          textAlign: 'center',
+          background: 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(20px)',
+          borderRadius: 20,
+          padding: '32px 28px',
+          border: '1px solid rgba(59, 130, 246, 0.1)',
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.05), 0 0 20px rgba(59, 130, 246, 0.05)'
         }}
       >
-        <h1 style={{ margin: 0, fontSize: '28px', marginBottom: '8px' }}>
-          Purchase Frequency Analyzer
+        <h1 style={{ 
+          fontSize: 38, 
+          fontWeight: 800, 
+          marginBottom: 8,
+          background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+          margin: 0
+        }}>
+          📊 Purchase Frequency Analyzer
         </h1>
-        <p style={{ margin: 0, opacity: 0.7 }}>
+        <div style={{ 
+          color: '#64748b', 
+          fontSize: 15,
+          fontWeight: 500,
+          maxWidth: 680,
+          margin: '0 auto',
+          lineHeight: 1.6
+        }}>
           Analyze customer purchase patterns and frequency trends
-        </p>
+        </div>
       </header>
 
-      {/* Controls Section */}
-      <div 
-        className="controls-section"
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginBottom: '24px',
-          gap: '16px'
-        }}
-      >
-        <div style={{ flex: 1 }}>
-          <DateRangePicker
-            ref={dateRangePickerRef}
-            dateRange={dateRange}
-            onChange={handleDateRangeChange}
-            isLoading={isLoading}
-          />
-        </div>
-        <div style={{ flex: 1 }}>
-          <FilterControl
-            ref={filterControlRef}
-            segments={availableSegments}
-            selectedSegments={selectedSegments}
-            onChange={handleSegmentFilterChange}
-            isLoading={isLoading}
-          />
-        </div>
+      {/* Advanced Filter Section - fills horizontally */}
+      <div style={{ marginBottom: '32px' }}>
+        {/* Use EnhancedFilterContainer from transaction-patterns */}
+        <EnhancedFilterContainer
+          filters={filters}
+          onFiltersChange={handleEnhancedFiltersChange}
+          onDateRangeChange={handleEnhancedDateRangeChange}
+          isLoading={isLoading}
+          availableSegments={availableSegments}
+          availableCategories={availableCategories}
+          minDate={filters.dateRange?.start || '2017-01-01'}
+          maxDate={filters.dateRange?.end || '2024-12-31'}
+          showDateRange={true}
+          showApply={false}
+          className="enhanced-filter-container"
+        />
       </div>
 
       {/* KPI Tiles */}
+      {/* Selected Filters Summary Bar */}
+      {/* Clickable Filter Chips for Segments & Categories */}
+      <div style={{ marginBottom: '18px' }}>
+        <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '8px', color: '#232a36' }}>
+          Customer Segmentation & Product Categories
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+          {/* Customer Segmentation Chips */}
+          {Object.values(availableSegments).flat().length > 0 ? (
+            Object.values(availableSegments).flat().map(segment => (
+              <button
+                key={segment.id}
+                style={{
+                  padding: '6px 16px',
+                  borderRadius: '16px',
+                  border: filters.customerSegments.some(s => s.id === segment.id) ? '2px solid #e930ff' : '1px solid #e2e8f0',
+                  background: filters.customerSegments.some(s => s.id === segment.id) ? 'rgba(233,48,255,0.12)' : '#fff',
+                  color: '#e930ff',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  boxShadow: filters.customerSegments.some(s => s.id === segment.id) ? '0 2px 8px rgba(233,48,255,0.08)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => {
+                  const isSelected = filters.customerSegments.some(s => s.id === segment.id);
+                  const newSegments = isSelected
+                    ? filters.customerSegments.filter(s => s.id !== segment.id)
+                    : [...filters.customerSegments, segment];
+                  setFilters(prev => ({ ...prev, customerSegments: newSegments }));
+                  handleSegmentFilterChange(newSegments.map(s => s.id));
+                }}
+              >
+                {segment.label}
+              </button>
+            ))
+          ) : (
+            <span style={{ color: '#ef4444', fontWeight: 500 }}>No segments available</span>
+          )}
+          {/* Product Category Chips */}
+          {Object.values(availableCategories).flat().length > 0 ? (
+            Object.values(availableCategories).flat().map(category => (
+              <button
+                key={category.id}
+                style={{
+                  padding: '6px 16px',
+                  borderRadius: '16px',
+                  border: filters.productCategories.some(c => c.id === category.id) ? '2px solid #10b981' : '1px solid #e2e8f0',
+                  background: filters.productCategories.some(c => c.id === category.id) ? 'rgba(16,185,129,0.12)' : '#fff',
+                  color: '#10b981',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  boxShadow: filters.productCategories.some(c => c.id === category.id) ? '0 2px 8px rgba(16,185,129,0.08)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => {
+                  const isSelected = filters.productCategories.some(c => c.id === category.id);
+                  const newCategories = isSelected
+                    ? filters.productCategories.filter(c => c.id !== category.id)
+                    : [...filters.productCategories, category];
+                  setFilters(prev => ({ ...prev, productCategories: newCategories }));
+                }}
+              >
+                {category.label}
+              </button>
+            ))
+          ) : (
+            <span style={{ color: '#ef4444', fontWeight: 500 }}>No categories available</span>
+          )}
+        </div>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: '16px',
+          background: 'rgba(255,255,255,0.95)',
+          borderRadius: '16px',
+          boxShadow: '0 2px 8px rgba(59,130,246,0.08)',
+          padding: '12px 24px',
+          marginBottom: '18px',
+          border: '1px solid #e2e8f0',
+          fontSize: '15px',
+          fontWeight: 500
+        }}
+      >
+        <span style={{ color: '#3b82f6', fontWeight: 700 }}>Active Filters:</span>
+        {filters.customerSegments.length > 0 && (
+          <span style={{ color: '#e930ff' }}>
+            Segments: {filters.customerSegments.map(s => s.label).join(', ')}
+          </span>
+        )}
+        {filters.productCategories.length > 0 && (
+          <span style={{ color: '#10b981' }}>
+            Categories: {filters.productCategories.map(c => c.label).join(', ')}
+          </span>
+        )}
+        {filters.markets.length > 0 && (
+          <span style={{ color: '#8b5cf6' }}>
+            Markets: {filters.markets.map(m => m.label).join(', ')}
+          </span>
+        )}
+        {filters.monetary.length > 0 && (
+          <span style={{ color: '#fbbf24' }}>
+            Monetary: {filters.monetary.map(m => m.label).join(', ')}
+          </span>
+        )}
+        {filters.loyalty.length > 0 && (
+          <span style={{ color: '#10b981' }}>
+            Loyalty: {filters.loyalty.map(l => l.label).join(', ')}
+          </span>
+        )}
+        {filters.countries.length > 0 && (
+          <span style={{ color: '#64748b' }}>
+            Countries: {filters.countries.map(c => c.label).join(', ')}
+          </span>
+        )}
+        {(filters.customerSegments.length === 0 && filters.productCategories.length === 0 && filters.markets.length === 0 && filters.monetary.length === 0 && filters.loyalty.length === 0 && filters.countries.length === 0) && (
+          <span style={{ color: '#64748b' }}>None</span>
+        )}
+      </div>
       <section 
         className="kpi-section"
         style={{ marginBottom: '24px' }}
       >
         {initialLoading ? (
-          <div style={{ height: '120px', backgroundColor: '#232a36', borderRadius: '20px' }}>
-            <p style={{ textAlign: 'center', padding: '48px' }}>Loading KPI data...</p>
+          <div style={{ height: '120px', backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: '20px', border: '1px solid rgba(59,130,246,0.1)', boxShadow: '0 10px 40px rgba(0,0,0,0.05)' }}>
+            <p style={{ textAlign: 'center', padding: '48px', color: '#64748b' }}>Loading KPI data...</p>
           </div>
         ) : (
           <KPITilesRow
@@ -306,34 +555,21 @@ export default function PurchaseFrequencyDashboard() {
       >
         <FrequencyHistogram
           ref={histogramRef}
-          data={histogramData || []}
+          data={filteredHistogram || []}
           meanFrequency={meanFrequency}
           highThreshold={highThreshold}
           lowThreshold={lowThreshold}
           highlightBins={highlightedElements.histogramBins}
-          onBarClick={(bin) => {
-            console.log(`Clicked bin ${bin}`);
-            
-            // Expand intelligence panel with a relevant query
-            if (intelligenceRef.current && !intelligencePanelExpanded) {
-              dispatch(toggleIntelligencePanel());
-              const query = `What can you tell me about customers who purchase ${bin} times?`;
-              intelligenceRef.current.setQuery(query);
-              intelligenceRef.current.submitQuery(query);
-            }
-          }}
         />
+
+        {/* Legacy Distribution (with hover insights) */}
+  {/* Remove FrequencyDistribution if not needed, or import it if required */}
         
         <IntervalHeatmap
           ref={heatmapRef}
-          data={intervalData || []}
+          data={filteredInterval || []}
           dateRange={dateRange}
           highlightCells={highlightedElements.intervalCells}
-          onCellClick={(day, hour) => {
-            console.log(`Clicked cell ${day} at ${hour}:00`);
-            
-            // Similar intelligence panel integration as above
-          }}
           onDateRangeChange={handleDateRangeChange}
         />
       </div>
@@ -343,28 +579,18 @@ export default function PurchaseFrequencyDashboard() {
         className="visualizations-grid"
         style={{
           display: 'grid',
-          gridTemplateColumns: '7fr 5fr',
+          gridTemplateColumns: '1fr 1fr',
           gridGap: '24px',
           marginBottom: '24px'
         }}
       >
-        <SegmentQuadrant
-          ref={quadrantRef}
-          data={customerSegments || []}
-          highlightSegments={highlightedElements.customerSegments}
-          onSegmentClick={(segment) => {
-            console.log(`Clicked segment ${segment}`);
-            
-            // Filter to this segment
-            filterControlRef.current?.selectSegment(segment);
-            
-            // Intelligence panel integration
-            if (intelligenceRef.current) {
-              const query = `What are the key characteristics of the ${segment} segment?`;
-              intelligenceRef.current.setQuery(query);
-            }
-          }}
-        />
+        <div data-chart="segment-quadrant">
+          <SegmentQuadrant
+            ref={quadrantRef}
+            data={filteredCustomerSegments || []}
+            highlightSegments={highlightedElements.customerSegments}
+          />
+        </div>
         
         <div 
           className="secondary-charts"
@@ -376,64 +602,26 @@ export default function PurchaseFrequencyDashboard() {
         >
           <RegularityChart
             ref={regularityChartRef}
-            data={regularityData || []}
-            previousPeriodData={undefined} // Would come from previous period data
+            data={filteredRegularity || []}
+            previousPeriodData={undefined}
             showComparison={false}
-            onAxisClick={(timeframe) => {
-              console.log(`Clicked timeframe ${timeframe}`);
-              
-              // Intelligence panel integration
-              if (intelligenceRef.current) {
-                const query = `What are the trends for ${timeframe} purchasing customers?`;
-                intelligenceRef.current.setQuery(query);
-              }
-            }}
+          />
+
+          {/* New: Recency vs Frequency Heatmap */}
+          <RecencyFrequencyHeatmap
+            data={filteredCustomerSegments || []}
+          />
+
+          {/* New: Frequency Pareto Chart */}
+          <FrequencyParetoChart
+            data={filteredHistogram || []}
           />
           
-          <ValueTreemap
-            ref={treemapRef}
-            data={valueSegments || []}
-            highlightSegments={highlightedElements.valueSegments}
-            onSegmentClick={(segment) => {
-              console.log(`Clicked value segment ${segment}`);
-              
-              // Intelligence panel integration
-              if (intelligenceRef.current) {
-                const query = `What strategies should we use for ${segment} value customers?`;
-                intelligenceRef.current.setQuery(query);
-              }
-            }}
-          />
+          {/* ValueTreemap removed per request */}
         </div>
       </div>
 
-      {/* Intelligence Panel - Fixed position on right side */}
-      <div 
-        className="intelligence-panel"
-        style={{
-          position: 'fixed',
-          top: 0,
-          right: 0,
-          width: '400px',
-          height: '100vh',
-          backgroundColor: 'rgba(35, 42, 54, 0.95)',
-          borderLeft: '1px solid #3a4459',
-          padding: '24px',
-          transform: intelligencePanelExpanded ? 'translateX(0)' : 'translateX(360px)',
-          transition: 'transform 0.3s ease',
-          overflow: 'auto',
-          zIndex: 100
-        }}
-      >
-        <PatternIntelligence
-          ref={intelligenceRef}
-          isExpanded={intelligencePanelExpanded}
-          onToggle={() => dispatch(toggleIntelligencePanel())}
-          onQuery={handleIntelligenceQuery}
-          response={intelligenceResponse}
-          isLoading={intelligenceLoading}
-        />
-      </div>
+
     </div>
   );
 } 

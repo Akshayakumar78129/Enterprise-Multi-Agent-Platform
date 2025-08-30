@@ -28,6 +28,7 @@ export interface KPIData {
   avg_interval_days: number;
   active_customers_percentage: number;
   high_value_customers_percentage: number;
+  avg_customer_value: number;
   previous_period_comparison?: {
     total_customers: number;
     avg_purchase_frequency: number;
@@ -40,13 +41,14 @@ export interface KPITileProps {
   title: string;
   value: number;
   previousValue?: number;
-  format?: 'number' | 'percentage' | 'currency' | 'days';
-  trend?: 'up' | 'down' | 'neutral';
+  format?: 'number' | 'percentage' | 'currency' | 'days' | 'decimal';
+  trend?: 'up' | 'down' | 'neutral' | number; // allow numeric percentage as used in component
   isCritical?: boolean;
   showSpark?: boolean;
   width?: number;
   height?: number;
   onClick?: () => void;
+  onHoverInsight?: (info: { title: string; lines: string[] } | null) => void;
 }
 
 export interface HighlightedElements {
@@ -78,6 +80,7 @@ export interface FrequencyHistogramProps {
   componentId?: string;
   highlightBins?: number[];
   focusRegion?: {start: number; end: number};
+  onHoverInsight?: (info: { title: string; lines: string[] } | null) => void;
 }
 
 export interface IntervalData {
@@ -104,6 +107,7 @@ export interface IntervalHeatmapProps {
     startHour: number;
     endHour: number;
   };
+  onHoverInsight?: (info: { title: string; lines: string[] } | null) => void;
 }
 
 export interface CustomerSegment {
@@ -132,6 +136,7 @@ export interface SegmentQuadrantProps {
     yStart: number;
     yEnd: number;
   };
+  onHoverInsight?: (info: { title: string; lines: string[] } | null) => void;
 }
 
 export interface RegularityData {
@@ -158,15 +163,7 @@ export interface ValueSegment {
   avgValue: number;
 }
 
-export interface ValueTreemapProps {
-  data: ValueSegment[];
-  width?: number;
-  height?: number;
-  onSegmentClick?: (segment: string) => void;
-  onChartElementClick?: (clickData: any) => void;
-  componentId?: string;
-  highlightSegments?: string[];
-}
+// ValueTreemap removed per request
 
 export interface DateRangePickerProps {
   dateRange: DateRange;
@@ -355,14 +352,7 @@ export interface CustomerSegmentQuadrantProps {
   height?: number;
 }
 
-export interface ValueSegmentTreemapProps {
-  data: ValueSegmentData[];
-  isLoading?: boolean;
-  onSegmentClick?: (segment: string) => void;
-  selectedSegment?: string | null;
-  width?: number;
-  height?: number;
-}
+// ValueSegmentTreemap removed per request
 
 export interface PurchaseRegularityRadarProps {
   data: CustomerPurchaseData[];

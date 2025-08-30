@@ -17,10 +17,11 @@ import purchaseFrequencyReducer from '../Customer/tools/purchase_frequency/ui/st
 import customerSegmentationReducer from '../Customer/tools/customer_segmentation/ui/state/customerSegmentationSlice';
 import customerBehaviourReducer from '../Customer/tools/customer_behaviour/ui/state/customerBehaviourSlice';
 import churnPredictionReducer from '../Customer/tools/churn_prediction/ui/state/churnPredictionSlice';
+import engagementClassifierReducer from '../Customer/tools/engagement_classifier/ui/state/engagementClassifierSlice';
 
 
 
-const backendAiUrl = process.env.NEXT_PUBLIC_BACKEND_AI_URL || 'http://127.0.0.1:5000';
+const backendAiUrl = process.env.NEXT_PUBLIC_BACKEND_AI_URL || 'http://127.0.0.1:8001';
 
 // Configure Redux store
 const store = configureStore({
@@ -29,6 +30,7 @@ const store = configureStore({
     customerSegmentation: customerSegmentationReducer,
     customerBehaviour: customerBehaviourReducer,
     churnPrediction: churnPredictionReducer,
+    engagementClassifier: engagementClassifierReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

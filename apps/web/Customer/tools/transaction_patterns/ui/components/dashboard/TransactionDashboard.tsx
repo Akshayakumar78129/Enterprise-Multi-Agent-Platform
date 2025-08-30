@@ -42,7 +42,7 @@ import {
 
 export const TransactionDashboard = () => {
   const theme = useTheme();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<any>();
   const dateRange = useSelector(selectDateRange);
   const loading = useSelector(selectLoading);
   const anomalyLoading = useSelector(selectAnomalyLoading);
@@ -135,6 +135,11 @@ export const TransactionDashboard = () => {
       }}>
         Transaction Pattern Analysis
       </h1>
+
+      {/* Top Control Bar: Date Range */}
+      <div style={{ marginBottom: theme.spacing[4] }}>
+        <DateRangeSelector compact />
+      </div>
       
       <Grid columns={12} gap={theme.spacing[4]}>
         {/* KPI Tiles Row */}
@@ -203,9 +208,6 @@ export const TransactionDashboard = () => {
         {/* Right sidebar with controls and AI interaction */}
         <GridItem colSpan={3}>
           <Grid columns={1} gap={theme.spacing[4]}>
-            <GridItem>
-              <DateRangeSelector />
-            </GridItem>
             <GridItem>
               <FilterControls />
             </GridItem>

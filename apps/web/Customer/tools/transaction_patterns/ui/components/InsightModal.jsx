@@ -147,6 +147,7 @@ const InsightModal = ({
   onDownloadCSV,
   onFilter,
   rawContext,
+  enableAI = true,
 }) => {
   const [userPrompt, setUserPrompt] = useState('');
   const [mode, setMode] = useState('strategic');
@@ -167,7 +168,14 @@ const InsightModal = ({
             <h3 style={{ margin: 0, color: '#e6edf3' }}>{title}</h3>
             {subtitle && <div style={{ marginTop: 4, color: '#9fb3c8', fontSize: 13 }}>{subtitle}</div>}
           </div>
-          <button onClick={onClose} aria-label="Close" style={{ background: 'transparent', border: 0, color: '#e6edf3', fontSize: 22, cursor: 'pointer' }}>&times;</button>
+          <button 
+            onClick={onClose} 
+            aria-label="Close" 
+            title="Close this insight modal"
+            style={{ background: 'transparent', border: 0, color: '#e6edf3', fontSize: 22, cursor: 'pointer' }}
+          >
+            &times;
+          </button>
         </div>
         <div style={{ padding: 20, flex: '1 1 auto', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {metrics.length > 0 && (
@@ -194,6 +202,7 @@ const InsightModal = ({
             </Section>
           )}
 
+          {enableAI && onAskAI && (
           <Section title="AI insight">
             {aiAudit && (
               <div style={{ fontSize: 12, color: '#9fb3c8', marginBottom: 6 }}>
@@ -205,14 +214,21 @@ const InsightModal = ({
             <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
               <span style={{ color: '#9fb3c8', fontSize: 12 }}>Mode:</span>
               {['quick','strategic','forecast'].map(m => (
-                <button key={m} onClick={()=>setMode(m)} style={{
-                  background: mode===m? '#00e0ff' : 'transparent',
-                  color: mode===m? '#001018' : '#e6edf3',
-                  border: '1px solid #2d3748',
-                  borderRadius: 999,
-                  padding: '4px 10px',
-                  cursor: 'pointer'
-                }}>{m.charAt(0).toUpperCase()+m.slice(1)}</button>
+                <button 
+                  key={m} 
+                  onClick={()=>setMode(m)} 
+                  title={`Switch to ${m} analysis mode.&#10;${m === 'quick' ? 'Fast insights for immediate decisions' : m === 'strategic' ? 'Comprehensive analysis for planning' : 'Predictive analysis with forecasting'}`}
+                  style={{
+                    background: mode===m? '#00e0ff' : 'transparent',
+                    color: mode===m? '#001018' : '#e6edf3',
+                    border: '1px solid #2d3748',
+                    borderRadius: 999,
+                    padding: '4px 10px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {m.charAt(0).toUpperCase()+m.slice(1)}
+                </button>
               ))}
             </div>
             <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: 12, minHeight: 80, color: '#d1d5db', marginBottom: 8 }}>
@@ -224,12 +240,13 @@ const InsightModal = ({
                 onChange={(e)=>setUserPrompt(e.target.value)}
                 onKeyDown={(e)=>{ if(e.key==='Enter'){ e.preventDefault(); e.stopPropagation(); onAskAI && onAskAI(userPrompt, mode); } }}
                 placeholder="Ask a follow-up (e.g., Risks? 30/90-day plan? Forecast?)"
+                title="Type your custom question about this data.&#10;Examples: 'What are the risks?', 'Show me a 30-day plan', 'What should I focus on?'"
                 style={{ flex: 1, background: 'transparent', color: '#e6edf3', border: '1px solid #2d3748', borderRadius: 8, padding: '8px 10px' }}
               />
               <button 
                 type="button"
                 aria-label="Send follow-up"
-                title="Send"
+                title="Send your custom question to get AI analysis.&#10;Ask about risks, opportunities, or specific insights."
                 onClick={()=>{ if(onAskAI){ onAskAI(userPrompt, mode, 'followup'); } setUserPrompt(''); }}
                 disabled={!!aiLoading || !userPrompt.trim()}
                 style={{ background: 'transparent', color: '#e6edf3', border: '1px solid #2d3748', borderRadius: 8, padding: '8px 12px', cursor: (!!aiLoading || !userPrompt.trim()) ? 'not-allowed' : 'pointer' }}
@@ -237,13 +254,27 @@ const InsightModal = ({
               <button 
                 onClick={()=>onAskAI && onAskAI('', mode, 'explain')} 
                 disabled={!!aiLoading}
+                title="Generate AI-powered explanation of this data.&#10;Get insights, strategies, and actionable recommendations."
                 style={{ background: aiLoading? '#57f0ff66' : '#00e0ff', color: '#001018', border: 0, borderRadius: 8, padding: '8px 12px', cursor: aiLoading? 'not-allowed' : 'pointer' }}
               >{aiLoading ? 'Working…' : 'Explain with AI'}</button>
-              {onDownloadCSV && <button onClick={onDownloadCSV} style={{ background: 'transparent', color: '#e6edf3', border: '1px solid #2d3748', borderRadius: 8, padding: '8px 12px', cursor: 'pointer' }}>Download CSV</button>}
-              {onFilter && <button onClick={onFilter} style={{ background: 'transparent', color: '#e6edf3', border: '1px solid #2d3748', borderRadius: 8, padding: '8px 12px', cursor: 'pointer' }}>Filter to this</button>}
-              {rawContext && <button onClick={() => navigator.clipboard.writeText(JSON.stringify(rawContext, null, 2))} style={{ background: 'transparent', color: '#e6edf3', border: '1px solid #2d3748', borderRadius: 8, padding: '8px 12px', cursor: 'pointer' }}>Copy Context</button>}
+              {onDownloadCSV && <button 
+                onClick={onDownloadCSV} 
+                title="Download the underlying data as a CSV file.&#10;Perfect for further analysis in Excel or other tools."
+                style={{ background: 'transparent', color: '#e6edf3', border: '1px solid #2d3748', borderRadius: 8, padding: '8px 12px', cursor: 'pointer' }}
+              >Download CSV</button>}
+              {onFilter && <button 
+                onClick={onFilter} 
+                title="Apply filters to focus the dashboard on this specific data.&#10;Narrows down the view to show only relevant transactions."
+                style={{ background: 'transparent', color: '#e6edf3', border: '1px solid #2d3748', borderRadius: 8, padding: '8px 12px', cursor: 'pointer' }}
+              >Filter to this</button>}
+              {rawContext && <button 
+                onClick={() => navigator.clipboard.writeText(JSON.stringify(rawContext, null, 2))} 
+                title="Copy the raw data context to clipboard.&#10;Useful for technical analysis or integration with other tools."
+                style={{ background: 'transparent', color: '#e6edf3', border: '1px solid #2d3748', borderRadius: 8, padding: '8px 12px', cursor: 'pointer' }}
+              >Copy Context</button>}
             </div>
           </Section>
+          )}
         </div>
       </div>
     </div>

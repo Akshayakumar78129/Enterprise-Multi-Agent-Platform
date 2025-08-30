@@ -1,5 +1,6 @@
 import React, { forwardRef, useImperativeHandle, useState, useEffect } from 'react';
 import { FrequencyHistogramProps } from '../../types';
+import { handleChartClick } from '../../utils/chartSelectionHelper';
 
 const FrequencyHistogram = forwardRef<any, FrequencyHistogramProps>(({
   data,
@@ -15,14 +16,14 @@ const FrequencyHistogram = forwardRef<any, FrequencyHistogramProps>(({
   highlightBins = [],
   focusRegion
 }, ref) => {
-  const [hoveredBin, setHoveredBin] = useState<number | null>(null);
-  const [selectedBins, setSelectedBins] = useState<number[]>([]);
-  const [dragStart, setDragStart] = useState<number | null>(null);
+  const [hoveredBin, setHoveredBin] = useState<any | null>(null);
+  const [selectedBins, setSelectedBins] = useState<any[]>([]);
+  const [dragStart, setDragStart] = useState<any | null>(null);
   
   // Reset selection when highlight bins change
   useEffect(() => {
     if (highlightBins && highlightBins.length > 0) {
-      setSelectedBins(highlightBins);
+      setSelectedBins(highlightBins as any);
     }
   }, [highlightBins]);
 
@@ -61,31 +62,82 @@ const FrequencyHistogram = forwardRef<any, FrequencyHistogramProps>(({
   const actualBarWidth = barWidth - barSpacing;
   
   // Handle mouse events
-  const handleBarMouseEnter = (bin: number) => {
-    setHoveredBin(bin);
+  const explainBin = (label: string | number) => {
+    const s = String(label);
+    if (/^\d+$/.test(s)) return `Exactly ${s} purchases in the period`;
+    if (/^(\d+)-(\d+)$/.test(s)) {
+      const [, a, b] = s.match(/(\d+)-(\d+)/)!;
+      return `${a} to ${b} purchases in the period`;
+    }
+    if (/^(\d+)\+$/.test(s)) {
+      const [, a] = s.match(/(\d+)\+/)!;
+      return `${a} or more purchases in the period`;
+    }
+    return `Purchases in this bucket during the period`;
+  };
+
+  const handleBarMouseEnter = (binLabel: any) => {
+    setHoveredBin(binLabel);
+    // Emit hover insight if provided
+    try {
+      // @ts-ignore next-line: prop may not be passed
+      if (typeof onHoverInsight === 'function') {
+        const d = data.find(x => String(x.bin) === String(binLabel));
+        const count = d?.count || 0;
+        const pct = d?.percentage || 0;
+        // @ts-ignore next-line
+        onHoverInsight({
+          title: `Frequency ${String(binLabel)}`,
+          lines: [
+            `Meaning: ${explainBin(binLabel)}`,
+            `Customers: ${count.toLocaleString()}`,
+            `Share: ${typeof pct === 'number' ? pct.toFixed(1) : pct}%`,
+          ]
+        });
+      }
+    } catch {}
   };
   
   const handleBarMouseLeave = () => {
     setHoveredBin(null);
+    try {
+      // @ts-ignore next-line
+      if (typeof onHoverInsight === 'function') onHoverInsight(null);
+    } catch {}
   };
+
+  const formatBin = (label: any) => String(label);
   
-  const handleBarClick = (bin: number, event: React.MouseEvent, barIndex: number) => {
+  const handleBarClick = (binLabel: any, event: React.MouseEvent, barIndex: number) => {
     event.stopPropagation(); // Prevent background click
+
+    // Shift+click: send minimal selection to global handler (do not add chat message)
+    if (event.shiftKey) {
+      handleChartClick({
+        chartId: 'purchase-frequency-histogram',
+        chartType: 'bar',
+        label: `Frequency ${formatBin(binLabel)}`,
+        value: data[barIndex]?.count ?? 0,
+        unit: ' customers',
+        index: barIndex,
+        metadata: { bin: formatBin(binLabel) }
+      }, event.nativeEvent);
+    }
     
-    if (event.ctrlKey || event.metaKey) {
-      // Add to selection if Ctrl/Cmd key is pressed
+    if (event.shiftKey || event.ctrlKey || event.metaKey) {
+      // Add to selection if Shift/Ctrl/Cmd key is pressed
       setSelectedBins(prev => 
-        prev.includes(bin) 
-          ? prev.filter(b => b !== bin) 
-          : [...prev, bin]
+        prev.includes(binLabel) 
+          ? prev.filter(b => b !== binLabel) 
+          : [...prev, binLabel]
       );
     } else {
       // Otherwise set as single selection
-      setSelectedBins([bin]);
+      setSelectedBins([binLabel]);
     }
     
     if (onBarClick) {
-      onBarClick(bin);
+      onBarClick(binLabel as any);
     }
 
     // Send click data for laser functionality
@@ -105,8 +157,8 @@ const FrequencyHistogram = forwardRef<any, FrequencyHistogramProps>(({
         const pointData = {
           datasetIndex: 0,
           index: barIndex,
-          bin: bin,
-          label: `Frequency ${bin}`,
+          bin: formatBin(binLabel),
+          label: `Frequency ${formatBin(binLabel)}`,
           value: data[barIndex].count,
           x: barCenterX, // SVG-relative coordinates
           y: barCenterY,
@@ -119,7 +171,8 @@ const FrequencyHistogram = forwardRef<any, FrequencyHistogramProps>(({
           componentId: componentId || 'frequency-histogram',
           chartId: 'histogram',
           chartRect: svgRect,
-          elementRect: containerRect
+          elementRect: containerRect,
+          shiftKey: event.shiftKey
         });
       }
     }
@@ -174,23 +227,30 @@ const FrequencyHistogram = forwardRef<any, FrequencyHistogramProps>(({
         width: `${width}px`,
         height: `${height}px`,
         position: 'relative',
-        backgroundColor: '#232a36',
+        backgroundColor: 'rgba(255,255,255,0.9)',
         borderRadius: '12px',
         padding: '16px',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.1)'
+        boxShadow: '0 10px 40px rgba(0,0,0,0.05)',
+        border: '1px solid rgba(59,130,246,0.1)'
       }}
     >
       <h3 
         style={{
           margin: 0,
-          marginBottom: '12px',
+          marginBottom: '8px',
           fontSize: '16px',
-          fontWeight: 600,
-          color: '#f7f9fb'
+          fontWeight: 700,
+          color: '#1f2937'
         }}
       >
         Purchase Frequency Distribution
       </h3>
+      <div style={{ marginBottom: '12px', fontSize: '12px', color: '#64748b' }}>
+        What do these mean? Each bin groups customers by how many purchases they made in the selected period. For example:
+        <span style={{ marginLeft: 6, color:'#0f172a' }}><strong>1</strong> = exactly 1 purchase</span>,
+        <span style={{ marginLeft: 6, color:'#0f172a' }}><strong>4-5</strong> = between 4 and 5 purchases</span>,
+        <span style={{ marginLeft: 6, color:'#0f172a' }}><strong>20+</strong> = 20 or more purchases.</span>
+      </div>
       
       <svg width={width - 32} height={height - 60} onClick={handleBackgroundClick}>
         <defs>
@@ -220,6 +280,14 @@ const FrequencyHistogram = forwardRef<any, FrequencyHistogramProps>(({
             stroke="#8893a7" 
             strokeWidth={1} 
           />
+
+          {/* Axis titles */}
+          <text x={innerWidth / 2} y={innerHeight + 36} textAnchor="middle" fill="#8893a7" fontSize={12}>
+            Purchase frequency (count)
+          </text>
+          <text x={-40} y={innerHeight / 2} textAnchor="middle" fill="#8893a7" fontSize={12} transform={`rotate(-90, -40, ${innerHeight / 2})`}>
+            Customers (count)
+          </text>
           
           {/* X Axis Labels */}
           {data.map((d, i) => (
@@ -231,7 +299,7 @@ const FrequencyHistogram = forwardRef<any, FrequencyHistogramProps>(({
               fill="#8893a7"
               fontSize={12}
             >
-              {d.bin}
+              {formatBin(d.bin)}
             </text>
           ))}
           
@@ -348,6 +416,9 @@ const FrequencyHistogram = forwardRef<any, FrequencyHistogramProps>(({
         >
           <strong>Frequency: {hoveredBin}</strong>
           <div>Customers: {data.find(d => d.bin === hoveredBin)?.count}</div>
+          {typeof data.find(d => d.bin === hoveredBin)?.percentage === 'number' && (
+            <div>Share: {(data.find(d => d.bin === hoveredBin)?.percentage as number).toFixed(1)}%</div>
+          )}
           <div style={{ 
             fontSize: '12px', 
             opacity: 0.8,

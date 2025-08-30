@@ -2,14 +2,29 @@ import React from 'react';
 
 const Insight = ({ title, children }) => (
   <div style={{ 
-    backgroundColor: 'rgba(255, 255, 255, 0.05)', 
-    padding: '15px', 
+    backgroundColor: '#1A1F26', 
+    padding: '20px', 
     borderRadius: '8px', 
-    margin: '10px 0',
-    border: '1px solid rgba(255, 255, 255, 0.1)'
+    margin: '16px 0',
+    border: 'none',
+    transition: 'all 200ms ease-out'
   }}>
-    <h4 style={{ marginTop: 0, color: '#a5b4fc' }}>{title}</h4>
-    <p style={{ margin: 0, color: '#d1d5db' }}>{children}</p>
+    <h4 style={{ 
+      marginTop: 0, 
+      marginBottom: '12px',
+      color: '#F8FAFC',
+      fontSize: '16px',
+      fontWeight: 600,
+      lineHeight: '1.4',
+      letterSpacing: '-0.01em'
+    }}>{title}</h4>
+    <p style={{ 
+      margin: 0, 
+      color: '#94A3B8',
+      fontSize: '14px',
+      lineHeight: '1.5',
+      fontWeight: 400
+    }}>{children}</p>
   </div>
 );
 

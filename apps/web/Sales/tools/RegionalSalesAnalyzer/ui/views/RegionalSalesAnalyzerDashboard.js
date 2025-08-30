@@ -5,6 +5,8 @@ import RegionalTimeSeriesExplorer from "../components/visualizations/RegionalTim
 import RegionalSalesChatbot from "../components/chat/RegionalSalesChatbot";
 import ChatButton from "../components/chat/ChatButton";
 import SalesBusinessAgent from "../components/businessagent.tsx";
+import RegionalFilters from "../components/filters/RegionalFilters";
+import styles from "../styles/RegionalSalesAnalyzerDashboard.module.css";
 
 // Add CSS animations for AI insight popup
 const aiInsightStyles = `
@@ -46,6 +48,8 @@ const RegionalSalesAnalyzerDashboard = () => {
       start: '2017-01-01',
       end: '2021-12-31'
     },
+    country: '',
+    state: '',
     aggregation: 'month'
   });
   const [selectedRegions, setSelectedRegions] = useState(['overall']);
@@ -88,13 +92,45 @@ const RegionalSalesAnalyzerDashboard = () => {
     });
   }, [selectedRegions, selectedMetric, filters, data]);
 
-  const fetchData = async () => {
+  const fetchData = async (customFilters = null) => {
     setIsLoading(true);
     try {
+      const filtersToUse = customFilters || filters;
+      
+      // Build the filters object for the API
+      const apiFilters = {
+        dateRange: filtersToUse.dateRange,
+        aggregation: filtersToUse.aggregation || 'month'
+      };
+      
+      // Only add country if specified
+      if (filtersToUse.country) {
+        apiFilters.country = filtersToUse.country;
+      }
+      
+      // Only add state if specified
+      if (filtersToUse.state) {
+        apiFilters.state = filtersToUse.state;
+      }
+      
+      // Add sales range filter if specified
+      if (filtersToUse.salesRange) {
+        if (filtersToUse.salesRange.min || filtersToUse.salesRange.max) {
+          apiFilters.salesRange = filtersToUse.salesRange;
+        }
+      }
+      
+      // Add performance level filter if specified
+      if (filtersToUse.performanceLevel) {
+        apiFilters.performanceLevel = filtersToUse.performanceLevel;
+      }
+      
+      console.log('🔍 Applying filters:', apiFilters);
+      
       const response = await fetch("/api/regional-sales-analyzer/data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(filters),
+        body: JSON.stringify(apiFilters),
       });
 
       if (!response.ok) throw new Error("Failed to fetch data");
@@ -102,6 +138,7 @@ const RegionalSalesAnalyzerDashboard = () => {
       const result = await response.json();
       if (result.success) {
         setData(result.data);
+        console.log('✅ Data fetched successfully:', result.data);
       } else {
         throw new Error(result.error || "Unknown error");
       }
@@ -114,7 +151,10 @@ const RegionalSalesAnalyzerDashboard = () => {
   };
 
   const handleFilterChange = (newFilters) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
+    const updatedFilters = { ...filters, ...newFilters };
+    setFilters(updatedFilters);
+    // Auto-fetch data when filters change
+    fetchData(updatedFilters);
   };
 
   const handleRegionSelect = (country, state) => {
@@ -475,30 +515,15 @@ const RegionalSalesAnalyzerDashboard = () => {
   }
 
   return (
-    <div
-      style={{
-        padding: "24px",
-        backgroundColor: "#0a1224",
-        minHeight: "100vh",
-        color: "#f7f9fb",
-      }}
-    >
+    <div className={styles.regionalSalesAnalyzerDashboard}>
       {/* Header */}
-      <div style={{ marginBottom: "24px" }}>
-        <h1 style={{ 
-          marginBottom: "8px", 
-          color: "#00e0ff",
-          fontSize: "28px",
-          fontWeight: "600"
-        }}>
-          Regional Sales Analyzer
-        </h1>
-        <p style={{ 
-          color: "#5891cb", 
-          fontSize: "16px",
-          margin: 0,
-          marginBottom: "8px"
-        }}>
+      <div className={styles.header}>
+        <div className={styles.titleWrap}>
+          <h1 className={styles.title}>
+            Regional Sales Analyzer
+          </h1>
+        </div>
+        <p className={styles.subtitle}>
           Comprehensive geospatial analytics and regional performance insights
         </p>
         <div style={{
@@ -514,122 +539,19 @@ const RegionalSalesAnalyzerDashboard = () => {
         </div>
       </div>
 
-      {/* Date Range and Filters */}
-      <div style={{
-        marginBottom: "24px",
-        padding: "16px",
-        backgroundColor: "#232a36",
-        borderRadius: "8px",
-        border: "1px solid #3a4459",
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "16px",
-        alignItems: "center"
-      }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          <label style={{ fontSize: "12px", color: "#f7f9fb", fontWeight: "bold" }}>
-            Start Date
-          </label>
-          <input
-            type="date"
-            value={filters.dateRange?.start || ''}
-            onChange={(e) => handleFilterChange({
-              dateRange: { ...filters.dateRange, start: e.target.value }
-            })}
-            style={{
-              padding: "6px 8px",
-              backgroundColor: "#0a1224",
-              color: "#f7f9fb",
-              border: "1px solid #3a4459",
-              borderRadius: "4px",
-              fontSize: "12px"
-            }}
-          />
-        </div>
+      {/* Filters Section */}
+      <RegionalFilters 
+        onFiltersChange={(newFilters) => {
+          console.log('📊 Filters changed:', newFilters);
+          setFilters(newFilters);
+          // Fetch data with the new filters
+          fetchData(newFilters);
+        }}
+        currentFilters={filters}
+        data={data}
+      />
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          <label style={{ fontSize: "12px", color: "#f7f9fb", fontWeight: "bold" }}>
-            End Date
-          </label>
-          <input
-            type="date"
-            value={filters.dateRange?.end || ''}
-            onChange={(e) => handleFilterChange({
-              dateRange: { ...filters.dateRange, end: e.target.value }
-            })}
-            style={{
-              padding: "6px 8px",
-              backgroundColor: "#0a1224",
-              color: "#f7f9fb",
-              border: "1px solid #3a4459",
-              borderRadius: "4px",
-              fontSize: "12px"
-            }}
-          />
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          <label style={{ fontSize: "12px", color: "#f7f9fb", fontWeight: "bold" }}>
-            Country Filter
-          </label>
-          <select
-            value={filters.country || ''}
-            onChange={(e) => handleFilterChange({ country: e.target.value || undefined })}
-            style={{
-              padding: "6px 8px",
-              backgroundColor: "#0a1224",
-              color: "#f7f9fb",
-              border: "1px solid #3a4459",
-              borderRadius: "4px",
-              fontSize: "12px",
-              minWidth: "120px"
-            }}
-          >
-            <option value="">All Countries</option>
-            {data?.availableRegions && 
-              [...new Set(data.availableRegions.map(r => r.country))]
-                .sort()
-                .map(country => (
-                  <option key={country} value={country}>{country}</option>
-                ))
-            }
-          </select>
-        </div>
-
-        <button
-          onClick={fetchData}
-          disabled={isLoading}
-          style={{
-            padding: "8px 16px",
-            backgroundColor: isLoading ? "#3a4459" : "#00e0ff",
-            color: isLoading ? "#f7f9fb" : "#0a1224",
-            border: "none",
-            borderRadius: "4px",
-            cursor: isLoading ? "not-allowed" : "pointer",
-            fontSize: "12px",
-            fontWeight: "bold",
-            marginTop: "auto"
-          }}
-        >
-          {isLoading ? "Loading..." : "Refresh Data"}
-        </button>
-
-        {data?.metadata && (
-          <div style={{
-            marginLeft: "auto",
-            fontSize: "12px",
-            color: "#5891cb",
-            textAlign: "right"
-          }}>
-            <div>{data.metadata.totalRegions} regions analyzed</div>
-            <div>
-              {data.metadata.dateRange.start} to {data.metadata.dateRange.end}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* KPI Section */}
+      {/* KPI Section - Always show */}
       <RegionalKPITiles 
         kpis={data?.kpis} 
         isLoading={isLoading}
@@ -645,7 +567,7 @@ const RegionalSalesAnalyzerDashboard = () => {
         marginBottom: "24px"
       }}>
         {/* Regional Performance Map */}
-        <div style={{ gridColumn: "1 / 3" }}>
+        <div className={styles.mapSection} style={{ gridColumn: "1 / 3" }}>
           <RegionalPerformanceMap
             data={data?.regionalSalesData || []}
             countryData={data?.countryLevelData || []}
@@ -661,7 +583,7 @@ const RegionalSalesAnalyzerDashboard = () => {
       </div>
 
       {/* Time Series Section */}
-      <div style={{ marginBottom: "24px" }}>
+      <div className={styles.timeSeriesSection} style={{ marginBottom: "24px" }}>
         <RegionalTimeSeriesExplorer
           data={data?.timeSeriesData}
           selectedRegions={selectedRegions}
@@ -683,18 +605,21 @@ const RegionalSalesAnalyzerDashboard = () => {
         marginBottom: "24px"
       }}>
         {/* Regional Comparison Table */}
-        <div style={{
-          backgroundColor: "#232a36",
-          border: "1px solid #3a4459",
-          borderRadius: "8px",
-          padding: "20px"
+        <div className={styles.glassBackground} style={{
+          padding: "20px",
+          animation: `${styles.fadeInUp} 0.6s cubic-bezier(0.4, 0, 0.2, 1) 1050ms both`
         }}>
           <h3 style={{
-            color: "#00e0ff",
+            color: "#fbbf24",
             marginBottom: "16px",
-            fontSize: "18px"
+            fontSize: "18px",
+            fontWeight: "600",
+            background: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text"
           }}>
-            Regional Performance Comparison
+            📊 Regional Performance Comparison
           </h3>
           
           {data?.regionalSalesData ? (
@@ -736,19 +661,22 @@ const RegionalSalesAnalyzerDashboard = () => {
                       key={`${region.country}-${region.state}`}
                       style={{
                         backgroundColor: selectedRegions.includes(`${region.country}-${region.state}`) 
-                          ? "#00e0ff20" 
-                          : index % 2 === 0 ? "#232a36" : "#2c3341",
+                          ? "rgba(251, 191, 36, 0.15)" 
+                          : index % 2 === 0 ? "rgba(30, 41, 59, 0.3)" : "rgba(30, 41, 59, 0.5)",
                         cursor: "pointer",
-                        transition: "all 0.2s"
+                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                        animation: `${styles.fadeInUp} 0.5s cubic-bezier(0.4, 0, 0.2, 1) ${1100 + index * 50}ms both`
                       }}
                       onMouseEnter={(e) => {
                         if (!selectedRegions.includes(`${region.country}-${region.state}`)) {
-                          e.currentTarget.style.backgroundColor = "#3a4459";
+                          e.currentTarget.style.backgroundColor = "rgba(251, 191, 36, 0.1)";
+                          e.currentTarget.style.transform = "translateX(4px)";
                         }
                       }}
                       onMouseLeave={(e) => {
                         if (!selectedRegions.includes(`${region.country}-${region.state}`)) {
-                          e.currentTarget.style.backgroundColor = index % 2 === 0 ? "#232a36" : "#2c3341";
+                          e.currentTarget.style.backgroundColor = index % 2 === 0 ? "rgba(30, 41, 59, 0.3)" : "rgba(30, 41, 59, 0.5)";
+                          e.currentTarget.style.transform = "translateX(0)";
                         }
                       }}
                       onClick={(e) => {
@@ -815,18 +743,20 @@ const RegionalSalesAnalyzerDashboard = () => {
         </div>
 
         {/* Opportunity Analysis */}
-        <div style={{
-          backgroundColor: "#232a36",
-          border: "1px solid #3a4459",
-          borderRadius: "8px",
+        <div className={`${styles.glassBackground} ${styles.opportunitySection}`} style={{
           padding: "20px"
         }}>
           <h3 style={{
-            color: "#00e0ff",
+            color: "#fbbf24",
             marginBottom: "16px",
-            fontSize: "18px"
+            fontSize: "18px",
+            fontWeight: "600",
+            background: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text"
           }}>
-            Growth Opportunities
+            🚀 Growth Opportunities
           </h3>
           
           {data?.opportunityAnalysis ? (
@@ -840,22 +770,26 @@ const RegionalSalesAnalyzerDashboard = () => {
                 .map((region, index) => (
                   <div
                     key={`${region.country}-${region.state}`}
+                    className={styles.glassBackground}
                     style={{
-                      padding: "12px",
-                      marginBottom: "8px",
-                      backgroundColor: "#0a1224",
-                      border: "1px solid #3a4459",
-                      borderRadius: "6px",
+                      padding: "16px",
+                      marginBottom: "12px",
+                      borderRadius: "12px",
                       cursor: "pointer",
-                      transition: "all 0.2s"
+                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                      animation: `${styles.fadeInUp} 0.5s cubic-bezier(0.4, 0, 0.2, 1) ${1200 + index * 100}ms both`,
+                      minHeight: "auto",
+                      border: "1px solid rgba(251, 191, 36, 0.2)"
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "#232a36";
-                      e.currentTarget.style.borderColor = "#5fd4d6";
+                      e.currentTarget.style.transform = "translateY(-4px) scale(1.02)";
+                      e.currentTarget.style.borderColor = "rgba(251, 191, 36, 0.4)";
+                      e.currentTarget.style.boxShadow = "0 12px 40px rgba(0, 0, 0, 0.3), 0 0 30px rgba(251, 191, 36, 0.2)";
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "#0a1224";
-                      e.currentTarget.style.borderColor = "#3a4459";
+                      e.currentTarget.style.transform = "translateY(0) scale(1)";
+                      e.currentTarget.style.borderColor = "rgba(251, 191, 36, 0.2)";
+                      e.currentTarget.style.boxShadow = "";
                     }}
                     onClick={(e) => {
                       // Call the global addAIInsightToChat for Shift+Click multi-selection
@@ -907,12 +841,15 @@ const RegionalSalesAnalyzerDashboard = () => {
                       </div>
                       <div style={{
                         fontSize: "12px",
-                        color: "#5fd4d6",
-                        backgroundColor: "#5fd4d620",
-                        padding: "2px 6px",
-                        borderRadius: "4px"
+                        color: "#fbbf24",
+                        background: "linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2))",
+                        padding: "4px 10px",
+                        borderRadius: "20px",
+                        border: "1px solid rgba(251, 191, 36, 0.3)",
+                        fontWeight: "600",
+                        animation: `${styles.pulse} 2s ease-in-out infinite`
                       }}>
-                        Growth Opportunity
+                        🎯 Growth Opportunity
                       </div>
                     </div>
                     <div style={{
@@ -955,16 +892,7 @@ const RegionalSalesAnalyzerDashboard = () => {
 
       {/* Footer with data info */}
       {data?.metadata && (
-        <div style={{
-          marginTop: "40px",
-          padding: "16px",
-          backgroundColor: "#232a36",
-          borderRadius: "8px",
-          border: "1px solid #3a4459",
-          fontSize: "12px",
-          color: "#5891cb",
-          textAlign: "center"
-        }}>
+        <div className={styles.footer}>
           Regional Sales Analyzer • {data.metadata.totalRegions} regions • 
           {data.metadata.dateRange.start} to {data.metadata.dateRange.end} • 
           Last updated: {new Date().toLocaleString()}

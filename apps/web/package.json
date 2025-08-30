@@ -24,6 +24,7 @@
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
     "framer-motion": "^10.16.4",
+    "lucide-react": "^0.542.0",
     "mysql2": "^3.6.1",
     "next": "^15.3.2",
     "plotly.js": "^2.35.3",

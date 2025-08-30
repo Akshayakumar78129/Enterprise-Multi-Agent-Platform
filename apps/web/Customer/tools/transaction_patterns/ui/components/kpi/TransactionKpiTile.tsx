@@ -46,6 +46,7 @@ export const TransactionKpiTile = ({
     <KpiTile
       label="Total Transactions"
       value={formatNumber(totalTransactions)}
+      prefix="💳"
       trendDirection={trendDirection}
       trendValue={trendValue}
       className={className}

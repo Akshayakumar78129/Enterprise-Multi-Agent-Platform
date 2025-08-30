@@ -10,7 +10,8 @@ import {
   ChartOptions,
 } from 'chart.js';
 import { segmentationTheme, getSegmentColor } from '../../styles/theme';
-import { createChartJsClickHandler } from '../../utils/chartSelectionHelper';
+import { agentCommunication } from '../../services/agentCommunication';
+// Removed unused import - createChartJsClickHandler
 
 ChartJS.register(LinearScale, PointElement, Tooltip, Legend);
 
@@ -43,6 +44,8 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
   const [showAIInsight, setShowAIInsight] = useState(false);
   const [aiInsightContent, setAiInsightContent] = useState<any>(null);
   const [insightPosition, setInsightPosition] = useState({ x: 0, y: 0 });
+  const [questionAnswer, setQuestionAnswer] = useState<{ question: string; answer: string } | null>(null);
+  const [isAnswering, setIsAnswering] = useState(false);
 
   const segmentData = React.useMemo(() => {
     const segments = new Map<string, DataPoint[]>();
@@ -146,6 +149,15 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
             }));
           },
         },
+        onClick: (e, legendItem, legend) => {
+          // Prevent default legend click behavior to avoid animation errors
+          e.native?.preventDefault?.();
+          e.native?.stopPropagation?.();
+          
+          // Optional: You can implement custom visibility toggle here if needed
+          // For now, we just prevent the error by blocking the default behavior
+          console.log('Legend click disabled to prevent animation errors');
+        },
       },
       tooltip: {
         backgroundColor: segmentationTheme.colors.bgGlass,
@@ -153,19 +165,27 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
         bodyColor: segmentationTheme.colors.textSecondary,
         borderColor: segmentationTheme.colors.accentCyan,
         borderWidth: 1,
-        padding: 12,
-        displayColors: false,
+        padding: 16,
+        displayColors: true,
+        bodyFont: {
+          size: 13,
+        },
+        titleFont: {
+          size: 14,
+          weight: 'bold',
+        },
         callbacks: {
           title: (context) => {
-            const point = context[0].raw as any;
-            return `Customer: ${point.customer_id}`;
+            const segmentName = context[0].dataset.label || 'Unknown Segment';
+            return `${segmentName}`;
           },
           label: (context) => {
-            const datasetLabel = context.dataset.label || '';
+            const point = context.raw as any;
+            const segmentPoints = segmentData.get(String(point.segment)) || [];
+            
             return [
-              datasetLabel,
-              `X: ${context.parsed.x.toFixed(2)}`,
-              `Y: ${context.parsed.y.toFixed(2)}`,
+              `Customer: ${point.customer_id}`,
+              `Segment Size: ${segmentPoints.length} customers`
             ];
           },
         },
@@ -185,7 +205,7 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
         },
         title: {
           display: true,
-          text: 'Principal Component 1',
+          text: 'Value Dimension (Spending & Frequency)',
           color: segmentationTheme.colors.textSecondary,
           font: {
             size: 12,
@@ -206,7 +226,7 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
         },
         title: {
           display: true,
-          text: 'Principal Component 2',
+          text: 'Engagement Dimension (Recency & Loyalty)',
           color: segmentationTheme.colors.textSecondary,
           font: {
             size: 12,
@@ -216,12 +236,12 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
       },
     },
     onClick: (event: any, elements: any[]) => {
-      // First handle ChartSelectionManager integration
-      const chartRef = { data: chartData };
-      const clickHandler = createChartJsClickHandler('segment-distribution', 'scatter', chartRef);
-      clickHandler(event, elements);
+      // Stop event propagation to prevent chatbot from opening
+      if (event?.native) {
+        event.native.stopPropagation?.();
+        event.native.preventDefault?.();
+      }
       
-      // Then handle local state for the detailed popup
       if (elements.length > 0) {
         const datasetIndex = elements[0].datasetIndex;
         const index = elements[0].index;
@@ -229,9 +249,14 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
           p => p.x === chartData.datasets[datasetIndex].data[index].x &&
                p.y === chartData.datasets[datasetIndex].data[index].y
         );
+        
         if (point) {
-          if (event.native?.shiftKey) {
-            // Shift+Click for multi-selection
+          setSelectedPoint(point);
+          onPointClick?.(point);
+          
+          // Check if shift key is pressed for multi-selection
+          if (event?.native?.shiftKey) {
+            // Shift+click - send to dashboard context
             const selectionAPI = (window as any).chartSelectionAPI;
             if (selectionAPI) {
               selectionAPI.addPoint({
@@ -246,13 +271,20 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
               });
             }
           } else {
-            // Regular click - just set selected point
-            setSelectedPoint(point);
-            onPointClick?.(point);
-            // AI insights are now handled by ChartSelectionManager
+            // Regular click - show internal AI insight popup (don't send to chatbot)
+            const insight = generatePointInsight(point);
+            setAiInsightContent(insight);
+            setInsightPosition({ 
+              x: event?.native?.clientX || window.innerWidth / 2, 
+              y: event?.native?.clientY || window.innerHeight / 2 
+            });
+            setShowAIInsight(true);
           }
         }
       }
+      
+      // Return false to prevent any default handling
+      return false;
     },
     onHover: (event, elements) => {
       if (elements.length > 0) {
@@ -265,6 +297,19 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
   };
 
   return (
+    <>
+      <style jsx global>{`
+        @keyframes fadeInScale {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+      `}</style>
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -404,8 +449,8 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
         pointerEvents: 'none',
       }} />
 
-      {/* AI Insight Popup removed - using ChartSelectionManager instead */}
-      {false && (
+      {/* AI Insight Popup */}
+      {showAIInsight && aiInsightContent && (
         <div
           style={{
             position: 'fixed',
@@ -468,8 +513,60 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
             </div>
           )}
           
+          {/* Answer Display */}
+          {questionAnswer && (
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1))',
+              border: '1px solid rgba(99, 102, 241, 0.4)',
+              borderRadius: 8,
+              padding: 12,
+              marginBottom: 12,
+              animation: 'fadeInScale 0.3s ease-out'
+            }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#8b5cf6', marginBottom: 8 }}>
+                🤖 AI Answer
+              </div>
+              <div style={{ fontSize: 11, color: 'rgba(247, 249, 251, 0.9)', marginBottom: 6 }}>
+                <strong>Q:</strong> {questionAnswer.question}
+              </div>
+              <div style={{ fontSize: 11, color: 'rgba(247, 249, 251, 0.85)', lineHeight: 1.4 }}>
+                <strong>A:</strong> {isAnswering ? (
+                  <span style={{ color: '#8b5cf6' }}>Analyzing segment data...</span>
+                ) : (
+                  questionAnswer.answer
+                )}
+              </div>
+              {!isAnswering && (
+                <button
+                  onClick={() => setQuestionAnswer(null)}
+                  style={{
+                    marginTop: 8,
+                    padding: '4px 8px',
+                    background: 'transparent',
+                    border: '1px solid rgba(139, 92, 246, 0.3)',
+                    borderRadius: 4,
+                    color: 'rgba(139, 92, 246, 0.9)',
+                    fontSize: 10,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
+                    e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.5)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.3)';
+                  }}
+                >
+                  Clear Answer
+                </button>
+              )}
+            </div>
+          )}
+          
           {/* Key Questions */}
-          {aiInsightContent.questions && (
+          {aiInsightContent.questions && !questionAnswer && (
             <div style={{
               background: 'rgba(99, 102, 241, 0.1)',
               border: '1px solid rgba(99, 102, 241, 0.3)',
@@ -494,16 +591,35 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    if (typeof window !== 'undefined' && (window as any).addAIInsightToChat) {
-                      (window as any).addAIInsightToChat({
-                        label: `${aiInsightContent.title} - Question`,
-                        value: question,
-                        actionType: 'question'
+                    
+                    // Answer the question directly instead of sending to chatbot
+                    setIsAnswering(true);
+                    setQuestionAnswer({ question, answer: 'Analyzing...' });
+                    
+                    try {
+                      // Use the customer agent to answer questions about segments
+                      const response = await agentCommunication.sendToAgent('customer', {
+                        query: question,
+                        context: {
+                          title: aiInsightContent.title,
+                          summary: aiInsightContent.summary,
+                          details: aiInsightContent.details
+                        }
                       });
+                      
+                      if (response.success) {
+                        setQuestionAnswer({ question, answer: response.response });
+                      } else {
+                        setQuestionAnswer({ question, answer: 'Unable to analyze segment data.' });
+                      }
+                    } catch (error) {
+                      console.error('Error answering question:', error);
+                      setQuestionAnswer({ question, answer: 'An error occurred while analyzing the data.' });
+                    } finally {
+                      setIsAnswering(false);
                     }
-                    setShowAIInsight(false);
                   }}
                 >
                   • {question}
@@ -539,13 +655,7 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (typeof window !== 'undefined' && (window as any).addAIInsightToChat) {
-                      (window as any).addAIInsightToChat({
-                        label: `${aiInsightContent.title} - Action`,
-                        value: `Execute: ${action}`,
-                        actionType: 'execute'
-                      });
-                    }
+                    // Just close the AI insight popup - actions are for display only
                     setShowAIInsight(false);
                   }}
                 >
@@ -561,6 +671,7 @@ const EnhancedSegmentDistributionMap: React.FC<EnhancedSegmentDistributionMapPro
         </div>
       )}
     </motion.div>
+    </>
   );
 };
 

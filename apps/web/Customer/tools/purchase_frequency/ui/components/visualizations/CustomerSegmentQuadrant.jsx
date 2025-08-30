@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react";
+// ...existing code...
+import React, { useState, useMemo, useEffect } from "react";
 import { Card } from "../../../../../../ui-common/design-system/components/Card";
 import dynamic from "next/dynamic";
 
@@ -9,13 +10,17 @@ const CustomerSegmentQuadrant = ({
   data = [],
   isLoading = false,
   onSegmentSelect = null,
+  onShiftClick = null,
   selectedCustomers = [],
   selectedSegment = null,
+  selectedPoints = [],
   width = 480,
   height = 480
 }) => {
   const [hoveredCustomer, setHoveredCustomer] = useState(null);
+  const [selectedCustomerInfo, setSelectedCustomerInfo] = useState(null);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [segmentInsights, setSegmentInsights] = useState([]);
 
   const segmentColors = {
     'Champions': '#00e0ff',        // Electric Cyan
@@ -77,6 +82,13 @@ const CustomerSegmentQuadrant = ({
           color: segmentColors[segment],
           opacity: segmentData.map((d, index) => {
             const customerId = d.customerId;
+            if (hoveredCustomer === customerId) {
+              return 1; // Full opacity for hovered
+            }
+
+            // If dashboard selection contains this segment, emphasize it
+            const isSegmentSelected = Array.isArray(selectedPoints) && selectedPoints.some(sp => sp.chartId === 'customer_segments' && (sp.index === segment || sp.label?.includes(segment)));
+            if (isSegmentSelected) return 1;
             
             // Handle selection filtering
             if (selectedSegment && segment !== selectedSegment) {
@@ -87,23 +99,25 @@ const CustomerSegmentQuadrant = ({
               return 0.2; // Fade non-selected customers
             }
             
-            if (hoveredCustomer === customerId) {
-              return 1; // Full opacity for hovered
-            }
+            // Removed hover logic
             
             return 0.8; // Default opacity
           }),
           line: {
             color: segmentData.map((d, index) => {
               const customerId = d.customerId;
+              if (hoveredCustomer === customerId) {
+                return '#f7f9fb'; // Cloud White outline for hovered
+              }
+
+              const isSegmentSelected = Array.isArray(selectedPoints) && selectedPoints.some(sp => sp.chartId === 'customer_segments' && (sp.index === segment || sp.label?.includes(segment)));
+              if (isSegmentSelected) return '#10b981';
               
               if (selectedCustomers.includes(customerId)) {
                 return '#f7f9fb'; // Cloud White outline for selected
               }
               
-              if (hoveredCustomer === customerId) {
-                return '#f7f9fb'; // Cloud White outline for hovered
-              }
+              // Removed hover logic
               
               return 'transparent';
             }),
@@ -117,12 +131,18 @@ const CustomerSegmentQuadrant = ({
           avgTransactionValue: d.avgTransactionValue
         })),
         hovertemplate:
-          '<b>%{customdata.customerName}</b><br>' +
-          'Frequency: %{x} purchases<br>' +
-          'Total Value: $%{y:,.2f}<br>' +
-          'Avg Transaction: $%{customdata.avgTransactionValue:,.2f}<br>' +
-          'Last Purchase: %{customdata.recencyDays} days ago<br>' +
-          'Segment: ' + segment + '<br>' +
+          '<b>🏢 %{customdata.customerName}</b><br>' +
+          '📊 <b>Frequency:</b> %{x} purchases<br>' +
+          '💰 <b>Total Value:</b> $%{y:,.2f}<br>' +
+          '💵 <b>Avg Transaction:</b> $%{customdata.avgTransactionValue:,.2f}<br>' +
+          '📅 <b>Last Purchase:</b> %{customdata.recencyDays} days ago<br>' +
+          '🎯 <b>Segment:</b> ' + segment + '<br>' +
+          (segment === 'Champions' ? '⭐ <i>Top-tier customer - Focus on retention & VIP treatment</i>' :
+           segment === 'Loyal' ? '🤝 <i>Reliable customer - Upselling opportunities available</i>' :
+           segment === 'Big Spenders' ? '💎 <i>High-value customer - Premium product recommendations</i>' :
+           segment === 'At Risk' ? '⚠️ <i>Needs attention - Re-engagement campaign recommended</i>' :
+           '📈 <i>Growth potential - Targeted engagement strategies</i>') + '<br>' +
+          '🔍 <i>Click to analyze this customer segment</i>' +
           '<extra></extra>',
         hoverlabel: {
           bgcolor: '#232a36',
@@ -134,16 +154,6 @@ const CustomerSegmentQuadrant = ({
 
     return { traces, medianFreq, medianValue };
   }, [data, selectedCustomers, selectedSegment, hoveredCustomer]);
-
-  const handleClick = (eventData) => {
-    if (onSegmentSelect && eventData.points && eventData.points.length > 0) {
-      // Find the segment name from the clicked trace
-      const point = eventData.points[0];
-      const segment = point.data.name;
-      onSegmentSelect(segment);
-    }
-  };
-
   const handleHover = (eventData) => {
     if (eventData.points && eventData.points.length > 0) {
       const customerId = eventData.points[0].customdata.customerId;
@@ -154,6 +164,111 @@ const CustomerSegmentQuadrant = ({
   const handleUnhover = () => {
     setHoveredCustomer(null);
   };
+            // onHover and onUnhover should be assigned in the Plot component JSX, not here
+
+  // Generate segment insights
+  useEffect(() => {
+    if (!data || data.length === 0) return;
+
+    const insights = [];
+    const segmentCounts = {};
+    const segmentValues = {};
+    
+    // Calculate segment statistics
+    data.forEach(customer => {
+      const segment = customer.segment || 'Others';
+      if (!segmentCounts[segment]) {
+        segmentCounts[segment] = 0;
+        segmentValues[segment] = 0;
+      }
+      segmentCounts[segment]++;
+      segmentValues[segment] += customer.monetaryValue || 0;
+    });
+
+    const totalCustomers = data.length;
+    const totalValue = Object.values(segmentValues).reduce((sum, val) => sum + val, 0);
+
+    // Find dominant segment
+    const dominantSegment = Object.entries(segmentCounts).reduce((max, [segment, count]) => 
+      count > max.count ? { segment, count } : max, { segment: '', count: 0 });
+
+    // Find highest value segment
+    const highestValueSegment = Object.entries(segmentValues).reduce((max, [segment, value]) => 
+      value > max.value ? { segment, value } : max, { segment: '', value: 0 });
+
+    insights.push(`👥 Largest segment: ${dominantSegment.segment} (${((dominantSegment.count / totalCustomers) * 100).toFixed(1)}% of customers)`);
+    insights.push(`💰 Highest value: ${highestValueSegment.segment} ($${highestValueSegment.value.toLocaleString()} total)`);
+
+    // Champions analysis
+    const championsCount = segmentCounts['Champions'] || 0;
+    const championsValue = segmentValues['Champions'] || 0;
+    if (championsCount > 0) {
+      const championsShare = (championsValue / totalValue) * 100;
+      insights.push(`⭐ Champions impact: ${championsCount} customers (${championsShare.toFixed(1)}% of total value)`);
+    }
+
+    // At Risk analysis
+    const atRiskCount = segmentCounts['At Risk'] || 0;
+    if (atRiskCount > 0) {
+      const atRiskPct = (atRiskCount / totalCustomers) * 100;
+      insights.push(`⚠️ At Risk customers: ${atRiskCount} (${atRiskPct.toFixed(1)}%) need immediate attention`);
+    }
+
+    // Opportunity analysis
+    const othersCount = segmentCounts['Others'] || 0;
+    if (othersCount > 0) {
+      const opportunityPct = (othersCount / totalCustomers) * 100;
+      insights.push(`📈 Growth opportunity: ${othersCount} customers (${opportunityPct.toFixed(1)}%) with untapped potential`);
+    }
+
+    // Value concentration
+    const top2Segments = Object.entries(segmentValues)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 2);
+    const top2Value = top2Segments.reduce((sum, [,value]) => sum + value, 0);
+    const top2Share = (top2Value / totalValue) * 100;
+    insights.push(`🎯 Value concentration: Top 2 segments drive ${top2Share.toFixed(1)}% of total value`);
+
+    setSegmentInsights(insights);
+  }, [data]);
+
+  const handleClick = (eventData) => {
+    if (eventData.points && eventData.points.length > 0) {
+      const point = eventData.points[0];
+      const segment = point.data.name;
+      const syntheticEvent = {
+        shiftKey: eventData.event?.shiftKey || false,
+        clientX: eventData.event?.clientX || 0,
+        clientY: eventData.event?.clientY || 0,
+        preventDefault: () => {},
+        stopPropagation: () => {}
+      };
+      if (syntheticEvent.shiftKey && typeof onShiftClick === 'function') {
+        // Debug log for shift+click
+        console.log('[DEBUG] CustomerSegmentQuadrant shift+click', {
+          chartId: 'customer_segments',
+          index: segment,
+          label: segment,
+          value: point.y,
+          customerId: point.customdata?.customerId,
+          customerName: point.customdata?.customerName
+        }, syntheticEvent);
+        // Send context for AI chat
+        onShiftClick({
+          chartId: 'customer_segments',
+          index: segment,
+          label: segment,
+          value: point.y,
+          customerId: point.customdata?.customerId,
+          customerName: point.customdata?.customerName
+        }, syntheticEvent);
+      } else {
+        // On normal click, show customer info
+        setSelectedCustomerInfo(point.customdata);
+      }
+    }
+  };
+
 
   const handleLegendClick = (eventData) => {
     if (onSegmentSelect) {
@@ -305,16 +420,37 @@ const CustomerSegmentQuadrant = ({
     >
       <div style={{ width: '100%', height: '100%', position: 'relative' }}>
         {chartData && (
-          <Plot
-            data={chartData.traces}
-            layout={layout}
-            config={config}
-            onClick={handleClick}
-            onHover={handleHover}
-            onUnhover={handleUnhover}
-            onLegendClick={handleLegendClick}
-            style={{ width: '100%', height: '100%' }}
-          />
+            <Plot
+              data={chartData.traces}
+              layout={layout}
+              config={config}
+              onClick={handleClick}
+              onHover={handleHover}
+              onUnhover={handleUnhover}
+              onLegendClick={handleLegendClick}
+              style={{ width: '100%', height: '100%' }}
+            />
+          )}
+        {/* Show customer info on click */}
+        {selectedCustomerInfo && (
+          <div style={{
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: 'rgba(35,42,54,0.95)',
+            border: '1px solid #00e0ff',
+            borderRadius: 8,
+            padding: '12px 16px',
+            color: '#d6e3f1',
+            fontSize: 13,
+            zIndex: 10
+          }}>
+            <div><strong>Customer:</strong> {selectedCustomerInfo.customerName}</div>
+            <div><strong>ID:</strong> {selectedCustomerInfo.customerId}</div>
+            <div><strong>Recency:</strong> {selectedCustomerInfo.recencyDays} days</div>
+            <div><strong>Avg Transaction:</strong> ${selectedCustomerInfo.avgTransactionValue}</div>
+          </div>
         )}
         
         {/* Zoom controls */}
@@ -394,6 +530,51 @@ const CustomerSegmentQuadrant = ({
           color: '#00e0ff'
         }}>
           Selected: {selectedCustomers.length} customer{selectedCustomers.length !== 1 ? 's' : ''}
+        </div>
+      )}
+
+      {/* Segment Insights Panel */}
+      {segmentInsights && segmentInsights.length > 0 && (
+        <div style={{
+          marginTop: '12px',
+          background: 'rgba(35,42,54,0.95)',
+          border: '1px solid rgba(0,224,255,0.2)',
+          borderRadius: 8,
+          padding: '12px 16px'
+        }}>
+          <div style={{ 
+            fontWeight: 600, 
+            marginBottom: 8, 
+            color: '#00e0ff', 
+            fontSize: 14,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6
+          }}>
+            🎯 Customer Segment Insights
+          </div>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+            gap: '8px' 
+          }}>
+            {segmentInsights.map((insight, idx) => (
+              <div 
+                key={idx} 
+                style={{ 
+                  fontSize: 11, 
+                  lineHeight: 1.4, 
+                  color: '#d6e3f1',
+                  padding: '6px 10px',
+                  background: 'rgba(255,255,255,0.03)',
+                  borderRadius: 4,
+                  border: '1px solid rgba(255,255,255,0.05)'
+                }}
+              >
+                {insight}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </Card>
