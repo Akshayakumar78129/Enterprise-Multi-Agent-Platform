@@ -70,6 +70,19 @@ const PatternIntelligence = forwardRef<any, PatternIntelligenceProps>(({
     handleQuerySubmit(query);
   };
 
+  // ESC key clears selected points via global API if available
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        try {
+          (window as any).chartSelectionAPI?.clearAll?.();
+        } catch {}
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div 
       className="pattern-intelligence"

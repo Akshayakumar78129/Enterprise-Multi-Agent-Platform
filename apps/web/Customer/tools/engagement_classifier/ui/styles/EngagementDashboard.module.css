@@ -1,0 +1,125 @@
+/* CSS Module for Engagement Dashboard - Standard Enterprise IQ Styling */
+.engagementDashboard {
+  min-height: 100vh;
+  background: #0a1224;
+  color: #f7f9fb;
+  font-family: 'Inter', sans-serif;
+  position: relative;
+  overflow-x: hidden;
+  padding: 24px;
+}
+
+.mainContent {
+  position: relative;
+  z-index: 1;
+}
+
+.header {
+  margin-bottom: 32px;
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* Wrap to position the glow behind the heading */
+.titleWrap {
+  position: relative;
+  display: inline-block;
+}
+.titleWrap::before {
+  content: none;
+}
+
+/* Darken from top-left corner */
+.titleWrap::after {
+  content: none;
+}
+
+.title {
+  margin-bottom: 8px;
+  color: #f7f9fb;
+  font-size: 32px;
+  font-weight: 700;
+  font-family: 'Inter', sans-serif;
+}
+
+@keyframes goldSweep {
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+.subtitle {
+  color: #f7f9fb;
+  font-size: 16px;
+  margin: 0;
+  opacity: 0.8;
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+}
+
+.section {
+  margin-bottom: 24px;
+}
+
+.filtersSection {
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 150ms both;
+}
+
+.opportunitySection {
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 900ms both;
+}
+
+.searchSection {
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 1050ms both;
+}
+
+.footer {
+  margin-top: 32px;
+  padding: 16px;
+  text-align: center;
+  color: #f7f9fb;
+  font-size: 12px;
+  border-top: 1px solid #3a4459;
+  opacity: 0.7;
+  font-family: 'Inter', sans-serif;
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 1200ms both;
+}
+
+/* Animation Keyframes */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .engagementDashboard {
+    padding: 16px;
+  }
+  
+  .title {
+    font-size: 24px !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .engagementDashboard {
+    padding: 20px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .engagementDashboard {
+    padding: 24px;
+  }
+}
+
+@media (min-width: 1400px) {
+  .engagementDashboard {
+    padding: 32px;
+  }
+}

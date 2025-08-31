@@ -1,5 +1,6 @@
 import React, { forwardRef, useImperativeHandle, useState, useEffect } from 'react';
 import { SegmentQuadrantProps, CustomerSegment } from '../../types';
+import { handleChartClick } from '../../utils/chartSelectionHelper';
 
 const SegmentQuadrant = forwardRef<any, SegmentQuadrantProps>(({
   data,
@@ -119,16 +120,52 @@ const SegmentQuadrant = forwardRef<any, SegmentQuadrantProps>(({
   // Handle interactions
   const handlePointMouseEnter = (id: string) => {
     setHoveredPoint(id);
+    try {
+      // @ts-ignore next-line
+      if (typeof onHoverInsight === 'function') {
+        const c = data.find(d => d.id === id);
+        if (c) {
+          // @ts-ignore next-line
+          onHoverInsight({
+            title: `${c.segment} customer`,
+            lines: [
+              `Frequency: ${c.frequency.toFixed(2)}`,
+              `Avg value: $${c.monetary.toFixed(2)}`,
+              `Recency score: ${c.recency.toFixed(2)}`
+            ]
+          });
+        }
+      }
+    } catch {}
   };
   
   const handlePointMouseLeave = () => {
     setHoveredPoint(null);
+    try {
+      // @ts-ignore next-line
+      if (typeof onHoverInsight === 'function') onHoverInsight(null);
+    } catch {}
   };
+  
+
   
   const handlePointClick = (event: React.MouseEvent, segment: string, customerId: string, customer: CustomerSegment) => {
     // Prevent event propagation
     event.preventDefault();
     event.stopPropagation();
+
+    // Shift+click: send minimal selection to global handler (do not add chat message)
+    if (event.shiftKey) {
+      handleChartClick({
+        chartId: 'customer-segment-quadrant',
+        chartType: 'scatter',
+        label: `${segment}`,
+        value: customer.monetary.toFixed(0),
+        unit: ' $ avg value',
+        index: Number(customerId),
+        metadata: { customerId, frequency: customer.frequency, monetary: customer.monetary, recency: customer.recency }
+      }, event.nativeEvent);
+    }
     
     // Toggle segment selection
     setSelectedSegments(prev => 
@@ -267,7 +304,7 @@ const SegmentQuadrant = forwardRef<any, SegmentQuadrantProps>(({
             fill="#f7f9fb"
             fontSize={14}
           >
-            Purchase Frequency
+            Purchase Frequency (count)
           </text>
           
           {/* Y Axis Label */}
@@ -279,7 +316,12 @@ const SegmentQuadrant = forwardRef<any, SegmentQuadrantProps>(({
             fontSize={14}
             transform={`rotate(-90, -40, ${innerHeight / 2})`}
           >
-            Average Transaction Value
+            Average Transaction Value ($)
+          </text>
+
+          {/* Legend: point size ~ recency */}
+          <text x={innerWidth - 10} y={-10} textAnchor="end" fill="#8893a7" fontSize={12}>
+            Point size shows recency score (higher = newer)
           </text>
           
           {/* Quadrant Lines */}

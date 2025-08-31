@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Card } from "../../../../../../ui-common/design-system/components/Card";
 import dynamic from "next/dynamic";
+import { handleChartClick } from "../../utils/chartSelectionHelper";
 
 // Dynamic import for Plotly to avoid SSR issues
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
@@ -10,7 +11,6 @@ const TemporalHeatmap = ({
   isLoading = false,
   width = 600,
   height = 400,
-  onCellClick = null,
   highlightCells = [],
   colorScale = null
 }) => {
@@ -165,13 +165,39 @@ const TemporalHeatmap = ({
   };
 
   const handlePlotClick = (event) => {
-    if (!onCellClick || !event.points || event.points.length === 0) return;
+    if (!event.points || event.points.length === 0) return;
     
     const point = event.points[0];
     const day = point.y;
     const hour = parseInt(point.x.split(':')[0]);
+    const value = point.z;
     
-    onCellClick(day, hour);
+    // Find the actual data point to get avgAmount
+    const dataPoint = data.find(d => d.day === day && d.hour === hour);
+    const avgAmount = dataPoint?.avgAmount || 0;
+    
+    // Get the actual mouse event with coordinates
+    const mouseEvent = event.event || {};
+    // If no clientX/Y, try to get from the Plotly event
+    if (!mouseEvent.clientX && event.event) {
+      mouseEvent.clientX = event.event.pageX || event.event.x || window.innerWidth / 2;
+      mouseEvent.clientY = event.event.pageY || event.event.y || window.innerHeight / 2;
+    }
+    
+    // Use the chart selection helper for multi-select support
+    handleChartClick({
+      chartId: 'temporal-heatmap',
+      chartType: 'Temporal Heatmap',
+      label: `${day} ${hour}:00`,
+      value: value,
+      unit: ' transactions',
+      metadata: {
+        day,
+        hour,
+        avgAmount: avgAmount,
+        formattedAvgAmount: `$${avgAmount.toFixed(2)}`
+      }
+    }, mouseEvent);
   };
 
   if (!data || data.length === 0) {

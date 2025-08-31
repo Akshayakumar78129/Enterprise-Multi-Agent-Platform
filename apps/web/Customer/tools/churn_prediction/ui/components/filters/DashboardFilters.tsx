@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import EnhancedDateRangeFilter, { DateRangeConfig } from '../../../../shared/components/filters/EnhancedDateRangeFilter';
 
 interface FilterState {
-  dateRange: {
-    type: 'week' | 'month' | 'quarter' | 'year' | 'custom';
-    startDate: Date;
-    endDate: Date;
-  };
+  dateRange: DateRangeConfig;
   segments: string[];
   productCategories: string[];
+  riskLevels: string[];
 }
 
 interface DashboardFiltersProps {
@@ -16,14 +14,7 @@ interface DashboardFiltersProps {
   availableCategories?: string[];
 }
 
-// Available date ranges based on actual customer data
-// The mock data generates last_purchase_date from 0-365 days ago
-const DATE_RANGES = {
-  week: { label: 'Last 7 Days', days: 7 },
-  month: { label: 'Last 30 Days', days: 30 },
-  quarter: { label: 'Last 90 Days', days: 90 },
-  year: { label: 'Last 365 Days', days: 365 }
-};
+// Removed DATE_RANGES as we use EnhancedDateRangeFilter now
 
 const CUSTOMER_SEGMENTS = [
   'Enterprise',
@@ -43,70 +34,106 @@ const PRODUCT_CATEGORIES = [
   'Add-ons'
 ];
 
+const RISK_LEVELS = [
+  'Very High',
+  'High',
+  'Medium',
+  'Low'
+];
+
 export default function DashboardFilters({ 
   onFiltersChange,
   availableSegments = CUSTOMER_SEGMENTS,
   availableCategories = PRODUCT_CATEGORIES
 }: DashboardFiltersProps) {
+  // Use dates that match the database (2019-2021)
   const [filters, setFilters] = useState<FilterState>({
     dateRange: {
-      type: 'month',
-      startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-      endDate: new Date()
+      type: 'year',
+      granularity: 'monthly',
+      startDate: new Date('2021-01-01'),
+      endDate: new Date('2021-12-31'),
+      label: 'Year 2021'
     },
     segments: [],
-    productCategories: []
+    productCategories: [],
+    riskLevels: []
   });
 
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
+  // Remove auto-trigger on mount
   useEffect(() => {
-    onFiltersChange(filters);
-  }, [filters]);
+    if (isInitialized) {
+      onFiltersChange(filters);
+    } else {
+      setIsInitialized(true);
+    }
+  }, [filters, isInitialized]);
 
-  const handleDateRangeChange = (type: 'week' | 'month' | 'quarter' | 'year') => {
-    const days = DATE_RANGES[type].days;
-    const endDate = new Date();
-    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const handleDateRangeChange = (dateRange: DateRangeConfig) => {
+    const newFilters = {
+      ...filters,
+      dateRange
+    };
     
-    setFilters(prev => ({
-      ...prev,
-      dateRange: { type, startDate, endDate }
-    }));
+    setFilters(newFilters);
+    onFiltersChange(newFilters); // Call directly on user action
   };
 
   const handleSegmentToggle = (segment: string) => {
-    setFilters(prev => ({
-      ...prev,
-      segments: prev.segments.includes(segment)
-        ? prev.segments.filter(s => s !== segment)
-        : [...prev.segments, segment]
-    }));
+    const newFilters = {
+      ...filters,
+      segments: filters.segments.includes(segment)
+        ? filters.segments.filter(s => s !== segment)
+        : [...filters.segments, segment]
+    };
+    setFilters(newFilters);
+    onFiltersChange(newFilters);
   };
 
   const handleCategoryToggle = (category: string) => {
-    setFilters(prev => ({
-      ...prev,
-      productCategories: prev.productCategories.includes(category)
-        ? prev.productCategories.filter(c => c !== category)
-        : [...prev.productCategories, category]
-    }));
+    const newFilters = {
+      ...filters,
+      productCategories: filters.productCategories.includes(category)
+        ? filters.productCategories.filter(c => c !== category)
+        : [...filters.productCategories, category]
+    };
+    setFilters(newFilters);
+    onFiltersChange(newFilters);
+  };
+
+  const handleRiskLevelToggle = (level: string) => {
+    const newFilters = {
+      ...filters,
+      riskLevels: filters.riskLevels.includes(level)
+        ? filters.riskLevels.filter(l => l !== level)
+        : [...filters.riskLevels, level]
+    };
+    setFilters(newFilters);
+    onFiltersChange(newFilters);
   };
 
   const clearFilters = () => {
-    setFilters({
+    const newFilters = {
       dateRange: {
-        type: 'month',
-        startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-        endDate: new Date()
+        type: 'year',
+        granularity: 'monthly',
+        startDate: new Date('2021-01-01'),
+        endDate: new Date('2021-12-31'),
+        label: 'Year 2021'
       },
       segments: [],
-      productCategories: []
-    });
+      productCategories: [],
+      riskLevels: []
+    };
+    setFilters(newFilters);
+    onFiltersChange(newFilters);
   };
 
   const activeFilterCount = filters.segments.length + filters.productCategories.length + 
-    (filters.dateRange.type !== 'month' ? 1 : 0);
+    filters.riskLevels.length + (filters.dateRange.type !== 'month' ? 1 : 0);
 
   return (
     <div style={{
@@ -193,7 +220,18 @@ export default function DashboardFilters({
 
       {isExpanded && (
         <div style={{ animation: 'slideDown 0.3s ease-out' }}>
-          {/* Date Range */}
+          {/* Enhanced Date Range */}
+          <div style={{ marginBottom: 20 }}>
+            <EnhancedDateRangeFilter
+              value={filters.dateRange}
+              onChange={handleDateRangeChange}
+              minDate={new Date('2019-01-01')}
+              maxDate={new Date('2021-12-31')}
+              theme="churn"
+            />
+          </div>
+
+          {/* Risk Levels */}
           <div style={{ marginBottom: 20 }}>
             <div style={{
               fontSize: 12,
@@ -203,59 +241,57 @@ export default function DashboardFilters({
               textTransform: 'uppercase',
               letterSpacing: 1
             }}>
-              📅 Date Range (filters by last_purchase_date)
+              🚨 Risk Levels
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {Object.entries(DATE_RANGES).map(([key, value]) => (
-                <button
-                  key={key}
-                  onClick={() => handleDateRangeChange(key as any)}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: 8,
-                    border: '1px solid',
-                    borderColor: filters.dateRange.type === key 
-                      ? 'rgba(0, 224, 255, 0.5)' 
-                      : 'rgba(255, 255, 255, 0.1)',
-                    background: filters.dateRange.type === key
-                      ? 'rgba(0, 224, 255, 0.1)'
-                      : 'transparent',
-                    color: filters.dateRange.type === key
-                      ? '#00e0ff'
-                      : 'rgba(247, 249, 251, 0.8)',
-                    fontSize: 13,
-                    fontWeight: filters.dateRange.type === key ? 600 : 400,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (filters.dateRange.type !== key) {
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (filters.dateRange.type !== key) {
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                    }
-                  }}
-                >
-                  {value.label}
-                </button>
-              ))}
-            </div>
-            <div style={{
-              marginTop: 8,
-              fontSize: 11,
-              color: 'rgba(247, 249, 251, 0.5)'
-            }}>
-              {filters.dateRange.startDate.toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
-              })} - {filters.dateRange.endDate.toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
+              {RISK_LEVELS.map(level => {
+                const getRiskColor = () => {
+                  switch(level) {
+                    case 'Very High': return '#ff1744';
+                    case 'High': return '#ff9800';
+                    case 'Medium': return '#ffd600';
+                    case 'Low': return '#00e676';
+                    default: return '#7c3aed';
+                  }
+                };
+                const color = getRiskColor();
+                
+                return (
+                  <button
+                    key={level}
+                    onClick={() => handleRiskLevelToggle(level)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: 8,
+                      border: '1px solid',
+                      borderColor: filters.riskLevels.includes(level)
+                        ? `${color}80`
+                        : 'rgba(255, 255, 255, 0.1)',
+                      background: filters.riskLevels.includes(level)
+                        ? `${color}20`
+                        : 'transparent',
+                      color: filters.riskLevels.includes(level)
+                        ? color
+                        : 'rgba(247, 249, 251, 0.8)',
+                      fontSize: 13,
+                      fontWeight: filters.riskLevels.includes(level) ? 600 : 400,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!filters.riskLevels.includes(level)) {
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!filters.riskLevels.includes(level)) {
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                      }
+                    }}
+                  >
+                    {level}
+                  </button>
+                );
               })}
             </div>
           </div>

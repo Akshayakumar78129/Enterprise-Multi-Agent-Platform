@@ -34,12 +34,28 @@ export default async function handler(req, res) {
 
     // Structure response according to the specification
     const response = {
-      success: true,
+      status: 'success',
+      customers: engagementData,
+      kpis: {
+        totalCustomers: kpis.total_customers,
+        avgEngagementScore: kpis.avg_engagement_score,
+        highEngagedCount: kpis.engagement_distribution?.high || 0,
+        atRiskCount: kpis.engagement_distribution?.low || 0,
+        recentlyEngaged: kpis.engagement_distribution?.high || 0,
+        engagementTrend: kpis.engagement_trend,
+        avg_days_since_activity: kpis.avg_days_since_activity,
+        reengagement_opportunities: kpis.reengagement_opportunities,
+        engagement_distribution: kpis.engagement_distribution
+      },
+      highlights: {
+        distribution: engagementDistribution,
+        rfm_analysis: rfmAnalysis,
+        opportunities: reengagementOpportunities,
+        timeline: engagementTimeline
+      },
       data: {
-        // Raw customer data
+        // Keep the original structure for backward compatibility
         customers: engagementData,
-        
-        // KPI data for tiles
         kpis: {
           total_customers: kpis.total_customers,
           avg_engagement_score: kpis.avg_engagement_score,
@@ -48,25 +64,15 @@ export default async function handler(req, res) {
           reengagement_opportunities: kpis.reengagement_opportunities,
           engagement_distribution: kpis.engagement_distribution
         },
-        
-        // Engagement distribution for pyramid visualization
         distribution: engagementDistribution,
-        
-        // RFM analysis for component breakdown
         rfm_analysis: rfmAnalysis,
-        
-        // Re-engagement opportunities for opportunity finder
         opportunities: reengagementOpportunities,
-        
-        // Timeline data for temporal analysis
         timeline: engagementTimeline,
-        
-        // Summary metrics
         summary: {
           total_customers: kpis.total_customers,
-          high_engagement: kpis.engagement_distribution.high,
-          medium_engagement: kpis.engagement_distribution.medium,
-          low_engagement: kpis.engagement_distribution.low,
+          high_engagement: kpis.engagement_distribution?.high || 0,
+          medium_engagement: kpis.engagement_distribution?.medium || 0,
+          low_engagement: kpis.engagement_distribution?.low || 0,
           avg_purchase_value: kpis.avg_purchase_value,
           avg_transaction_frequency: kpis.avg_transaction_frequency
         }

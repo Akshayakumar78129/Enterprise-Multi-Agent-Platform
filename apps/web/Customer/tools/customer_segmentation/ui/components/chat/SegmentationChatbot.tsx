@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { parseMentions, hasMentions, extractQueryContext } from '../../../../churn_prediction/ui/utils/mentionParser';
 import { packDashboardContext, createAgentQueryPayload, optimizeContextForQuery } from '../../../../churn_prediction/ui/utils/contextPacker';
-import { queryAgent, mockAgentResponse, AgentResult } from '../../../../churn_prediction/ui/services/agentCommunication';
+import { mockAgentResponse, AgentResult } from '../../../../churn_prediction/ui/services/agentCommunication';
+import { queryAgent } from '../../services/agentCommunication';
 import { getAgentConfig, getActiveAgents, isValidAgent } from '../../../../churn_prediction/ui/config/agentRegistry';
 import { AIResponseDashboard } from '../../../../../../ui-common/ai-interaction/aiResponse';
 import { v4 as uuidv4 } from 'uuid';
@@ -63,10 +64,18 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
   const [chatbotMode, setChatbotMode] = useState<ChatbotMode>('quick');
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Session state for AIResponseDashboard
+  const [session] = useState({
+    session_id: uuidv4(),
+    user_id: "ari",
+    app_name: "customer_segmentation"
+  });
 
   // Conversation memory for context
   const [conversationMemory, setConversationMemory] = useState({
     lastChartContext: null as any,
+    selectedPoints: [] as any[],
     conversationContext: {
       lastSegment: null as string | null,
       lastMetric: null as string | null,
@@ -124,8 +133,49 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
     }
   }, [chatbotMode]);
 
-  // Handle chart click context
+  // Handle chart click context for shift-click multi-selection
   const handleChartClickContext = useCallback((clickData: any) => {
+    const { label, value, chartType, count, total, originalEvent } = clickData;
+    const numValue = parseFloat(value) || 0;
+    const isShiftKey = originalEvent?.shiftKey || false;
+    
+    // NO CHAT MESSAGE - just update the selected points display
+    console.log('📊 Chart click received, updating selection:', { 
+      label, 
+      value: count || value,
+      chartType,
+      isShiftKey 
+    });
+    
+    // Store chart context - handle multi-selection with shift key
+    setConversationMemory(prev => {
+      const newPoint = {
+        label,
+        value: count || value,
+        chartType,
+        unit: clickData.unit || ''
+      };
+      
+      if (isShiftKey && prev.selectedPoints) {
+        // Add to existing selection
+        return {
+          ...prev,
+          lastChartContext: clickData,
+          selectedPoints: [...prev.selectedPoints, newPoint]
+        };
+      } else {
+        // Replace selection
+        return {
+          ...prev,
+          lastChartContext: clickData,
+          selectedPoints: [newPoint]
+        };
+      }
+    });
+  }, []);
+
+  // Original handler preserved for backwards compatibility
+  const handleChartClickContextOld = useCallback((clickData: any) => {
     const { label, value, chartType, count, total } = clickData;
     const numValue = parseFloat(value) || 0;
     
@@ -207,42 +257,7 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
       // Store selected points
       if (points && points.length > 0) {
         setSelectedPoints(points);
-        
-        // Format message exactly like churn dashboard
-        let formattedMessage = `## 📊 Selected Data Points Analysis\n\nYou've selected **${points.length} data point${points.length > 1 ? 's' : ''}** for analysis:\n`;
-        
-        points.forEach((point: any, idx: number) => {
-          formattedMessage += `\n**${idx + 1}. ${point.label || 'Data Point'}** - `;
-          formattedMessage += `${point.chartType || 'Unknown'} • `;
-          formattedMessage += `${point.value}${point.unit || ''}`;
-          
-          // Add segment-specific details
-          if (point.chartType === 'segment-profile' && point.metadata) {
-            const meta = point.metadata;
-            if (meta.avgSpend) formattedMessage += ` • $${meta.avgSpend} avg spend`;
-            if (meta.loyaltyScore) formattedMessage += ` • ${meta.loyaltyScore}% loyalty`;
-          } else if (point.chartType === 'kpi-tile') {
-            if (point.metadata?.trend) formattedMessage += ` • ${point.metadata.trend}`;
-          } else if (point.chartType === 'scatter' && point.metadata) {
-            if (point.metadata.y) formattedMessage += ` • Y: ${point.metadata.y}`;
-            if (point.metadata.segment) formattedMessage += ` • ${point.metadata.segment}`;
-          }
-          
-          if (point.trend) {
-            formattedMessage += ` • ${point.trend}`;
-          }
-        });
-        
-        formattedMessage += `\n\n**Analysis Modes:** Select below or ask me anything.`;
-        
-        const selectionMessage: Message = {
-          id: `selection_${Date.now()}`,
-          type: 'bot',
-          content: formattedMessage,
-          timestamp: new Date(),
-          contextData: { points, context }
-        };
-        setMessages(prev => [...prev, selectionMessage]);
+        // NO CHAT MESSAGE - points are displayed above input area
       }
       
       // If there's a specific message/question, add it to input
@@ -271,41 +286,7 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
         // Always open chatbot on multi-select
         setIsOpen(true);
         
-        // Format the points exactly like churn dashboard
-        let formattedMessage = `## 📊 Selected Data Points Analysis\n\nYou've selected **${points.length} data points** for analysis:\n`;
-        
-        points.forEach((point: any, idx: number) => {
-          formattedMessage += `\n**${idx + 1}. ${point.label || 'Data Point'}** - `;
-          formattedMessage += `${point.chartType || 'Unknown'} • `;
-          formattedMessage += `${point.value}${point.unit || ''}`;
-          
-          // Add segment-specific details
-          if (point.chartType === 'segment-profile' && point.metadata) {
-            const meta = point.metadata;
-            if (meta.avgSpend) formattedMessage += ` • $${meta.avgSpend} avg spend`;
-            if (meta.loyaltyScore) formattedMessage += ` • ${meta.loyaltyScore}% loyalty`;
-          } else if (point.chartType === 'kpi-tile') {
-            if (point.metadata?.trend) formattedMessage += ` • ${point.metadata.trend}`;
-          } else if (point.chartType === 'scatter' && point.metadata) {
-            if (point.metadata.y) formattedMessage += ` • Y: ${point.metadata.y}`;
-            if (point.metadata.segment) formattedMessage += ` • ${point.metadata.segment}`;
-          }
-          
-          if (point.trend) {
-            formattedMessage += ` • ${point.trend}`;
-          }
-        });
-        
-        formattedMessage += `\n\n**Analysis Modes:** Select below or ask me anything.`;
-        
-        const notificationMessage: Message = {
-          id: `notify_${Date.now()}`,
-          type: 'bot',
-          content: formattedMessage,
-          timestamp: new Date(),
-          contextData: { points }
-        };
-        setMessages(prev => [...prev, notificationMessage]);
+        // NO CHAT MESSAGE - points are displayed above input area
       }
     };
     
@@ -314,10 +295,10 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
     window.addEventListener('segmentationChatbotMessage', handleChatbotMessage as any);
     window.addEventListener('segmentationMultiSelect', handleMultiSelect as any);
     
-    // Also expose function globally
+    // Also expose function globally - matching the name used in chartSelectionHelper
     if (typeof window !== 'undefined') {
-      (window as any).addSegmentationInsightToChat = handleChartClickContext;
-      console.log('✅ Segmentation AI Insight handler registered');
+      (window as any).addSegmentInsightToChat = handleChartClickContext;
+      console.log('✅ Segmentation AI Insight handler registered globally');
     }
     
     return () => {
@@ -326,10 +307,26 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
       window.removeEventListener('segmentationMultiSelect', handleMultiSelect as any);
       
       if (typeof window !== 'undefined') {
-        delete (window as any).addSegmentationInsightToChat;
+        delete (window as any).addSegmentInsightToChat;
       }
     };
   }, [handleChartClickContext, isOpen]);
+
+  // Add ESC key handler to clear selections
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setConversationMemory(prev => ({
+          ...prev,
+          selectedPoints: [],
+          lastChartContext: undefined
+        }));
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const sendMessage = async (messageText?: string) => {
     const textToSend = messageText || inputValue.trim();
@@ -337,6 +334,15 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
 
     // Get current mode configuration
     const modeConfig = getChatbotModeConfig(chatbotMode);
+    
+    // Enhance query with selected points if available
+    let enhancedQuery = textToSend;
+    if (selectedPoints && selectedPoints.length > 0) {
+      const pointsContext = selectedPoints
+        .map((p: any) => `${p.label}: ${p.value}${p.unit || ''}`)
+        .join(', ');
+      enhancedQuery = `${textToSend}\n\nContext: Selected data points - ${pointsContext}`;
+    }
 
     const userMessage: Message = {
       id: uuidv4(),
@@ -350,8 +356,9 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
 
     // Check for mentions
     if (hasMentions(textToSend)) {
-      const mentions = parseMentions(textToSend);
-      for (const agentName of mentions) {
+      const parsedMessage = parseMentions(textToSend);
+      const agentNames = parsedMessage.mentions.map(m => m.agentName);
+      for (const agentName of agentNames) {
         if (isValidAgent(agentName)) {
           const agentConfig = getAgentConfig(agentName);
           if (agentConfig) {
@@ -369,11 +376,64 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
             setMessages(prev => [...prev, loadingMessage]);
 
             try {
-              const context = packDashboardContext(dashboardContext || {});
-              const queryPayload = createAgentQueryPayload(textToSend, context, agentConfig);
+              // Pack the dashboard context properly - include selected points
+              const context = dashboardContext ? {
+                source_dashboard: 'customer_segmentation',
+                segment_context: dashboardContext.segment_context || {},
+                filters_applied: dashboardContext.filters_applied || {},
+                selectedPoints: selectedPoints || [],
+                lastChartContext: lastChartContext || null,
+                timestamp: new Date().toISOString(),
+                user_id: 'segmentation_user'
+              } : {
+                source_dashboard: 'customer_segmentation',
+                segment_context: {},
+                filters_applied: {},
+                selectedPoints: selectedPoints || [],
+                lastChartContext: lastChartContext || null,
+                timestamp: new Date().toISOString(),
+                user_id: 'segmentation_user'
+              };
               
-              // Simulate agent response
-              const response = await mockAgentResponse(agentConfig, textToSend);
+              // Create proper payload matching churn implementation with enhanced query
+              const payload = {
+                query: enhancedQuery,
+                context: context,
+                request_id: uuidv4(),
+                priority: 'normal' as const,
+                mentioned_agent: agentName
+              };
+              
+              // Use real backend by default, only mock if explicitly enabled
+              const USE_MOCK_RESPONSES = process.env.NEXT_PUBLIC_USE_MOCK_AGENTS === 'true';
+              
+              console.log('🔧 Segmentation agent call:', {
+                agentName,
+                USE_MOCK_RESPONSES,
+                payload: { ...payload, query: payload.query.substring(0, 50) + '...' }
+              });
+              
+              let response;
+              if (USE_MOCK_RESPONSES) {
+                console.log('🎭 Using mock agent response');
+                response = await mockAgentResponse(agentConfig, textToSend);
+              } else {
+                console.log('🌐 Using real backend for agent:', agentName);
+                // Call queryAgent with proper payload structure
+                const agentResult = await queryAgent(agentName, payload, 10000);
+                
+                console.log('📦 Agent result received:', {
+                  success: agentResult.success,
+                  hasText: !!agentResult.response_text,
+                  error: agentResult.error_message
+                });
+                
+                response = {
+                  answer: agentResult.success ? agentResult.response_text : 
+                         `❌ Error: ${agentResult.error_message || 'Failed to get response from agent'}`,
+                  metadata: agentResult.metadata || {}
+                };
+              }
               
               // Update with actual response
               setMessages(prev => prev.map(msg => 
@@ -381,10 +441,16 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
                   ? { ...msg, content: response.answer, isLoading: false, metadata: response.metadata }
                   : msg
               ));
-            } catch (error) {
+            } catch (error: any) {
+              console.error('❌ Error in segmentation agent query:', error);
               setMessages(prev => prev.map(msg => 
                 msg.id === loadingMessage.id 
-                  ? { ...msg, content: 'Sorry, I encountered an error processing your request.', isLoading: false, error: error.message }
+                  ? { 
+                      ...msg, 
+                      content: `Sorry, I encountered an error: ${error.message || 'Failed to contact agent'}`, 
+                      isLoading: false, 
+                      error: error.message 
+                    }
                   : msg
               ));
             }
@@ -392,24 +458,63 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
         }
       }
     } else {
-      // Regular bot response adapted to mode
-      let responseContent = '';
-      
-      if (chatbotMode === 'quick') {
-        responseContent = `Quick insight on "${textToSend}":\n\n📊 **Key Metrics:** Active segments showing 15% growth\n⚡ **Action:** Focus on top-performing segments\n\n💡 Try @customer for segment-specific insights.`;
-      } else if (chatbotMode === 'strategic') {
-        responseContent = `Strategic analysis for "${textToSend}":\n\n📈 **Trend Analysis:** Customer segments show varying performance patterns\n🎯 **Strategic Focus:** Optimize high-value segments while nurturing growth segments\n📋 **Recommendations:**\n• Deploy targeted campaigns for Champions\n• Retention strategies for At Risk segment\n• Upselling opportunities in Loyal segment\n\n💡 Mention @sales, @customer, @finance, or @inventory for specialized strategic insights.`;
-      } else if (chatbotMode === 'deep-dive') {
-        responseContent = `Deep exploration of "${textToSend}":\n\n🔍 **Behavioral Patterns:** Analyzing customer journey across segments\n📊 **Correlations:** Purchase frequency correlates with engagement (r=0.72)\n🎯 **Hidden Insights:**\n• Segment transitions occur primarily during promotional periods\n• Cross-segment movement indicates 23% upgrade potential\n• Behavioral clustering reveals 3 distinct sub-segments\n\n📈 **Detailed Metrics:**\n• Segment stability: 78%\n• Migration rate: 12% quarterly\n• Value concentration: Top 20% drive 65% revenue\n\n💡 Use @customer or @finance agents for comprehensive deep-dive analysis.`;
-      }
-      
-      const botMessage: Message = {
-        id: uuidv4(),
+      // Use AIResponseDashboard for regular bot responses
+      const botMessageId = uuidv4();
+      const loadingMessage: Message = {
+        id: botMessageId,
         type: 'bot',
-        content: responseContent,
+        content: 'Thinking...',
+        isLoading: true,
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, botMessage]);
+      setMessages(prev => [...prev, loadingMessage]);
+      
+      try {
+        // Construct query based on chatbot mode - use enhanced query with selected points
+        let query = enhancedQuery;
+        if (chatbotMode === 'quick') {
+          query = `Provide a quick insight for: ${enhancedQuery}. Include key metrics and immediate actions.`;
+        } else if (chatbotMode === 'strategic') {
+          query = `Provide strategic analysis for: ${enhancedQuery}. Include trend analysis, strategic focus areas, and recommendations.`;
+        } else if (chatbotMode === 'deep-dive') {
+          query = `Provide deep-dive analysis for: ${enhancedQuery}. Include behavioral patterns, correlations, hidden insights, and detailed metrics.`;
+        }
+        
+        const response = AIResponseDashboard(query, session);
+        let fullResponse = '';
+        
+        for await (const chunk of response) {
+          if (chunk === '[DONE]') {
+            break;
+          }
+          if (chunk === '[ERROR]') {
+            console.error('Error in AI response');
+            setMessages(prev => prev.map(msg => 
+              msg.id === botMessageId
+                ? { ...msg, content: 'Sorry, I encountered an error processing your request.', isLoading: false, error: 'AI Response Error' }
+                : msg
+            ));
+            return;
+          }
+          
+          if (typeof chunk === 'object' && chunk !== null && chunk.text) {
+            fullResponse += chunk.text;
+            // Update message with streaming response
+            setMessages(prev => prev.map(msg => 
+              msg.id === botMessageId
+                ? { ...msg, content: fullResponse, isLoading: false }
+                : msg
+            ));
+          }
+        }
+      } catch (error) {
+        console.error('Error calling AIResponseDashboard:', error);
+        setMessages(prev => prev.map(msg => 
+          msg.id === botMessageId
+            ? { ...msg, content: 'Sorry, I encountered an error processing your request.', isLoading: false, error: error.message }
+            : msg
+        ));
+      }
     }
   };
 
@@ -608,6 +713,156 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
             ))}
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Selected Points Display - Clean hover style above input */}
+          {conversationMemory?.selectedPoints && conversationMemory.selectedPoints.length > 0 && (
+            <div style={{
+              padding: '10px 20px',
+              background: 'rgba(102, 126, 234, 0.05)',
+              borderTop: '1px solid rgba(102, 126, 234, 0.2)',
+              borderBottom: '1px solid rgba(102, 126, 234, 0.2)',
+              maxHeight: conversationMemory.selectedPoints.length > 2 ? '80px' : 'auto',
+              overflowY: conversationMemory.selectedPoints.length > 2 ? 'auto' : 'visible',
+              transition: 'all 0.3s ease'
+            }}>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px'
+              }}>
+                {/* Header */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: '12px',
+                  color: 'rgba(247, 249, 251, 0.6)',
+                  marginBottom: '4px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ 
+                      color: '#667eea', 
+                      fontSize: '8px',
+                      animation: 'pulse 2s infinite'
+                    }}>●</span>
+                    <span>Selected Points ({conversationMemory.selectedPoints.length})</span>
+                    {conversationMemory.selectedPoints.length > 1 && (
+                      <span style={{ fontSize: '10px', opacity: 0.5 }}>
+                        Shift+click to add more
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setConversationMemory(prev => ({ 
+                      ...prev, 
+                      lastChartContext: undefined,
+                      selectedPoints: []
+                    }))}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'rgba(247, 249, 251, 0.4)',
+                      cursor: 'pointer',
+                      padding: '2px 6px',
+                      fontSize: '16px',
+                      lineHeight: 1,
+                      transition: 'color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'rgba(247, 249, 251, 0.8)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(247, 249, 251, 0.4)'}
+                    title="Clear all selections"
+                  >
+                    ×
+                  </button>
+                </div>
+                
+                {/* Selected points list */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px'
+                }}>
+                  {conversationMemory.selectedPoints.map((point, index) => (
+                    <div 
+                      key={index}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '13px',
+                        color: '#f8fafc',
+                        padding: '4px 8px',
+                        background: 'rgba(102, 126, 234, 0.08)',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(102, 126, 234, 0.2)',
+                        position: 'relative',
+                        paddingRight: '32px'
+                      }}
+                    >
+                      <span style={{ 
+                        fontSize: '11px', 
+                        opacity: 0.5,
+                        minWidth: '16px'
+                      }}>
+                        {index + 1}.
+                      </span>
+                      <span style={{ fontWeight: 500 }}>
+                        {point.label}: {point.value}{point.unit}
+                      </span>
+                      {point.chartType && (
+                        <span style={{
+                          fontSize: '10px',
+                          padding: '2px 6px',
+                          background: 'rgba(102, 126, 234, 0.15)',
+                          borderRadius: '4px',
+                          color: '#a78bfa',
+                          marginLeft: 'auto',
+                          marginRight: '24px'
+                        }}>
+                          {point.chartType}
+                        </span>
+                      )}
+                      {/* Individual remove button */}
+                      <button
+                        onClick={() => {
+                          setConversationMemory(prev => ({
+                            ...prev,
+                            selectedPoints: prev.selectedPoints?.filter((_, i) => i !== index) || []
+                          }));
+                        }}
+                        style={{
+                          position: 'absolute',
+                          right: '4px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'rgba(247, 249, 251, 0.3)',
+                          cursor: 'pointer',
+                          padding: '2px 4px',
+                          fontSize: '14px',
+                          lineHeight: 1,
+                          transition: 'all 0.2s',
+                          borderRadius: '4px'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = '#ff4444';
+                          e.currentTarget.style.background = 'rgba(255, 68, 68, 0.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = 'rgba(247, 249, 251, 0.3)';
+                          e.currentTarget.style.background = 'transparent';
+                        }}
+                        title="Remove this point"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Input */}
           <div style={{

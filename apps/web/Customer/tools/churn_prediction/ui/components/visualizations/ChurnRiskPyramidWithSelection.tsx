@@ -172,8 +172,7 @@ const ChurnRiskPyramidWithSelection: React.FC<ChurnRiskPyramidProps> = (props) =
     const isShiftClick = e.shiftKey;
     
     if (isShiftClick) {
-      // Shift+Click: Send to chatbot ONLY
-      const levelCustomers = customers.filter(c => c.risk_level === level);
+      // Shift+Click: Send minimal data to chatbot (like KPI tiles)
       
       // Use the global addAIInsightToChat function if available
       if (typeof window !== 'undefined' && (window as any).addAIInsightToChat) {
@@ -187,7 +186,7 @@ const ChurnRiskPyramidWithSelection: React.FC<ChurnRiskPyramidProps> = (props) =
         });
       }
       
-      // Also send via props if provided
+      // Also send via props if provided - minimal data only
       if (props.onContextSelect) {
         props.onContextSelect({
           chartType: 'risk-pyramid',
@@ -195,8 +194,8 @@ const ChurnRiskPyramidWithSelection: React.FC<ChurnRiskPyramidProps> = (props) =
           selectedPoint: {
             level,
             count: counts[index],
-            percentage: percentages[index],
-            customers: levelCustomers
+            percentage: percentages[index]
+            // Removed customers array - send only summary data
           },
           message: `Analyzing ${level} risk level: ${counts[index]} customers (${percentages[index].toFixed(1)}% of total)`
         });
@@ -326,10 +325,13 @@ const ChurnRiskPyramidWithSelection: React.FC<ChurnRiskPyramidProps> = (props) =
           const baseWidth = refWidth * 0.85;
           const minWidth = refWidth * 0.25;
           
-          // Create pyramid shape: Very High (top) should be narrowest, Low (bottom) should be widest
-          // Use index-based width calculation for pyramid shape
-          const widthRatio = (i + 1) / riskLevels.length; // 0.25, 0.5, 0.75, 1.0
-          const w = minWidth + (baseWidth - minWidth) * widthRatio;
+          // Size blocks based on actual customer count - bigger count = wider block
+          // Calculate width based on the proportion of customers in this risk level
+          const maxCount = Math.max(...counts); // Find the largest group
+          const countRatio = counts[i] / maxCount; // Ratio of this group to largest
+          // Ensure minimum width of 30% even for smallest group, max 100% for largest
+          const widthRatio = 0.3 + (countRatio * 0.7);
+          const w = baseWidth * widthRatio;
           const x = (refWidth - w) / 2;
           
           return (

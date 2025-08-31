@@ -272,6 +272,8 @@ app.use('/api/v1/finance', authenticateToken, auditLog, cacheMiddleware, finance
 
 // Error handling middleware
 app.use((error, req, res, next) => {
+  console.error('🔥 ERROR in', req.method, req.url, ':', error.stack || error.message || error);
+  
   logger.error('Unhandled error:', {
     error: error.message,
     stack: error.stack,
@@ -281,11 +283,15 @@ app.use((error, req, res, next) => {
     headers: req.headers
   });
 
+  const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+  
   res.status(error.status || 500).json({
     success: false,
     error: {
       message: error.message || 'Internal server error',
-      code: error.code || 'INTERNAL_ERROR'
+      code: error.code || 'INTERNAL_ERROR',
+      // Show stack trace in development
+      ...(isDev && { stack: error.stack })
     },
     metadata: {
       timestamp: new Date().toISOString(),

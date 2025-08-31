@@ -1,0 +1,37 @@
+{
+  "name": "regional-sales-chatbot",
+  "version": "1.0.0",
+  "description": "Intelligent chatbot for regional sales analysis and insights",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "node test-embeddings.js",
+    "setup": "node setup.js",
+    "server": "node api-server.js"
+  },
+  "keywords": [
+    "chatbot",
+    "regional-sales",
+    "ai",
+    "gemini",
+    "rag",
+    "analytics"
+  ],
+  "author": "Enterprise IQ",
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "better-sqlite3": "^11.10.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

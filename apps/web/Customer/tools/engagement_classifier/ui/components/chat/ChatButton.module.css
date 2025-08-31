@@ -1,0 +1,160 @@
+/* Chat Button Styles - Enhanced Glassmorphism */
+.chatButton {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, rgba(139,92,246,0.95) 0%, rgba(34,211,238,0.95) 100%);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.35), 0 0 0 1px rgba(255,255,255,0.06) inset;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0b1020;
+  position: relative;
+  overflow: visible;
+  backdrop-filter: blur(8px);
+}
+
+.chatButton:hover {
+  transform: translateY(-3px) scale(1.06);
+  box-shadow: 0 16px 40px rgba(139, 92, 246, 0.45), 0 0 0 1px rgba(255,255,255,0.08) inset;
+  filter: brightness(1.05);
+}
+
+.chatButton:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.chatButton.open {
+  background: linear-gradient(135deg, rgba(239,68,68,0.95) 0%, rgba(220,38,38,0.95) 100%);
+  box-shadow: 0 10px 30px rgba(239, 68, 68, 0.35), 0 0 0 1px rgba(255,255,255,0.06) inset;
+}
+
+.chatButton.open:hover {
+  box-shadow: 0 16px 40px rgba(239, 68, 68, 0.45), 0 0 0 1px rgba(255,255,255,0.08) inset;
+}
+
+.chatButtonIcon {
+  transition: transform 0.3s ease;
+}
+
+.chatButton.open .chatButtonIcon {
+  transform: rotate(90deg);
+}
+
+/* Unread indicator */
+.chatButton.hasUnread::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 20px;
+  height: 20px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 3px solid rgba(10, 18, 36, 0.85);
+  animation: pulse-unread 2s infinite;
+}
+
+.unreadIndicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 12px;
+  height: 12px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 2px solid rgba(139,92,246,0.9);
+}
+
+.unreadDot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: pulse-dot 1.5s infinite;
+}
+
+/* Tooltip - glassy */
+.chatButtonTooltip {
+  position: absolute;
+  bottom: 70px;
+  right: 0;
+  background: rgba(17, 24, 39, 0.75);
+  color: #f7f9fb;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.25s ease;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(6px);
+}
+
+.chatButtonTooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 20px;
+  border: 6px solid transparent;
+  border-top-color: rgba(17, 24, 39, 0.75);
+}
+
+.chatButton:hover .chatButtonTooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.chatButton.open .chatButtonTooltip {
+  display: none;
+}
+
+/* Animations */
+@keyframes pulse-unread {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .chatButton {
+    width: 56px;
+    height: 56px;
+    bottom: 20px;
+    right: 20px;
+  }
+  
+  .chatButtonTooltip {
+    bottom: 66px;
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+}
+
+/* Focus states for accessibility */
+.chatButton:focus {
+  outline: none;
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.35), 0 0 0 3px rgba(139, 92, 246, 0.25);
+}
+
+.chatButton.open:focus {
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35), 0 0 0 3px rgba(239, 68, 68, 0.25);
+}

@@ -11,7 +11,7 @@ import {
   Legend,
 } from 'chart.js';
 import { segmentationTheme, getSegmentColor } from '../../styles/theme';
-import { handleChartClick } from '../../utils/chartSelectionHelper';
+// Removed unused import - handleChartClick
 
 ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
@@ -26,6 +26,7 @@ interface SegmentProfile {
   regions: string[];
   characteristics: string[];
   recommendations: string[];
+  isSelected?: boolean; // Add flag for filter selection
 }
 
 interface EnhancedSegmentProfileCardsProps {
@@ -56,13 +57,17 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
           segment.loyaltyScore || 0,
           segment.engagementRate || 0,
         ],
-        backgroundColor: `${getSegmentColor(segment.segment - 1)}30`,
+        backgroundColor: `${getSegmentColor(segment.segment - 1)}50`, // Semi-transparent fill
         borderColor: getSegmentColor(segment.segment - 1),
-        borderWidth: 2,
+        borderWidth: 4, // Thicker lines for better visibility
         pointBackgroundColor: getSegmentColor(segment.segment - 1),
-        pointBorderColor: '#fff',
-        pointHoverBackgroundColor: '#fff',
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 3,
+        pointRadius: 6, // Larger points
+        pointHoverRadius: 8,
+        pointHoverBackgroundColor: '#ffffff',
         pointHoverBorderColor: getSegmentColor(segment.segment - 1),
+        pointHoverBorderWidth: 4,
       },
     ],
   });
@@ -75,26 +80,52 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
         display: false,
       },
       tooltip: {
-        enabled: false,
+        enabled: true,
+        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+        titleColor: '#ffffff',
+        bodyColor: '#ffffff',
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+        borderWidth: 1,
+        titleFont: {
+          size: 14,
+          weight: 'bold',
+        },
+        bodyFont: {
+          size: 13,
+        },
+        padding: 12,
+        cornerRadius: 6,
       },
     },
     scales: {
       r: {
         angleLines: {
-          color: 'rgba(255, 255, 255, 0.1)',
+          color: 'rgba(255, 255, 255, 0.3)', // More visible grid lines
+          lineWidth: 2,
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)',
+          color: 'rgba(255, 255, 255, 0.2)',
+          lineWidth: 1.5,
         },
         pointLabels: {
-          color: segmentationTheme.colors.textTertiary,
+          color: '#ffffff', // White labels for high contrast
           font: {
-            size: 10,
+            size: 13, // Larger font for elderly users
+            weight: 'bold',
           },
+          padding: 10,
         },
         ticks: {
-          display: false,
+          display: true,
+          color: 'rgba(255, 255, 255, 0.6)',
+          font: {
+            size: 11,
+          },
+          backdropColor: 'transparent',
+          stepSize: 25,
         },
+        min: 0,
+        max: 100,
       },
     },
   };
@@ -173,26 +204,27 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
         gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
         gap: segmentationTheme.spacing.lg,
       }}>
-        {segments.map((segment, index) => (
+        {segments.map((segment, index) => {
+          // Check if segment is selected (default to true if not specified)
+          const isSegmentSelected = segment.isSelected !== false;
+          
+          return (
           <motion.div
             key={segment.segment}
             initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            animate={{ 
+              opacity: isSegmentSelected ? 1 : 0.4, // Dim unselected segments
+              x: 0 
+            }}
             transition={{ delay: index * 0.1 }}
-            whileHover={{ scale: 1.02 }}
+            whileHover={{ scale: isSegmentSelected ? 1.02 : 1 }} // Only scale if selected
             onClick={(e: React.MouseEvent) => {
-              // Send to ChartSelectionManager
-              handleChartClick({
-                chartId: `segment-card-${segment.segment}`,
-                chartType: 'segment-profile',
-                label: `Segment ${segment.segment}`,
-                value: segment.customerCount,
-                unit: 'customers',
-                metadata: segment
-              }, e);
+              // Stop event propagation to prevent chatbot from opening
+              e.stopPropagation();
+              e.preventDefault();
               
               if (e.shiftKey) {
-                // Shift+Click for multi-selection
+                // Shift+Click for multi-selection - send to dashboard context
                 const selectionAPI = (window as any).chartSelectionAPI;
                 if (selectionAPI) {
                   selectionAPI.addPoint({
@@ -206,7 +238,40 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
                   });
                 }
               } else {
-                // Regular click - just expand card
+                // Regular click - show internal AI insight popup (don't send to chatbot)
+                const insight = {
+                  emoji: '🎯',
+                  title: `Segment ${segment.segment}`,
+                  subtitle: `${segment.customerCount} customers`,
+                  summary: `Average spend: $${segment.avgSpend.toLocaleString()} | Frequency: ${segment.frequency} | Loyalty: ${segment.loyaltyScore} | Engagement: ${segment.engagementRate}%`,
+                  details: [
+                    `👥 Customer Count: ${segment.customerCount}`,
+                    `💰 Average Spend: $${segment.avgSpend.toLocaleString()}`,
+                    `📊 Frequency Score: ${segment.frequency}`,
+                    `⭐ Loyalty Score: ${segment.loyaltyScore}`,
+                    `📈 Engagement Rate: ${segment.engagementRate}%`
+                  ],
+                  characteristics: segment.characteristics,
+                  recommendations: segment.recommendations,
+                  questions: [
+                    'What drives loyalty in this segment?',
+                    'How can we increase engagement?',
+                    'Which products resonate most?',
+                    'What are the growth opportunities?'
+                  ],
+                  actions: [
+                    'Launch targeted campaign',
+                    'Create personalized offers',
+                    'Analyze purchase patterns',
+                    'Export segment data'
+                  ]
+                };
+                
+                setAiInsightContent(insight);
+                setInsightPosition({ x: e.clientX, y: e.clientY });
+                setShowAIInsight(true);
+                
+                // Also expand card
                 setExpandedCard(expandedCard === segment.segment ? null : segment.segment);
                 onSelect?.(segment.segment);
               }
@@ -219,18 +284,23 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
               WebkitBackdropFilter: segmentationTheme.effects.backdropBlur,
               borderRadius: segmentationTheme.borderRadius.xl,
               border: `2px solid ${
-                selectedSegment === segment.segment 
-                  ? getSegmentColor(segment.segment - 1) 
-                  : 'rgba(255, 255, 255, 0.1)'
+                isSegmentSelected
+                  ? selectedSegment === segment.segment 
+                    ? getSegmentColor(segment.segment - 1)
+                    : 'rgba(255, 255, 255, 0.1)'
+                  : 'rgba(255, 255, 255, 0.05)' // Dimmer border for unselected
               }`,
-              boxShadow: selectedSegment === segment.segment 
-                ? `${segmentationTheme.effects.glassShadow}, 0 0 30px ${getSegmentColor(segment.segment - 1)}40`
-                : segmentationTheme.effects.tileShadow,
+              boxShadow: isSegmentSelected 
+                ? selectedSegment === segment.segment 
+                  ? `${segmentationTheme.effects.glassShadow}, 0 0 30px ${getSegmentColor(segment.segment - 1)}40`
+                  : segmentationTheme.effects.tileShadow
+                : 'none', // No shadow for unselected
               padding: segmentationTheme.spacing.lg,
-              cursor: 'pointer',
+              cursor: isSegmentSelected ? 'pointer' : 'not-allowed',
               position: 'relative',
               overflow: 'hidden',
               transition: segmentationTheme.animation.normal,
+              filter: isSegmentSelected ? 'none' : 'grayscale(50%)', // Grayscale unselected
             }}
           >
             <div style={{
@@ -322,10 +392,26 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
               marginBottom: segmentationTheme.spacing.md,
             }}>
               {[
-                { label: 'Avg Spend', value: `$${(segment.avgSpend || 0).toLocaleString()}` },
-                { label: 'Frequency', value: `${segment.frequency || 0}/mo` },
-                { label: 'Recency', value: `${segment.recency || 0} days` },
-                { label: 'Loyalty', value: `${segment.loyaltyScore || 0}%` },
+                { 
+                  label: 'Avg Spend', 
+                  value: `$${(segment.avgSpend || 0).toLocaleString()}`,
+                  indicator: segment.avgSpend > 500 ? '🟢' : segment.avgSpend > 200 ? '🟡' : '🔴'
+                },
+                { 
+                  label: 'Frequency', 
+                  value: `${segment.frequency || 0}/mo`,
+                  indicator: segment.frequency > 7 ? '🟢' : segment.frequency > 4 ? '🟡' : '🔴'
+                },
+                { 
+                  label: 'Recency', 
+                  value: `${segment.recency || 0} days`,
+                  indicator: segment.recency < 10 ? '🟢' : segment.recency < 20 ? '🟡' : '🔴'
+                },
+                { 
+                  label: 'Loyalty', 
+                  value: `${segment.loyaltyScore || 0}%`,
+                  indicator: segment.loyaltyScore > 80 ? '🟢' : segment.loyaltyScore > 60 ? '🟡' : '🔴'
+                },
               ].map((metric) => (
                 <div
                   key={metric.label}
@@ -343,19 +429,32 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
                     {metric.label}
                   </div>
                   <div style={{
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    color: getSegmentColor(segment.segment - 1),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
                   }}>
-                    {metric.value}
+                    <div style={{
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      color: getSegmentColor(segment.segment - 1),
+                    }}>
+                      {metric.value}
+                    </div>
+                    <span style={{ fontSize: '14px' }}>{metric.indicator}</span>
                   </div>
                 </div>
               ))}
             </div>
 
             <div style={{
-              height: '180px',
+              height: '200px',
               marginBottom: segmentationTheme.spacing.md,
+              background: 'rgba(0, 0, 0, 0.3)',
+              borderRadius: '12px',
+              padding: '10px',
+              position: 'relative',
+              boxShadow: `0 0 20px ${getSegmentColor(segment.segment - 1)}30`,
+              border: `1px solid ${getSegmentColor(segment.segment - 1)}40`,
             }}>
               <Radar data={getRadarData(segment)} options={radarOptions} />
             </div>
@@ -437,11 +536,12 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
               pointerEvents: 'none',
             }} />
           </motion.div>
-        ))}
+        );
+        })}
       </div>
 
-      {/* AI Insight Popup removed - using ChartSelectionManager instead */}
-      {false && (
+      {/* AI Insight Popup */}
+      {showAIInsight && aiInsightContent && (
         <div
           style={{
             position: 'fixed',
@@ -532,13 +632,7 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (typeof window !== 'undefined' && (window as any).addAIInsightToChat) {
-                      (window as any).addAIInsightToChat({
-                        label: `${aiInsightContent.title} - Question`,
-                        value: question,
-                        actionType: 'question'
-                      });
-                    }
+                    // Just close the AI insight popup - questions are for display only
                     setShowAIInsight(false);
                   }}
                 >
@@ -575,13 +669,7 @@ const EnhancedSegmentProfileCards: React.FC<EnhancedSegmentProfileCardsProps> = 
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (typeof window !== 'undefined' && (window as any).addAIInsightToChat) {
-                      (window as any).addAIInsightToChat({
-                        label: `${aiInsightContent.title} - Action`,
-                        value: `Execute: ${action}`,
-                        actionType: 'execute'
-                      });
-                    }
+                    // Just close the AI insight popup - actions are for display only
                     setShowAIInsight(false);
                   }}
                 >

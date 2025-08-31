@@ -1,6 +1,7 @@
 import React, { useEffect, useState, Suspense, lazy } from 'react';
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
+import { applyFilters, calculateFilteredMetrics, getAvailableSegments, getAvailableCategories } from '../../../Customer/tools/churn_prediction/ui/utils/dataFilters';
 
 // Lazy load heavy components to reduce initial bundle size
 const ChurnKpiTiles = lazy(() => import('../../../Customer/tools/churn_prediction/ui/components/kpi/ChurnKpiTiles'));
@@ -65,9 +66,26 @@ const LoadingSpinner = ({ height = '200px' }: { height?: string }) => (
   </div>
 );
 
-const fetchChurnData = async () => {
-  const res = await fetch('/api/churn-prediction/data');
-  return res.json();
+const fetchChurnData = async (startDate?: string, endDate?: string) => {
+  // Build query parameters with optional date filtering
+  const params = new URLSearchParams({ count: '2631' });
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
+  
+  // Fetch both detailed data and summary for accurate counts
+  const [dataRes, summaryRes] = await Promise.all([
+    fetch(`/api/churn-prediction/data?${params.toString()}`),
+    fetch('/api/churn-prediction/summary')
+  ]);
+  const data = await dataRes.json();
+  const summary = await summaryRes.json();
+  
+  // Merge summary data into response
+  if (data.status === 'success' && summary.status === 'success') {
+    data.summaryData = summary.data;
+  }
+  
+  return data;
 };
 
 const generateMockTimeSeriesData = () => {
@@ -630,8 +648,6 @@ const FloatingChatButton = ({ onClick, isHidden }: any) => {
   );
 };
 
-import { applyFilters, calculateFilteredMetrics, getAvailableSegments, getAvailableCategories } from '../../../Customer/tools/churn_prediction/ui/utils/dataFilters';
-
 export default function ChurnDashboardPage() {
   const [data, setData] = useState<any>({ status: 'loading' });
   const [binCount, setBinCount] = useState(30);
@@ -660,33 +676,69 @@ export default function ChurnDashboardPage() {
     fetchChurnData().then((response) => {
       // Extract the nested data structure from API response
       if (response.status === 'success' && response.data) {
+        // Generate accurate pyramid data based on full distribution
+        let pyramidCustomers = response.data.customers || [];
+        
+        // If we have summary data with full counts, create representative data for pyramid
+        if (response.summaryData?.summary) {
+          const summary = response.summaryData.summary;
+          pyramidCustomers = [];
+          
+          // Create representative customers for accurate pyramid display
+          const riskLevels = [
+            { level: 'Low', count: summary.low_risk_count },
+            { level: 'Medium', count: summary.medium_risk_count },
+            { level: 'High', count: summary.high_risk_count },
+            { level: 'Very High', count: summary.very_high_risk_count }
+          ];
+          
+          riskLevels.forEach(({ level, count }) => {
+            // Create exact count for accurate percentages
+            for (let i = 0; i < count; i++) {
+              pyramidCustomers.push({
+                customer_id: `${level}_${i}`,
+                risk_level: level,
+                churn_probability: level === 'Very High' ? 0.85 : 
+                                   level === 'High' ? 0.65 :
+                                   level === 'Medium' ? 0.4 : 0.15,
+                name: `Customer ${level} ${i}`
+              });
+            }
+          });
+        }
+        
         setData({
           status: 'success',
           customers: response.data.customers || [],
+          pyramidCustomers: pyramidCustomers, // Separate accurate data for pyramid
           feature_importance: response.data.feature_importance || [],
           probabilities: response.data.customers?.map(c => c.churn_probability) || [],
           probability_distribution: response.data.probability_distribution || [],
           predictions: response.data.predictions || [],
           risk_distribution: response.data.risk_distribution || [],
-          summary: response.data.summary || {},
-          // Add realistic mock data for missing components
-          segment_matrix: [
-            { segment: 'High Value', low: 15, medium: 25, high: 35, very_high: 45 },
-            { segment: 'Regular', low: 40, medium: 30, high: 20, very_high: 10 },
-            { segment: 'New Customer', low: 60, medium: 25, high: 10, very_high: 5 },
-            { segment: 'Loyal', low: 70, medium: 20, high: 8, very_high: 2 }
+          summary: response.summaryData?.summary || response.data.summary || {},
+          // Use real data from API instead of mock
+          segment_matrix: response.data.segment_matrix || [],
+          risk_time_series: response.data.risk_time_series || [],
+          // Use insights from API or generate based on actual data
+          insights: response.data.insights || [
+            { 
+              title: "High Risk Alert", 
+              description: `${((response.summaryData?.summary?.high_risk_count + response.summaryData?.summary?.very_high_risk_count) / response.summaryData?.summary?.total_customers * 100).toFixed(0)}% of customers are at risk`, 
+              type: "warning" 
+            },
+            { 
+              title: "Model Performance", 
+              description: "Churn prediction model accuracy: 85%", 
+              type: "info" 
+            },
+            { 
+              title: "Top Risk Factor", 
+              description: "Recent purchase activity is the strongest predictor", 
+              type: "insight" 
+            }
           ],
-          risk_time_series: generateMockTimeSeriesData(),
-          insights: [
-            { title: "High Risk Alert", description: "37% of customers are in high/very high risk categories", type: "warning" },
-            { title: "Model Performance", description: "Churn prediction model accuracy: 85%", type: "info" },
-            { title: "Top Risk Factor", description: "Recent purchase activity is the strongest predictor", type: "insight" }
-          ],
-          retention_strategies: [
-            { title: "Personalized Offers", description: "Target high-risk customers with tailored promotions", priority: "High" },
-            { title: "Customer Support", description: "Proactive outreach to customers with declining activity", priority: "Medium" },
-            { title: "Loyalty Program", description: "Enhance rewards for medium-risk segment", priority: "Medium" }
-          ]
+          retention_strategies: response.data.retention_strategies || []
         });
       } else {
         setData({ status: 'error' });
@@ -716,24 +768,59 @@ export default function ChurnDashboardPage() {
     }
   }, [data, filters]);
 
-  // Compute KPIs from data
-  const computeKPIs = (customers = []) => {
+  // Compute KPIs from data - use real summary statistics when available
+  const computeKPIs = (displayData: any) => {
+    // Use summary data for accurate KPIs if available
+    if (displayData.summary && displayData.summary.total_customers) {
+      const summary = displayData.summary;
+      const totalWithTransactions = summary.total_customers - (summary.no_transaction_count || 0);
+      const atRiskCount = (summary.high_risk_count || 0) + (summary.very_high_risk_count || 0);
+      
+      return {
+        overallRisk: totalWithTransactions > 0 
+          ? Math.round((atRiskCount / totalWithTransactions) * 100)
+          : 0,
+        highRiskCount: atRiskCount,
+        modelConfidence: 0.85,
+        topFactor: 'Recency',
+        riskTransition: summary.churn_rate ? Math.round(summary.churn_rate - 50) : 0,
+        totalCustomers: summary.total_customers,
+        churnRate: summary.churn_rate || 0,
+        retentionRate: summary.retention_rate || 0,
+        lowRiskCount: summary.low_risk_count || 0,
+        mediumRiskCount: summary.medium_risk_count || 0,
+        avgCustomerValue: summary.avg_customer_value || 0,
+        totalRevenue: summary.total_revenue || 0
+      };
+    }
+    
+    // Fallback to calculating from customer array if summary not available
+    const customers = displayData.customers || [];
     if (!customers.length) return {
       overallRisk: 0, highRiskCount: 0, modelConfidence: 0.85, topFactor: 'Recency', riskTransition: 0
     };
+    
     const overallRisk = Math.round(100 * customers.filter((c: any) => c.risk_level !== 'Low').length / customers.length);
     const highRiskCount = customers.filter((c: any) => c.risk_level === 'High' || c.risk_level === 'Very High').length;
+    const lowRiskCount = customers.filter((c: any) => c.risk_level === 'Low').length;
+    const mediumRiskCount = customers.filter((c: any) => c.risk_level === 'Medium').length;
+    
     return {
       overallRisk,
       highRiskCount,
       modelConfidence: 0.85,
       topFactor: 'Recency',
-      riskTransition: 0
+      riskTransition: 0,
+      totalCustomers: customers.length,
+      churnRate: overallRisk,
+      retentionRate: 100 - overallRisk,
+      lowRiskCount,
+      mediumRiskCount
     };
   };
   // Use filtered data if available, otherwise use original data
   const displayData = filteredData || data;
-  const kpis = computeKPIs(displayData.customers || []);
+  const kpis = computeKPIs(displayData);
 
   // Enhanced initial insight - informative but not overwhelming
   const generateSimpleInsight = (label: string, value: any, chartType: string, additionalData?: any) => {
@@ -749,7 +836,8 @@ export default function ChurnDashboardPage() {
       const percentage = ((highRisk / total) * 100).toFixed(1);
       const status = highRisk > 30 ? '🔴 Critical' : highRisk > 15 ? '🟠 Elevated' : '🟢 Stable';
       
-      enhancedInsight = `📊 **Risk Distribution Analysis**\n\n**Current Status:** ${status}\n**High-Risk Customers:** ${highRisk} out of ${total} (${percentage}%)\n**Revenue at Risk:** $${(highRisk * 2500).toLocaleString()}\n**Immediate Action Needed:** ${highRisk > 15 ? 'Yes - Deploy retention strategies' : 'Monitor closely'}\n\n💡 **Quick Insight:** ${highRisk > 30 ? 'Critical situation requiring emergency intervention' : highRisk > 15 ? 'Above threshold - proactive measures recommended' : 'Within acceptable range - maintain current strategies'}`;
+      const avgValue = displayData?.summary?.avg_customer_value || 1500;
+      enhancedInsight = `📊 **Risk Distribution Analysis**\n\n**Current Status:** ${status}\n**High-Risk Customers:** ${highRisk} out of ${total} (${percentage}%)\n**Revenue at Risk:** $${(highRisk * avgValue).toLocaleString()}\n**Immediate Action Needed:** ${highRisk > 15 ? 'Yes - Deploy retention strategies' : 'Monitor closely'}\n\n💡 **Quick Insight:** ${highRisk > 30 ? 'Critical situation requiring emergency intervention' : highRisk > 15 ? 'Above threshold - proactive measures recommended' : 'Within acceptable range - maintain current strategies'}`;
     } else if (chartType === 'KPI') {
       const kpiValue = valueStr;
       const isPercentage = kpiValue.includes('%');
@@ -760,7 +848,8 @@ export default function ChurnDashboardPage() {
       const customers = parseInt(valueStr.split(' ')[0]) || 0;
       const probability = label.replace('Probability ', '');
       
-      enhancedInsight = `📊 **Churn Probability Segment**\n\n**Range:** ${probability}\n**Customers in Segment:** ${customers}\n**Revenue Exposure:** $${(customers * 2500).toLocaleString()}\n**Risk Level:** ${probability.includes('80') ? '🔴 Very High' : probability.includes('60') ? '🟠 High' : probability.includes('40') ? '🟡 Medium' : '🟢 Low'}\n\n💡 **Action Required:** ${probability.includes('80') ? 'Immediate intervention - these customers will likely churn within 30 days' : probability.includes('60') ? 'Proactive outreach recommended this week' : 'Standard monitoring and engagement'}`;
+      const avgValue = displayData?.summary?.avg_customer_value || 1500;
+      enhancedInsight = `📊 **Churn Probability Segment**\n\n**Range:** ${probability}\n**Customers in Segment:** ${customers}\n**Revenue Exposure:** $${(customers * avgValue).toLocaleString()}\n**Risk Level:** ${probability.includes('80') ? '🔴 Very High' : probability.includes('60') ? '🟠 High' : probability.includes('40') ? '🟡 Medium' : '🟢 Low'}\n\n💡 **Action Required:** ${probability.includes('80') ? 'Immediate intervention - these customers will likely churn within 30 days' : probability.includes('60') ? 'Proactive outreach recommended this week' : 'Standard monitoring and engagement'}`;
     } else if (chartType === 'Feature Importance') {
       const importance = valueStr.split(' ')[0];
       const rank = valueStr.match(/Rank #(\d+)/)?.[1] || '1';
@@ -771,7 +860,8 @@ export default function ChurnDashboardPage() {
       const segmentTotal = matches ? parseInt(matches[1]) : 0;
       const riskPercentage = matches ? parseInt(matches[2]) : 0;
       
-      enhancedInsight = `📊 **Segment Performance**\n\n**Segment Name:** ${label}\n**Total Customers:** ${segmentTotal}\n**High-Risk Portion:** ${riskPercentage}%\n**Revenue Value:** $${(segmentTotal * 2500).toLocaleString()}\n**Health Status:** ${riskPercentage > 30 ? '⚠️ Needs Attention' : '✅ Healthy'}\n\n💡 **Strategy:** ${riskPercentage > 30 ? 'This segment requires immediate intervention strategies' : 'Maintain current engagement levels and monitor for changes'}`;
+      const avgValue = displayData?.summary?.avg_customer_value || 1500;
+      enhancedInsight = `📊 **Segment Performance**\n\n**Segment Name:** ${label}\n**Total Customers:** ${segmentTotal}\n**High-Risk Portion:** ${riskPercentage}%\n**Revenue Value:** $${(segmentTotal * avgValue).toLocaleString()}\n**Health Status:** ${riskPercentage > 30 ? '⚠️ Needs Attention' : '✅ Healthy'}\n\n💡 **Strategy:** ${riskPercentage > 30 ? 'This segment requires immediate intervention strategies' : 'Maintain current engagement levels and monitor for changes'}`;
     } else if (chartType === 'Time Series') {
       enhancedInsight = `📊 **Temporal Risk Analysis**\n\n**Latest Period:** ${valueStr}\n**Trend Direction:** ${Math.random() > 0.5 ? '📈 Increasing Risk' : '📉 Decreasing Risk'}\n**Month-over-Month Change:** ${Math.random() > 0.5 ? '+' : '-'}${(Math.random() * 10).toFixed(1)}%\n**Seasonal Pattern:** Q4 typically shows higher risk\n\n💡 **Forecast:** Based on current trends, expect ${Math.random() > 0.5 ? 'continued risk elevation' : 'stabilization'} over the next 30 days`;
     } else {
@@ -790,7 +880,7 @@ export default function ChurnDashboardPage() {
   const generateKPIInsight = (kpiType: string, value: any) => {
     const insights = {
       overallRisk: `📊 **Overall Churn Risk: ${value}%** - This represents ${Math.floor(value * 10)} customers at medium, high, or very high risk levels. ${value > 30 ? '🚨 **CRITICAL**: Immediate action required across multiple segments.' : value > 15 ? '⚠️ **ELEVATED**: Monitor closely and prepare retention strategies.' : '✅ **STABLE**: Current retention efforts are effective.'}`,
-      highRiskCount: `🎯 **High-Risk Customers: ${value}** - These customers need immediate attention. Estimated revenue at risk: **$${(value * 2500).toLocaleString()}**. ${value > 100 ? '🚨 **URGENT**: Deploy emergency retention campaigns.' : '⚠️ **PRIORITY**: Focus on personalized outreach.'}`,
+      highRiskCount: `🎯 **High-Risk Customers: ${value}** - These customers need immediate attention. Estimated revenue at risk: **$${((value * (displayData?.summary?.avg_customer_value || 1500))).toLocaleString()}**. ${value > 100 ? '🚨 **URGENT**: Deploy emergency retention campaigns.' : '⚠️ **PRIORITY**: Focus on personalized outreach.'}`,
       modelConfidence: `🤖 **Model Confidence: ${value}** - ${value > 0.8 ? '✅ **EXCELLENT**: High prediction accuracy, trust the insights.' : value > 0.7 ? '⚠️ **GOOD**: Reliable predictions with minor uncertainty.' : '🚨 **LOW**: Model needs improvement, use insights cautiously.'}`,
       topFactor: `🔍 **Top Churn Factor: ${value}** - This is your strongest predictor. Focus retention efforts on improving this metric. Customers with poor ${value && typeof value === 'string' ? value.toLowerCase() : String(value || 'unknown factor').toLowerCase()} scores are **3x more likely** to churn.`,
       riskTransition: `📈 **Risk Changes: +${value}** - ${value > 20 ? '🚨 **WORSENING**: More customers moving to higher risk levels.' : value > 0 ? '⚠️ **SLIGHT INCREASE**: Monitor trend closely.' : '✅ **IMPROVING**: Risk levels are stabilizing.'}`
@@ -804,7 +894,8 @@ export default function ChurnDashboardPage() {
     const riskIcon = binStart < 0.3 ? '✅' : binStart < 0.6 ? '⚠️' : binStart < 0.8 ? '🚨' : '🔥';
     const actionRequired = binStart < 0.3 ? 'Monitor and maintain engagement' : binStart < 0.6 ? 'Proactive outreach recommended' : binStart < 0.8 ? 'Immediate intervention required' : 'EMERGENCY retention needed';
     
-    return `${riskIcon} **${riskLevel} Risk Cohort (${Math.round(binStart*100)}-${Math.round(binEnd*100)}%)** - This cohort of **${customerCount} customers** has a ${riskLevel.toLowerCase()} churn risk. Their primary churn driver is **'${primaryDriver}'**. Revenue at risk: **$${(customerCount * 1500).toLocaleString()}**. 🎯 **Action**: ${actionRequired}.`;
+    const avgValue = displayData?.summary?.avg_customer_value || 1500;
+    return `${riskIcon} **${riskLevel} Risk Cohort (${Math.round(binStart*100)}-${Math.round(binEnd*100)}%)** - This cohort of **${customerCount} customers** has a ${riskLevel.toLowerCase()} churn risk. Their primary churn driver is **'${primaryDriver}'**. Revenue at risk: **$${(customerCount * avgValue).toLocaleString()}**. 🎯 **Action**: ${actionRequired}.`;
   };
 
 
@@ -1416,8 +1507,8 @@ Want detailed tactics for this specific segment?`;
                 }}
               >
                 <ChurnRiskPyramidWithSelection 
-                  customers={displayData.customers || []} 
-                  data={displayData.customers || []}
+                  customers={displayData.pyramidCustomers || displayData.customers || []} 
+                  data={displayData.pyramidCustomers || displayData.customers || []}
                   onContextSelect={(context) => {
                     // Send context to chatbot
                     if (typeof window !== 'undefined') {
@@ -1636,15 +1727,18 @@ Want detailed tactics for this specific segment?`;
         <Suspense fallback={<div>Loading BI Agent...</div>}>
           <StandaloneBusinessIntelligenceAgent
             customers={displayData.customers || []}
+            summary={displayData.summary}
+            kpis={kpis}
+            riskDistribution={displayData.risk_distribution}
             isVisible={isBIAgentOpen}
             onClose={() => setIsBIAgentOpen(false)}
           />
         </Suspense>
 
-        {/* BI Agent Trigger Button */}
+        {/* BI Agent Trigger Button - Use accurate count from summary */}
         <BusinessIntelligenceTrigger
           onClick={() => setIsBIAgentOpen(!isBIAgentOpen)}
-          highRiskCount={displayData.customers?.filter((c: any) => c.risk_level === 'High' || c.risk_level === 'Very High').length || 0}
+          highRiskCount={kpis.highRiskCount || displayData.customers?.filter((c: any) => c.risk_level === 'High' || c.risk_level === 'Very High').length || 0}
         />
 
 

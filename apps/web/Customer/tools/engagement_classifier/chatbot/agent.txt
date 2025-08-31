@@ -1,0 +1,173 @@
+# Agent Knowledge Base (Sales and Inventory)
+
+This file provides practical, actionable guidance the chatbot uses to answer questions when you tag @sales or @inventory. Content is embedded with tags sales_agent and inventory_agent for tag-filtered retrieval.
+
+## Core Principles
+- Be specific and actionable. Prefer steps, checklists, and measurable targets.
+- Use the simplest metric that answers the question; avoid jargon.
+- Prioritize quick wins first; then structural long-term improvements.
+
+# Sales Strategy and Execution (@sales)
+
+## Growth Levers
+- Traffic: Increase qualified top-of-funnel (TOFU) via SEO, paid search, partner referrals.
+- Conversion: Reduce friction in the funnel; improve message-market fit and objection handling.
+- AOV/Monetization: Bundles, cross-sell, upsell, tiered pricing, add-ons.
+- Retention: Lifecycle messaging, reactivation campaigns, value moments.
+
+## Funnel Optimization Checklist
+1. Define a single, consistent value proposition across ads, landing pages, and sales calls.
+2. Remove friction on lead capture (fewer fields, clear CTA, social proof).
+3. Measure each stage: visit → lead → MQL → SQL → meeting → proposal → closed-won.
+4. Identify the steepest drop-off; run 2 experiments per week there (copy, offer, CTA, proof).
+5. Standardize discovery: problem, impact, use case, timeline, decision process, budget.
+
+## Sales Pipeline and Forecasting
+- Pipeline Coverage: 3x–4x of target; segment by stage, owner, and age.
+- Forecast Hygiene: stage probability × deal amount; auto-flag stale deals (no activity >14 days).
+- Velocity: time-in-stage; auto-assign tasks to unblock (exec sponsor, trial extension, technical deep-dive).
+
+## Pricing and Packaging
+- Versioning: Good/Better/Best with clear value deltas; align with segments.
+- Value-based: anchor around measurable outcomes (time saved, revenue lift, risk reduction).
+- Discounts: time-bound, tied to volume or multi-year; require a give-get (case study, reference).
+
+## Account Expansion (Post-Sale)
+- Land-and-Expand: footprint first (pilot), then expand seats/modules/sites.
+- Health Score: product usage depth × breadth × frequency + support risk.
+- Expansion Triggers: feature adoption thresholds, executive sponsor presence, renewal window.
+
+## Sales Playbooks by Scenario
+- New Market Entry
+  1. Build 10 lighthouse logos; optimize case studies for the niche.
+  2. Narrow ICP to 1–2 verticals; template messaging.
+  3. Partner with complementary vendors; co-marketing webinars.
+- Competitive Displacement
+  1. Pain Inventory: gaps vs incumbent, switching cost mitigation plan.
+  2. ROI Calculator: quantified value in 90 days.
+  3. Executive Ask: sponsor meeting to de-risk migration.
+- Enterprise Deals
+  1. Multi-thread: user, manager, economic buyer, security, procurement.
+  2. Mutual Action Plan with clear dates and owners.
+  3. Proof Plan: 2–3 crisp success criteria; time-boxed.
+
+## Retention and Reactivation
+- Cohorts: analyze retention by acquisition month and channel.
+- Activation Milestones: define 3 key actions within first week; trigger nudges when missed.
+- Churn Mitigation: outreach within 24 hours of negative usage inflection; offer success session.
+
+## Metrics & Targets
+- Conversion Rate Lift: +20% over 6–8 weeks at bottleneck stage.
+- AOV Increase: +5–10% via bundles or add-ons in 4 weeks.
+- Win Rate: improve by 5 points (e.g., 22% → 27%) with discovery script + objection handling.
+- Expansion: 15–25% of accounts with >1 product/module in 2 quarters.
+
+## Quick Wins
+- Add social proof above-the-fold (logos, testimonials) on top landing pages.
+- Add “next step” CTA on thank-you pages (book a demo, download playbook).
+- Standardize email follow-ups: 3-touch sequence within 7 days.
+
+## Sales Q&A Snippets
+- Q: How to improve win rate fast?
+  A: Standardize discovery, map 3 killer objections with talk tracks, add customer proof in proposals, and enforce a 48-hour follow-up SLA.
+- Q: What’s a good pipeline coverage?
+  A: 3–4x of quarterly target; segment by stage and owner; below 2.5x indicates risk.
+- Q: Best way to raise AOV?
+  A: Bundles, anchor pricing, add-ons at checkout; test 2 offers per week and measure attach rate.
+
+# Inventory and Operations (@inventory)
+
+## Replenishment Fundamentals
+- Reorder Point (ROP) = Avg Daily Demand × Lead Time + Safety Stock.
+- Safety Stock approximations:
+  - Normal demand: z × sqrt(lead_time_days × σ_demand^2 + demand^2 × σ_lead_time^2)
+  - Simple: service_level_factor × demand_std_dev × sqrt(lead_time_days)
+- Review Policies: continuous review (ROP) vs periodic review (order-up-to).
+
+## EOQ and Ordering Costs
+- EOQ = sqrt((2 × D × S) / H)
+  - D: annual demand, S: order cost, H: holding cost per unit per year.
+- Use EOQ for stable demand SKUs to balance ordering vs holding costs.
+
+## ABC–XYZ Segmentation
+- ABC (value): A = top ~20% revenue, B = next ~30%, C = remaining ~50%.
+- XYZ (predictability): X = low variability, Y = moderate, Z = high variability.
+- Policy Matrix:
+  - AX: tight control, frequent review, low safety stock.
+  - AZ: supplier agreements, higher safety stock, flexible lead times.
+  - CZ: minimize on-hand, consider make-to-order or discontinue.
+
+## Demand Planning and S&OP
+- Forecast Hierarchy: item → category → region; reconcile top-down and bottom-up.
+- Promotional Lifts: isolate promo impact; avoid contaminating base demand.
+- S&OP Cadence: monthly cycle; track forecast error (MAPE, WAPE), bias, service levels.
+
+## Vendor and Lead Time Management
+- Lead Time Reduction: dual sourcing, pre-qualification, safety agreements.
+- Reliability: measure OTIF (On-Time-In-Full); penalize chronic underperformance.
+- MOQ vs Holding Cost: simulate cash impact; align negotiations with EOQ/ABC tiers.
+
+## Inventory Risk and Actions
+- Stockout Risk: high when variability or lead time is high; raise safety stock; coordinate with marketing to dampen demand spikes.
+- Dead Stock: <1 unit/week for 90 days; apply markdown ladder or bundle with high-velocity SKUs.
+- Excess Stock: run targeted promotions; shift inventory across locations if transfer cost < markdown loss.
+
+## Operational Playbooks
+- Low Stock Alert Response
+  1. Validate demand surge or forecast miss.
+  2. Place expedited order if ROP breached; adjust safety stock if surge persists.
+  3. Coordinate promotions to avoid exacerbating stockouts.
+- New Product Intro (NPI)
+  1. Set conservative initial stock, shorter review cycles.
+  2. Increase stock only after achieving steady-state demand.
+
+## Inventory Q&A Snippets
+- Q: What’s a low stock threshold?
+  A: The on-hand level that triggers replenishment to prevent stockouts given expected demand and lead time.
+- Q: How to reduce stockouts quickly?
+  A: Increase safety stock temporarily, expedite critical POs, align campaigns to stabilize demand, and shorten review intervals.
+- Q: How to deal with dead stock?
+  A: Apply a discount ladder (e.g., 10%/30%/50%), bundle with complementary SKUs, and stop reordering until sell-through improves.
+
+# Shared Concepts (Sales + Inventory)
+- Cohorts: track retention and value over time; target activation milestones.
+- Health Signals: trends, deltas, and anomalies beat single data points.
+- Actions: every insight should map to an owner, due date, and expected impact.
+
+# Example Answers (Short, Actionable)
+
+Q: @sales How can we improve conversion this quarter?
+A:
+1. Identify the steepest funnel drop-off; run 2 A/B tests weekly (message and offer).
+2. Add proof above-the-fold and a 3-step follow-up sequence.
+3. Standardize discovery to improve proposal win rate; measure week-over-week.
+
+Q: @sales How to raise AOV?
+A:
+1. Introduce bundles with 10–15% effective discount.
+2. Add add-ons at checkout; target 12–18% attach rate.
+3. Use anchor pricing and limit discounting to time-bound offers.
+
+Q: @inventory How to set safety stock?
+A:
+1. Choose target service level (e.g., 95%, z ≈ 1.65).
+2. Compute variability (demand and lead time); apply safety stock formula.
+3. Review quarterly and after major supplier or demand changes.
+
+Q: @inventory We have frequent stockouts for a top SKU—what now?
+A:
+1. Raise safety stock; place an expedited order.
+2. Investigate forecast bias and lead time variability; correct the model.
+3. Coordinate with marketing to throttle campaigns until stability returns.
+
+# Glossary
+- Pipeline Coverage: ratio of pipeline value to target (goal: 3–4x).
+- AOV: Average Order Value.
+- EOQ: Economic Order Quantity.
+- OTIF: On-Time-In-Full.
+- MAP: Mutual Action Plan (enterprise sales close plan).
+
+# Formatting Guidance for Responses
+- Prefer lists with numbered steps or bullet points.
+- Include simple formulas when helpful (e.g., ROP, EOQ).
+- Keep answers concrete: what to do next week and how to measure success.

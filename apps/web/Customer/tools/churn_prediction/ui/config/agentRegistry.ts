@@ -31,7 +31,7 @@ export const AGENT_REGISTRY: AgentRegistry = {
   sales: {
     name: 'sales',
     displayName: 'Sales Intelligence Agent',
-    endpoint: '/api/agents/query',
+    endpoint: '/run_sse',
     authToken: process.env.NEXT_PUBLIC_API_GATEWAY_TOKEN || 'your_api_gateway_token',
     description: 'Analyzes sales performance, trends, and revenue optimization using Sales department tools',
     capabilities: [
@@ -53,7 +53,7 @@ export const AGENT_REGISTRY: AgentRegistry = {
   customer: {
     name: 'customer',
     displayName: 'Customer Intelligence Agent',
-    endpoint: '/api/agents/query',
+    endpoint: '/run_sse',
     authToken: process.env.NEXT_PUBLIC_API_GATEWAY_TOKEN || 'your_api_gateway_token',
     description: 'Provides comprehensive customer insights using Customer department analytics tools',
     capabilities: [
@@ -77,7 +77,7 @@ export const AGENT_REGISTRY: AgentRegistry = {
   finance: {
     name: 'finance',
     displayName: 'Finance Intelligence Agent',
-    endpoint: '/api/agents/query',
+    endpoint: '/run_sse',
     authToken: process.env.NEXT_PUBLIC_API_GATEWAY_TOKEN || 'your_api_gateway_token',
     description: 'Provides financial analysis and business intelligence using Finance department tools',
     capabilities: [
@@ -100,7 +100,7 @@ export const AGENT_REGISTRY: AgentRegistry = {
   inventory: {
     name: 'inventory',
     displayName: 'Inventory Intelligence Agent',
-    endpoint: '/api/agents/query',
+    endpoint: '/run_sse',
     authToken: process.env.NEXT_PUBLIC_API_GATEWAY_TOKEN || 'your_api_gateway_token',
     description: 'Manages inventory optimization and supply chain insights using Inventory department tools',
     capabilities: [

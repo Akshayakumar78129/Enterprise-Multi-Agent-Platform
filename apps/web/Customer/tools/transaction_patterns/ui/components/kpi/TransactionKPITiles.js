@@ -1,5 +1,6 @@
 import React from "react";
 import { KpiTile } from "../../../../../../ui-common/design-system/components/KpiTile";
+import { handleChartClick } from '../../utils/chartSelectionHelper';
 import styles from './TransactionKPITiles.module.css';
 
 const TransactionKPITiles = ({ kpis, isLoading = false, onKPIClick = null }) => {
@@ -29,6 +30,27 @@ const TransactionKPITiles = ({ kpis, isLoading = false, onKPIClick = null }) => 
     return `${displayHour}:00 ${period}`;
   };
 
+  const handleKPICardClick = (kpiId, label, value, event) => {
+    // Use the chart selection helper for multi-select support
+    handleChartClick({
+      chartId: 'kpi-tiles',
+      chartType: 'KPI Card',
+      label: label,
+      value: typeof value === 'number' ? value : 0,
+      unit: '',
+      metadata: {
+        kpiId: kpiId,
+        rawValue: value,
+        kpiData: kpis
+      }
+    }, event);
+    
+    // Still call the original handler if provided
+    if (onKPIClick) {
+      onKPIClick(kpiId);
+    }
+  };
+
   const tiles = [
     {
       label: "Total Transactions",
@@ -39,7 +61,7 @@ const TransactionKPITiles = ({ kpis, isLoading = false, onKPIClick = null }) => 
       icon: "💳",
       trend: 8.5,
       trendDirection: "up",
-      onClick: () => onKPIClick && onKPIClick('totalTransactions')
+      onClick: (event) => handleKPICardClick('totalTransactions', 'Total Transactions', kpis.totalTransactions || 0, event)
     },
     {
       label: "Anomaly Rate",
@@ -50,7 +72,7 @@ const TransactionKPITiles = ({ kpis, isLoading = false, onKPIClick = null }) => 
       icon: "⚠️",
       trend: -2.3,
       trendDirection: "down",
-      onClick: () => onKPIClick && onKPIClick('anomalyRate')
+      onClick: (event) => handleKPICardClick('anomalyRate', 'Anomaly Rate', kpis.anomalyRate || 0, event)
     },
     {
       label: "Peak Hour",
@@ -60,7 +82,7 @@ const TransactionKPITiles = ({ kpis, isLoading = false, onKPIClick = null }) => 
       icon: "⏰",
       trend: 0,
       trendDirection: "neutral",
-      onClick: () => onKPIClick && onKPIClick('peakHour')
+      onClick: (event) => handleKPICardClick('peakHour', 'Peak Hour', kpis.peakHour || 12, event)
     },
     {
       label: "Top Payment Method",
@@ -70,7 +92,7 @@ const TransactionKPITiles = ({ kpis, isLoading = false, onKPIClick = null }) => 
       icon: "💼",
       trend: 12.7,
       trendDirection: "up",
-      onClick: () => onKPIClick && onKPIClick('topPaymentMethod')
+      onClick: (event) => handleKPICardClick('topPaymentMethod', 'Top Payment Method', 0, event)
     },
     {
       label: "Avg Transaction",
@@ -81,7 +103,7 @@ const TransactionKPITiles = ({ kpis, isLoading = false, onKPIClick = null }) => 
       icon: "📊",
       trend: 5.8,
       trendDirection: "up",
-      onClick: () => onKPIClick && onKPIClick('avgAmount')
+      onClick: (event) => handleKPICardClick('avgAmount', 'Avg Transaction', kpis.avgAmount || 0, event)
     },
     {
       label: "Product Diversity",
@@ -92,7 +114,7 @@ const TransactionKPITiles = ({ kpis, isLoading = false, onKPIClick = null }) => 
       icon: "📦",
       trend: 15.2,
       trendDirection: "up",
-      onClick: () => onKPIClick && onKPIClick('uniqueItems')
+      onClick: (event) => handleKPICardClick('uniqueItems', 'Product Diversity', kpis.uniqueItems || 0, event)
     }
   ];
 

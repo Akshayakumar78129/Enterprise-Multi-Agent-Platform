@@ -58,7 +58,7 @@ export default function EnhancedFeatureImportance({ customers, data }: EnhancedF
     };
   }, [sortBy]);
 
-  const handleBarClick = (data: any) => {
+  const handleBarClick = (data: any, event?: any) => {
     const contextData = {
       chartType: 'feature-importance',
       chartName: 'Feature Importance Analysis',
@@ -69,14 +69,16 @@ export default function EnhancedFeatureImportance({ customers, data }: EnhancedF
 
     dispatch(setChatContext(contextData));
     
-    // Trigger AI insight in chatbot
+    // Trigger AI insight in chatbot with event for shift-click detection
     if (typeof window !== 'undefined' && (window as any).addAIInsightToChat) {
       (window as any).addAIInsightToChat({
         label: data.name,
         value: data.percentage.toString(),
         chartType: 'Feature Importance',
         count: data.percentage,
-        total: 100
+        total: 100,
+        unit: '%',
+        originalEvent: event
       });
     }
   };
@@ -189,7 +191,7 @@ export default function EnhancedFeatureImportance({ customers, data }: EnhancedF
           }}
           onMouseEnter={() => setHoveredBar(payload.name)}
           onMouseLeave={() => setHoveredBar(null)}
-          onClick={() => handleBarClick(payload)}
+          onClick={(e) => handleBarClick(payload, e)}
         />
         
         {/* Icon overlay */}

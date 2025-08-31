@@ -1,10 +1,16 @@
+// Force reload - Updated: 2024-01-30
 import React, { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
+import ReactMarkdown from 'react-markdown';
 import TransactionKPITiles from '../components/kpi/TransactionKPITiles';
 import TemporalHeatmap from "../components/visualizations/TemporalHeatmap";
 import DualAxisTimeSeries from "../components/visualizations/DualAxisTimeSeries";
 import InsightModal from "../components/InsightModal";
-import FloatingAIChat from '../../../../../ui-common/FloatingAIChat';
+import TransactionChatbot from '../components/chat/TransactionChatbot';
+import TransactionChatButton from '../components/chat/TransactionChatButton';
+import ChartSelectionManager from '../components/selection/ChartSelectionManager';
+import FilterSection from '../components/FilterSection';
+import BusinessIntelligenceAgent, { BusinessIntelligenceTrigger } from '../components/BusinessIntelligenceAgent';
 const AmountDistributionHistogram = dynamic(() => import('../components/visualizations/AmountDistributionHistogram'), { ssr: false });
 const ProductMatrixScatterPlot = dynamic(() => import('../components/visualizations/ProductMatrixScatterPlot'), { ssr: false });
 import styles from './TransactionPatternsDashboard.module.css';
@@ -31,6 +37,11 @@ const TransactionPatternsDashboard = ({
   const [aiText, setAiText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiAudit, setAiAudit] = useState(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [selectedChartPoints, setSelectedChartPoints] = useState([]);
+  const [chatbotMessage, setChatbotMessage] = useState('');
+  const [chatbotMessagePosition, setChatbotMessagePosition] = useState(null);
+  const [showBusinessIntelligence, setShowBusinessIntelligence] = useState(false);
   const [filters, setFilters] = useState(initialFilters || {
     dateRange: {
       start: '2017-01-01',
@@ -196,16 +207,21 @@ const TransactionPatternsDashboard = ({
     setAiAudit(null);
   };
 
-  const handleKPIClick = () => {
+  const handleKPIClick = (kpiId) => {
     if (!dashboardData || !dashboardData.kpis) return;
     const { kpis } = dashboardData;
+    
+    // Open the full modal when any KPI is clicked
     openModal(
-      'Key Performance Indicators',
-      'Summary of transaction activity',
+      '💳 Transaction Intelligence Dashboard',
+      'AI-Powered Analysis & Insights',
       [
-        { label: 'Total Transactions', value: kpis.totalTransactions.toLocaleString() },
-        { label: 'Avg Transaction Value', value: `$${kpis.avgTransactionValue.toFixed(2)}` },
-        { label: 'Unique Customers', value: kpis.uniqueCustomers.toLocaleString() },
+        { label: 'Total Transactions', value: kpis.totalTransactions.toLocaleString(), icon: '💳', trend: 8.5 },
+        { label: 'Avg Transaction Value', value: `$${kpis.avgTransactionValue.toFixed(2)}`, icon: '💰', trend: 5.8 },
+        { label: 'Unique Customers', value: kpis.uniqueCustomers.toLocaleString(), icon: '👥', trend: 12.7 },
+        { label: 'Anomaly Rate', value: `${(kpis.anomalyRate || 0).toFixed(1)}%`, icon: '⚠️', trend: -2.3 },
+        { label: 'Peak Hour', value: `${kpis.peakHour || 12}:00`, icon: '⏰' },
+        { label: 'Top Payment', value: kpis.topPaymentMethod || 'Standard', icon: '💼', hint: `${(kpis.topPaymentPercentage || 0).toFixed(1)}% of transactions` },
       ],
       [
         `YoY Growth: ${kpis.yoyGrowth}%`,
@@ -252,13 +268,23 @@ const TransactionPatternsDashboard = ({
       staticPoints.push('This is a low activity period, well below average.');
     }
 
+    // Enhanced modal with more metrics and insights
+    const avgAmount = point ? point.avgAmount || 0 : 0;
+    const metrics = [
+      { label: 'Transaction Count', value: count.toLocaleString(), icon: '📊', trend: count > hourlyAverage ? 15 : -10 },
+      { label: 'Day Total', value: totalForDay.toLocaleString(), icon: '📅' },
+      { label: 'Hour Total (Week)', value: totalForHour.toLocaleString(), icon: '🕐' },
+      { label: 'Hourly Average', value: Math.round(hourlyAverage).toLocaleString(), icon: '📈' },
+      { label: 'Avg Amount', value: avgAmount ? `$${avgAmount.toFixed(2)}` : 'N/A', icon: '💰' },
+    ];
+    
     openModal(
-      `Activity for ${day} at ${hour}:00`,
-      'Transactional activity details',
-      [{ label: 'Transactions', value: count }],
-      [],
-      { day, hour, count },
-      staticPoints
+      `🔥 Temporal Analysis: ${day} at ${hour}:00`,
+      'Deep dive into transaction patterns and insights',
+      metrics,
+      staticPoints,
+      { day, hour, count, totalForDay, totalForHour, hourlyAverage },
+      []
     );
   };
 
@@ -352,13 +378,21 @@ const TransactionPatternsDashboard = ({
       }
     }
 
+    // Enhanced modal with more insights
+    const enhancedMetrics = [
+      { label: 'Transaction Count', value: transaction_count.toLocaleString(), icon: '📊', trend: transaction_count > avgTxForDayOfWeek ? 10 : -8 },
+      { label: 'Average Value', value: `$${avg_amount.toFixed(2)}`, icon: '💵', trend: avg_amount > 2000 ? 12 : -5 },
+      { label: 'Day of Week', value: dayOfWeek, icon: '📅' },
+      { label: 'Avg for this Day', value: Math.round(avgTxForDayOfWeek).toLocaleString(), icon: '📈' },
+    ];
+    
     openModal(
-      `Data for ${date}`,
-      'Time series data point',
-      metrics,
-      [],
+      `📈 Time Series Analysis: ${date}`,
+      'Detailed daily transaction insights and trends',
+      enhancedMetrics,
+      staticPoints,
       context,
-      staticPoints
+      []
     );
   };
 
@@ -407,38 +441,161 @@ const TransactionPatternsDashboard = ({
   }
 
   return (
+    <>
+      <style jsx>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translate(-50%, -85%);
+          }
+          to {
+            opacity: 1;
+            transform: translate(-50%, -100%);
+          }
+        }
+        
+        @keyframes fadeInDown {
+          from {
+            opacity: 0;
+            transform: translate(-50%, -15%);
+          }
+          to {
+            opacity: 1;
+            transform: translate(-50%, 0);
+          }
+        }
+      `}</style>
+    <ChartSelectionManager
+      onSelectionChange={(points, isShiftSelection) => {
+        setSelectedChartPoints(points);
+        if (isShiftSelection && points.length > 0 && isChatOpen) {
+          if (window.transactionChatbot && window.transactionChatbot.addContext) {
+            points.forEach(point => {
+              window.transactionChatbot.addContext({
+                label: point.label,
+                value: point.value,
+                chartType: point.chartType,
+                unit: point.unit || '',
+                originalEvent: { shiftKey: true }
+              });
+            });
+          }
+        }
+      }}
+      onShowMessage={(message, position) => {
+        console.log('Dashboard: onShowMessage called', { message, position });
+        setChatbotMessage(message);
+        setChatbotMessagePosition(position);
+        console.log('Message state set:', { chatbotMessage: message, chatbotMessagePosition: position });
+      }}
+    >
     <div className={styles.dashboardContainer}>
-      {isLoading && !dashboardData ? (
-        <div className={styles.fullWidthCard}><p>Loading Dashboard...</p></div>
-      ) : dashboardData && (
-        <div className={styles.mainContent}>
-          <TransactionKPITiles 
+      {/* Dashboard Header */}
+      <div className={styles.header}>
+        <h1 className={styles.title}>💳 Transaction Patterns Intelligence</h1>
+        <p className={styles.subtitle}>Analyze transaction patterns, discover insights, and optimize business performance</p>
+      </div>
+
+      {/* Main Content */}
+      <div className={styles.mainContent}>
+        {/* Filter Section */}
+      <FilterSection 
+        filters={filters}
+        onFiltersChange={(newFilters) => {
+          setFilters(newFilters);
+          fetchData(newFilters);
+        }}
+        paymentMethods={dashboardData?.paymentMethods?.map(pm => pm.method) || []}
+        isLoading={isLoading}
+        />
+
+        {isLoading && !dashboardData ? (
+          <div className={styles.fullWidthCard}>
+            <div className={styles.loadingSpinner}></div>
+            <p className={styles.loadingText}>Loading Transaction Patterns...</p>
+          </div>
+        ) : dashboardData && (
+          <>
+            <TransactionKPITiles 
             kpis={dashboardData.kpis} 
             onTileClick={handleKPIClick} 
-          />
-          
-          <div className={styles.chartsGrid}>
-            <div className={styles.dashboardCard}>
-              <h3 className={styles.chartTitle}>Transaction Volume & Average Value Over Time</h3>
+            />
+            
+            <div className={styles.chartsGrid}>
+              <div className={`${styles.dashboardCard} ${styles.glowEffect}`}>
+                <h3 className={styles.chartTitle}>📊 Transaction Volume & Average Value Over Time</h3>
               <DualAxisTimeSeries data={dashboardData.timeSeries} onDataPointClick={handleTimeSeriesClick} />
-            </div>
-            <div className={styles.dashboardCard}>
-              <h3 className={styles.chartTitle}>Temporal Heatmap of Transactions</h3>
+              </div>
+              <div className={`${styles.dashboardCard} ${styles.glowEffect}`}>
+                <h3 className={styles.chartTitle}>🗓️ Temporal Heatmap of Transactions</h3>
               <TemporalHeatmap data={dashboardData.temporalHeatmap} onCellClick={handleHeatmapCellClick} />
-            </div>
-            <div className={styles.dashboardCard}>
-              <h3 className={styles.chartTitle}>Product Performance Matrix (Value vs. Quantity)</h3>
+              </div>
+              <div className={`${styles.dashboardCard} ${styles.glowEffect}`}>
+                <h3 className={styles.chartTitle}>📦 Product Performance Matrix</h3>
               <ProductMatrixScatterPlot data={dashboardData.productMatrix} onInsight={handleChartInsight} />
-            </div>
-            <div className={styles.dashboardCard}>
-              <h3 className={styles.chartTitle}>Distribution of Transaction Amounts</h3>
+              </div>
+              <div className={`${styles.dashboardCard} ${styles.glowEffect}`}>
+                <h3 className={styles.chartTitle}>💰 Distribution of Transaction Amounts</h3>
               <AmountDistributionHistogram data={dashboardData.amountDistribution} onInsight={handleChartInsight} />
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </div>
 
-      <FloatingAIChat insights={insights} onAskAI={askAI} />
+      <TransactionChatbot 
+        dashboardContext={{
+          source_dashboard: 'transaction_patterns',
+          transaction_context: {
+            total_transactions: dashboardData?.kpis?.totalTransactions || 0,
+            anomaly_rate: dashboardData?.kpis?.anomalyRate || 0,
+            avg_transaction_amount: dashboardData?.kpis?.avgTransactionValue || 0,
+            peak_hour: dashboardData?.temporalHeatmap?.[0]?.hour || '14',
+            payment_methods: dashboardData?.paymentMethods || []
+          },
+          chart_context: {
+            chartType: modalTitle || 'overview',
+            activeChart: modalTitle || 'dashboard',
+            clickedElement: modalContext,
+            selectedPoints: modalStaticPoints
+          },
+          filters: filters,
+          date_range: {
+            start_date: filters.dateRange?.start || '2017-01-01',
+            end_date: filters.dateRange?.end || '2021-12-31'
+          }
+        }}
+        isVisible={isChatOpen}
+        onToggle={() => setIsChatOpen(!isChatOpen)}
+      />
+      
+      {/* Business Intelligence Agent */}
+      {showBusinessIntelligence && (
+        <BusinessIntelligenceAgent
+          transactionData={{
+            totalTransactions: dashboardData?.kpis?.totalTransactions,
+            avgAmount: dashboardData?.kpis?.avgTransactionAmount,
+            anomalyRate: dashboardData?.kpis?.anomalyRate || 3.2,
+            peakHour: dashboardData?.kpis?.peakHour
+          }}
+          filters={filters}
+          onClose={() => setShowBusinessIntelligence(false)}
+        />
+      )}
+      
+      {/* Business Intelligence Trigger Button */}
+      <BusinessIntelligenceTrigger
+        onClick={() => setShowBusinessIntelligence(!showBusinessIntelligence)}
+        transactionData={{
+          anomalyRate: dashboardData?.kpis?.anomalyRate || 3.2
+        }}
+      />
+      
+      <TransactionChatButton 
+        onClick={() => setIsChatOpen(!isChatOpen)}
+        isOpen={isChatOpen}
+        hasNewMessage={insights && insights.length > 0}
+      />
 
       <InsightModal 
         isOpen={modalOpen}
@@ -454,7 +611,248 @@ const TransactionPatternsDashboard = ({
         onDownloadCSV={onDownloadCSV}
         onFilterToThis={onFilterToThis}
       />
+      
+      {/* Enhanced Inline Insight Popup - Churn Dashboard Style */}
+      {chatbotMessage && chatbotMessagePosition && (
+        <div
+          style={{
+            position: 'fixed',
+            left: chatbotMessagePosition.x,
+            top: chatbotMessagePosition.isTopElement || chatbotMessagePosition.chartType === 'KPI Card'
+              ? chatbotMessagePosition.y + 20
+              : chatbotMessagePosition.y - 20,
+            transform: chatbotMessagePosition.isTopElement || chatbotMessagePosition.chartType === 'KPI Card'
+              ? 'translate(-50%, 0)'
+              : 'translate(-50%, -100%)',
+            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98))',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(148, 163, 184, 0.3)',
+            borderRadius: '12px',
+            padding: '0',
+            maxWidth: '320px',
+            minWidth: '280px',
+            zIndex: 10000,
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4), 0 0 60px rgba(59, 130, 246, 0.1)',
+            animation: chatbotMessagePosition.isTopElement || chatbotMessagePosition.chartType === 'KPI Card'
+              ? 'fadeInDown 0.3s ease-out'
+              : 'fadeInUp 0.3s ease-out',
+            pointerEvents: 'auto',
+            overflow: 'hidden'
+          }}
+        >
+          {/* Header with close button */}
+          <div style={{
+            background: 'rgba(59, 130, 246, 0.1)',
+            borderBottom: '1px solid rgba(59, 130, 246, 0.2)',
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '16px' }}>💳</span>
+              <span style={{ color: '#60a5fa', fontWeight: 600, fontSize: '14px' }}>
+                Transaction Insight
+              </span>
+            </div>
+            <button
+              onClick={() => setChatbotMessage('')}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#94a3b8',
+                fontSize: '18px',
+                cursor: 'pointer',
+                padding: '0',
+                width: '20px',
+                height: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                e.currentTarget.style.color = '#ef4444';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = '#94a3b8';
+              }}
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Content */}
+          <div style={{ padding: '16px' }}>
+            <div style={{ color: '#e2e8f0', fontSize: '13px', lineHeight: '1.6' }}>
+              <ReactMarkdown
+                components={{
+                  strong: ({children}) => <span style={{color: '#60a5fa', fontWeight: 600}}>{children}</span>,
+                  p: ({children}) => <div style={{marginBottom: '10px'}}>{children}</div>,
+                  ul: ({children}) => <ul style={{margin: '6px 0', paddingLeft: '18px'}}>{children}</ul>,
+                  li: ({children}) => <li style={{marginBottom: '4px', color: '#cbd5e1'}}>{children}</li>,
+                  a: ({children, href}) => (
+                    <button
+                      onClick={() => console.log('Action:', href)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#60a5fa',
+                        textDecoration: 'underline',
+                        cursor: 'pointer',
+                        padding: '0',
+                        fontSize: 'inherit'
+                      }}
+                    >
+                      {children}
+                    </button>
+                  )
+                }}
+              >
+                {chatbotMessage}
+              </ReactMarkdown>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '8px',
+              marginTop: '12px',
+              paddingTop: '12px',
+              borderTop: '1px solid rgba(148, 163, 184, 0.1)'
+            }}>
+              <button
+                onClick={() => {
+                  console.log('Show detailed analysis');
+                  openModal(
+                    '📊 Detailed Analysis',
+                    'Comprehensive transaction insights',
+                    [],
+                    [],
+                    { source: 'inline-popup' },
+                    []
+                  );
+                }}
+                style={{
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  color: '#60a5fa',
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)';
+                  e.currentTarget.style.transform = 'scale(1.02)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                Detailed analysis
+              </button>
+              
+              <button
+                onClick={() => console.log('Show trends')}
+                style={{
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  color: '#10b981',
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(16, 185, 129, 0.2)';
+                  e.currentTarget.style.transform = 'scale(1.02)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                Show trends
+              </button>
+              
+              <button
+                onClick={() => console.log('Get insights')}
+                style={{
+                  background: 'rgba(139, 92, 246, 0.1)',
+                  border: '1px solid rgba(139, 92, 246, 0.3)',
+                  color: '#a78bfa',
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(139, 92, 246, 0.2)';
+                  e.currentTarget.style.transform = 'scale(1.02)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                Get insights
+              </button>
+              
+              <button
+                onClick={() => console.log('Export data')}
+                style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: '#f87171',
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                  e.currentTarget.style.transform = 'scale(1.02)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                Export data
+              </button>
+            </div>
+
+            {/* Footer hint */}
+            <div style={{
+              marginTop: '12px',
+              paddingTop: '12px',
+              borderTop: '1px solid rgba(148, 163, 184, 0.1)',
+              fontSize: '11px',
+              color: 'rgba(148, 163, 184, 0.7)',
+              textAlign: 'center'
+            }}>
+              Press <strong style={{color: '#60a5fa'}}>Shift+Click</strong> to select multiple points
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+    </ChartSelectionManager>
+    </>
   );
 };
 

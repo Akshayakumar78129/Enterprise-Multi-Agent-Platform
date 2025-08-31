@@ -16,6 +16,8 @@ export default async function handler(req, res) {
     const segmentType = req.query.segmentType || 'rfm';
     const limit = parseInt(req.query.limit) || 500;
     const includeMetrics = req.query.includeMetrics !== 'false';
+    const startDate = req.query.startDate;
+    const endDate = req.query.endDate;
 
     console.log('📊 Connecting to real database:', path.join(process.cwd(), 'Customer/database/customers.db'));
     
@@ -24,6 +26,15 @@ export default async function handler(req, res) {
     const db = new sqlite3.Database(dbPath);
 
     console.log('📊 Executing real database query for customer segmentation...');
+
+    // Build WHERE clause for date filtering
+    let dateFilter = '';
+    const queryParams = [limit];
+    
+    if (startDate && endDate) {
+      dateFilter = ' AND DATE(t."Txn Date") BETWEEN ? AND ?';
+      queryParams.unshift(startDate, endDate);
+    }
 
     // Get customer data with transaction aggregations for RFM analysis
     const query = `
@@ -39,7 +50,7 @@ export default async function handler(req, res) {
         julianday('2021-12-31') - julianday(MAX(DATE(t."Txn Date"))) as recency_days
       FROM dbo_D_Customer c
       LEFT JOIN dbo_F_Sales_Transaction t ON c."Customer Key" = t."Customer Key"
-      WHERE c."Customer Key" > 0 AND c."Customer Name" IS NOT NULL
+      WHERE c."Customer Key" > 0 AND c."Customer Name" IS NOT NULL${dateFilter}
       GROUP BY c."Customer Key", c."Customer Name"
       HAVING COUNT(t."Sales Txn Key") > 0
       ORDER BY lifetime_value DESC
@@ -47,7 +58,7 @@ export default async function handler(req, res) {
     `;
 
     const customers = await new Promise((resolve, reject) => {
-      db.all(query, [limit], (err, rows) => {
+      db.all(query, queryParams, (err, rows) => {
         if (err) {
           reject(err);
         } else {
@@ -56,6 +67,25 @@ export default async function handler(req, res) {
       });
     });
 
+    // Get date range from database for the filter
+    const dateRangeQuery = `
+      SELECT 
+        MIN(DATE("Txn Date")) as min_date,
+        MAX(DATE("Txn Date")) as max_date
+      FROM dbo_F_Sales_Transaction
+    `;
+    
+    const dateRange = await new Promise((resolve, reject) => {
+      db.get(dateRangeQuery, [], (err, row) => {
+        if (err) {
+          console.error('Error getting date range:', err);
+          resolve({ min_date: '2019-01-01', max_date: '2021-12-31' });
+        } else {
+          resolve(row);
+        }
+      });
+    });
+    
     db.close();
 
     console.log(`✅ Retrieved ${customers.length} real customers from database`);
@@ -86,6 +116,7 @@ export default async function handler(req, res) {
         metadata: {
           total_records: segmentedCustomers.length,
           segments_count: segmentDistribution.length,
+          date_range: dateRange,
           last_updated: new Date().toISOString(),
           segmentation_method: 'RFM Analysis',
           data_quality: {

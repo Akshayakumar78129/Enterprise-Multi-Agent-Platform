@@ -1,5 +1,6 @@
 import React, { forwardRef, useImperativeHandle, useState, useEffect } from 'react';
 import { IntervalHeatmapProps } from '../../types';
+import { handleChartClick } from '../../utils/chartSelectionHelper';
 
 const IntervalHeatmap = forwardRef<any, IntervalHeatmapProps>(({
   data,
@@ -68,8 +69,8 @@ const IntervalHeatmap = forwardRef<any, IntervalHeatmapProps>(({
   
   // Helper function to get color based on value
   const getColor = (value: number) => {
-    if (value === 0) return colorScale[0];
-    const ratio = value / maxValue;
+    if (!isFinite(value) || value <= 0) return colorScale[0];
+    const ratio = Math.max(0, Math.min(1, value / (maxValue || 1)));
     
     if (ratio < 0.33) {
       // Interpolate between first and second color
@@ -106,14 +107,29 @@ const IntervalHeatmap = forwardRef<any, IntervalHeatmapProps>(({
   // Handle cell interactions
   const handleCellClick = (day: string, hour: number, event: React.MouseEvent) => {
     event.stopPropagation(); // Prevent background click
+
+    // Shift+click: send minimal selection to global handler (do not add chat message)
+    if (event.shiftKey) {
+      handleChartClick({
+        chartId: 'purchase-interval-heatmap',
+        chartType: 'heatmap',
+        label: `${day} ${hour}:00`,
+        value: dataMap.get(day)?.get(hour)?.volume || 0,
+        unit: ' customers',
+        index: days.indexOf(day) * hours.length + hours.indexOf(hour),
+        metadata: { day, hour }
+      }, event.nativeEvent);
+    }
     
     const cell = { day, hour };
-    // Toggle selection if cell is already selected, otherwise set as new selection
-    setSelectedCells(prev => 
-      prev.some(c => c.day === day && c.hour === hour)
-        ? prev.filter(c => !(c.day === day && c.hour === hour))
-        : [cell]
-    );
+    // Shift/Ctrl/Cmd: multi-select toggle, else single select
+    setSelectedCells(prev => {
+      const exists = prev.some(c => c.day === day && c.hour === hour);
+      if (event.shiftKey || event.ctrlKey || event.metaKey) {
+        return exists ? prev.filter(c => !(c.day === day && c.hour === hour)) : [...prev, cell];
+      }
+      return [cell];
+    });
     
     if (onCellClick) {
       onCellClick(day, hour);
@@ -158,10 +174,30 @@ const IntervalHeatmap = forwardRef<any, IntervalHeatmapProps>(({
   
   const handleCellMouseEnter = (day: string, hour: number) => {
     setHoveredCell({ day, hour });
+    try {
+      // @ts-ignore next-line
+      if (typeof onHoverInsight === 'function') {
+        const cell = dataMap.get(day)?.get(hour);
+        // @ts-ignore next-line
+        onHoverInsight({
+          title: `${day} ${hour}:00`,
+          lines: [
+            `Volume: ${cell?.volume ?? cell?.transaction_count ?? 0}`,
+            ...(cell?.avg_value || cell?.avgTransactionValue ? [
+              `Avg value: $${(cell?.avg_value ?? cell?.avgTransactionValue).toFixed(2)}`
+            ] : [])
+          ]
+        });
+      }
+    } catch {}
   };
   
   const handleCellMouseLeave = () => {
     setHoveredCell(null);
+    try {
+      // @ts-ignore next-line
+      if (typeof onHoverInsight === 'function') onHoverInsight(null);
+    } catch {}
   };
   
   // Check if cell is within the last 90 days (for recency indicator)
@@ -182,10 +218,11 @@ const IntervalHeatmap = forwardRef<any, IntervalHeatmapProps>(({
         width: `${adjustedWidth}px`,
         height: `${adjustedHeight}px`,
         position: 'relative',
-        backgroundColor: '#232a36',
+        backgroundColor: 'rgba(255,255,255,0.9)',
         borderRadius: '12px',
         padding: '16px',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.1)'
+        boxShadow: '0 10px 40px rgba(0,0,0,0.05)',
+        border: '1px solid rgba(59,130,246,0.1)'
       }}
     >
       <h3 
@@ -193,12 +230,17 @@ const IntervalHeatmap = forwardRef<any, IntervalHeatmapProps>(({
           margin: 0,
           marginBottom: '12px',
           fontSize: '16px',
-          fontWeight: 600,
-          color: '#f7f9fb'
+          fontWeight: 700,
+          color: '#1f2937'
         }}
       >
         Purchase Interval Analysis
       </h3>
+
+      {/* Axes description for clarity */}
+      <div style={{ color: '#8893a7', fontSize: 12, marginBottom: 6 }}>
+        Hour of day (0–23) • Day of week (Mon–Sun) • Cell color intensity represents purchase volume/density
+      </div>
       
       <div 
         style={{
@@ -326,11 +368,14 @@ const IntervalHeatmap = forwardRef<any, IntervalHeatmapProps>(({
             boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
           }}
         >
-          <strong>{hoveredCell.day} at {hoveredCell.hour}:00</strong>
-          <div>Density: {(dataMap.get(hoveredCell.day)?.get(hoveredCell.hour)?.value || 0).toFixed(2)}</div>
-          {dataMap.get(hoveredCell.day)?.get(hoveredCell.hour)?.transactionCount && (
-            <div>Transactions: {dataMap.get(hoveredCell.day)?.get(hoveredCell.hour)?.transactionCount}</div>
-          )}
+          {/* Explicit x/y/z lines */}
+          <div>x: {hoveredCell.hour}</div>
+          <div>y: {hoveredCell.day}</div>
+          <div>
+            z: {(dataMap.get(hoveredCell.day)?.get(hoveredCell.hour)?.value || 0).toFixed(2)}
+          </div>
+          <hr style={{ borderColor: '#3a4459', opacity: 0.4 }} />
+          <div>Transactions: {dataMap.get(hoveredCell.day)?.get(hoveredCell.hour)?.transactionCount ?? 0}</div>
           {dataMap.get(hoveredCell.day)?.get(hoveredCell.hour)?.avgTransactionValue && (
             <div>Avg Value: ${dataMap.get(hoveredCell.day)?.get(hoveredCell.hour)?.avgTransactionValue.toFixed(2)}</div>
           )}

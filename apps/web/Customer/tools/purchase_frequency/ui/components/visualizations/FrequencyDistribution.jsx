@@ -11,7 +11,8 @@ const FrequencyDistribution = ({
   onBinClick = null,
   selectedBin = null,
   width = 460,
-  height = 300
+  height = 300,
+  onHoverInsight = null
 }) => {
   const [hoveredBin, setHoveredBin] = useState(null);
   const [keyPoints, setKeyPoints] = useState([]);
@@ -57,17 +58,17 @@ const FrequencyDistribution = ({
       marker: {
         color: actualData.map((bin, index) => {
           if (selectedBin && bin.bin === selectedBin) {
-            return '#00e0ff'; // Electric Cyan for selected
+            return '#2563EB'; // Primary accent for selected
           }
           if (hoveredBin === index) {
-            return '#5fd4d6'; // Lighter cyan for hover
+            return '#0891B2'; // Secondary accent for hover
           }
-          // Gradient from Midnight Navy to Electric Cyan
+          // Elite gradient from dark to primary accent
           const intensity = bin.count / Math.max(...actualData.map(b => b.count));
-          const r = Math.round(10 + (0 - 10) * intensity);
-          const g = Math.round(18 + (224 - 18) * intensity);
-          const b = Math.round(36 + (255 - 36) * intensity);
-          return `rgb(${r}, ${g}, ${b})`;
+          const r = Math.round(37 + (37 - 37) * intensity);
+          const g = Math.round(99 + (99 - 99) * intensity);
+          const b = Math.round(235 + (235 - 235) * intensity);
+          return `rgba(${r}, ${g}, ${b}, ${0.3 + intensity * 0.7})`;
         }),
         line: {
           color: actualData.map((bin, index) => {
@@ -167,20 +168,44 @@ const FrequencyDistribution = ({
   }, [data, selectedBin, hoveredBin]);
 
   const handleClick = (eventData) => {
+    if (!eventData?.event?.shiftKey) return; // Shift-only
     if (onBinClick && eventData.points && eventData.points.length > 0) {
       const clickedBin = eventData.points[0].x;
-      onBinClick(clickedBin);
+      const syntheticEvent = {
+        shiftKey: true,
+        clientX: eventData.event?.clientX || 0,
+        clientY: eventData.event?.clientY || 0,
+        preventDefault: () => {},
+        stopPropagation: () => {}
+      };
+      onBinClick(clickedBin, syntheticEvent);
     }
   };
 
   const handleHover = (eventData) => {
     if (eventData.points && eventData.points.length > 0) {
       setHoveredBin(eventData.points[0].pointIndex);
+      try {
+        if (typeof onHoverInsight === 'function') {
+          const p = eventData.points[0];
+          const label = p.x; // bin label
+          const count = p.y;
+          const pct = Array.isArray(p.customdata) ? p.customdata[0] : p.customdata;
+          onHoverInsight({
+            title: `Frequency ${label}`,
+            lines: [
+              `Customers: ${Number(count||0).toLocaleString()}`,
+              ...(pct != null ? [`Share: ${Number(pct).toFixed(1)}%`] : [])
+            ]
+          });
+        }
+      } catch {}
     }
   };
 
   const handleUnhover = () => {
     setHoveredBin(null);
+    try { if (typeof onHoverInsight === 'function') onHoverInsight(null); } catch {}
   };
 
   if (!data || data.length === 0) {
@@ -208,28 +233,33 @@ const FrequencyDistribution = ({
     paper_bgcolor: 'transparent',
     plot_bgcolor: 'transparent',
     font: {
-      family: 'Inter, sans-serif',
-      color: '#f7f9fb'
+      family: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      color: '#F8FAFC',
+      size: 12
     },
     xaxis: {
       title: {
         text: 'Number of Purchases',
-        font: { size: 12, color: '#f7f9fb' }
+        font: { size: 14, color: '#94A3B8', family: 'Inter' }
       },
-      tickfont: { size: 10, color: '#f7f9fb' },
-      gridcolor: 'rgba(247, 249, 251, 0.1)',
+      tickfont: { size: 12, color: '#94A3B8' },
+      gridcolor: 'rgba(148, 163, 184, 0.1)',
       showgrid: true,
-      zeroline: false
+      zeroline: false,
+      linecolor: 'rgba(148, 163, 184, 0.2)',
+      tickcolor: 'rgba(148, 163, 184, 0.2)'
     },
     yaxis: {
       title: {
         text: 'Number of Customers',
-        font: { size: 12, color: '#f7f9fb' }
+        font: { size: 14, color: '#94A3B8', family: 'Inter' }
       },
-      tickfont: { size: 10, color: '#f7f9fb' },
-      gridcolor: 'rgba(247, 249, 251, 0.1)',
+      tickfont: { size: 12, color: '#94A3B8' },
+      gridcolor: 'rgba(148, 163, 184, 0.1)',
       showgrid: true,
-      zeroline: false
+      zeroline: false,
+      linecolor: 'rgba(148, 163, 184, 0.2)',
+      tickcolor: 'rgba(148, 163, 184, 0.2)'
     },
     shapes: chartData?.shapes || [],
     annotations: chartData ? [

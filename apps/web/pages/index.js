@@ -17,10 +17,11 @@ import purchaseFrequencyReducer from '../Customer/tools/purchase_frequency/ui/st
 import customerSegmentationReducer from '../Customer/tools/customer_segmentation/ui/state/customerSegmentationSlice';
 import customerBehaviourReducer from '../Customer/tools/customer_behaviour/ui/state/customerBehaviourSlice';
 import churnPredictionReducer from '../Customer/tools/churn_prediction/ui/state/churnPredictionSlice';
+import engagementClassifierReducer from '../Customer/tools/engagement_classifier/ui/state/engagementClassifierSlice';
 
 
 
-const backendAiUrl = process.env.NEXT_PUBLIC_BACKEND_AI_URL || 'http://127.0.0.1:5000';
+const backendAiUrl = process.env.NEXT_PUBLIC_BACKEND_AI_URL || 'http://127.0.0.1:8001';
 
 // Configure Redux store
 const store = configureStore({
@@ -29,6 +30,7 @@ const store = configureStore({
     customerSegmentation: customerSegmentationReducer,
     customerBehaviour: customerBehaviourReducer,
     churnPrediction: churnPredictionReducer,
+    engagementClassifier: engagementClassifierReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -225,6 +227,41 @@ export default function ConversationalCanvas() {
       }));
     }
   }, [userSelectedChartPoints]);
+
+  // Set up global handler for shift-click chart selections
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.addAIInsightToChat = (clickData) => {
+        const { label, value, chartType, originalEvent } = clickData;
+        const isShiftKey = originalEvent?.shiftKey || false;
+        
+        const newPoint = {
+          label,
+          value: clickData.count || value,
+          chartType,
+          unit: clickData.unit || ''
+        };
+        
+        setUserSelectedChartPoints(prev => {
+          if (isShiftKey && prev.length > 0) {
+            // Add to existing selection
+            return [...prev, newPoint];
+          } else {
+            // Replace selection
+            return [newPoint];
+          }
+        });
+      };
+      
+      console.log('✅ Global addAIInsightToChat handler registered');
+    }
+    
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete window.addAIInsightToChat;
+      }
+    };
+  }, []);
 
   // Auto-load disabled - no dashboard on page load
 

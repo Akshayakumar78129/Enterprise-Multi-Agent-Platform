@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Card } from "../../../../../../ui-common/design-system/components/Card";
 import dynamic from "next/dynamic";
+import { handleChartClick } from "../../utils/chartSelectionHelper";
 
 // Dynamic import for Plotly to avoid SSR issues
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
@@ -10,7 +11,6 @@ const DualAxisTimeSeries = ({
   isLoading = false,
   width = 800,
   height = 400,
-  onDataPointClick = null,
   highlightDateRange = null
 }) => {
   const [plotData, setPlotData] = useState(null);
@@ -185,14 +185,37 @@ const DualAxisTimeSeries = ({
   };
 
   const handlePlotClick = (event) => {
-    if (!onDataPointClick || !event.points || event.points.length === 0) return;
+    if (!event.points || event.points.length === 0) return;
     
     const point = event.points[0];
     const clickedDate = point.x;
     const dataPoint = data.find(d => d.date === clickedDate);
     
     if (dataPoint) {
-      onDataPointClick(dataPoint);
+      // Get the actual mouse event with coordinates
+      const mouseEvent = event.event || {};
+      // If no clientX/Y, try to get from the Plotly event
+      if (!mouseEvent.clientX && event.event) {
+        mouseEvent.clientX = event.event.pageX || event.event.x || window.innerWidth / 2;
+        mouseEvent.clientY = event.event.pageY || event.event.y || window.innerHeight / 2;
+      }
+      
+      // Use the chart selection helper for multi-select support
+      const isVolume = point.data.name === 'Transaction Volume';
+      handleChartClick({
+        chartId: 'time-series',
+        chartType: 'Time Series',
+        label: clickedDate,
+        value: isVolume ? dataPoint.transaction_count : dataPoint.avg_amount,
+        unit: isVolume ? ' transactions' : '',
+        metadata: {
+          date: clickedDate,
+          transaction_count: dataPoint.transaction_count,
+          avg_amount: dataPoint.avg_amount,
+          formattedAvgAmount: `$${dataPoint.avg_amount.toFixed(2)}`,
+          dataType: isVolume ? 'volume' : 'value'
+        }
+      }, mouseEvent);
     }
   };
 

@@ -130,7 +130,10 @@ const DashboardNavigation = ({ isOpen, onClose }) => {
       icon: CurrencyDollarIcon,
       color: colors.teal,
       tools: [
-        { name: 'Financial Dashboard', path: '/finance/financial-tool', icon: BanknotesIcon, description: 'Cash flow and financial KPI analysis' }
+        { name: 'Financial Dashboard', path: '/finance/financial-tool', icon: BanknotesIcon, description: 'Cash flow and financial KPI analysis' },
+        { name: 'AR Aging Analysis', path: '/finance/ar-aging-analysis', icon: CalendarDaysIcon, description: 'Accounts receivable aging and collection analysis' },
+        { name: 'Cash Flow Analysis', path: '/finance/cash-flow-analysis', icon: ArrowPathIcon, description: 'Detailed cash flow tracking and forecasting' },
+        { name: 'Revenue Forecast', path: '/finance/revenue-forecast', icon: ChartBarSquareIcon, description: 'Revenue prediction and trend analysis' }
       ]
     }
   };

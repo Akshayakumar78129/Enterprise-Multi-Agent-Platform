@@ -67,6 +67,20 @@ const KPITile = forwardRef<any, KPITileProps>(({
         cursor: onClick ? 'pointer' : 'default'
       }}
       onClick={onClick}
+      onMouseEnter={() => {
+        // @ts-ignore next-line
+        if (typeof onHoverInsight === 'function') {
+          // @ts-ignore next-line
+          onHoverInsight({ title: title, lines: [
+            `Value: ${formattedValue}`,
+            ...(displayTrend !== undefined ? [`Trend: ${displayTrend > 0 ? '+' : ''}${(typeof displayTrend === 'number' ? displayTrend : 0).toFixed ? (displayTrend as number).toFixed(1) : displayTrend}%`] : [])
+          ]});
+        }
+      }}
+      onMouseLeave={() => {
+        // @ts-ignore next-line
+        if (typeof onHoverInsight === 'function') onHoverInsight(null);
+      }}
     >
       <h3 
         className="kpi-title"

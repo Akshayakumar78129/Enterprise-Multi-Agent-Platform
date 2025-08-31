@@ -101,6 +101,10 @@ const RegularityChart = forwardRef<any, RegularityChartProps>(({
       >
         Purchase Regularity Chart
       </h3>
+
+      <div style={{ color: '#8893a7', fontSize: 12, marginBottom: 6 }}>
+        Spokes are timeframes • Distance from center represents percentage of customers • Magenta overlay shows previous period (if enabled)
+      </div>
       
       <svg width={innerWidth} height={innerHeight}>
         <g transform={`translate(${margin.left}, ${margin.top})`}>

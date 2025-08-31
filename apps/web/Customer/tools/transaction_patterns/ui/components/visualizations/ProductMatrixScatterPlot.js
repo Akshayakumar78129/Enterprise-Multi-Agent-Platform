@@ -1,7 +1,24 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Plot from 'react-plotly.js';
+import { handleChartClick } from '../../utils/chartSelectionHelper';
 
-const ProductMatrixScatterPlot = ({ data, onInsight }) => {
+const ProductMatrixScatterPlot = ({ data }) => {
+  const [isApiReady, setIsApiReady] = useState(false);
+  
+  useEffect(() => {
+    // Check if ChartSelectionManager API is available
+    const checkApi = () => {
+      if (window.chartSelectionAPI) {
+        console.log('ProductMatrix: ChartSelectionManager API is ready');
+        setIsApiReady(true);
+      } else {
+        console.log('ProductMatrix: Waiting for ChartSelectionManager API...');
+        setTimeout(checkApi, 100);
+      }
+    };
+    checkApi();
+  }, []);
+  
   if (!data || data.length === 0) {
     return <div>No product data available.</div>;
   }
@@ -53,19 +70,58 @@ const ProductMatrixScatterPlot = ({ data, onInsight }) => {
       style={{ width: '100%', height: '100%' }}
       config={{ displayModeBar: false, responsive: true }}
       onClick={(event) => {
-        if (!onInsight || !event.points || event.points.length === 0) return;
+        console.log('ProductMatrix Click Event:', event);
+        if (!event.points || event.points.length === 0) return;
         const point = event.points[0];
         const { text: name, x: total_quantity, y: total_value } = point;
-        const insight = {
-          title: `Product Insights: ${name}`,
-          subtitle: 'Performance analysis for this product',
-          metrics: [
-            { label: 'Total Quantity Sold', value: total_quantity.toLocaleString() },
-            { label: 'Total Sales Value', value: `$${total_value.toLocaleString()}` },
-          ],
-          context: { name, total_quantity, total_value, source: 'productMatrix' },
-        };
-        onInsight(insight);
+        
+        // Get the actual mouse event with coordinates
+        const mouseEvent = event.event || {};
+        console.log('Original mouseEvent:', mouseEvent);
+        
+        // Plotly provides clientX/clientY which are viewport coordinates
+        // We should use these directly, not pageX/pageY which include scroll
+        if (!mouseEvent.clientX) {
+          // Try to get from the original event
+          if (event.event) {
+            mouseEvent.clientX = event.event.clientX;
+            mouseEvent.clientY = event.event.clientY;
+            mouseEvent.shiftKey = event.event.shiftKey;
+          }
+          
+          // If still no coordinates, get from the clicked element
+          if (!mouseEvent.clientX || !mouseEvent.clientY) {
+            const chartElement = event.event?.target || event.event?.srcElement;
+            if (chartElement) {
+              const rect = chartElement.getBoundingClientRect();
+              mouseEvent.clientX = rect.left + rect.width / 2;
+              mouseEvent.clientY = rect.top + rect.height / 2;
+            } else {
+              mouseEvent.clientX = window.innerWidth / 2;
+              mouseEvent.clientY = window.innerHeight / 2;
+            }
+          }
+        }
+        
+        console.log('Final mouseEvent:', mouseEvent);
+        console.log('ChartSelectionAPI available?', !!window.chartSelectionAPI);
+        
+        // Use the chart selection helper for multi-select support
+        handleChartClick({
+          chartId: 'product-matrix',
+          chartType: 'Product Matrix',
+          label: name,
+          value: total_value,
+          unit: '',
+          metadata: {
+            productName: name,
+            quantity: total_quantity,
+            totalValue: total_value,
+            avgPrice: total_value / total_quantity,
+            formattedValue: `$${total_value.toLocaleString()}`,
+            formattedQuantity: total_quantity.toLocaleString()
+          }
+        }, mouseEvent);
       }}
     />
   );
