@@ -814,14 +814,8 @@ body::before {
   color: var(--text-primary) !important;
 }
 
-/* Universal override for ANY element that might turn white */
-*:active,
-*:focus,
-*:focus-visible,
-*.active {
-  background: transparent !important;
-  background-color: transparent !important;
-}
+/* Removed universal selector that was causing white screen on click */
+/* Only target specific interactive elements, not body/html */
 
 /* Specific overrides for all possible button/card elements */
 button,

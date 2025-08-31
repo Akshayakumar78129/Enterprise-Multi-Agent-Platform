@@ -17,7 +17,7 @@ import purchaseFrequencyReducer from '../Customer/tools/purchase_frequency/ui/st
 import customerSegmentationReducer from '../Customer/tools/customer_segmentation/ui/state/customerSegmentationSlice';
 import customerBehaviourReducer from '../Customer/tools/customer_behaviour/ui/state/customerBehaviourSlice';
 import churnPredictionReducer from '../Customer/tools/churn_prediction/ui/state/churnPredictionSlice';
-import engagementClassifierReducer from '../Customer/tools/engagement_classifier/ui/state/engagementClassifierSlice';
+// import engagementClassifierReducer from '../Customer/tools/engagement_classifier/ui/state/engagementClassifierSlice';
 
 
 
@@ -30,7 +30,7 @@ const store = configureStore({
     customerSegmentation: customerSegmentationReducer,
     customerBehaviour: customerBehaviourReducer,
     churnPrediction: churnPredictionReducer,
-    engagementClassifier: engagementClassifierReducer,
+    // engagementClassifier: engagementClassifierReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
