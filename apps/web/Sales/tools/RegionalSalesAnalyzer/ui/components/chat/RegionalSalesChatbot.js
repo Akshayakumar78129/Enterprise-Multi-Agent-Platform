@@ -256,10 +256,21 @@ const RegionalSalesChatbot = ({
 
   // Handle agent mentions (matching churn functionality)
   const handleAgentMentions = async (mentions, cleanQuery) => {
+    // Enhance query with selected points if available
+    let enhancedQuery = cleanQuery;
+    if (conversationMemory?.selectedPoints && conversationMemory.selectedPoints.length > 0) {
+      const pointsContext = conversationMemory.selectedPoints
+        .map(p => `${p.label}: ${p.value}${p.unit}`)
+        .join(', ');
+      enhancedQuery = `${cleanQuery}\n\nContext: Selected data points - ${pointsContext}`;
+    }
+    
     console.log('🚀 handleAgentMentions called:', {
       mentions,
       cleanQuery,
+      enhancedQuery,
       chatbotMode,
+      selectedPoints: conversationMemory?.selectedPoints,
       timestamp: new Date().toISOString()
     });
 
@@ -281,7 +292,7 @@ const RegionalSalesChatbot = ({
     // Get mode configuration
     const modeConfig = getChatbotModeConfig(chatbotMode);
     
-    // Create context for agents
+    // Create context for agents - include selected chart points
     const agentContext = {
       user_id: session.user_id,
       regions: dashboardContext?.selectedRegions,
@@ -290,7 +301,9 @@ const RegionalSalesChatbot = ({
       filters: dashboardContext?.filters,
       contextTags,
       chat_mode: chatbotMode,
-      mode_config: modeConfig
+      mode_config: modeConfig,
+      selectedPoints: conversationMemory?.selectedPoints || [],
+      lastChartContext: conversationMemory?.lastChartContext || null
     };
 
     // Query each valid agent
@@ -326,8 +339,8 @@ const RegionalSalesChatbot = ({
               : msg
           ));
         } else {
-          // Query real agent via backend
-          const response = await queryAgent(agentName, cleanQuery, agentContext, session.session_id);
+          // Query real agent via backend with enhanced query
+          const response = await queryAgent(agentName, enhancedQuery, agentContext, session.session_id);
           
           let fullResponse = '';
           let metadata = {};
@@ -385,11 +398,21 @@ const RegionalSalesChatbot = ({
   const handleRegularConversation = async (query) => {
     const modeConfig = getChatbotModeConfig(chatbotMode);
     
+    // Build enhanced query with selected points context
+    let enhancedQuery = query;
+    if (conversationMemory?.selectedPoints && conversationMemory.selectedPoints.length > 0) {
+      const pointsContext = conversationMemory.selectedPoints
+        .map(p => `${p.label}: ${p.value}${p.unit}`)
+        .join(', ');
+      enhancedQuery = `${query}\n\nContext: Selected data points - ${pointsContext}`;
+    }
+    
     console.log('🤖 handleRegularConversation called:', {
-      query,
+      query: enhancedQuery,
       session,
       chatbotMode,
       modeConfig,
+      selectedPoints: conversationMemory?.selectedPoints,
       timestamp: new Date().toISOString()
     });
 
@@ -404,8 +427,8 @@ const RegionalSalesChatbot = ({
     setMessages(prev => [...prev, loadingMessage]);
 
     try {
-      // Use AIResponseDashboard for orchestrator
-      const response = AIResponseDashboard(query, session);
+      // Use AIResponseDashboard for orchestrator with enhanced query
+      const response = AIResponseDashboard(enhancedQuery, session);
       
       let fullResponse = '';
       let currentAgent = null;
@@ -557,7 +580,12 @@ const RegionalSalesChatbot = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: query,
-          context: { ...dashboardContext, contextTags },
+          context: { 
+            ...dashboardContext, 
+            contextTags,
+            selectedPoints: conversationMemory?.selectedPoints || [],
+            lastChartContext: conversationMemory?.lastChartContext || null
+          },
           session,
           chatMode: chatbotMode,
           modeConfig

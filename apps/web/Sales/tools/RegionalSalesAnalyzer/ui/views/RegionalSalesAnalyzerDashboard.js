@@ -133,7 +133,7 @@ const RegionalSalesAnalyzerDashboard = () => {
         body: JSON.stringify(apiFilters),
       });
 
-      if (!response.ok) throw new Error("Failed to fetch data");
+      //if (!response.ok) throw new Error("Failed to fetch data");
 
       const result = await response.json();
       if (result.success) {

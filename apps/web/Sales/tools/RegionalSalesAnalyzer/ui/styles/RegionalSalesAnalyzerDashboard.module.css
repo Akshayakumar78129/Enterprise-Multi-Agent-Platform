@@ -7,7 +7,13 @@
   position: relative;
   overflow-x: hidden;
   padding: 24px;
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Prevent white flash on all interactive elements */
+.regionalSalesAnalyzerDashboard * {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 
 /* Animated Background Particles */
@@ -320,8 +326,8 @@
   left: 100%;
 }
 
-/* Ripple effect on click */
-.standardKpiTile::after {
+/* Ripple effect on click - disabled to prevent white flash */
+/* .standardKpiTile::after {
   content: '';
   position: absolute;
   top: 50%;
@@ -336,7 +342,7 @@
 
 .standardKpiTile:active::after {
   animation: ripple 0.6s ease-out;
-}
+} */
 
 /* Enhanced KPI Header */
 .kpiHeader {

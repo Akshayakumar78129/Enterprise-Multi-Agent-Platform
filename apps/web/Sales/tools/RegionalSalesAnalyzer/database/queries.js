@@ -5,7 +5,7 @@ class RegionalSalesAnalyzerQueries {
   constructor() {
     this.dbPath = path.resolve(
       process.cwd(),
-      "Customer/database/customers.db"
+      "Sales", "database", "sales_agent.db"
     );
   }
 

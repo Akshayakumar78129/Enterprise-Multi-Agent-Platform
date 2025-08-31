@@ -239,6 +239,8 @@ export default function TransactionChatbot({
           is_canvas: false,
           context: {
             dashboard: 'transaction_patterns',
+            selectedPoints: conversationMemory?.selectedPoints || [],
+            lastChartContext: conversationMemory?.lastChartContext || null,
             ...dashboardContext
           }
         })
@@ -359,6 +361,15 @@ export default function TransactionChatbot({
     const textToSend = inputValue.trim();
     if (!textToSend || isLoading) return;
     
+    // Enhance query with selected points if available
+    let enhancedQuery = textToSend;
+    if (conversationMemory?.selectedPoints && conversationMemory.selectedPoints.length > 0) {
+      const pointsContext = conversationMemory.selectedPoints
+        .map((p: any) => `${p.label}: ${p.value}${p.unit || ''}`)
+        .join(', ');
+      enhancedQuery = `${textToSend}\n\nContext: Selected data points - ${pointsContext}`;
+    }
+    
     // Add user message
     const userMessage: Message = {
       id: uuidv4(),
@@ -371,8 +382,8 @@ export default function TransactionChatbot({
     setIsLoading(true);
     
     try {
-      // Extract mentions
-      const { mentions, cleanQuery } = extractMentions(textToSend);
+      // Extract mentions from enhanced query
+      const { mentions, cleanQuery } = extractMentions(enhancedQuery);
       
       if (mentions.length > 0) {
         // Query specific agents
@@ -433,7 +444,7 @@ export default function TransactionChatbot({
         setMessages(prev => [...prev, loadingMessage]);
         
         try {
-          const response = await queryBackend(textToSend);
+          const response = await queryBackend(enhancedQuery);
           let fullResponse = '';
           
           for await (const chunk of processSSEStream(response)) {

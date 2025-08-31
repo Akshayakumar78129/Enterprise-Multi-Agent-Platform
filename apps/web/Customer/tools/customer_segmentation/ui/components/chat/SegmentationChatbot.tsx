@@ -334,6 +334,15 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
 
     // Get current mode configuration
     const modeConfig = getChatbotModeConfig(chatbotMode);
+    
+    // Enhance query with selected points if available
+    let enhancedQuery = textToSend;
+    if (selectedPoints && selectedPoints.length > 0) {
+      const pointsContext = selectedPoints
+        .map((p: any) => `${p.label}: ${p.value}${p.unit || ''}`)
+        .join(', ');
+      enhancedQuery = `${textToSend}\n\nContext: Selected data points - ${pointsContext}`;
+    }
 
     const userMessage: Message = {
       id: uuidv4(),
@@ -367,24 +376,28 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
             setMessages(prev => [...prev, loadingMessage]);
 
             try {
-              // Pack the dashboard context properly
+              // Pack the dashboard context properly - include selected points
               const context = dashboardContext ? {
                 source_dashboard: 'customer_segmentation',
                 segment_context: dashboardContext.segment_context || {},
                 filters_applied: dashboardContext.filters_applied || {},
+                selectedPoints: selectedPoints || [],
+                lastChartContext: lastChartContext || null,
                 timestamp: new Date().toISOString(),
                 user_id: 'segmentation_user'
               } : {
                 source_dashboard: 'customer_segmentation',
                 segment_context: {},
                 filters_applied: {},
+                selectedPoints: selectedPoints || [],
+                lastChartContext: lastChartContext || null,
                 timestamp: new Date().toISOString(),
                 user_id: 'segmentation_user'
               };
               
-              // Create proper payload matching churn implementation
+              // Create proper payload matching churn implementation with enhanced query
               const payload = {
-                query: textToSend,
+                query: enhancedQuery,
                 context: context,
                 request_id: uuidv4(),
                 priority: 'normal' as const,
@@ -457,14 +470,14 @@ export default function SegmentationChatbot({ dashboardContext }: SegmentationCh
       setMessages(prev => [...prev, loadingMessage]);
       
       try {
-        // Construct query based on chatbot mode
-        let query = textToSend;
+        // Construct query based on chatbot mode - use enhanced query with selected points
+        let query = enhancedQuery;
         if (chatbotMode === 'quick') {
-          query = `Provide a quick insight for: ${textToSend}. Include key metrics and immediate actions.`;
+          query = `Provide a quick insight for: ${enhancedQuery}. Include key metrics and immediate actions.`;
         } else if (chatbotMode === 'strategic') {
-          query = `Provide strategic analysis for: ${textToSend}. Include trend analysis, strategic focus areas, and recommendations.`;
+          query = `Provide strategic analysis for: ${enhancedQuery}. Include trend analysis, strategic focus areas, and recommendations.`;
         } else if (chatbotMode === 'deep-dive') {
-          query = `Provide deep-dive analysis for: ${textToSend}. Include behavioral patterns, correlations, hidden insights, and detailed metrics.`;
+          query = `Provide deep-dive analysis for: ${enhancedQuery}. Include behavioral patterns, correlations, hidden insights, and detailed metrics.`;
         }
         
         const response = AIResponseDashboard(query, session);

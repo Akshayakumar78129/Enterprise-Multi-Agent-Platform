@@ -522,10 +522,21 @@ What specific aspect would you like me to explain?`;
   };
 
   const handleAgentMentions = async (mentionedAgents: string[], query: string, originalText: string) => {
+    // Enhance query with selected points if available
+    let enhancedQuery = query;
+    if (conversationMemory?.selectedPoints && conversationMemory.selectedPoints.length > 0) {
+      const pointsContext = conversationMemory.selectedPoints
+        .map((p: any) => `${p.label}: ${p.value}${p.unit || ''}`)
+        .join(', ');
+      enhancedQuery = `${query}\n\nContext: Selected data points - ${pointsContext}`;
+    }
+    
     console.log('🚀 handleAgentMentions called with:', {
       mentionedAgents,
       query,
-      originalText
+      enhancedQuery,
+      originalText,
+      selectedPoints: conversationMemory?.selectedPoints
     });
     
     // Validate mentioned agents
@@ -553,13 +564,15 @@ What specific aspect would you like me to explain?`;
       return;
     }
 
-    // Pack current dashboard context
+    // Pack current dashboard context - include selected chart points
     const context = dashboardContext ? {
       source_dashboard: dashboardContext.source_dashboard,
       customer_context: dashboardContext.customer_context,
       chart_context: dashboardContext.chart_context,
       filters: dashboardContext.filters,
       date_range: dashboardContext.date_range,
+      selectedPoints: conversationMemory?.selectedPoints || [],
+      lastChartContext: conversationMemory?.lastChartContext || null,
       timestamp: new Date().toISOString()
     } : {
       source_dashboard: 'unknown',
@@ -594,8 +607,8 @@ What specific aspect would you like me to explain?`;
 
       try {
         // Optimize context for this agent type
-        const optimizedContext = optimizeContextForQuery(context, query, agentName);
-        const payload = createAgentQueryPayload(optimizedContext, query, agentName);
+        const optimizedContext = optimizeContextForQuery(context, enhancedQuery, agentName);
+        const payload = createAgentQueryPayload(optimizedContext, enhancedQuery, agentName);
 
         // Use real API Gateway calls by default, only use mock if explicitly enabled
         const USE_MOCK_RESPONSES = process.env.NEXT_PUBLIC_USE_MOCK_AGENTS === 'true';
@@ -670,14 +683,25 @@ What specific aspect would you like me to explain?`;
 
   const handleRegularConversation = async (textToSend: string) => {
     try {
+      // Enhance query with selected points if available
+      let enhancedQuery = textToSend;
+      if (conversationMemory?.selectedPoints && conversationMemory.selectedPoints.length > 0) {
+        const pointsContext = conversationMemory.selectedPoints
+          .map((p: any) => `${p.label}: ${p.value}${p.unit || ''}`)
+          .join(', ');
+        enhancedQuery = `${textToSend}\n\nContext: Selected data points - ${pointsContext}`;
+      }
+      
       console.log('🤖 handleRegularConversation called with:', {
         query: textToSend,
+        enhancedQuery,
         session,
+        selectedPoints: conversationMemory?.selectedPoints,
         timestamp: new Date().toISOString()
       });
       
-      // Use AIResponseDashboard for AI responses
-      const response = AIResponseDashboard(textToSend, session);
+      // Use AIResponseDashboard for AI responses with enhanced query
+      const response = AIResponseDashboard(enhancedQuery, session);
       
       // Create a temporary loading message
       const loadingMessage: Message = {
