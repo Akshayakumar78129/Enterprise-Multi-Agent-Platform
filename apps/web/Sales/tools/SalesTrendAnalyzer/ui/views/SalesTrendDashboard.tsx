@@ -1,13 +1,19 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { DashboardState, FilterState, THEME, Metric, TimePeriod, KEYFRAMES } from '../types';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { DashboardState, FilterState, THEME, Metric, TimePeriod, KEYFRAMES, SelectedDataPoint } from '../types';
 import KPITiles from '../components/kpi/KPITiles';
 import TimeSeriesExplorer from '../components/visualizations/TimeSeriesExplorer';
 import SeasonalPatternAnalyzer from '../components/visualizations/SeasonalPatternAnalyzer';
 import GrowthRateVisualizer from '../components/visualizations/GrowthRateVisualizer';
 import EnhancedContextAwareChatbot from '../components/chat/EnhancedContextAwareChatbot';
 import QuickInsightsAssistant from '../components/chat/QuickInsightsAssistantSimple';
-import BusinessIntelligenceAssistant from '../components/chat/BusinessIntelligenceAssistantSimple';
-import { ThemeProvider } from '../contexts/ThemeContext';
+import InteractiveAIDashboardAssistant from '../components/chat/InteractiveAIDashboardAssistant';
+import { useTheme } from '../contexts/ThemeContext';
+import { chartSelectionManager } from '../utils/ChartSelectionManager';
+import SelectionStatusIndicator from '../components/common/SelectionStatusIndicator';
+import MultiSelectionGuide from '../components/common/MultiSelectionGuide';
+// New non-invasive filter UI and data bridge (5 filters only)
+import { SalesFilterBar } from '../../../../../ui-common/components/SalesFilterBar';
+import { SalesFilterDataBridge } from '../../../../../ui-common/components/SalesFilterDataBridge';
 
 const initialFilters: FilterState = {
   startDate: '2020-01-01',
@@ -26,7 +32,34 @@ interface ClickedDataPoint {
   percentChange?: number;
 }
 
-const SalesTrendDashboard: React.FC = () => {
+const ThemeToggleButton: React.FC = () => {
+  const { theme, isDarkMode, toggleTheme } = useTheme();
+  return (
+    <button
+      onClick={toggleTheme}
+      style={{
+        width: '40px',
+        height: '40px',
+        borderRadius: '50%',
+        background: theme.bg.card,
+        border: `2px solid ${theme.border.medium}`,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '16px',
+        color: theme.text.primary,
+        boxShadow: `0 4px 16px ${theme.chat.shadow}`,
+        transition: 'all 0.3s ease'
+      }}
+      title={`Switch to ${isDarkMode ? 'light' : 'dark'} mode`}
+    >
+      {isDarkMode ? '🌙' : '☀️'}
+    </button>
+  );
+};
+
+const SalesTrendDashboardInner: React.FC = () => {
   const [state, setState] = useState<DashboardState>({
     filters: initialFilters,
     data: null,
@@ -38,8 +71,7 @@ const SalesTrendDashboard: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [lastClickedPoint, setLastClickedPoint] = useState<ClickedDataPoint | null>(null);
 
-  // Business Intelligence Assistant state
-  const [isBIOpen, setIsBIOpen] = useState(false);
+
 
   // Quick Insights Assistant state
   const [quickInsightsVisible, setQuickInsightsVisible] = useState(false);
@@ -48,7 +80,26 @@ const SalesTrendDashboard: React.FC = () => {
   const [quickInsightsChartInfo, setQuickInsightsChartInfo] = useState<any>(null);
   const [quickInsightsChartType, setQuickInsightsChartType] = useState<string>('timeseries');
 
+  // Multi-selection state
+  const [selectedPoints, setSelectedPoints] = useState<Set<string>>(new Set());
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+
+  // Local UI filters for top-panel filters
+  const [uiFilters, setUiFilters] = useState<{ 
+    date_from?: string; date_to?: string; salesperson?: string; territory?: string; customer_category?: string; customer_region?: string;
+  }>({ date_from: state.filters.startDate, date_to: state.filters.endDate });
+  const prevUiFiltersRef = useRef<typeof uiFilters>(uiFilters);
+
+  useEffect(() => {
+    // Keep date pickers in sync when dashboard date range changes elsewhere
+    setUiFilters(prev => ({ ...prev, date_from: state.filters.startDate, date_to: state.filters.endDate }));
+  }, [state.filters.startDate, state.filters.endDate]);
+
+  // Legacy API fetch (kept for reference); replaced by SalesFilterDataBridge which drives state.
   const fetchData = async () => {
+    // If DataBridge is active, skip legacy fetch to avoid double updates
+    // This keeps state in sync with ui-common filters (dates + dims)
+    if (true) return;
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
@@ -123,14 +174,62 @@ const SalesTrendDashboard: React.FC = () => {
     }
   }, [state.data?.kpis]);
 
+  // Multi-selection setup and cleanup
+  useEffect(() => {
+    // Subscribe to selection changes
+    const unsubscribe = chartSelectionManager.subscribe((selections: SelectedDataPoint[]) => {
+      const selectionIds = new Set(selections.map(s => s.id));
+      setSelectedPoints(selectionIds);
+      setIsMultiSelectMode(selections.length > 0);
+
+      // Hide Quick Insights for combined (multi-selection) mode
+      if (selections.length > 1) {
+        setQuickInsightsVisible(false);
+      }
+    });
+
+    // ESC key handler to clear selections
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        chartSelectionManager.clearSelections();
+        setQuickInsightsVisible(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+
+    return () => {
+      unsubscribe();
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, []);
+
   const handleFilterChange = (newFilters: Partial<FilterState>) => {
     setState(prev => ({
       ...prev,
       filters: { ...prev.filters, ...newFilters }
     }));
+
+    // Trigger Quick Insights when filters are applied
+    const x = Math.round(window.innerWidth / 2) - 200;
+    const y = 110;
+    setQuickInsightsPosition({ x, y });
+    setQuickInsightsData({
+      metricName: state.filters.metric,
+      date: `${newFilters.startDate || state.filters.startDate} to ${newFilters.endDate || state.filters.endDate}`,
+      value: 0,
+      period: 'Filters Applied'
+    });
+    setQuickInsightsChartInfo({
+      title: 'Filters Updated',
+      description: 'Dashboard updated based on your selected filters',
+      purpose: 'Confirm context and provide quick guidance'
+    });
+    setQuickInsightsChartType('timeseries');
+    setQuickInsightsVisible(true);
   };
 
-  // Create separate handlers for each chart type
+  // Enhanced click handler supporting both single click and Shift+Click multi-selection
   const createDataPointClickHandler = useCallback((chartType: string) => {
     return (point: any, event?: any) => {
       console.log(`🎯 ${chartType} data point clicked:`, point);
@@ -138,56 +237,107 @@ const SalesTrendDashboard: React.FC = () => {
       // Extract and normalize the clicked point data
       const clickedPoint: ClickedDataPoint = {
         metricName: point.metricName || point.metric || state.filters.metric,
-        date: point.period || point.date || point.x,
-        value: point.value || point.y || point.val || point.revenue || 0
+        // Prefer structured date for parsing; fall back to period only if no 'date'
+        date: point.date || point.period || point.x,
+        value: point.value || point.y || point.val || point.revenue || 0,
+        // Pass through seasonal context so Quick Insights can compute seasonal insights
+        period: point.period,
+        year: point.year,
+        month: point.month,
+        isAverage: point.isAverage
       };
+
+      // Use provided previous/percentChange if present; otherwise compute
+      if (typeof point.previousValue === 'number') {
+        clickedPoint.previousValue = point.previousValue;
+      }
+      if (typeof point.percentChange === 'number') {
+        clickedPoint.percentChange = point.percentChange;
+      }
 
       // Enhanced previous value calculation for different data types
       let previousValue: number | undefined;
-      
-      // Try to find previous value from mainData first
-      if (state.data?.mainData && clickedPoint.date) {
-        previousValue = findPreviousValue(state.data.mainData, clickedPoint.date, clickedPoint.metricName);
-      }
-      
-      // If not found, try to calculate from seasonal data for seasonal chart clicks
-      if (previousValue === undefined && state.data?.seasonality && clickedPoint.date) {
-        const seasonalData = state.data.seasonality;
-        const currentIndex = seasonalData.findIndex(item => 
-          item.year + '-' + String(item.month).padStart(2, '0') + '-01' === clickedPoint.date ||
-          item.year + '-' + String(item.month) === clickedPoint.date
-        );
-        
-        if (currentIndex > 0) {
-          const previousItem = seasonalData[currentIndex - 1];
-          previousValue = previousItem?.revenue;
-        }
-      }
 
-      if (previousValue !== undefined) {
-        clickedPoint.previousValue = previousValue;
-        clickedPoint.percentChange = calculatePercentChange(clickedPoint.value, previousValue);
+      if (clickedPoint.previousValue === undefined) {
+        // Try to find previous value from mainData first
+        if (state.data?.mainData && clickedPoint.date) {
+          previousValue = findPreviousValue(state.data.mainData, clickedPoint.date, clickedPoint.metricName);
+        }
+        
+        // If not found, try to calculate from seasonal data for seasonal chart clicks
+        if (previousValue === undefined && state.data?.seasonality && clickedPoint.date) {
+          const seasonalData = state.data.seasonality;
+          const currentIndex = seasonalData.findIndex(item => 
+            item.year + '-' + String(item.month).padStart(2, '0') + '-01' === clickedPoint.date ||
+            item.year + '-' + String(item.month) === clickedPoint.date
+          );
+          
+          if (currentIndex > 0) {
+            const previousItem = seasonalData[currentIndex - 1];
+            previousValue = previousItem?.revenue;
+          }
+        }
+
+        if (previousValue !== undefined) {
+          clickedPoint.previousValue = previousValue;
+          // Set percentChange only if not provided
+          if (clickedPoint.percentChange === undefined) {
+            clickedPoint.percentChange = calculatePercentChange(clickedPoint.value, previousValue);
+          }
+        }
       }
 
       console.log('🎯 Processed clicked point:', clickedPoint);
 
-      // Show Quick Insights Assistant at click position
-      if (event && event.event) {
-        const mouseEvent = event.event;
-        setQuickInsightsPosition({ 
-          x: mouseEvent.clientX + 10, 
-          y: mouseEvent.clientY - 10 
-        });
+      // Get a reliable DOM event reference across libs/browsers
+      const domEvent: any = (event && (event.event || event.nativeEvent || event.srcEvent)) || undefined;
+      const isShiftClick = !!(domEvent && domEvent.shiftKey);
+
+      if (isShiftClick) {
+        // Multi-selection mode: Shift+Click
+        console.log('🔄 Shift+Click detected - Multi-selection mode');
+        
+        // Create selection data point
+        const selectionPoint: SelectedDataPoint = {
+          id: `${chartType}-${clickedPoint.date}-${clickedPoint.metricName}`,
+          chartType: chartType as any,
+          metricName: clickedPoint.metricName,
+          date: clickedPoint.date,
+          value: clickedPoint.value,
+          previousValue: clickedPoint.previousValue,
+          percentChange: clickedPoint.percentChange,
+          period: point.period,
+          year: point.year,
+          month: point.month,
+          isAverage: point.isAverage,
+          displayName: `${clickedPoint.metricName} (${clickedPoint.date})`,
+          timestamp: Date.now()
+        };
+
+        // Toggle selection
+        chartSelectionManager.toggleSelection(selectionPoint);
+        
+      } else {
+        // Regular single click - preserve existing behavior
+        console.log('🎯 Regular click - Single selection mode');
+        
+        // Clear any existing multi-selections
+        chartSelectionManager.clearSelections();
+        
+        // Show Quick Insights Assistant anchored to viewport near the click
+        const x = domEvent?.clientX ?? Math.round(window.innerWidth / 2);
+        const y = domEvent?.clientY ?? 120;
+        setQuickInsightsPosition({ x: x + 10, y: y + 10 });
         setQuickInsightsData(clickedPoint);
         setQuickInsightsChartInfo(null);
         setQuickInsightsChartType(chartType);
         setQuickInsightsVisible(true);
-      }
 
-      // Store the clicked point for main chatbot
-      setLastClickedPoint(clickedPoint);
+        // Store the clicked point for main chatbot
+        setLastClickedPoint(clickedPoint);
+      }
       
-      console.log('🎯 Quick insights and chatbot state updated');
+      console.log('🎯 Click processing completed');
     };
   }, [state.data, state.filters.metric]);
 
@@ -201,6 +351,30 @@ const SalesTrendDashboard: React.FC = () => {
       ...prev,
       filters: { ...prev.filters, metric: metric as Metric }
     }));
+
+    // Show Quick Insights when a KPI tile is selected
+    const x = Math.round(window.innerWidth / 2) - 180;
+    const y = 120;
+    setQuickInsightsPosition({ x, y });
+    const k = state.data?.kpis || {};
+    const metricValue =
+      metric === 'revenue' ? k.total_revenue :
+      metric === 'units' ? k.total_units :
+      metric === 'aov' ? k.avg_order_value :
+      metric === 'margin' ? k.margin_percentage : k[metric];
+    setQuickInsightsData({
+      metricName: metric,
+      date: `${state.filters.startDate} to ${state.filters.endDate}`,
+      value: Number(metricValue || 0),
+      period: 'Current Selection'
+    });
+    setQuickInsightsChartInfo({
+      title: 'Key Metrics',
+      description: 'Essential business performance indicators',
+      purpose: 'Quick health check of your business'
+    });
+    setQuickInsightsChartType('kpi');
+    setQuickInsightsVisible(true);
   };
 
   // Handle info icon clicks for chart explanations
@@ -210,23 +384,95 @@ const SalesTrendDashboard: React.FC = () => {
     const chartInfo = {
       timeseries: {
         title: 'Time Series Explorer',
-        description: 'Interactive trend visualization showing how your sales metrics change over time',
-        purpose: 'Identify trends, patterns, and anomalies in your sales data'
+        description: 'Track how your sales change over time',
+        purpose: 'Spot trends and patterns in your data'
       },
       seasonal: {
-        title: 'Seasonal Pattern Analyzer',
-        description: 'Reveals seasonal patterns and cyclical trends in your business performance',
-        purpose: 'Understand seasonal variations to optimize planning and forecasting'
+        title: 'Seasonal Patterns',
+        description: 'See monthly and seasonal sales cycles',
+        purpose: 'Plan for busy and slow periods'
       },
       growth: {
-        title: 'Growth Rate Visualizer',
-        description: 'Displays period-over-period growth rates to track business momentum',
-        purpose: 'Monitor growth acceleration and identify high-performing periods'
+        title: 'Growth Rate Analysis',
+        description: 'Month-to-month growth percentage changes',
+        purpose: 'Monitor business momentum and acceleration'
       },
       kpi: {
-        title: 'KPI Dashboard',
-        description: 'Key performance indicators providing snapshot of business health',
-        purpose: 'Quick overview of critical business metrics and performance'
+        title: 'Key Metrics',
+        description: 'Essential business performance indicators',
+        purpose: 'Quick health check of your business'
+      },
+      revenue: {
+        title: 'Total Revenue',
+        description: 'Net sales after returns/discounts; main income indicator.',
+        purpose: 'Track topline momentum and plan allocation.',
+        calc: 'Sum of (price × quantity) minus returns and discounts.',
+        drivers: 'Price, volume, product mix, discounts, seasonality.',
+        benchmark: 'Target YoY ≥ 5% growth; stable MoM seasonality pattern.',
+        action: 'Scale winning channels; secure inventory; monitor returns/discounts.'
+      },
+      units: {
+        title: 'Units Sold',
+        description: 'Total items shipped; volume performance tracker.',
+        purpose: 'Gauge demand and operational load.',
+        calc: 'Sum of quantities sold across orders.',
+        drivers: 'Demand, pricing, promotions, availability, seasonality.',
+        benchmark: 'Watch fill rate/stockouts; aim for sustained YoY growth.',
+        action: 'Ensure inventory/fulfillment capacity; replicate best-performing campaigns.'
+      },
+      aov: {
+        title: 'Average Order Value',
+        description: 'Average revenue per order (excl. taxes).',
+        purpose: 'Understand basket size and upsell impact.',
+        calc: 'Total revenue ÷ number of orders.',
+        drivers: 'Bundling, cross-sell, pricing, shipping thresholds.',
+        benchmark: 'Target steady growth; avoid spikes from heavy discounting.',
+        action: 'Promote bundles and add‑ons; test free‑shipping thresholds.'
+      },
+      margin: {
+        title: 'Profit Margin',
+        description: 'Percent of revenue kept as profit.',
+        purpose: 'Assess pricing power and cost efficiency.',
+        calc: '(Revenue − costs) ÷ revenue.',
+        drivers: 'COGS, shipping, discounts, mix, pricing.',
+        benchmark: 'Aim for consistent or improving margin QoQ.',
+        action: 'Review COGS/discounting; optimize mix; adjust pricing where elastic.'
+      },
+      avgGrowth: {
+        title: 'Average Growth',
+        description: 'Typical month‑over‑month growth rate across the selected period.',
+        purpose: 'Assess sustained momentum and baseline velocity.',
+        calc: 'Average of monthly growth rates: (current − previous) ÷ previous.',
+        drivers: 'Seasonality, campaigns, supply, pricing, mix.',
+        benchmark: 'Healthy baseline ≥ 3–5% MoM depending on season.',
+        action: 'Stabilize dips; scale repeatable plays that lift baseline.'
+      },
+      maxGrowth: {
+        title: 'Best Growth Month',
+        description: 'Month with the highest MoM growth rate.',
+        purpose: 'Benchmark peak momentum and repeat drivers.',
+        calc: 'Max of monthly growth rates in range.',
+        drivers: 'Campaign spikes, launches, price moves, promotions.',
+        benchmark: 'Validate quality of spike (sustainable vs promo‑driven).',
+        action: 'Document playbook; replicate across channels/segments.'
+      },
+      minGrowth: {
+        title: 'Worst Growth Month',
+        description: 'Month with the lowest (or negative) MoM growth.',
+        purpose: 'Identify headwinds and fix root causes.',
+        calc: 'Min of monthly growth rates in range.',
+        drivers: 'Stockouts, pricing, competition, seasonality, campaign gaps.',
+        benchmark: 'Contain declines; recover within 1–2 months.',
+        action: 'Diagnose drivers; adjust pricing/promo; fix supply; refresh creatives.'
+      },
+      latestGrowth: {
+        title: 'Current Growth',
+        description: 'Most recent MoM growth rate.',
+        purpose: 'Gauge current trend direction.',
+        calc: '(Latest − previous) ÷ previous.',
+        drivers: 'Recent campaigns, supply, pricing moves, macro.',
+        benchmark: 'Confirm alignment with seasonal baseline and targets.',
+        action: 'If momentum is positive, scale; if negative, run rapid test to recover.'
       }
     };
 
@@ -280,7 +526,6 @@ const SalesTrendDashboard: React.FC = () => {
         animation: ${THEME.animations.float};
       }
       body {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         min-height: 100vh;
         font-family: ${THEME.typography.fontFamily};
       }
@@ -340,12 +585,19 @@ const SalesTrendDashboard: React.FC = () => {
 
 
   // Main Dashboard Layout
+  const { theme } = useTheme();
+  // Keep the body synced to theme for areas outside React tree
+  React.useEffect(() => {
+    document.body.style.background = theme.bg.primary;
+    document.body.style.color = theme.text.primary;
+  }, [theme]);
+
   return (
-    <ThemeProvider>
       <div
         style={{
           minHeight: '100vh',
-          background: 'linear-gradient(135deg, #667eea 0%, #3d323bff 100%)',
+          background: theme.bg.primary,
+          color: theme.text.primary,
           fontFamily: THEME.typography.fontFamily
         }}
       >
@@ -391,14 +643,29 @@ const SalesTrendDashboard: React.FC = () => {
           margin: '0 auto'
         }}
       >
-        {/* Header Section */}
+        {/* Header Section with floating theme toggle */}
         <div
           style={{
+            position: 'relative',
             textAlign: 'center',
             marginBottom: '48px',
             animation: THEME.animations.fadeInUp
           }}
         >
+          {/* Fixed Theme Toggle Button at top-right of the dashboard */}
+          <div
+            style={{
+              position: 'fixed',
+              top: '16px',
+              right: '16px',
+              display: 'flex',
+              gap: '8px',
+              zIndex: 10000 // ensure above charts and overlays
+            }}
+          >
+            <ThemeToggleButton />
+          </div>
+
           <h1
             className="gradient-text"
             style={{
@@ -413,7 +680,7 @@ const SalesTrendDashboard: React.FC = () => {
           <p
             style={{
               fontSize: THEME.typography.sizes.lg,
-              color: THEME.colors.text.white,
+              color: theme.text.primary,
               margin: 0,
               fontWeight: THEME.typography.weights.medium,
               opacity: 0.9
@@ -421,6 +688,43 @@ const SalesTrendDashboard: React.FC = () => {
           >
             AI-Powered Sales Intelligence Dashboard
           </p>
+        </div>
+
+        {/* Filters (non-invasive, 5 best filters). Updates dashboard state via DataBridge */}
+        <div style={{ marginBottom: '20px' }}>
+          <SalesFilterBar
+            value={uiFilters}
+            onChange={(v) => {
+              // Detect filter changes to trigger Quick Insights popup near the filter bar
+              const prev = prevUiFiltersRef.current;
+              const changed = JSON.stringify(prev) !== JSON.stringify(v);
+              setUiFilters(v);
+              prevUiFiltersRef.current = v;
+              if (changed) {
+                const container = document.body; // fallback to viewport center
+                const x = Math.round(window.innerWidth / 2) - 200;
+                const y = 140; // slightly below header
+                setQuickInsightsPosition({ x, y });
+                setQuickInsightsData({
+                  metricName: state.filters.metric,
+                  date: `${v.date_from || state.filters.startDate} to ${v.date_to || state.filters.endDate}`,
+                  value: 0,
+                  period: 'Filters Applied'
+                });
+                setQuickInsightsChartInfo({
+                  title: 'Filters Updated',
+                  description: 'Dashboard updated based on your selected filters',
+                  purpose: 'Quick, contextual insights'
+                });
+                setQuickInsightsChartType('timeseries');
+                setQuickInsightsVisible(true);
+              }
+            }}
+          />
+          <SalesFilterDataBridge
+            filters={uiFilters as any}
+            setDashboardState={(updater) => setState(updater as any)}
+          />
         </div>
 
         {/* KPI Section */}
@@ -437,6 +741,7 @@ const SalesTrendDashboard: React.FC = () => {
             isLoading={state.isLoading}
             selectedMetric={state.filters.metric}
             onMetricSelect={handleMetricSelect}
+            onInfoIconClick={handleInfoIconClick}
           />
         </div>
 
@@ -464,6 +769,7 @@ const SalesTrendDashboard: React.FC = () => {
               onFilterChange={handleFilterChange}
               onDataPointClick={handleTimeSeriesClick}
               onInfoIconClick={(event) => handleInfoIconClick(event, 'timeseries')}
+              selectedPoints={selectedPoints}
             />
           </div>
 
@@ -482,6 +788,7 @@ const SalesTrendDashboard: React.FC = () => {
               onTimePeriodChange={(period) => handleFilterChange({ timePeriod: period })}
               onDataPointClick={handleSeasonalClick}
               onInfoIconClick={(event) => handleInfoIconClick(event, 'seasonal')}
+              selectedPoints={selectedPoints}
             />
           </div>
         </div>
@@ -501,6 +808,7 @@ const SalesTrendDashboard: React.FC = () => {
             onTimePeriodChange={(period) => handleFilterChange({ timePeriod: period })}
             onDataPointClick={handleGrowthClick}
             onInfoIconClick={(event) => handleInfoIconClick(event, 'growth')}
+            selectedPoints={selectedPoints}
           />
         </div>
       </div>
@@ -525,88 +833,69 @@ const SalesTrendDashboard: React.FC = () => {
         dashboardState={state}
       />
 
-      {/* Business Intelligence Assistant */}
-      <BusinessIntelligenceAssistant
-        dashboardState={state}
-        isOpen={isBIOpen}
-        onToggle={() => setIsBIOpen(!isBIOpen)}
+      {/* Interactive AI Dashboard Assistant */}
+      <InteractiveAIDashboardAssistant dashboardState={state} suppressTrigger={isChatOpen} />
+
+      {/* Selection Status Indicator */}
+      <SelectionStatusIndicator
+        selectionCount={selectedPoints.size}
+        isVisible={isMultiSelectMode}
+        onClearSelections={() => chartSelectionManager.clearSelections()}
+        onExplainSelections={() => {
+          // Build short 5-word descriptors and combined insights
+          const selections = chartSelectionManager.getSelections();
+          const analysis = chartSelectionManager.analyzeSelections();
+
+          const toFiveWords = (s: string) => {
+            const words = s.split(/\s+/).filter(Boolean);
+            return words.slice(0, 5).join(' ');
+          };
+
+          const pointSummaries = selections.map(p => {
+            // e.g., "Jan 2025 revenue spike" style
+            const month = (() => {
+              const m = (p.month || (p.date?.match(/\d{4}-(\d{2})/)?.[1])) || '';
+              const map = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+              const n = parseInt(String(m), 10);
+              return isFinite(n) && n >= 1 && n <= 12 ? map[n-1] : (p.date || '').slice(0,7);
+            })();
+            const yr = p.year || p.date?.slice(0,4) || '';
+            const metric = (p.metricName || 'value').toLowerCase();
+            const noun = /revenue|sales/.test(metric) ? 'sales' : /units/.test(metric) ? 'units' : /margin|profit/.test(metric) ? 'margin' : metric;
+            const tone = p.percentChange && Math.abs(p.percentChange) > 15 ? (p.percentChange > 0 ? 'surge' : 'drop') : 'change';
+            const raw = `${month} ${yr} ${noun} ${tone}`.trim();
+            return toFiveWords(raw);
+          });
+
+          // Open chat and seed context
+          setIsChatOpen(true);
+          // Ensure Quick Insights is hidden for combined insights
+          setQuickInsightsVisible(false);
+
+          // Set lastClickedPoint as a seed message with selections context for EnhancedContextAwareChatbot
+          setLastClickedPoint({
+            type: 'multi-selection',
+            contextId: Date.now(), // unique per Explain click
+            summaries: pointSummaries,
+            insights: analysis?.insights || [],
+          } as any);
+        }}
       />
 
-      {/* Floating Action Buttons */}
-      <div style={{
-        position: 'fixed',
-        bottom: '30px',
-        right: '30px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
-        zIndex: 999
-      }}>
-        {/* Business Intelligence Button */}
-        <button
-          onClick={() => setIsBIOpen(!isBIOpen)}
-          style={{
-            width: '60px',
-            height: '60px',
-            borderRadius: '50%',
-            border: 'none',
-            background: 'linear-gradient(135deg, #667eea, #764ba2)',
-            color: 'white',
-            fontSize: '24px',
-            cursor: 'pointer',
-            boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
-            transition: 'all 0.3s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            animation: isBIOpen ? 'none' : THEME.animations.float
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.1)';
-            e.currentTarget.style.boxShadow = '0 12px 35px rgba(102, 126, 234, 0.6)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.4)';
-          }}
-          title="Business Intelligence Assistant"
-        >
-          🧠
-        </button>
+      {/* Multi-Selection Guide */}
+      <MultiSelectionGuide isVisible={!isMultiSelectMode} />
 
-        {/* Main AI Assistant Button */}
-        <button
-          onClick={toggleChatbot}
-          style={{
-            width: '60px',
-            height: '60px',
-            borderRadius: '50%',
-            border: 'none',
-            background: 'linear-gradient(135deg, #4facfe, #00f2fe)',
-            color: 'white',
-            fontSize: '24px',
-            cursor: 'pointer',
-            boxShadow: '0 8px 25px rgba(79, 172, 254, 0.4)',
-            transition: 'all 0.3s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            animation: isChatOpen ? 'none' : THEME.animations.float
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.1)';
-            e.currentTarget.style.boxShadow = '0 12px 35px rgba(79, 172, 254, 0.6)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.boxShadow = '0 8px 25px rgba(79, 172, 254, 0.4)';
-          }}
-          title="AI Assistant with 4 Specialized Agents"
-        >
-          🤖
-        </button>
-      </div>
+
     </div>
+  );
+};
+
+import { ThemeProvider } from '../contexts/ThemeContext';
+
+const SalesTrendDashboard: React.FC = () => {
+  return (
+    <ThemeProvider>
+      <SalesTrendDashboardInner />
     </ThemeProvider>
   );
 };

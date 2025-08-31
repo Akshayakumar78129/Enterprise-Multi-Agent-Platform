@@ -3,7 +3,7 @@ import { KpiTile } from '../../../../../../ui-common/design-system/components/Kp
 import { KPITilesProps, THEME } from '../../types';
 import { formatCurrency, formatNumber, formatPercentage } from '../../utils/formatters';
 
-const KPITiles: React.FC<KPITilesProps> = ({ data, isLoading = false, previousPeriodData, selectedMetric, onMetricSelect }) => {
+const KPITiles: React.FC<KPITilesProps> = ({ data, isLoading = false, previousPeriodData, selectedMetric, onMetricSelect, onInfoIconClick }) => {
   // console.log('KPITiles render:', { data, isLoading, selectedMetric });
 
   if (!data && !isLoading) {
@@ -33,6 +33,7 @@ const KPITiles: React.FC<KPITilesProps> = ({ data, isLoading = false, previousPe
       variant: 'default' as const,
       icon: '💰',
       metric: 'revenue',
+      tooltip: 'Total money earned from all sales after deducting returns and discounts',
     },
     {
       label: 'Total Units',
@@ -44,6 +45,7 @@ const KPITiles: React.FC<KPITilesProps> = ({ data, isLoading = false, previousPe
       variant: 'default' as const,
       icon: '📦',
       metric: 'units',
+      tooltip: 'Total number of individual products sold regardless of their price',
     },
     {
       label: 'Average Order Value',
@@ -55,6 +57,7 @@ const KPITiles: React.FC<KPITilesProps> = ({ data, isLoading = false, previousPe
       variant: 'default' as const,
       icon: '🛍️',
       metric: 'aov',
+      tooltip: 'Average dollar amount customers spend per order when they buy',
     },
     {
       label: 'Margin %',
@@ -66,6 +69,7 @@ const KPITiles: React.FC<KPITilesProps> = ({ data, isLoading = false, previousPe
       variant: 'default' as const,
       icon: '📈',
       metric: 'margin',
+      tooltip: 'Percentage of revenue left as profit after all costs',
     },
   ];
 
@@ -124,7 +128,7 @@ const KPITiles: React.FC<KPITilesProps> = ({ data, isLoading = false, previousPe
             if (onMetricSelect) {
               e.currentTarget.style.transform = 'translateY(0) scale(1)';
               e.currentTarget.style.boxShadow = tile.metric === selectedMetric 
-                ? '0 8px 32px rgba(59, 130, 246, 0.25)' 
+                ? `0 8px 32px ${THEME.colors.primary20}` 
                 : THEME.glass.boxShadow;
             }
           }}
@@ -138,7 +142,7 @@ const KPITiles: React.FC<KPITilesProps> = ({ data, isLoading = false, previousPe
                 left: 0,
                 right: 0,
                 bottom: 0,
-                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)',
+                background: 'linear-gradient(135deg, rgba(0, 224, 255, 0.08) 0%, rgba(233, 48, 255, 0.08) 100%)',
                 borderRadius: '18px',
                 zIndex: -1
               }}
@@ -157,7 +161,7 @@ const KPITiles: React.FC<KPITilesProps> = ({ data, isLoading = false, previousPe
               justifyContent: 'center',
               fontSize: '24px',
               marginBottom: '16px',
-              boxShadow: '0 4px 16px rgba(59, 130, 246, 0.3)'
+              boxShadow: `0 4px 16px ${THEME.colors.primary20}`
             }}
           >
             {tile.icon}
@@ -236,12 +240,50 @@ const KPITiles: React.FC<KPITilesProps> = ({ data, isLoading = false, previousPe
             </div>
           )}
 
+          {/* Info Icon in Top Right */}
+          {onInfoIconClick && (
+            <div
+              title="Click for KPI explanation"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onInfoIconClick(e, tile.metric);
+              }}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                background: THEME.colors.primary20,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                fontSize: '11px',
+                transition: 'all 0.2s ease',
+                zIndex: 10
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = THEME.colors.primary40;
+                e.currentTarget.style.transform = 'scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = THEME.colors.primary20;
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >
+              ℹ️
+            </div>
+          )}
+
           {/* Floating Dot Pattern for Visual Interest */}
           <div
             style={{
               position: 'absolute',
               top: '20px',
-              right: '20px',
+              right: '44px',
               width: '4px',
               height: '4px',
               borderRadius: '50%',
@@ -254,7 +296,7 @@ const KPITiles: React.FC<KPITilesProps> = ({ data, isLoading = false, previousPe
             style={{
               position: 'absolute',
               top: '30px',
-              right: '32px',
+              right: '56px',
               width: '2px',
               height: '2px',
               borderRadius: '50%',

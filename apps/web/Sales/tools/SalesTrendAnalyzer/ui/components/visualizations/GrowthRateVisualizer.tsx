@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import type { Data } from 'plotly.js';
 import { GrowthRateVisualizerProps, THEME } from '../../types';
 import { formatCurrency, formatPercentage } from '../../utils/formatters';
+import { Card } from '../../../../../../ui-common/design-system/components/Card';
 
 // Dynamic import for Plotly
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
@@ -13,19 +14,38 @@ const GrowthRateVisualizer: React.FC<GrowthRateVisualizerProps> = ({
   timePeriod,
   onTimePeriodChange,
   onDataPointClick,
-  onInfoIconClick
+  onInfoIconClick,
+  selectedPoints = new Set()
 }) => {
   const chartData = useMemo((): Data[] | null => {
     if (!data?.length) return null;
 
-    // Bar chart for growth rates
+    // Bar chart for growth rates with selection highlighting
+    const barColors = data.map(d => {
+      const pointId = `growth-${d.period}-growth_rate`;
+      if (selectedPoints.has(pointId)) {
+        return THEME.colors.energyYellow;
+      }
+      return d.growth_rate >= 0 ? THEME.colors.risk.green : THEME.colors.risk.red;
+    });
+    
+    const barBorderColors = data.map(d => {
+      const pointId = `growth-${d.period}-growth_rate`;
+      return selectedPoints.has(pointId) ? THEME.colors.signalMagenta : 'transparent';
+    });
+    
     const growthBars: Data = {
       x: data.map(d => d.period),
       y: data.map(d => d.growth_rate),
       type: 'bar',
       name: 'Growth Rate',
       marker: {
-        color: data.map(d => d.growth_rate >= 0 ? THEME.colors.risk.green : THEME.colors.risk.red)
+        color: barColors,
+        opacity: 0.85,
+        line: {
+          color: barBorderColors,
+          width: selectedPoints.size > 0 ? 3 : 0
+        }
       }
     };
 
@@ -44,7 +64,7 @@ const GrowthRateVisualizer: React.FC<GrowthRateVisualizerProps> = ({
     };
 
     return [growthBars, avgLine];
-  }, [data]);
+  }, [data, selectedPoints]);
 
   const layout = {
     width: THEME.dimensions.growthRateVisualizer.width,
@@ -111,22 +131,30 @@ const GrowthRateVisualizer: React.FC<GrowthRateVisualizerProps> = ({
       {
         label: 'Average Growth',
         value: data[0].avg_growth_rate,
-        formatter: formatPercentage
+        formatter: formatPercentage,
+        tooltip: 'Average growth rate across all time periods shown',
+        chartType: 'avgGrowth'
       },
       {
         label: 'Highest Growth',
         value: data[0].max_growth_rate,
-        formatter: formatPercentage
+        formatter: formatPercentage,
+        tooltip: 'Best growth rate achieved in any single period',
+        chartType: 'maxGrowth'
       },
       {
         label: 'Lowest Growth',
         value: data[0].min_growth_rate,
-        formatter: formatPercentage
+        formatter: formatPercentage,
+        tooltip: 'Worst growth rate experienced in any period',
+        chartType: 'minGrowth'
       },
       {
         label: 'Latest Growth',
         value: data[data.length - 1].growth_rate,
-        formatter: formatPercentage
+        formatter: formatPercentage,
+        tooltip: 'Growth rate for the most recent time period',
+        chartType: 'latestGrowth'
       }
     ];
   }, [data]);
@@ -275,7 +303,7 @@ const GrowthRateVisualizer: React.FC<GrowthRateVisualizerProps> = ({
             <div style={{
               position: 'absolute',
               top: '12px',
-              right: '12px',
+              right: '36px',
               width: '8px',
               height: '8px',
               borderRadius: '50%',
@@ -296,7 +324,10 @@ const GrowthRateVisualizer: React.FC<GrowthRateVisualizerProps> = ({
         minHeight: '400px',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        background: 'rgba(44, 51, 65, 0.35)',
+        borderRadius: 12,
+        border: '1px solid rgba(255,255,255,0.06)'
       }}>
         {isLoading ? (
           <div style={{

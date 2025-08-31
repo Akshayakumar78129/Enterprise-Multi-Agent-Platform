@@ -1,13 +1,9 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
-const config = require('../../../database/config');
-const fs = require('fs');
+import { db } from '../../../../lib/db/connector';
+import { sql } from 'drizzle-orm';
 
 class SalesTrendQueries {
   constructor() {
-    this.dbPath = config.DATABASE.path;
-    console.log('Database path:', this.dbPath);
-    console.log('Database exists:', fs.existsSync(this.dbPath));
+    // Using Drizzle connection instead of pg Pool
   }
 
   async getMainData(filters = {}) {
@@ -32,44 +28,38 @@ class SalesTrendQueries {
 
     if (dimensionFields) {
       selectClause.push(
-        `"${dimensionFields.id}" as dimension_id`,
-        `"${dimensionFields.name}" as dimension_name`
+        `${dimensionFields.id} as dimension_id`,
+        `${dimensionFields.name} as dimension_name`
       );
     }
 
-    const query = `
+    let query = `
       SELECT ${selectClause.join(', ')}
-      FROM "dbo_F_Sales_Transaction"
-      WHERE date("Txn Date") >= date(?) AND date("Txn Date") <= date(?)
+      FROM dbo_f_sales_transaction
+      WHERE "Txn Date"::date >= $1::date AND "Txn Date"::date <= $2::date
         AND "Deleted Flag" = 0 
         AND "Excluded Flag" = 0
-      ${dimensionFields ? `GROUP BY period, "${dimensionFields.id}", "${dimensionFields.name}"` : 'GROUP BY period'}
+      ${dimensionFields ? `GROUP BY period, ${dimensionFields.id}, ${dimensionFields.name}` : 'GROUP BY period'}
       ${dimensionFields ? `ORDER BY SUM("Net Sales Amount") DESC LIMIT ${topN}` : 'ORDER BY period'}
     `;
 
-    return new Promise((resolve, reject) => {
-      console.log('Connecting to database at:', this.dbPath);
-      const db = new sqlite3.Database(this.dbPath, sqlite3.OPEN_READONLY, (err) => {
-        if (err) {
-          console.error('Error opening database:', err);
-          reject(err);
-          return;
-        }
-        console.log('Database connection successful');
-        
-        db.all(query, [startDate, endDate], (err, rows) => {
-          if (err) {
-            console.error('Error executing query:', err);
-            db.close();
-            reject(err);
-            return;
-          }
-          console.log('Query executed successfully, rows:', rows?.length);
-          db.close();
-          resolve(rows);
-        });
-      });
-    });
+    try {
+      const finalQuery = query.replace('$1', `'${startDate}'`).replace('$2', `'${endDate}'`);
+      const result = await db.execute(sql`${sql.raw(finalQuery)}`);
+      
+      // Convert BigInt values to numbers
+      const rows = result.rows || result;
+      return rows.map(row => ({
+        ...row,
+        revenue: parseFloat(row.revenue) || 0,
+        units: parseFloat(row.units) || 0,
+        orders: parseInt(row.orders) || 0,
+        dimension_id: row.dimension_id ? parseInt(row.dimension_id) : null
+      }));
+    } catch (error) {
+      console.error('Error executing main data query:', error);
+      throw error;
+    }
   }
 
   async getKPIData(filters = {}) {
@@ -80,33 +70,31 @@ class SalesTrendQueries {
         SUM("Net Sales Amount") as total_revenue,
         SUM("Net Sales Quantity") as total_units,
         COUNT(DISTINCT "Sales Txn Number") as total_orders,
-        ROUND(SUM("Net Sales Amount") / COUNT(DISTINCT "Sales Txn Number"), 2) as avg_order_value,
-        ROUND(SUM("Net Sales Amount" - "Cost Amount") / SUM("Net Sales Amount") * 100, 2) as margin_percentage
-      FROM "dbo_F_Sales_Transaction"
-      WHERE date("Txn Date") >= date(?) AND date("Txn Date") <= date(?)
+        ROUND((SUM("Net Sales Amount") / NULLIF(COUNT(DISTINCT "Sales Txn Number"), 0))::numeric, 2) as avg_order_value,
+        ROUND(((SUM("Net Sales Amount" - "Cost Amount") / NULLIF(SUM("Net Sales Amount"), 0)) * 100)::numeric, 2) as margin_percentage
+      FROM dbo_f_sales_transaction
+      WHERE "Txn Date"::date >= $1::date AND "Txn Date"::date <= $2::date
         AND "Deleted Flag" = 0 
         AND "Excluded Flag" = 0
     `;
 
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(this.dbPath, sqlite3.OPEN_READONLY, (err) => {
-        if (err) {
-          console.error('Error opening database:', err);
-          reject(err);
-          return;
-        }
-        
-        db.get(query, [startDate, endDate], (err, row) => {
-          db.close();
-          if (err) {
-            console.error('Error executing KPI query:', err);
-            reject(err);
-          } else {
-            resolve(row);
-          }
-        });
-      });
-    });
+    try {
+      const finalQuery = query.replace('$1', `'${startDate}'`).replace('$2', `'${endDate}'`);
+      const result = await db.execute(sql`${sql.raw(finalQuery)}`);
+      const rows = result.rows || result;
+      const row = rows[0];
+      
+      return {
+        total_revenue: parseFloat(row.total_revenue) || 0,
+        total_units: parseFloat(row.total_units) || 0,
+        total_orders: parseInt(row.total_orders) || 0,
+        avg_order_value: parseFloat(row.avg_order_value) || 0,
+        margin_percentage: parseFloat(row.margin_percentage) || 0
+      };
+    } catch (error) {
+      console.error('Error executing KPI query:', error);
+      throw error;
+    }
   }
 
   async getSeasonalityData(filters = {}) {
@@ -116,36 +104,30 @@ class SalesTrendQueries {
     const query = `
       SELECT 
         ${timeGroup} as period,
-        strftime('%Y', "Txn Date") as year,
-        strftime('%m', "Txn Date") as month,
+        EXTRACT(YEAR FROM "Txn Date"::date)::text as year,
+        LPAD(EXTRACT(MONTH FROM "Txn Date"::date)::text, 2, '0') as month,
         SUM("Net Sales Amount") as revenue
-      FROM "dbo_F_Sales_Transaction"
-      WHERE date("Txn Date") >= date(?) AND date("Txn Date") <= date(?)
+      FROM dbo_f_sales_transaction
+      WHERE "Txn Date"::date >= $1::date AND "Txn Date"::date <= $2::date
         AND "Deleted Flag" = 0 
         AND "Excluded Flag" = 0
       GROUP BY period, year, month
       ORDER BY period
     `;
 
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(this.dbPath, sqlite3.OPEN_READONLY, (err) => {
-        if (err) {
-          console.error('Error opening database:', err);
-          reject(err);
-          return;
-        }
-        
-        db.all(query, [startDate, endDate], (err, rows) => {
-          db.close();
-          if (err) {
-            console.error('Error executing seasonality query:', err);
-            reject(err);
-          } else {
-            resolve(rows);
-          }
-        });
-      });
-    });
+    try {
+      const finalQuery = query.replace('$1', `'${startDate}'`).replace('$2', `'${endDate}'`);
+      const result = await db.execute(sql`${sql.raw(finalQuery)}`);
+      
+      const rows = result.rows || result;
+      return rows.map(row => ({
+        ...row,
+        revenue: parseFloat(row.revenue) || 0
+      }));
+    } catch (error) {
+      console.error('Error executing seasonality query:', error);
+      throw error;
+    }
   }
 
   async getGrowthRates(filters = {}) {
@@ -157,8 +139,8 @@ class SalesTrendQueries {
         SELECT 
           ${timeGroup} as period,
           SUM("Net Sales Amount") as revenue
-        FROM "dbo_F_Sales_Transaction"
-        WHERE date("Txn Date") >= date(?) AND date("Txn Date") <= date(?)
+        FROM dbo_f_sales_transaction
+        WHERE "Txn Date"::date >= $1::date AND "Txn Date"::date <= $2::date
           AND "Deleted Flag" = 0 
           AND "Excluded Flag" = 0
         GROUP BY period
@@ -169,7 +151,7 @@ class SalesTrendQueries {
           period,
           revenue,
           LAG(revenue) OVER (ORDER BY period) as prev_revenue,
-          ROUND(((revenue - LAG(revenue) OVER (ORDER BY period)) / LAG(revenue) OVER (ORDER BY period)) * 100, 2) as growth_rate
+          ROUND((((revenue - LAG(revenue) OVER (ORDER BY period)) / NULLIF(LAG(revenue) OVER (ORDER BY period), 0)) * 100)::numeric, 2) as growth_rate
         FROM sales_by_period
       )
       SELECT 
@@ -184,48 +166,51 @@ class SalesTrendQueries {
       ORDER BY period
     `;
 
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(this.dbPath, sqlite3.OPEN_READONLY, (err) => {
-        if (err) {
-          console.error('Error opening database:', err);
-          reject(err);
-          return;
-        }
-        
-        db.all(query, [startDate, endDate], (err, rows) => {
-          db.close();
-          if (err) {
-            console.error('Error executing growth rates query:', err);
-            reject(err);
-          } else {
-            resolve(rows);
-          }
-        });
-      });
-    });
+    try {
+      const finalQuery = query.replace('$1', `'${startDate}'`).replace('$2', `'${endDate}'`);
+      const result = await db.execute(sql`${sql.raw(finalQuery)}`);
+      
+      const rows = result.rows || result;
+      return rows.map(row => ({
+        ...row,
+        revenue: parseFloat(row.revenue) || 0,
+        growth_rate: parseFloat(row.growth_rate) || 0,
+        avg_growth_rate: parseFloat(row.avg_growth_rate) || 0,
+        min_growth_rate: parseFloat(row.min_growth_rate) || 0,
+        max_growth_rate: parseFloat(row.max_growth_rate) || 0
+      }));
+    } catch (error) {
+      console.error('Error executing growth rates query:', error);
+      throw error;
+    }
   }
 
   _getTimeGrouping(timePeriod) {
     const groupings = {
-      daily: 'date("Txn Date")',
-      weekly: "strftime('%Y-%W', \"Txn Date\")",
-      monthly: "strftime('%Y-%m', \"Txn Date\")",
-      quarterly: "strftime('%Y-Q' || ((strftime('%m', \"Txn Date\") + 2) / 3)",
-      annual: "strftime('%Y', \"Txn Date\")"
+      daily: '"Txn Date"::date',
+      weekly: "TO_CHAR(\"Txn Date\"::date, 'IYYY-IW')",
+      monthly: "TO_CHAR(\"Txn Date\"::date, 'YYYY-MM')",
+      quarterly: "TO_CHAR(\"Txn Date\"::date, 'YYYY-\"Q\"Q')",
+      annual: "TO_CHAR(\"Txn Date\"::date, 'YYYY')"
     };
     return groupings[timePeriod] || groupings.monthly;
   }
 
   _getDimensionFields(dimension) {
     const dimensions = {
-      product: { id: 'Item Key', name: 'Item Number' },
-      category: { id: 'Item Category Hrchy Key', name: 'Product Posting Group' },
-      channel: { id: 'Sales Organization Key', name: 'Business Unit Key' },
-      region: { id: 'Customer Geography Hrchy Key', name: 'Customer Geography Hrchy Key' },
-      customer: { id: 'Customer Key', name: 'Customer Key' }
+      product: { id: 'item_key', name: 'item_number' },
+      category: { id: 'item_category_hrchy_key', name: 'item_category_hrchy_key' },
+      channel: { id: 'sales_organization_key', name: 'business_unit_key' },
+      region: { id: 'customer_geography_hrchy_key', name: 'customer_geography_hrchy_key' },
+      customer: { id: 'customer_key', name: 'customer_key' }
     };
     return dimensions[dimension] || null;
   }
+
+  // Clean up connection pool when done
+  async close() {
+    // No need to close Drizzle connection
+  }
 }
 
-module.exports = { SalesTrendQueries }; 
+export { SalesTrendQueries };

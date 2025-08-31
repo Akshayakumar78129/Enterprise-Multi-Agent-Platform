@@ -1,16 +1,16 @@
-# 🎨 Glass Morphism Style Guide
+﻿# ðŸŽ¨ Glass Morphism Style Guide
 ## Sales Trend Analyzer Dashboard
 
-### 🌟 Overview
+### ðŸŒŸ Overview
 This style guide implements a sophisticated glass morphism design system with blue-to-purple gradients, advanced animations, and AI-powered interactions. The design follows modern UI/UX principles with a focus on visual hierarchy, accessibility, and performance.
 
 ---
 
-## 🎯 Key Design Elements
+## ðŸŽ¯ Key Design Elements
 
 ### 1. Glass Morphism Design System
 
-#### **Glass Card Base**
+#### <strong>Glass Card Base</strong>
 ```css
 .glass-card {
   background: rgba(255, 255, 255, 0.95);
@@ -25,7 +25,7 @@ This style guide implements a sophisticated glass morphism design system with bl
 }
 ```
 
-#### **Hover Effects**
+#### <strong>Hover Effects</strong>
 ```css
 .glass-card:hover {
   transform: translateY(-4px);
@@ -36,36 +36,36 @@ This style guide implements a sophisticated glass morphism design system with bl
 
 ### 2. Sophisticated Color Palette
 
-#### **Primary Gradients**
-- **Main Gradient**: `linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)`
-- **Hover Gradient**: `linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)`
+#### <strong>Primary Gradients</strong>
+- <strong>Main Gradient</strong>: `linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)`
+- <strong>Hover Gradient</strong>: `linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)`
 
-#### **Base Colors**
-- **Primary Blue**: `#3b82f6`
-- **Primary Dark**: `#2563eb`  
-- **Secondary Purple**: `#8b5cf6`
-- **Secondary Dark**: `#7c3aed`
+#### <strong>Base Colors</strong>
+- <strong>Primary Blue</strong>: `#3b82f6`
+- <strong>Primary Dark</strong>: `#2563eb`  
+- <strong>Secondary Purple</strong>: `#8b5cf6`
+- <strong>Secondary Dark</strong>: `#7c3aed`
 
-#### **Risk Color System**
-- **Red (Danger)**: `#ef4444`
-- **Orange (Warning)**: `#f97316`
-- **Yellow (Caution)**: `#eab308`
-- **Green (Success)**: `#22c55e`
+#### <strong>Risk Color System</strong>
+- <strong>Red (Danger)</strong>: `#ef4444`
+- <strong>Orange (Warning)</strong>: `#f97316`
+- <strong>Yellow (Caution)</strong>: `#eab308`
+- <strong>Green (Success)</strong>: `#22c55e`
 
-#### **Opacity Variations**
-- **20% Opacity**: `rgba(59, 130, 246, 0.2)` for backgrounds
-- **40% Opacity**: `rgba(59, 130, 246, 0.4)` for borders
-- **95% Opacity**: `rgba(255, 255, 255, 0.95)` for glass effect
+#### <strong>Opacity Variations</strong>
+- <strong>20% Opacity</strong>: `rgba(59, 130, 246, 0.2)` for backgrounds
+- <strong>40% Opacity</strong>: `rgba(59, 130, 246, 0.4)` for borders
+- <strong>95% Opacity</strong>: `rgba(255, 255, 255, 0.95)` for glass effect
 
-#### **Text Colors**
-- **Primary Text**: `#1f2937`
-- **Secondary Text**: `#6b7280`
-- **White Text**: `#ffffff`
-- **Gradient Text**: `linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)`
+#### <strong>Text Colors</strong>
+- <strong>Primary Text</strong>: `#1f2937`
+- <strong>Secondary Text</strong>: `#6b7280`
+- <strong>White Text</strong>: `#ffffff`
+- <strong>Gradient Text</strong>: `linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)`
 
 ### 3. Advanced Animation System
 
-#### **Entrance Animations**
+#### <strong>Entrance Animations</strong>
 ```css
 /* Fade In Up */
 @keyframes fadeInUp {
@@ -116,7 +116,7 @@ This style guide implements a sophisticated glass morphism design system with bl
 }
 ```
 
-#### **Floating Animation**
+#### <strong>Floating Animation</strong>
 ```css
 @keyframes float {
   0%, 100% {
@@ -128,38 +128,38 @@ This style guide implements a sophisticated glass morphism design system with bl
 }
 ```
 
-#### **Hover Effects**
-- **Lift Effect**: `transform: translateY(-4px); box-shadow: 0 12px 40px rgba(59, 130, 246, 0.15);`
-- **Scale Effect**: `transform: scale(1.02);`
+#### <strong>Hover Effects</strong>
+- <strong>Lift Effect</strong>: `transform: translateY(-4px); box-shadow: 0 12px 40px rgba(59, 130, 246, 0.15);`
+- <strong>Scale Effect</strong>: `transform: scale(1.02);`
 
-#### **Staggered Delays**
+#### <strong>Staggered Delays</strong>
 - Components animate in sequence with 150ms intervals
 - KPI tiles: `animationDelay: ${index * 0.1}s`
 - Chart sections: `0.2s, 0.4s, 0.6s, 0.8s`
 
 ### 4. Typography Hierarchy
 
-#### **Font System**
-- **Font Family**: `'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`
+#### <strong>Font System</strong>
+- <strong>Font Family</strong>: `'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`
 
-#### **Font Weights**
-- **Normal**: 400
-- **Medium**: 500  
-- **Semibold**: 600
-- **Bold**: 700
-- **Extrabold**: 800
+#### <strong>Font Weights</strong>
+- <strong>Normal</strong>: 400
+- <strong>Medium</strong>: 500  
+- <strong>Semibold</strong>: 600
+- <strong>Bold</strong>: 700
+- <strong>Extrabold</strong>: 800
 
-#### **Font Sizes**
-- **Extra Small**: `12px`
-- **Small**: `14px`
-- **Base**: `16px`
-- **Large**: `18px`
-- **Extra Large**: `20px`
-- **2XL**: `24px`
-- **3XL**: `30px`
-- **4XL**: `36px`
+#### <strong>Font Sizes</strong>
+- <strong>Extra Small</strong>: `12px`
+- <strong>Small</strong>: `14px`
+- <strong>Base</strong>: `16px`
+- <strong>Large</strong>: `18px`
+- <strong>Extra Large</strong>: `20px`
+- <strong>2XL</strong>: `24px`
+- <strong>3XL</strong>: `30px`
+- <strong>4XL</strong>: `36px`
 
-#### **Gradient Text Implementation**
+#### <strong>Gradient Text Implementation</strong>
 ```css
 .gradient-text {
   background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
@@ -171,12 +171,12 @@ This style guide implements a sophisticated glass morphism design system with bl
 
 ### 5. Responsive Grid System
 
-#### **Breakpoints**
-- **Mobile**: `max-width: 768px`
-- **Tablet**: `768px - 1024px`
-- **Desktop**: `1400px+`
+#### <strong>Breakpoints</strong>
+- <strong>Mobile</strong>: `max-width: 768px`
+- <strong>Tablet</strong>: `768px - 1024px`
+- <strong>Desktop</strong>: `1400px+`
 
-#### **Grid Patterns**
+#### <strong>Grid Patterns</strong>
 ```css
 /* Desktop - 2 Column */
 .charts-grid {
@@ -200,7 +200,7 @@ This style guide implements a sophisticated glass morphism design system with bl
 }
 ```
 
-#### **Responsive Adjustments**
+#### <strong>Responsive Adjustments</strong>
 ```css
 @media (max-width: 1024px) {
   .charts-grid {
@@ -217,7 +217,7 @@ This style guide implements a sophisticated glass morphism design system with bl
 
 ### 6. Interactive Chat System
 
-#### **Floating Chat Button**
+#### <strong>Floating Chat Button</strong>
 ```jsx
 <button
   className="glass-card"
@@ -237,36 +237,36 @@ This style guide implements a sophisticated glass morphism design system with bl
     animation: 'float 6s ease-in-out infinite, scaleIn 0.5s ease-out'
   }}
 >
-  🤖
+  ðŸ¤–
 </button>
 ```
 
-#### **Side Panel Design**
-- **Width**: 400px
-- **Background**: Glass morphism with blur
-- **Transition**: `right 0.4s cubic-bezier(0.4, 0, 0.2, 1)`
-- **Header**: Gradient background with white text
-- **Content**: Staggered card animations
+#### <strong>Side Panel Design</strong>
+- <strong>Width</strong>: 400px
+- <strong>Background</strong>: Glass morphism with blur
+- <strong>Transition</strong>: `right 0.4s cubic-bezier(0.4, 0, 0.2, 1)`
+- <strong>Header</strong>: Gradient background with white text
+- <strong>Content</strong>: Staggered card animations
 
 ### 7. Component Patterns
 
-#### **KPI Tiles**
-- **Minimum Width**: 220px
-- **Height**: 140px
-- **Border Radius**: 20px
-- **Icon Container**: 48px × 48px with gradient background
-- **Hover Effect**: Lift and scale with enhanced shadow
-- **Selected State**: Border highlight and gradient overlay
+#### <strong>KPI Tiles</strong>
+- <strong>Minimum Width</strong>: 220px
+- <strong>Height</strong>: 140px
+- <strong>Border Radius</strong>: 20px
+- <strong>Icon Container</strong>: 48px Ã— 48px with gradient background
+- <strong>Hover Effect</strong>: Lift and scale with enhanced shadow
+- <strong>Selected State</strong>: Border highlight and gradient overlay
 
-#### **Chart Components**
-- **Border Radius**: 20px
-- **Padding**: 24px
-- **Glass morphism background**
-- **Gradient headers**
-- **Info tooltips**: Positioned top-right
-- **Loading states**: Centered spinner with message
+#### <strong>Chart Components</strong>
+- <strong>Border Radius</strong>: 20px
+- <strong>Padding</strong>: 24px
+- <strong>Glass morphism background</strong>
+- <strong>Gradient headers</strong>
+- <strong>Info tooltips</strong>: Positioned top-right
+- <strong>Loading states</strong>: Centered spinner with message
 
-#### **Loading States**
+#### <strong>Loading States</strong>
 ```jsx
 <div style={{
   width: '40px',
@@ -278,15 +278,15 @@ This style guide implements a sophisticated glass morphism design system with bl
 }} />
 ```
 
-#### **Info Icons**
-- **Size**: 24px × 24px
-- **Background**: 20% opacity primary color
-- **Tooltip**: Native title attribute
-- **Position**: Absolute top-right corner
+#### <strong>Info Icons</strong>
+- <strong>Size</strong>: 24px Ã— 24px
+- <strong>Background</strong>: 20% opacity primary color
+- <strong>Tooltip</strong>: Native title attribute
+- <strong>Position</strong>: Absolute top-right corner
 
 ### 8. Plotly.js Integration
 
-#### **Chart Styling**
+#### <strong>Chart Styling</strong>
 ```javascript
 const chartLayout = {
   paper_bgcolor: 'transparent',
@@ -308,7 +308,7 @@ const chartLayout = {
 }
 ```
 
-#### **Interactive Features**
+#### <strong>Interactive Features</strong>
 - Click handlers for AI chat integration
 - Custom tooltips with glass morphism
 - Gradient fills for bars/lines
@@ -316,31 +316,31 @@ const chartLayout = {
 
 ---
 
-## 🚀 Implementation Benefits
+## ðŸš€ Implementation Benefits
 
-### **Consistency**
+### <strong>Consistency</strong>
 - All components follow the same glass morphism design language
 - Unified color palette across all visualizations
 - Consistent animation timing and easing functions
 
-### **Scalability** 
+### <strong>Scalability</strong> 
 - Modular THEME object for easy maintenance
 - Reusable component patterns
 - Responsive grid system adapts to all screen sizes
 
-### **Accessibility**
+### <strong>Accessibility</strong>
 - Proper contrast ratios (4.5:1 minimum)
 - Keyboard navigation support
 - Screen reader compatible
 - Focus states for all interactive elements
 
-### **Performance**
+### <strong>Performance</strong>
 - CSS-only animations (no JavaScript)
 - Optimized backdrop-filter usage
 - Minimal re-renders with proper dependencies
 - Lazy-loaded Plotly.js charts
 
-### **User Experience**
+### <strong>User Experience</strong>
 - Intuitive interactions with visual feedback
 - Smooth transitions between states
 - Context-aware AI explanations
@@ -348,48 +348,48 @@ const chartLayout = {
 
 ---
 
-## ✅ Implementation Checklist
+## âœ… Implementation Checklist
 
-### **Core Components**
-- ✅ Glass morphism cards with proper blur effects
-- ✅ Gradient text headers and accents
-- ✅ Staggered entrance animations
-- ✅ Hover effects with lift and scale
-- ✅ Floating background elements
+### <strong>Core Components</strong>
+- âœ… Glass morphism cards with proper blur effects
+- âœ… Gradient text headers and accents
+- âœ… Staggered entrance animations
+- âœ… Hover effects with lift and scale
+- âœ… Floating background elements
 
-### **KPI Tiles**
-- ✅ Gradient icon containers
-- ✅ Growth indicators with emojis
-- ✅ Selected state highlighting
-- ✅ Interactive metric switching
-- ✅ Animated value changes
+### <strong>KPI Tiles</strong>
+- âœ… Gradient icon containers
+- âœ… Growth indicators with emojis
+- âœ… Selected state highlighting
+- âœ… Interactive metric switching
+- âœ… Animated value changes
 
-### **Chart Components**
-- ✅ Glass morphism containers
-- ✅ Custom Plotly.js styling
-- ✅ Interactive tooltips
-- ✅ Info icons with explanations
-- ✅ Loading and empty states
+### <strong>Chart Components</strong>
+- âœ… Glass morphism containers
+- âœ… Custom Plotly.js styling
+- âœ… Interactive tooltips
+- âœ… Info icons with explanations
+- âœ… Loading and empty states
 
-### **Chat System**
-- ✅ Floating chat button with animation
-- ✅ Glass morphism side panel
-- ✅ Context-aware AI responses
-- ✅ Message bubble styling
-- ✅ Smooth panel transitions
+### <strong>Chat System</strong>
+- âœ… Floating chat button with animation
+- âœ… Glass morphism side panel
+- âœ… Context-aware AI responses
+- âœ… Message bubble styling
+- âœ… Smooth panel transitions
 
-### **Responsive Design**
-- ✅ Mobile-first grid system
-- ✅ Tablet and desktop breakpoints
-- ✅ Flexible component sizing
-- ✅ Touch-friendly interactions
-- ✅ Optimized spacing
+### <strong>Responsive Design</strong>
+- âœ… Mobile-first grid system
+- âœ… Tablet and desktop breakpoints
+- âœ… Flexible component sizing
+- âœ… Touch-friendly interactions
+- âœ… Optimized spacing
 
 ---
 
-## 🎨 Color Reference
+## ðŸŽ¨ Color Reference
 
-### **CSS Custom Properties**
+### <strong>CSS Custom Properties</strong>
 ```css
 :root {
   /* Primary Colors */

@@ -1,4 +1,4 @@
-const { SalesTrendQueries } = require('../../../Sales/tools/SalesTrendAnalyzer/database/queries');
+const { SalesTrendSQLiteQueries } = require('../../../Sales/tools/SalesTrendAnalyzer/database/sqlite-queries');
 
 export default async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') {
@@ -6,7 +6,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const queries = new SalesTrendQueries();
+    const queries = new SalesTrendSQLiteQueries();
+    console.log('Sales Trends API - Database connection established');
     const filters = req.method === 'POST' ? req.body : req.query;
 
     // Provide default date range covering actual data in database (2017-2021)

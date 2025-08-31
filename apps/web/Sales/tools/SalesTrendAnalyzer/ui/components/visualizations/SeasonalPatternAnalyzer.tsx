@@ -12,7 +12,8 @@ const SeasonalPatternAnalyzer: React.FC<SeasonalPatternAnalyzerProps> = ({
   timePeriod,
   onTimePeriodChange,
   onDataPointClick,
-  onInfoIconClick
+  onInfoIconClick,
+  selectedPoints = new Set()
 }) => {
   const chartData = useMemo(() => {
     if (!data?.length) return null;
@@ -26,23 +27,48 @@ const SeasonalPatternAnalyzer: React.FC<SeasonalPatternAnalyzerProps> = ({
       return acc;
     }, {} as Record<string, typeof data>);
 
-    // Create a trace for each year
-    const traces: any[] = Object.entries(yearGroups).map(([year, points]) => ({
-      x: points.map(p => p.month),
-      y: points.map(p => p.revenue),
-      type: 'scatter' as const,
-      mode: 'lines+markers' as const,
-      name: year,
-      line: {
-        color: year === new Date().getFullYear().toString() 
-          ? THEME.colors.primary 
-          : THEME.colors.secondary,
-        width: year === new Date().getFullYear().toString() ? 3 : 2
-      },
-      marker: {
-        size: 6
-      }
-    }));
+    // Create a trace for each year with selection highlighting
+    const traces: any[] = Object.entries(yearGroups).map(([year, points], idx) => {
+      const paletteColor = THEME.colors.categorical[idx % THEME.colors.categorical.length];
+      const darkRed = '#b91c1c';
+      // Create marker colors and sizes based on selection state
+      const markerColors = points.map(p => {
+        // Use ID format consistent with selection manager: seasonal-YYYY-MM-metric
+        const pointId = `seasonal-${year}-${String(p.month).padStart(2, '0')}-revenue`;
+        // Match theme's dark red highlight for selected points
+        return selectedPoints.has(pointId) ? darkRed : paletteColor;
+      });
+      
+      const markerSizes = points.map(p => {
+        const pointId = `seasonal-${year}-${String(p.month).padStart(2, '0')}-revenue`;
+        return selectedPoints.has(pointId) ? 11 : 6; // slightly larger for emphasis
+      });
+      
+      const markerBorderColors = points.map(p => {
+        const pointId = `seasonal-${year}-${String(p.month).padStart(2, '0')}-revenue`;
+        return selectedPoints.has(pointId) ? darkRed : 'transparent';
+      });
+
+      return {
+        x: points.map(p => p.month),
+        y: points.map(p => p.revenue),
+        type: 'scatter' as const,
+        mode: 'lines+markers' as const,
+        name: year,
+        line: {
+          color: paletteColor,
+          width: year === new Date().getFullYear().toString() ? 3 : 2
+        },
+        marker: {
+          color: markerColors,
+          size: markerSizes,
+          line: {
+            color: markerBorderColors,
+            width: 2
+          }
+        }
+      };
+    });
 
     // Calculate average seasonal pattern
     const monthlyAverages = Array.from({ length: 12 }, (_, month) => {
@@ -62,14 +88,14 @@ const SeasonalPatternAnalyzer: React.FC<SeasonalPatternAnalyzerProps> = ({
       mode: 'lines' as const,
       name: 'Average Pattern',
       line: {
-        color: THEME.colors.cloudWhite,
+        color: THEME.colors.text.secondary,
         width: 2,
         dash: 'dash'
       }
     });
 
     return traces;
-  }, [data]);
+  }, [data, selectedPoints]);
 
   const layout = {
     paper_bgcolor: 'transparent',
@@ -267,16 +293,66 @@ const SeasonalPatternAnalyzer: React.FC<SeasonalPatternAnalyzerProps> = ({
                   const point = event.points[0];
                   const year = point.data.name;
                   const month = point.x;
+                  const value = point.y;
                   
-                  // Find the exact data point from the original data
+                  console.log('🔄 Seasonal click:', { year, month, value });
+                  
+                  // Handle Average Pattern clicks
+                  if (year === 'Average Pattern') {
+                    const formattedDate = `avg-${String(month).padStart(2, '0')}`;
+                    const monthNames = [
+                      'January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December'
+                    ];
+                    const monthName = monthNames[parseInt(month) - 1];
+                    
+                    // Calculate average vs current year for this month
+                    const currentYearData = data.find(d => 
+                      d.year === new Date().getFullYear().toString() && 
+                      d.month === String(month).padStart(2, '0')
+                    );
+                    
+                    const percentChange = currentYearData ? 
+                      ((currentYearData.revenue - value) / value) * 100 : 0;
+                    
+                    onDataPointClick({
+                      metricName: 'revenue',
+                      date: formattedDate,
+                      value: value,
+                      period: `${monthName} Average`,
+                      year: 'Average',
+                      month: String(month).padStart(2, '0'),
+                      previousValue: currentYearData?.revenue,
+                      percentChange: percentChange,
+                      isAverage: true
+                    }, event);
+                    
+                    console.log('🔄 Average pattern click sent:', {
+                      monthName,
+                      averageValue: value,
+                      currentYearValue: currentYearData?.revenue
+                    });
+                    return;
+                  }
+                  
+                  // Handle actual year data clicks
                   const clickedDataPoint = data.find(d => 
-                    d.year === year && d.month === String(month)
+                    d.year === year && d.month === String(month).padStart(2, '0')
                   );
-                  
+                    
                   console.log('🔄 Found seasonal data point:', clickedDataPoint);
                   
                   if (clickedDataPoint) {
-                    const formattedDate = `${year}-${String(month).padStart(2, '0')}-01`;
+                    const formattedDate = `${year}-${String(month).padStart(2, '0')}`;
+                    
+                    // Calculate percentage change from same month previous year
+                    const previousYearPoint = data.find(d => 
+                      d.year === String(parseInt(year) - 1) && 
+                      d.month === String(month).padStart(2, '0')
+                    );
+                    
+                    const percentChange = previousYearPoint ? 
+                      ((clickedDataPoint.revenue - previousYearPoint.revenue) / previousYearPoint.revenue) * 100 : 0;
                     
                     onDataPointClick({
                       metricName: 'revenue',
@@ -284,13 +360,16 @@ const SeasonalPatternAnalyzer: React.FC<SeasonalPatternAnalyzerProps> = ({
                       value: clickedDataPoint.revenue,
                       period: formattedDate,
                       year: year,
-                      month: String(month)
+                      month: String(month).padStart(2, '0'),
+                      previousValue: previousYearPoint?.revenue,
+                      percentChange: percentChange
                     }, event);
                     
                     console.log('🔄 Seasonal data point click sent:', {
-                      metricName: 'revenue',
-                      date: formattedDate,
-                      value: clickedDataPoint.revenue
+                      year,
+                      month: String(month).padStart(2, '0'),
+                      value: clickedDataPoint.revenue,
+                      percentChange: percentChange
                     });
                   }
                 }

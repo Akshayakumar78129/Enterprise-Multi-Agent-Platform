@@ -51,6 +51,120 @@ export const sendMessageToAgent = async (
     };
   }
 
+  // Instant detailed summary for core agents (no network). Uses full time-series context.
+  if (['sales', 'customer', 'finance', 'inventory'].includes(agent.agentName)) {
+    const lp = context.userInteractions?.lastClickedPoint;
+    const period = lp?.period || lp?.date || context.filters?.endDate || 'current period';
+
+    // Build dataset from context
+    const series = Array.isArray(context.currentData?.mainData) ? context.currentData!.mainData : [];
+    const values = series.map(d => Number(d.revenue ?? d.value ?? 0));
+
+    // Basic stats
+    const total = values.reduce((s, v) => s + v, 0);
+    const count = values.length || 1;
+    const avg = total / count;
+    const first = values[0] ?? 0;
+    const last = values[values.length - 1] ?? 0;
+    const totalChangePct = first ? ((last - first) / first) * 100 : 0;
+
+    // Month-over-month changes (or period-over-period)
+    const deltas = values.slice(1).map((v, i) => ({
+      idx: i + 1,
+      abs: v - values[i],
+      pct: values[i] ? ((v - values[i]) / values[i]) * 100 : 0
+    }));
+
+    // Identify peaks and troughs
+    let peakIdx = -1, troughIdx = -1;
+    let peakVal = -Infinity, troughVal = Infinity;
+    values.forEach((v, i) => {
+      if (v > peakVal) { peakVal = v; peakIdx = i; }
+      if (v < troughVal) { troughVal = v; troughIdx = i; }
+    });
+    const peakLabel = series[peakIdx]?.period ?? series[peakIdx]?.date ?? 'N/A';
+    const troughLabel = series[troughIdx]?.period ?? series[troughIdx]?.date ?? 'N/A';
+
+    // Simple seasonality proxy: average by month if month exists
+    const monthBuckets: Record<string, number[]> = {};
+    series.forEach(d => {
+      const m = (d.month || (d.period?.slice(5,7)) || (d.date?.slice(5,7)) || '').padStart(2,'0');
+      if (!m || m === 'NaN') return;
+      monthBuckets[m] = monthBuckets[m] || [];
+      monthBuckets[m].push(Number(d.revenue ?? d.value ?? 0));
+    });
+    const monthAverages = Object.entries(monthBuckets).map(([m, arr]) => ({ m, avg: arr.reduce((s,v)=>s+v,0)/arr.length }));
+    monthAverages.sort((a,b)=>b.avg-a.avg);
+    const seasonalTop = monthAverages[0];
+    const seasonalBottom = monthAverages[monthAverages.length-1];
+
+    // Compose bullets by agent
+    const bullets = (() => {
+      switch (agent.agentName) {
+        case 'sales':
+          return [
+            `• Overall trend: ${totalChangePct>=0?'+':''}${totalChangePct.toFixed(1)}% from start to latest`,
+            `• Average period value: $${Math.round(avg).toLocaleString()} across ${count} periods`,
+            `• Peak: ${peakLabel} at $${Math.round(peakVal).toLocaleString()} | Low: ${troughLabel} at $${Math.round(troughVal).toLocaleString()}`,
+            deltas.length?`• Recent change: ${deltas.at(-1)!.pct>=0?'+':''}${deltas.at(-1)!.pct.toFixed(1)}% vs previous period`:`• Recent change: insufficient data`,
+            seasonalTop&&seasonalBottom?`• Seasonality: strongest ${seasonalTop.m}, weakest ${seasonalBottom.m}`:`• Seasonality: not enough monthly coverage`,
+            `• Recommendation: double-down on peak periods; lift weak months with targeted plays`
+          ];
+        case 'customer':
+          return [
+            `• Revenue stability proxy: avg $${Math.round(avg).toLocaleString()}, volatility ${coefOfVar(values).toFixed(2)}`,
+            `• Cohort signal: recent change ${deltas.length? (deltas.at(-1)!.pct>=0?'+':'')+deltas.at(-1)!.pct.toFixed(1)+'%':'n/a'}`,
+            seasonalTop&&seasonalBottom?`• Engagement seasonality: best ${seasonalTop.m}, weakest ${seasonalBottom.m}`:`• Engagement seasonality: limited evidence`,
+            `• Churn risk proxy: trough ${troughLabel} may mark vulnerable cohorts`,
+            `• CLV focus: protect top months; nurture low seasons`,
+            `• Action: targeted offers, win-backs, and loyalty boosts in soft periods`
+          ];
+        case 'finance':
+          return [
+            `• Topline trend: ${totalChangePct>=0?'+':''}${totalChangePct.toFixed(1)}% across timeframe`,
+            `• Run-rate: ~$${Math.round(avg).toLocaleString()} per period (avg)`,
+            `• Peak vs low spread: $${Math.round(peakVal-troughVal).toLocaleString()} swing`,
+            deltas.length?`• Latest delta: ${deltas.at(-1)!.pct>=0?'+':''}${deltas.at(-1)!.pct.toFixed(1)}% period-over-period`:`• Latest delta: insufficient data`,
+            seasonalTop&&seasonalBottom?`• Seasonality impact: peak ${seasonalTop.m} vs ${seasonalBottom.m}`:`• Seasonality impact: limited`,
+            `• Action: align spend with peaks; trim low-ROI costs in soft months`
+          ];
+        case 'inventory':
+          return [
+            `• Demand trend: ${totalChangePct>=0?'+':''}${totalChangePct.toFixed(1)}% over timeframe`,
+            `• Average demand: $${Math.round(avg).toLocaleString()} per period`,
+            `• Peak period: ${peakLabel}; trough period: ${troughLabel}`,
+            seasonalTop&&seasonalBottom?`• Seasonality: stock up for ${seasonalTop.m}; reduce for ${seasonalBottom.m}`:`• Seasonality: limited visibility`,
+            `• Risk: avoid outages in peaks; reduce overstock in lows`,
+            `• Action: tune reorder points and lead times to seasonal profile`
+          ];
+        default:
+          return [
+            `• Trend: ${totalChangePct>=0?'+':''}${totalChangePct.toFixed(1)}% from start to latest`,
+            `• Average: $${Math.round(avg).toLocaleString()} across ${count} periods`,
+            `• Peak/Low: ${peakLabel}/${troughLabel}`,
+            deltas.length?`• Latest change: ${deltas.at(-1)!.pct>=0?'+':''}${deltas.at(-1)!.pct.toFixed(1)}%`:`• Latest change: n/a`,
+            seasonalTop&&seasonalBottom?`• Seasonality: top ${seasonalTop.m}, bottom ${seasonalBottom.m}`:`• Seasonality: n/a`,
+            `• Next: focus resources to maximize peak windows`
+          ];
+      }
+    })();
+
+    // Helper for volatility
+    function coefOfVar(arr: number[]): number {
+      if (!arr.length) return 0;
+      const mean = arr.reduce((s,v)=>s+v,0)/arr.length || 1;
+      const variance = arr.reduce((s,v)=>s+(v-mean)*(v-mean),0)/arr.length;
+      return Math.sqrt(variance)/mean;
+    }
+
+    return {
+      success: true,
+      content: `**${agent.displayName} — Detailed Summary (${period})**\n\n${bullets.join('\n')}`,
+      agentInfo: agent,
+      processingTime: Date.now() - startTime
+    };
+  }
+
   try {
     // Fetch relevant cross-dashboard data for this agent
     console.log(`🔍 Fetching cross-dashboard data for ${agentName}...`);

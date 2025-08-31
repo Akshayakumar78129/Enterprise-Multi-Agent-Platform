@@ -1,4 +1,4 @@
-# Sales Trend Analyzer - UI/UX Specification
+﻿# Sales Trend Analyzer - UI/UX Specification
 
 ## 1. Tool Overview
 
@@ -44,7 +44,7 @@ The tool currently provides basic visualization through:
 - Moving average plots for seasonal component analysis
 - Residual scatter plots for anomaly detection
 - Static image files encoded as base64 strings
-- Fixed 2×2 plot layout with limited customization
+- Fixed 2Ã—2 plot layout with limited customization
 - Limited interactivity with static images
 - Fixed time granularity without dynamic adjustment
 - Standard coloring without thematic styling
@@ -69,10 +69,10 @@ Transform into a comprehensive trend intelligence system with:
 
 #### 4.1 Time Series Explorer
 
-**Temporal Trend Visualization**
-- **Purpose**: Visualize sales performance over time with interactive analysis
-- **Dimensions**: 760px × 480px
-- **Primary Elements**:
+<strong>Temporal Trend Visualization</strong>
+- <strong>Purpose</strong>: Visualize sales performance over time with interactive analysis
+- <strong>Dimensions</strong>: 760px Ã— 480px
+- <strong>Primary Elements</strong>:
   - Main trend chart:
     - X-axis: Time periods with appropriate granularity
     - Y-axis: Selected metric value
@@ -103,7 +103,7 @@ Transform into a comprehensive trend intelligence system with:
     - Active metric: Pill with Electric Cyan (#00e0ff) background
     - Icon indicators showing metric type
   - Time range selector:
-    - Horizontal brush area below main chart (760px × 60px)
+    - Horizontal brush area below main chart (760px Ã— 60px)
     - Preview mini-chart showing full time range
     - Drag handles for range selection
     - Quick period buttons: "YTD", "Last Quarter", "Last Year", "Custom"
@@ -122,7 +122,7 @@ Transform into a comprehensive trend intelligence system with:
     - Growth rate: Percentage with directional arrow
     - Trend direction: "Increasing", "Decreasing", "Stable" indicator
     - Seasonality strength: Bar indicator (0-100%)
-- **States**:
+- <strong>States</strong>:
   - Default: Revenue trend by monthly periods
   - Raw: Showing only actual data points
   - Smoothed: With moving average overlay
@@ -130,7 +130,7 @@ Transform into a comprehensive trend intelligence system with:
   - Projected: Including future trend forecast
   - Annotated: With events and anomalies marked
   - Range-focused: Zoomed to specific time period
-- **Interaction Details**:
+- <strong>Interaction Details</strong>:
   - Hover data points for detailed date and value information
   - Click time points to mark and analyze specific periods
   - Drag to select and zoom into specific date ranges
@@ -141,10 +141,10 @@ Transform into a comprehensive trend intelligence system with:
 
 #### 4.2 Seasonal Pattern Analyzer
 
-**Seasonality Visualization**
-- **Purpose**: Analyze and visualize recurring patterns and seasonality in sales data
-- **Dimensions**: 720px × 460px
-- **Primary Elements**:
+<strong>Seasonality Visualization</strong>
+- <strong>Purpose</strong>: Analyze and visualize recurring patterns and seasonality in sales data
+- <strong>Dimensions</strong>: 720px Ã— 460px
+- <strong>Primary Elements</strong>:
   - Seasonal decomposition view:
     - Three stacked charts (220px height each):
     - Top: Observed data - 3px solid Electric Cyan (#00e0ff)
@@ -156,7 +156,7 @@ Transform into a comprehensive trend intelligence system with:
     - Common time scale alignment across all three charts
     - Highlight band: Selected season spans with 30% opacity
   - Seasonal heatmap:
-    - 280px × 240px grid visualization
+    - 280px Ã— 240px grid visualization
     - X-axis: Time periods within season (months, weeks, days)
     - Y-axis: Seasons (years, quarters)
     - Cell color: Based on performance intensity
@@ -180,7 +180,7 @@ Transform into a comprehensive trend intelligence system with:
     - Interactive pattern selector with highlight functionality
   - Season comparison:
     - Small multiples of season overlays
-    - 360px × 160px visualization
+    - 360px Ã— 160px visualization
     - Multiple seasons overlaid with different opacity levels
     - Color-coded by year/season
     - Season legend with interactive selection
@@ -194,7 +194,7 @@ Transform into a comprehensive trend intelligence system with:
     - Adjusts sensitivity of pattern detection
     - Visual indicator of threshold effect on detected patterns
     - Default position with optimal detection setting
-- **States**:
+- <strong>States</strong>:
   - Default: Automatic decomposition of time series
   - Manual: User-specified decomposition parameters
   - Pattern-focused: Highlighting detected patterns
@@ -202,7 +202,7 @@ Transform into a comprehensive trend intelligence system with:
   - Heatmap: Showing intensity across seasons
   - Filtered: Specific season or pattern isolation
   - Normalized: Showing relative seasonal effect
-- **Interaction Details**:
+- <strong>Interaction Details</strong>:
   - Click pattern in list to highlight in visualization
   - Hover heatmap cells for detailed period metrics
   - Adjust decomposition parameters to refine analysis
@@ -213,10 +213,10 @@ Transform into a comprehensive trend intelligence system with:
 
 #### 4.3 Growth Rate Visualizer
 
-**Momentum and Change Analysis**
-- **Purpose**: Analyze rate of change and growth patterns across time periods
-- **Dimensions**: 680px × 420px
-- **Primary Elements**:
+<strong>Momentum and Change Analysis</strong>
+- <strong>Purpose</strong>: Analyze rate of change and growth patterns across time periods
+- <strong>Dimensions</strong>: 680px Ã— 420px
+- <strong>Primary Elements</strong>:
   - Growth rate chart:
     - X-axis: Time periods with appropriate scale
     - Y-axis: Percentage growth rate
@@ -229,15 +229,15 @@ Transform into a comprehensive trend intelligence system with:
     - Average growth: Horizontal dashed line
     - Trend line: 2px solid #5fd4d6 (lighter cyan)
   - Growth distribution histogram:
-    - 240px × 180px secondary chart
+    - 240px Ã— 180px secondary chart
     - X-axis: Growth rate bins
     - Y-axis: Frequency count
     - Bar color: Same as growth chart
     - Mean line: Vertical 2px solid Cloud White (#f7f9fb)
     - Distribution curve overlay
   - Growth metric cards:
-    - Four cards in 2×2 grid
-    - Card size: 160px × 120px
+    - Four cards in 2Ã—2 grid
+    - Card size: 160px Ã— 120px
     - Background: Graphite (#232a36)
     - Border-radius: 12px
     - Content:
@@ -265,7 +265,7 @@ Transform into a comprehensive trend intelligence system with:
     - Industry benchmark comparison
     - Prior year comparison
     - Custom benchmark input
-- **States**:
+- <strong>States</strong>:
   - Default: Period-over-period growth rates
   - YoY: Year-over-year growth comparison
   - Cumulative: Showing accumulated growth
@@ -273,7 +273,7 @@ Transform into a comprehensive trend intelligence system with:
   - Benchmark: Comparing against targets/benchmarks
   - Annotated: With key growth events marked
   - Distribution: Focusing on growth rate distribution
-- **Interaction Details**:
+- <strong>Interaction Details</strong>:
   - Hover bars for detailed growth metrics
   - Click specific period for detailed breakdown
   - Toggle between calculation methods
@@ -284,10 +284,10 @@ Transform into a comprehensive trend intelligence system with:
 
 #### 4.4 Dimensional Trend Breakdown
 
-**Multi-Dimension Trend Analysis**
-- **Purpose**: Compare trends across different dimension values (products, regions, etc.)
-- **Dimensions**: 720px × 520px
-- **Primary Elements**:
+<strong>Multi-Dimension Trend Analysis</strong>
+- <strong>Purpose</strong>: Compare trends across different dimension values (products, regions, etc.)
+- <strong>Dimensions</strong>: 720px Ã— 520px
+- <strong>Primary Elements</strong>:
   - Dimension selector:
     - Toggle buttons for dimensions:
       - Product
@@ -319,7 +319,7 @@ Transform into a comprehensive trend intelligence system with:
     - "Select All" and "Clear All" buttons
     - Mini-sparkline next to each dimension value
   - Growth comparison grid:
-    - 720px × 180px table below chart
+    - 720px Ã— 180px table below chart
     - Rows: Selected dimension values
     - Columns: Key metrics (Total, Growth, Trend Direction, Seasonality)
     - Cell background: Subtle heatmap based on values
@@ -335,7 +335,7 @@ Transform into a comprehensive trend intelligence system with:
     - Pattern similarity grouping
     - Trend direction filter
     - Outlier exclusion toggle
-- **States**:
+- <strong>States</strong>:
   - Default: Top 5 performers in selected dimension
   - Custom: User-selected dimension values
   - Stacked: Showing cumulative contribution
@@ -343,7 +343,7 @@ Transform into a comprehensive trend intelligence system with:
   - Sorted: Ordered by specific metric
   - Filtered: Applied threshold or pattern filters
   - Compared: Focusing on specific comparison
-- **Interaction Details**:
+- <strong>Interaction Details</strong>:
   - Click dimension toggle to change breakdown dimension
   - Select/deselect entities to show/hide in chart
   - Hover lines for detailed metrics and naming
@@ -354,46 +354,46 @@ Transform into a comprehensive trend intelligence system with:
 
 #### 4.5 KPI Tiles Row
 
-**Five Trend KPI Tiles (120px × 120px each)**
-1. **Current Period Value**
-   - **Value**: Metric amount in 32px Inter SemiBold, Cloud White (#f7f9fb)
-   - **Trend**: Arrow showing change vs. previous period
-   - **Visual**: Small spark line showing recent trend
-   - **States**: Increasing (Electric Cyan), Decreasing (Signal Magenta), Stable
+<strong>Five Trend KPI Tiles (120px Ã— 120px each)</strong>
+1. <strong>Current Period Value</strong>
+   - <strong>Value</strong>: Metric amount in 32px Inter SemiBold, Cloud White (#f7f9fb)
+   - <strong>Trend</strong>: Arrow showing change vs. previous period
+   - <strong>Visual</strong>: Small spark line showing recent trend
+   - <strong>States</strong>: Increasing (Electric Cyan), Decreasing (Signal Magenta), Stable
 
-2. **Period Growth Rate**
-   - **Value**: Percentage in 32px Inter SemiBold
-   - **Subtitle**: "vs Previous Period" in 12px Inter Regular
-   - **Visual**: Small bar showing current vs. previous
-   - **States**: Positive growth, Flat, Negative growth
+2. <strong>Period Growth Rate</strong>
+   - <strong>Value</strong>: Percentage in 32px Inter SemiBold
+   - <strong>Subtitle</strong>: "vs Previous Period" in 12px Inter Regular
+   - <strong>Visual</strong>: Small bar showing current vs. previous
+   - <strong>States</strong>: Positive growth, Flat, Negative growth
 
-3. **Seasonality Strength**
-   - **Value**: 0-100% in 32px Inter SemiBold
-   - **Subtitle**: "Pattern Strength" in 12px Inter Regular
-   - **Visual**: Small circular gauge with fill level
-   - **States**: Strong (>70%), Moderate (30-70%), Weak (<30%)
+3. <strong>Seasonality Strength</strong>
+   - <strong>Value</strong>: 0-100% in 32px Inter SemiBold
+   - <strong>Subtitle</strong>: "Pattern Strength" in 12px Inter Regular
+   - <strong>Visual</strong>: Small circular gauge with fill level
+   - <strong>States</strong>: Strong (>70%), Moderate (30-70%), Weak (<30%)
 
-4. **Trend Direction**
-   - **Value**: Direction text in 16px Inter SemiBold
-   - **Subtitle**: "Long-term Trend" in 12px Inter Regular
-   - **Visual**: Small arrow showing direction with slope
-   - **States**: Increasing, Stable, Decreasing, Volatile
+4. <strong>Trend Direction</strong>
+   - <strong>Value</strong>: Direction text in 16px Inter SemiBold
+   - <strong>Subtitle</strong>: "Long-term Trend" in 12px Inter Regular
+   - <strong>Visual</strong>: Small arrow showing direction with slope
+   - <strong>States</strong>: Increasing, Stable, Decreasing, Volatile
 
-5. **Top Performer**
-   - **Value**: Entity name in 16px Inter SemiBold
-   - **Subtitle**: Growth rate in 12px Inter Regular
-   - **Visual**: Small sparkline showing entity trend
-   - **States**: Default, Hover (shows entity details tooltip)
+5. <strong>Top Performer</strong>
+   - <strong>Value</strong>: Entity name in 16px Inter SemiBold
+   - <strong>Subtitle</strong>: Growth rate in 12px Inter Regular
+   - <strong>Visual</strong>: Small sparkline showing entity trend
+   - <strong>States</strong>: Default, Hover (shows entity details tooltip)
 
 ### Secondary Visualizations
 
 #### 4.6 Trend Decomposition Explorer
 
-**Time Series Component Analysis**
-- **Purpose**: Decompose time series into trend, seasonal, and residual components
-- **Dimensions**: 640px × 480px
-- **Implementation**: Multi-panel component visualization
-- **Visual Elements**:
+<strong>Time Series Component Analysis</strong>
+- <strong>Purpose</strong>: Decompose time series into trend, seasonal, and residual components
+- <strong>Dimensions</strong>: 640px Ã— 480px
+- <strong>Implementation</strong>: Multi-panel component visualization
+- <strong>Visual Elements</strong>:
   - Component charts:
     - Four stacked charts (100px height each):
     - Original data: 2px solid Electric Cyan (#00e0ff)
@@ -424,7 +424,7 @@ Transform into a comprehensive trend intelligence system with:
     - Download individual components
     - Save decomposition settings
     - Generate decomposition report
-- **States**:
+- <strong>States</strong>:
   - Default: Automatic decomposition
   - Custom: User-defined parameters
   - Focus: Highlighting specific component
@@ -434,16 +434,16 @@ Transform into a comprehensive trend intelligence system with:
 
 #### 4.7 Anomaly Detection Panel
 
-**Trend Pattern Anomaly Detection**
-- **Dimensions**: 680px × 360px
-- **Implementation**: Timeline with anomaly highlighting
-- **Visual Elements**:
+<strong>Trend Pattern Anomaly Detection</strong>
+- <strong>Dimensions</strong>: 680px Ã— 360px
+- <strong>Implementation</strong>: Timeline with anomaly highlighting
+- <strong>Visual Elements</strong>:
   - Anomaly timeline:
     - X-axis: Time periods
     - Y-axis: Normalized deviation score
     - Base line: Original time series in 2px solid Electric Cyan (#00e0ff)
     - Anomaly points: Highlighted with 8px Signal Magenta (#e930ff) diamonds
-    - Threshold bands: Light shaded areas at ±2/3 standard deviations
+    - Threshold bands: Light shaded areas at Â±2/3 standard deviations
     - Severity color coding:
       - Minor: #5fd4d6 (lighter cyan)
       - Moderate: Electric Cyan (#00e0ff)
@@ -474,7 +474,7 @@ Transform into a comprehensive trend intelligence system with:
     - Attempts to match anomalies with business events
     - Highlights known events on timeline
     - Confidence score for annotations
-- **States**:
+- <strong>States</strong>:
   - Default: Automatic anomaly detection
   - Selected: Focus on specific anomaly with details
   - Filtered: Showing only certain anomaly types
@@ -486,14 +486,14 @@ Transform into a comprehensive trend intelligence system with:
 
 #### 4.8 Trend Insight Assistant
 
-**AI-Powered Trend Analysis**
-- **Purpose**: Provide AI-guided insights on sales trend patterns
-- **Dimensions**: 360px width right drawer
-- **Container**:
+<strong>AI-Powered Trend Analysis</strong>
+- <strong>Purpose</strong>: Provide AI-guided insights on sales trend patterns
+- <strong>Dimensions</strong>: 360px width right drawer
+- <strong>Container</strong>:
   - Background: Graphite (#232a36)
   - Header: "Trend Insights" in 20px Inter SemiBold, Cloud White (#f7f9fb)
   - AI avatar: 48px animated assistant icon with Electric Cyan (#00e0ff) glow
-- **Interaction Components**:
+- <strong>Interaction Components</strong>:
   - Input field: "Ask about trends..." placeholder
   - Command palette with slash-commands:
     - /analyze-trend [period]
@@ -503,7 +503,7 @@ Transform into a comprehensive trend intelligence system with:
     - /identify-patterns
   - Recent queries list with quick-select
   - Voice input option
-- **Insight Cards**:
+- <strong>Insight Cards</strong>:
   - 320px width, variable height
   - Background: #1e2738 (darker graphite)
   - Border-left: 4px with insight-type specific color
@@ -511,13 +511,13 @@ Transform into a comprehensive trend intelligence system with:
   - Content: 14px Inter Regular, Cloud White (#f7f9fb) at 90% opacity
   - Mini-visualizations: Inline charts supporting insights
   - Action buttons: "Export", "Share", "Implement"
-- **Thoughtlets**: 
+- <strong>Thoughtlets</strong>: 
   - Small insight bubbles that appear contextually
   - 140-character max insights with minimal visualization
   - Positioned near relevant chart elements
   - Dismiss or expand options
   - Action links to explore further
-- **States**:
+- <strong>States</strong>:
   - Collapsed: Tab on edge of screen
   - Expanded: Full width with content
   - Thinking: Animated Electric Cyan (#00e0ff) dots
@@ -526,15 +526,15 @@ Transform into a comprehensive trend intelligence system with:
 
 #### 4.9 Trend Forecasting Panel
 
-**Predictive Trend Projection**
-- **Dimensions**: 380px width, expandable to 520px
-- **Container**:
+<strong>Predictive Trend Projection</strong>
+- <strong>Dimensions</strong>: 380px width, expandable to 520px
+- <strong>Container</strong>:
   - Background: Gradient from #232a36 to #2c3341
   - Border radius: 16px
   - Shadow: 0 4px 16px rgba(0,0,0,0.25)
-- **Components**:
+- <strong>Components</strong>:
   - Forecast visualization:
-    - 320px × 180px line chart
+    - 320px Ã— 180px line chart
     - Historical data: 2px solid Electric Cyan (#00e0ff)
     - Forecast line: 2px dashed Signal Magenta (#e930ff)
     - Confidence interval: Signal Magenta (#e930ff) at 30% opacity
@@ -560,7 +560,7 @@ Transform into a comprehensive trend intelligence system with:
     - Key drivers of forecast
     - Uncertainty factors
     - Seasonal effects incorporated
-- **States**:
+- <strong>States</strong>:
   - Default: Automatic forecast with standard parameters
   - Custom: User-defined forecast parameters
   - Multi-scenario: Showing multiple projections
@@ -571,7 +571,7 @@ Transform into a comprehensive trend intelligence system with:
 
 ## 5. User Interaction Flow
 
-1. **Dashboard Initialization**
+1. <strong>Dashboard Initialization</strong>
    - Progressive loading sequence with pulsing animation
    - KPI tiles appear first with counter animations
    - Time series chart draws from left to right with flowing animation
@@ -580,7 +580,7 @@ Transform into a comprehensive trend intelligence system with:
    - Anomalies pulse briefly to draw attention
    - Seasonality panel initializes with automatic pattern detection
 
-2. **Time Period Exploration Flow**
+2. <strong>Time Period Exploration Flow</strong>
    - Select time granularity (daily, weekly, monthly, quarterly, annual)
    - Dashboard updates with appropriate time scale and aggregation
    - Adjust time range using drag handles on range selector
@@ -589,7 +589,7 @@ Transform into a comprehensive trend intelligence system with:
    - Identify anomalies and unusual patterns
    - Generate insights specific to selected time frame
 
-3. **Pattern Analysis Workflow**
+3. <strong>Pattern Analysis Workflow</strong>
    - View seasonality decomposition and pattern strength
    - Explore recurring patterns across multiple seasons
    - Adjust decomposition parameters for optimal pattern detection
@@ -598,7 +598,7 @@ Transform into a comprehensive trend intelligence system with:
    - Generate seasonal insights and explanations
    - Export seasonal pattern analysis for planning
 
-4. **Growth Analysis Process**
+4. <strong>Growth Analysis Process</strong>
    - Select growth rate visualization
    - Toggle between different growth calculation methods
    - Compare growth across different time periods
@@ -607,7 +607,7 @@ Transform into a comprehensive trend intelligence system with:
    - Benchmark against targets or prior periods
    - Generate growth pattern insights and recommendations
 
-5. **Dimension Comparison Journey**
+5. <strong>Dimension Comparison Journey</strong>
    - Select dimension for comparative trend analysis
    - Choose top performers or specific entities to compare
    - View multi-series trend visualization
@@ -619,18 +619,18 @@ Transform into a comprehensive trend intelligence system with:
 ## 6. Integration with Other Tools
 
 ### Connected Data Flows
-- **Sales Performance Analyzer**: Shares performance metrics for trend context
-- **Product Performance Analyzer**: Provides product dimension for trend breakdown
-- **Regional Sales Analyzer**: Supplies regional data for trend analysis
-- **Demand Forecast Engine**: Receives trend patterns for forecasting
-- **Anomaly Detection**: Shares unusual pattern identification
+- <strong>Sales Performance Analyzer</strong>: Shares performance metrics for trend context
+- <strong>Product Performance Analyzer</strong>: Provides product dimension for trend breakdown
+- <strong>Regional Sales Analyzer</strong>: Supplies regional data for trend analysis
+- <strong>Demand Forecast Engine</strong>: Receives trend patterns for forecasting
+- <strong>Anomaly Detection</strong>: Shares unusual pattern identification
 
 ### Integration Touchpoints
-- **Performance Analysis**: Button to view current performance metrics
-- **Product Analysis**: Link to product-specific trend breakdown
-- **Regional Analysis**: Connection to region-specific trend patterns
-- **Forecast Engine**: Export trend patterns to forecasting
-- **Anomaly Investigation**: Deep-dive link for unusual patterns
+- <strong>Performance Analysis</strong>: Button to view current performance metrics
+- <strong>Product Analysis</strong>: Link to product-specific trend breakdown
+- <strong>Regional Analysis</strong>: Connection to region-specific trend patterns
+- <strong>Forecast Engine</strong>: Export trend patterns to forecasting
+- <strong>Anomaly Investigation</strong>: Deep-dive link for unusual patterns
 
 ### Cross-Tool Navigation
 - Unified time period definition and selection
@@ -658,10 +658,10 @@ Transform into a comprehensive trend intelligence system with:
 - Scalable text without breaking dashboard layout
 
 ### Responsive Behavior
-- **≥1440px**: Full dashboard with side-by-side visualizations
-- **1024-1439px**: Two-column layout with stacked sections
-- **768-1023px**: Single column with compact visualizations
-- **<768px**: Essential KPIs and simplified trend chart with drill-down
+- <strong>â‰¥1440px</strong>: Full dashboard with side-by-side visualizations
+- <strong>1024-1439px</strong>: Two-column layout with stacked sections
+- <strong>768-1023px</strong>: Single column with compact visualizations
+- <strong><768px</strong>: Essential KPIs and simplified trend chart with drill-down
 
 ### Performance Optimizations
 - Progressive loading of visualization components

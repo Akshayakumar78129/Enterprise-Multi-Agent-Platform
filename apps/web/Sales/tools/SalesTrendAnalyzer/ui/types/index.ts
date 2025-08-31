@@ -69,6 +69,23 @@ export interface APIResponse {
   message?: string;
 }
 
+// Multi-selection interfaces
+export interface SelectedDataPoint {
+  id: string;
+  chartType: 'timeseries' | 'seasonal' | 'growth' | 'kpi';
+  metricName: string;
+  date: string;
+  value: number;
+  previousValue?: number;
+  percentChange?: number;
+  period?: string;
+  year?: string;
+  month?: string;
+  isAverage?: boolean;
+  displayName: string;
+  timestamp: number;
+}
+
 // Component prop interfaces
 export interface TimeSeriesExplorerProps {
   data: SalesDataPoint[];
@@ -77,6 +94,7 @@ export interface TimeSeriesExplorerProps {
   onFilterChange: (filters: Partial<FilterState>) => void;
   onDataPointClick?: (point: SalesDataPoint, event?: any) => void;
   onInfoIconClick?: (event: React.MouseEvent) => void;
+  selectedPoints?: Set<string>;
 }
 
 export interface SeasonalPatternAnalyzerProps {
@@ -86,6 +104,7 @@ export interface SeasonalPatternAnalyzerProps {
   onTimePeriodChange: (period: TimePeriod) => void;
   onDataPointClick?: (point: SeasonalityDataPoint, event?: any) => void;
   onInfoIconClick?: (event: React.MouseEvent) => void;
+  selectedPoints?: Set<string>;
 }
 
 export interface GrowthRateVisualizerProps {
@@ -95,6 +114,7 @@ export interface GrowthRateVisualizerProps {
   onTimePeriodChange: (period: TimePeriod) => void;
   onDataPointClick?: (point: GrowthRateDataPoint, event?: any) => void;
   onInfoIconClick?: (event: React.MouseEvent) => void;
+  selectedPoints?: Set<string>;
 }
 
 export interface KPITileProps {
@@ -106,6 +126,7 @@ export interface KPITileProps {
 export interface KPITilesProps extends KPITileProps {
   selectedMetric?: string;
   onMetricSelect?: (metric: string) => void;
+  onInfoIconClick?: (event: React.MouseEvent, chartType: string) => void;
 }
 
 // Dashboard state interface
@@ -125,62 +146,75 @@ export interface DashboardState {
 export const THEME = {
   colors: {
     // Glass Morphism Backgrounds
-    glassBackground: 'rgba(255, 255, 255, 0.95)',
-    glassBackgroundDark: 'rgba(255, 255, 255, 0.05)',
-    glassBorder: 'rgba(59, 130, 246, 0.1)',
+    glassBackground: 'rgba(44, 51, 65, 0.95)', // container background #2c3341
+    glassBackgroundDark: 'rgba(10, 18, 36, 0.6)', // interactive bg #0a1224 with opacity
+    glassBorder: 'rgba(255, 255, 255, 0.08)',
     
     // Primary Gradients
-    primaryGradient: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-    primaryGradientHover: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+    primaryGradient: 'linear-gradient(135deg, #00e0ff 0%, #e930ff 100%)',
+    primaryGradientHover: 'linear-gradient(135deg, #19ecff 0%, #ff53ff 100%)',
     
-    // Base Colors
-    primary: '#3b82f6',
-    primaryDark: '#2563eb',
-    secondary: '#8b5cf6',
-    secondaryDark: '#7c3aed',
+    // Base Colors (accents)
+    primary: '#00e0ff', // Electric Cyan
+    primaryDark: '#00b7d1',
+    secondary: '#e930ff', // Signal Magenta
+    secondaryDark: '#c020e2',
     
-    // Risk Color System
+    // Categorical Palette (7 distinct, complementary colors)
+    categorical: [
+      '#00e0ff', // cyan
+      '#e930ff', // magenta
+      '#22c55e', // green
+      '#f59e0b', // orange
+      '#a78bfa', // purple
+      '#f43f5e', // rose
+      '#14b8a6'  // teal
+    ],
+
+    // State/Semantic + Disabled
+    disabled: 'rgba(247, 249, 251, 0.3)',
+
+    // Risk/State Color System
     risk: {
       red: '#ef4444',
-      orange: '#f97316', 
-      yellow: '#eab308',
+      orange: '#f59e0b',
+      yellow: '#fbbf24',
       green: '#22c55e'
     },
     
-    // Opacity Variations
-    primary20: 'rgba(59, 130, 246, 0.2)',
-    primary40: 'rgba(59, 130, 246, 0.4)',
-    secondary20: 'rgba(139, 92, 246, 0.2)',
-    secondary40: 'rgba(139, 92, 246, 0.4)',
+    // Opacity Variations (based on primary/secondary)
+    primary20: 'rgba(0, 224, 255, 0.2)',
+    primary40: 'rgba(0, 224, 255, 0.4)',
+    secondary20: 'rgba(233, 48, 255, 0.2)',
+    secondary40: 'rgba(233, 48, 255, 0.4)',
     
-    // Text Colors
+    // Text Colors (dark UI)
     text: {
-      primary: '#1f2937',
-      secondary: '#6b7280',
+      primary: '#f7f9fb', // Cloud White
+      secondary: 'rgba(247, 249, 251, 0.75)',
       white: '#ffffff',
-      gradient: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)'
+      gradient: 'linear-gradient(135deg, #00e0ff 0%, #e930ff 100%)'
     },
     
-    // Legacy colors (for backward compatibility)
-    midnightNavy: 'rgba(15, 23, 42, 0.95)',
+    // Legacy/back-compat helpers
+    midnightNavy: '#0a1224',
     electricCyan: '#00e0ff',
     signalMagenta: '#e930ff',
     cloudWhite: '#f7f9fb',
-    graphite: 'rgba(255, 255, 255, 0.05)',
-    lightGraphite: 'rgba(59, 130, 246, 0.1)',
+    graphite: '#232a36', // base background
+    lightGraphite: 'rgba(247, 249, 251, 0.15)', // subtle grid lines on dark
     energyYellow: '#eab308'
   },
   
   // Glass Morphism Effects
   glass: {
-    background: 'rgba(255, 255, 255, 0.95)',
-    backgroundDark: 'rgba(255, 255, 255, 0.05)',
-    border: '1px solid rgba(59, 130, 246, 0.1)',
-    backdropFilter: 'blur(20px)',
+    background: 'rgba(44, 51, 65, 0.95)', // container bg
+    backgroundDark: 'rgba(10, 18, 36, 0.85)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    backdropFilter: 'blur(16px)',
     boxShadow: `
-      0 8px 32px 0 rgba(59, 130, 246, 0.1),
-      0 2px 16px 0 rgba(0, 0, 0, 0.05),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.4)
+      0 8px 24px rgba(0, 0, 0, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05)
     `
   },
   
