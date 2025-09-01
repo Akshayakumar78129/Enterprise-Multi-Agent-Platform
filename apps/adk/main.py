@@ -22,7 +22,8 @@ load_dotenv()
 from google.adk.sessions import InMemorySessionService, Session
 from google.adk.runners import Runner
 from orchestration_agent import root_agent
-from google.adk.cli.fast_api import AgentRunRequest, StreamingMode, RunConfig, Event
+from google.adk.agents.run_config import RunConfig, StreamingMode
+from google.genai.types import Content
 
 from customer.agent import root_agent as customer_agent
 from finance.agent import root_agent as finance_agent
@@ -31,27 +32,18 @@ from sales.agent import root_agent as sales_agent
 
 logger = logging.getLogger(__name__)
 
-class RunResponse(BaseModel):
-    audio: Optional[str] = None
-    text: Optional[str] = None
-    visualisation: Optional[str] = None
-    
-# AGENT_DIR = "./"
-# APP_DIR = os.path.dirname(os.path.abspath(__file__))
-# SESSION_DB_URL = "sqlite:///./sessions.db"
+class AgentRunRequest(BaseModel):
+  app_name: str
+  user_id: str
+  session_id: str
+  new_message: Content
+  streaming: bool = False
+  state_delta: Optional[dict[str, Any]] = None
 
 ALLOWED_ORIGINS = [
     "http://localhost",
     "*",
 ]
-
-# SERVE_WEB_INTERFACE = False
-# app = get_fast_api_app(
-#     agents_dir=AGENT_DIR,
-#     session_service_uri=SESSION_DB_URL,
-#     allow_origins=ALLOWED_ORIGINS,
-#     web=SERVE_WEB_INTERFACE,
-# )
 
 app = FastAPI()
 
