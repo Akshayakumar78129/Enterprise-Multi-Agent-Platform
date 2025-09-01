@@ -1,0 +1,203 @@
+.filterSection {
+  background: linear-gradient(135deg, rgba(30, 39, 56, 0.95) 0%, rgba(26, 35, 50, 0.95) 100%);
+  border: 1px solid rgba(0, 224, 255, 0.1);
+  border-radius: 16px;
+  margin: 2rem 3rem;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.filterHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  background: rgba(0, 224, 255, 0.05);
+  border-bottom: 1px solid rgba(0, 224, 255, 0.1);
+}
+
+.filterTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #00e0ff;
+}
+
+.filterIcon {
+  font-size: 1.25rem;
+}
+
+.toggleButton {
+  background: transparent;
+  border: none;
+  color: #00e0ff;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  transition: transform 0.3s ease;
+}
+
+.toggleButton:hover {
+  transform: scale(1.1);
+}
+
+.filterContent {
+  padding: 1.5rem;
+}
+
+.filterGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filterLabel {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: rgba(247, 249, 251, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dateRange {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.dateInput,
+.selectInput {
+  padding: 0.75rem;
+  background: rgba(10, 18, 36, 0.5);
+  border: 1px solid rgba(0, 224, 255, 0.2);
+  border-radius: 8px;
+  color: #f7f9fb;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.dateInput:hover,
+.selectInput:hover {
+  border-color: rgba(0, 224, 255, 0.4);
+  background: rgba(10, 18, 36, 0.7);
+}
+
+.dateInput:focus,
+.selectInput:focus {
+  outline: none;
+  border-color: #00e0ff;
+  box-shadow: 0 0 0 2px rgba(0, 224, 255, 0.1);
+}
+
+.dateSeparator {
+  color: rgba(247, 249, 251, 0.5);
+  font-size: 0.9rem;
+}
+
+.filterActions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.applyButton,
+.resetButton {
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+}
+
+.applyButton {
+  background: linear-gradient(135deg, #00e0ff 0%, #00b8d4 100%);
+  color: #0a1224;
+  flex: 1;
+}
+
+.applyButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 224, 255, 0.3);
+}
+
+.resetButton {
+  background: transparent;
+  color: rgba(247, 249, 251, 0.7);
+  border-color: rgba(247, 249, 251, 0.2);
+  min-width: 100px;
+}
+
+.resetButton:hover {
+  background: rgba(247, 249, 251, 0.05);
+  border-color: rgba(247, 249, 251, 0.4);
+}
+
+.presets {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0, 224, 255, 0.1);
+}
+
+.presetsLabel {
+  font-size: 0.9rem;
+  color: rgba(247, 249, 251, 0.6);
+  font-weight: 500;
+}
+
+.presetButton {
+  padding: 0.5rem 1rem;
+  background: rgba(0, 224, 255, 0.1);
+  border: 1px solid rgba(0, 224, 255, 0.2);
+  border-radius: 20px;
+  color: #00e0ff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.presetButton:hover {
+  background: rgba(0, 224, 255, 0.2);
+  border-color: #00e0ff;
+  transform: translateY(-1px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .filterSection {
+    margin: 1.5rem;
+  }
+
+  .filterGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .dateRange {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .dateSeparator {
+    display: none;
+  }
+
+  .presets {
+    flex-wrap: wrap;
+  }
+}

@@ -1,0 +1,242 @@
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  background: linear-gradient(135deg, #1e2738 0%, #1a2332 100%);
+  border: 1px solid rgba(0, 224, 255, 0.3);
+  border-radius: 20px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  background: rgba(0, 224, 255, 0.05);
+  border-bottom: 1px solid rgba(0, 224, 255, 0.2);
+}
+
+.modalTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #00e0ff;
+}
+
+.aiIcon {
+  font-size: 1.5rem;
+  filter: drop-shadow(0 0 10px rgba(0, 224, 255, 0.5));
+}
+
+.closeButton {
+  background: transparent;
+  border: none;
+  color: rgba(247, 249, 251, 0.6);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  transition: all 0.3s ease;
+}
+
+.closeButton:hover {
+  color: #ff5252;
+  transform: rotate(90deg);
+}
+
+.modalContent {
+  padding: 1.5rem;
+  overflow-y: auto;
+  max-height: calc(80vh - 200px);
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: #00e0ff;
+}
+
+.loadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(0, 224, 255, 0.2);
+  border-top-color: #00e0ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.dataContext {
+  background: rgba(0, 224, 255, 0.05);
+  border-left: 3px solid #00e0ff;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.dataContext h4 {
+  margin: 0 0 0.5rem 0;
+  color: #f7f9fb;
+  font-size: 1.1rem;
+}
+
+.dataValue {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #00e0ff;
+  margin: 0;
+}
+
+.insightsSection,
+.recommendationsSection {
+  margin-bottom: 1.5rem;
+}
+
+.sectionTitle {
+  color: #00e0ff;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sectionTitle::before {
+  content: '';
+  width: 3px;
+  height: 18px;
+  background: #00e0ff;
+  border-radius: 2px;
+}
+
+.insightsList,
+.recommendationsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.insightItem,
+.recommendationItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  background: rgba(10, 18, 36, 0.3);
+  border-radius: 8px;
+  color: rgba(247, 249, 251, 0.9);
+  line-height: 1.5;
+  transition: all 0.3s ease;
+}
+
+.insightItem:hover,
+.recommendationItem:hover {
+  background: rgba(0, 224, 255, 0.05);
+  transform: translateX(4px);
+}
+
+.insightBullet {
+  color: #00e0ff;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.recommendationNumber {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, #00e0ff 0%, #00b8d4 100%);
+  color: #0a1224;
+  border-radius: 50%;
+  font-size: 0.85rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.modalFooter {
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: rgba(0, 224, 255, 0.02);
+  border-top: 1px solid rgba(0, 224, 255, 0.2);
+}
+
+.sendToChatButton,
+.closeModalButton {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.sendToChatButton {
+  flex: 1;
+  background: linear-gradient(135deg, #00e0ff 0%, #00b8d4 100%);
+  color: #0a1224;
+}
+
+.sendToChatButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 224, 255, 0.3);
+}
+
+.closeModalButton {
+  background: transparent;
+  color: rgba(247, 249, 251, 0.7);
+  border: 1px solid rgba(247, 249, 251, 0.2);
+}
+
+.closeModalButton:hover {
+  background: rgba(247, 249, 251, 0.05);
+  border-color: rgba(247, 249, 251, 0.4);
+}

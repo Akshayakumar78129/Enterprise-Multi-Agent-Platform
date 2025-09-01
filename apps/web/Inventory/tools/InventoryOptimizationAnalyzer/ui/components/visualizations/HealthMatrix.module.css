@@ -1,0 +1,217 @@
+.matrixContainer {
+  padding: 1rem;
+}
+
+.matrixWrapper {
+  overflow-x: auto;
+  background: rgba(10, 18, 36, 0.3);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.matrix {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 4px;
+}
+
+.cornerCell {
+  background: linear-gradient(135deg, rgba(0, 224, 255, 0.1) 0%, rgba(0, 224, 255, 0.05) 100%);
+  color: #00e0ff;
+  padding: 0.75rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-align: center;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.headerCell {
+  background: linear-gradient(135deg, rgba(0, 224, 255, 0.1) 0%, rgba(0, 224, 255, 0.05) 100%);
+  color: rgba(247, 249, 251, 0.9);
+  padding: 0.75rem;
+  font-weight: 500;
+  font-size: 0.9rem;
+  text-align: center;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.rowHeader {
+  background: linear-gradient(135deg, rgba(0, 224, 255, 0.1) 0%, rgba(0, 224, 255, 0.05) 100%);
+  color: rgba(247, 249, 251, 0.9);
+  padding: 0.75rem;
+  font-weight: 500;
+  font-size: 0.9rem;
+  text-align: left;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.cell {
+  padding: 0.75rem;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  position: relative;
+  min-width: 100px;
+}
+
+.cell:hover {
+  transform: scale(1.05);
+  z-index: 10;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.cellContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.scoreValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f7f9fb;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.scoreLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.8;
+}
+
+.riskIndicator {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 0.8rem;
+  filter: drop-shadow(0 0 4px rgba(255, 82, 82, 0.5));
+}
+
+/* Health Score Colors */
+.excellent {
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.3) 0%, rgba(0, 255, 136, 0.2) 100%);
+  border: 1px solid rgba(0, 255, 136, 0.4);
+}
+
+.good {
+  background: linear-gradient(135deg, rgba(93, 212, 214, 0.3) 0%, rgba(93, 212, 214, 0.2) 100%);
+  border: 1px solid rgba(93, 212, 214, 0.4);
+}
+
+.average {
+  background: linear-gradient(135deg, rgba(255, 193, 69, 0.3) 0%, rgba(255, 193, 69, 0.2) 100%);
+  border: 1px solid rgba(255, 193, 69, 0.4);
+}
+
+.poor {
+  background: linear-gradient(135deg, rgba(212, 93, 121, 0.3) 0%, rgba(212, 93, 121, 0.2) 100%);
+  border: 1px solid rgba(212, 93, 121, 0.4);
+}
+
+.critical {
+  background: linear-gradient(135deg, rgba(233, 48, 255, 0.3) 0%, rgba(233, 48, 255, 0.2) 100%);
+  border: 1px solid rgba(233, 48, 255, 0.4);
+}
+
+.selected {
+  border: 2px solid #00e0ff !important;
+  box-shadow: 0 0 20px rgba(0, 224, 255, 0.4);
+}
+
+.hovered {
+  border-width: 2px;
+}
+
+.emptyCell {
+  background: rgba(10, 18, 36, 0.2);
+  color: rgba(247, 249, 251, 0.3);
+  text-align: center;
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+
+.emptyState {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  color: rgba(247, 249, 251, 0.5);
+  font-size: 1.1rem;
+}
+
+/* Legend */
+.legend {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: rgba(10, 18, 36, 0.3);
+  border-radius: 12px;
+}
+
+.legendTitle {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #00e0ff;
+  margin-bottom: 0.75rem;
+}
+
+.legendItems {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: rgba(247, 249, 251, 0.8);
+}
+
+.legendColor {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.legendItem.excellent .legendColor {
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.5) 0%, rgba(0, 255, 136, 0.3) 100%);
+  border: 1px solid rgba(0, 255, 136, 0.6);
+}
+
+.legendItem.good .legendColor {
+  background: linear-gradient(135deg, rgba(93, 212, 214, 0.5) 0%, rgba(93, 212, 214, 0.3) 100%);
+  border: 1px solid rgba(93, 212, 214, 0.6);
+}
+
+.legendItem.average .legendColor {
+  background: linear-gradient(135deg, rgba(255, 193, 69, 0.5) 0%, rgba(255, 193, 69, 0.3) 100%);
+  border: 1px solid rgba(255, 193, 69, 0.6);
+}
+
+.legendItem.poor .legendColor {
+  background: linear-gradient(135deg, rgba(212, 93, 121, 0.5) 0%, rgba(212, 93, 121, 0.3) 100%);
+  border: 1px solid rgba(212, 93, 121, 0.6);
+}
+
+.legendItem.critical .legendColor {
+  background: linear-gradient(135deg, rgba(233, 48, 255, 0.5) 0%, rgba(233, 48, 255, 0.3) 100%);
+  border: 1px solid rgba(233, 48, 255, 0.6);
+}
+
+.hint {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(0, 224, 255, 0.05);
+  border-left: 3px solid #00e0ff;
+  border-radius: 8px;
+  color: rgba(247, 249, 251, 0.7);
+  font-size: 0.85rem;
+}

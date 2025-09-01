@@ -1,0 +1,290 @@
+.biContainer {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 900px;
+  max-height: 80vh;
+  background: linear-gradient(135deg, #1e2738 0%, #1a2332 100%);
+  border: 1px solid rgba(0, 224, 255, 0.3);
+  border-radius: 24px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  z-index: 1001;
+  overflow: hidden;
+  animation: scaleIn 0.3s ease;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.biHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, rgba(0, 224, 255, 0.1) 0%, rgba(0, 224, 255, 0.05) 100%);
+  border-bottom: 1px solid rgba(0, 224, 255, 0.2);
+}
+
+.headerContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.biIcon {
+  font-size: 2.5rem;
+  filter: drop-shadow(0 0 20px rgba(0, 224, 255, 0.5));
+}
+
+.biTitle {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #ffffff 0%, #00e0ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.biSubtitle {
+  margin: 0;
+  color: rgba(247, 249, 251, 0.7);
+  font-size: 1rem;
+}
+
+.closeButton {
+  background: transparent;
+  border: none;
+  color: rgba(247, 249, 251, 0.6);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.closeButton:hover {
+  color: #ff5252;
+  transform: rotate(90deg);
+}
+
+.biContent {
+  padding: 2rem;
+  overflow-y: auto;
+  max-height: calc(80vh - 120px);
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem;
+  color: #00e0ff;
+}
+
+.loadingSpinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(0, 224, 255, 0.2);
+  border-top-color: #00e0ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1.5rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.insightsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.insightCard {
+  background: rgba(10, 18, 36, 0.5);
+  border: 1px solid rgba(0, 224, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.insightCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #00e0ff, transparent);
+  transform: translateX(-100%);
+  transition: transform 0.5s ease;
+}
+
+.insightCard:hover::before {
+  transform: translateX(100%);
+}
+
+.insightCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0, 224, 255, 0.2);
+}
+
+.insightCard.alert {
+  border-color: rgba(255, 82, 82, 0.3);
+  background: linear-gradient(135deg, rgba(255, 82, 82, 0.05) 0%, transparent 100%);
+}
+
+.insightCard.opportunity {
+  border-color: rgba(255, 214, 0, 0.3);
+  background: linear-gradient(135deg, rgba(255, 214, 0, 0.05) 0%, transparent 100%);
+}
+
+.insightCard.recommendation {
+  border-color: rgba(0, 255, 136, 0.3);
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.05) 0%, transparent 100%);
+}
+
+.insightHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.insightTypeIcon {
+  font-size: 1.5rem;
+}
+
+.insightTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #f7f9fb;
+}
+
+.insightContent {
+  color: rgba(247, 249, 251, 0.9);
+  line-height: 1.6;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.priorityBadge {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  padding: 0.25rem 0.75rem;
+  background: linear-gradient(135deg, #ff5252 0%, #ff1744 100%);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 12px;
+  letter-spacing: 0.5px;
+}
+
+.metricsOverview {
+  background: rgba(0, 224, 255, 0.05);
+  border: 1px solid rgba(0, 224, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.overviewTitle {
+  margin: 0 0 1rem 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #00e0ff;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.metricCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(10, 18, 36, 0.5);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 224, 255, 0.1);
+}
+
+.metricLabel {
+  font-size: 0.85rem;
+  color: rgba(247, 249, 251, 0.7);
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.metricValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #00e0ff;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.exportButton,
+.scheduleButton {
+  padding: 0.875rem 2rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.exportButton {
+  background: linear-gradient(135deg, #00e0ff 0%, #00b8d4 100%);
+  color: #0a1224;
+}
+
+.scheduleButton {
+  background: transparent;
+  color: #00e0ff;
+  border: 1px solid #00e0ff;
+}
+
+.exportButton:hover,
+.scheduleButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 224, 255, 0.3);
+}
+
+@media (max-width: 768px) {
+  .biContainer {
+    width: 95%;
+    max-height: 90vh;
+  }
+  
+  .insightsGrid {
+    grid-template-columns: 1fr;
+  }
+}

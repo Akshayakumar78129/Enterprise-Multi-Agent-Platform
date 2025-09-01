@@ -1,0 +1,19 @@
+.chatToggleButton:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 30px rgba(0, 224, 255, 0.6) !important;
+}
+
+.chatWindow {
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
