@@ -164,6 +164,15 @@ const componentRegistry = {
     costTrend: dynamic(() => import('../Inventory/tools/InventoryHoldingCostAnalyzer/ui/components/visualizations/CostTrendAnalyzer.tsx'), { ssr: false }),
     warehouseComparison: dynamic(() => import('../Inventory/tools/InventoryHoldingCostAnalyzer/ui/components/visualizations/WarehouseCostComparison.jsx'), { ssr: false }),
   },
+  'inventory-optimization': {
+    dashboard: dynamic(() => import('../Inventory/tools/InventoryOptimizationAnalyzer/ui/views/InventoryOptimizationDashboard'), { ssr: false }),
+    healthMatrix: dynamic(() => import('../Inventory/tools/InventoryOptimizationAnalyzer/ui/components/visualizations/HealthMatrix'), { ssr: false }),
+    costImpactWaterfall: dynamic(() => import('../Inventory/tools/InventoryOptimizationAnalyzer/ui/components/visualizations/CostImpactWaterfall'), { ssr: false }),
+    performanceTimeline: dynamic(() => import('../Inventory/tools/InventoryOptimizationAnalyzer/ui/components/visualizations/PerformanceTimeline'), { ssr: false }),
+    actionPriorityMatrix: dynamic(() => import('../Inventory/tools/InventoryOptimizationAnalyzer/ui/components/visualizations/ActionPriorityMatrix'), { ssr: false }),
+    agingAnalysis: dynamic(() => import('../Inventory/tools/InventoryOptimizationAnalyzer/ui/components/visualizations/AgingAnalysis'), { ssr: false }),
+    kpiTiles: dynamic(() => import('../Inventory/tools/InventoryOptimizationAnalyzer/ui/components/kpi/KPITiles'), { ssr: false }),
+  },
 };
 
 /**

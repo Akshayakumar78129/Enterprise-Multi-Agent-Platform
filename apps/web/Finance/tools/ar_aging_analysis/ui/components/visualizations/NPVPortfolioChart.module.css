@@ -1,0 +1,163 @@
+.container {
+  background: rgba(30, 39, 56, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 24px;
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #f7f9fb;
+  margin: 0;
+}
+
+.waccIndicator {
+  background: rgba(0, 224, 255, 0.1);
+  color: #00e0ff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(0, 224, 255, 0.2);
+}
+
+.chartWrapper {
+  margin-bottom: 24px;
+}
+
+.tooltip {
+  background: rgba(30, 39, 56, 0.95);
+  border: 1px solid rgba(0, 224, 255, 0.4);
+  border-radius: 8px;
+  padding: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.tooltipTitle {
+  color: #f7f9fb;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.tooltipContent {
+  font-size: 11px;
+  color: #8892a8;
+}
+
+.tooltipContent div {
+  margin-bottom: 4px;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.metricCard {
+  background: rgba(35, 42, 54, 0.6);
+  border: 1px solid rgba(233, 48, 255, 0.4);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.metricLabel {
+  font-size: 11px;
+  color: #8892a8;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metricValue {
+  font-size: 20px;
+  font-weight: 600;
+  color: #f7f9fb;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #8892a8;
+}
+
+.legendColor {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.noData {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #8892a8;
+  font-size: 14px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+  
+  .metricsGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .legend {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 16px;
+  }
+  
+  .title {
+    font-size: 16px;
+  }
+  
+  .waccIndicator {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+  
+  .metricCard {
+    padding: 12px;
+  }
+  
+  .metricValue {
+    font-size: 16px;
+  }
+}
