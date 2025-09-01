@@ -29,6 +29,8 @@ out/
 build
 dist
 
+.playwright-mcp
+
 
 # Debug
 npm-debug.log*

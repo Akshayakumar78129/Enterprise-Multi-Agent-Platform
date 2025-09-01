@@ -4,6 +4,7 @@ import CostBreakdownVisualization from "../components/visualizations/CostBreakdo
 import ExcessiveCostGrid from "../components/visualizations/ExcessiveCostGrid";
 import CostTrendAnalyzer from "../components/visualizations/CostTrendAnalyzer";
 import WarehouseCostComparison from "../components/visualizations/WarehouseCostComparison.jsx";
+import { UniversalDashboardFilters, inventoryFilters } from "../../../../../ui-common/filters";
 import { 
   HoldingCostAnalysisData, 
   FilterState, 
@@ -83,6 +84,35 @@ const HoldingCostDashboard: React.FC = () => {
   };
 
   const handleFiltersChange = (newFilters: FilterState) => {
+    setDashboardState(prev => ({
+      ...prev,
+      filters: { ...prev.filters, ...newFilters }
+    }));
+  };
+
+  const handleUniversalFilterChange = (filters: Record<string, any>) => {
+    const newFilters: any = {};
+    
+    // Map universal filters to dashboard-specific filters
+    if (filters.dateRange) {
+      // Handle date range if needed
+    }
+    if (filters.warehouses?.length > 0) {
+      // Handle warehouse selection
+    }
+    if (filters.stockStatus) {
+      // Handle stock status
+    }
+    if (filters.holdingCostRange) {
+      // Handle cost range
+    }
+    if (filters.turnoverRate) {
+      // Handle turnover rate
+    }
+    if (filters.slowMoving !== undefined) {
+      // Handle slow-moving filter
+    }
+    
     setDashboardState(prev => ({
       ...prev,
       filters: { ...prev.filters, ...newFilters }
@@ -440,6 +470,22 @@ const HoldingCostDashboard: React.FC = () => {
       }}
     >
       {renderHeader()}
+      
+      {/* Universal Filters */}
+      <UniversalDashboardFilters
+        filters={inventoryFilters}
+        onFilterChange={handleUniversalFilterChange}
+        onReset={() => setDashboardState(prev => ({
+          ...prev,
+          filters: {
+            annualHoldingCostPercentage: 0.25,
+            opportunityCostRate: 0.08,
+            excessiveThreshold: 0.30
+          }
+        }))}
+        title="Inventory Analysis Filters"
+      />
+      
       {renderFilterPanel()}
       {renderSummaryInsights()}
       

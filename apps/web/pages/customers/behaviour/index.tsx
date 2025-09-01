@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'; // Import dynamic
 import { ThemeProvider } from '../../../ui-common/design-system/theme'; 
 import KpiTile from '../../../ui-common/design-system/components/KpiTile/KpiTile'; // Import KpiTile
 import { Card } from '../../../ui-common/design-system/components/Card'; // Import Card
+import { UniversalDashboardFilters, behaviorFilters } from '../../../ui-common/filters';
 
 // Dynamically import chart components with SSR disabled
 const PatternRadarChart = dynamic(() => import('../../../Customer/tools/customer_behaviour/ui/components/visualizations/PatternRadarChart'), { ssr: false });
@@ -67,6 +68,17 @@ const CustomerBehaviourDashboardPage = () => {
   const [behaviourData, setBehaviourData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeFilters, setActiveFilters] = useState<Record<string, any>>({});
+
+  const handleFilterChange = (filters: Record<string, any>) => {
+    setActiveFilters(filters);
+    // Apply filters to data fetching or data filtering logic here
+    // For now, we'll just update the state
+  };
+
+  const handleResetFilters = () => {
+    setActiveFilters({});
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -91,7 +103,7 @@ const CustomerBehaviourDashboardPage = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [activeFilters]); // Re-fetch when filters change
 
   const kpiMetrics = useMemo(() => {
     if (!behaviourData || !behaviourData.patterns || behaviourData.patterns.length === 0) {
@@ -221,6 +233,14 @@ const CustomerBehaviourDashboardPage = () => {
               Deep insights into customer interaction patterns and behavioral preferences
             </p>
           </header>
+
+          {/* Universal Filters */}
+          <UniversalDashboardFilters
+            filters={behaviorFilters}
+            onFilterChange={handleFilterChange}
+            onReset={handleResetFilters}
+            title="Customer Behavior Filters"
+          />
 
           {/* KPI Tiles Row - 5 tiles matching churn dashboard style exactly */}
           <div style={{

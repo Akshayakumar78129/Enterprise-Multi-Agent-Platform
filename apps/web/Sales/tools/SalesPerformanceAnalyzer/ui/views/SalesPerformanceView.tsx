@@ -11,7 +11,7 @@ import { PerformanceDistributionAnalyzer } from '../components/visualizations/Pe
 import { ComparativePerformanceGrid } from '../components/visualizations/ComparativePerformanceGrid';
 import { PerformanceCorrelationMatrix } from '../components/visualizations/PerformanceCorrelationMatrix';
 import { PerformanceDriverAnalysis } from '../components/visualizations/PerformanceDriverAnalysis';
-import { FilterControls } from '../components/controls/FilterControls';
+import { UniversalDashboardFilters, salesFilters } from '../../../../../ui-common/filters';
 import {
   fetchSalesPerformance,
   setDateRange,
@@ -55,16 +55,17 @@ export const SalesPerformanceView: FC = () => {
     dispatch(fetchSalesPerformance());
   }, [dispatch, dateRange, selectedDimension, selectedMetric]);
 
-  const handleDateRangeChange = (newDateRange: { startDate: string; endDate: string }) => {
-    dispatch(setDateRange(newDateRange));
-  };
-
-  const handleDimensionChange = (dimension: string) => {
-    dispatch(setSelectedDimension(dimension));
-  };
-
-  const handleMetricChange = (metric: string) => {
-    dispatch(setSelectedMetric(metric));
+  const handleFilterChange = (filters: Record<string, any>) => {
+    if (filters.dateRange) {
+      dispatch(setDateRange(filters.dateRange));
+    }
+    if (filters.region) {
+      dispatch(setSelectedDimension('region'));
+    }
+    if (filters.channel) {
+      dispatch(setSelectedDimension('channel'));
+    }
+    // Handle other filter changes as needed
   };
 
   const handleResetFilters = () => {
@@ -131,19 +132,12 @@ export const SalesPerformanceView: FC = () => {
     <div style={{ padding: theme.spacing[4], background: theme.colors.midnight }}>
       <Grid columns={12} gap="lg">
         <GridItem colSpan={12}>
-          <Card elevation="md" style={{ background: theme.colors.graphiteDark, border: `1px solid ${theme.colors.graphite}`, borderRadius: '12px', padding: theme.spacing[3] }}>
-            <FilterControls
-              dateRange={dateRange}
-              selectedDimension={selectedDimension}
-              selectedMetric={selectedMetric}
-              availableDimensions={AVAILABLE_DIMENSIONS}
-              availableMetrics={AVAILABLE_METRICS}
-              onDateRangeChange={handleDateRangeChange}
-              onDimensionChange={handleDimensionChange}
-              onMetricChange={handleMetricChange}
-              onResetFilters={handleResetFilters}
-            />
-          </Card>
+          <UniversalDashboardFilters
+            filters={salesFilters}
+            onFilterChange={handleFilterChange}
+            onReset={handleResetFilters}
+            title="Sales Performance Filters"
+          />
         </GridItem>
 
         <GridItem colSpan={12}>
