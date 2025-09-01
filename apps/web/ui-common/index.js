@@ -1,5 +1,5 @@
 // UI Common Components and Utilities
-export { default as FloatingAIChat } from './FloatingAIChat';
+
 export { default as FormattedTable, KPICard, DataGrid } from './components/FormattedTable';
 
 // Design system components
