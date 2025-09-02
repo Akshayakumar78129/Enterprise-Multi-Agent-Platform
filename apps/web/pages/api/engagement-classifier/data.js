@@ -1,4 +1,5 @@
-import { EngagementClassifierQueries } from "../../../Customer/tools/engagement_classifier/database/queries.js";
+import QueriesModule from "../../../Customer/tools/engagement_classifier/database/queries.js";
+const { EngagementClassifierQueries } = QueriesModule;
 
 export default async function handler(req, res) {
   if (req.method !== "GET" && req.method !== "POST") {
@@ -7,9 +8,23 @@ export default async function handler(req, res) {
 
   try {
     const queries = new EngagementClassifierQueries();
-    const filters = req.method === "POST" ? req.body : req.query;
+    const rawFilters = req.method === "POST" ? req.body : req.query;
 
-    console.log('Engagement Classifier API - Filters received:', filters);
+    // Normalize filters so array-like fields are always arrays
+    const toArray = (v) => {
+      if (v === undefined || v === null || v === "") return undefined;
+      return Array.isArray(v) ? v : [v];
+    };
+
+    const filters = {
+      ...rawFilters,
+      engagementLevels: toArray(rawFilters?.engagementLevels),
+      loyaltyStatus: toArray(rawFilters?.loyaltyStatus)
+    };
+
+    console.log('🔍 Engagement Classifier API - Filters received:', rawFilters);
+    console.log('🔍 Engagement Classifier API - Filters normalized:', filters);
+    console.log('🔍 Engagement Levels specifically:', filters.engagementLevels);
 
     // Fetch all required data in parallel
     const [
@@ -22,7 +37,7 @@ export default async function handler(req, res) {
     ] = await Promise.all([
       queries.getEngagementData(filters),
       queries.getKPIData(filters),
-      queries.getEngagementDistribution(filters),
+      queries.getEngagementDistribution(filters), // Use same filtered data for pyramid
       queries.getRFMAnalysis(filters),
       queries.getReengagementOpportunities(filters),
       queries.getEngagementTimeline(filters)
@@ -34,28 +49,12 @@ export default async function handler(req, res) {
 
     // Structure response according to the specification
     const response = {
-      status: 'success',
-      customers: engagementData,
-      kpis: {
-        totalCustomers: kpis.total_customers,
-        avgEngagementScore: kpis.avg_engagement_score,
-        highEngagedCount: kpis.engagement_distribution?.high || 0,
-        atRiskCount: kpis.engagement_distribution?.low || 0,
-        recentlyEngaged: kpis.engagement_distribution?.high || 0,
-        engagementTrend: kpis.engagement_trend,
-        avg_days_since_activity: kpis.avg_days_since_activity,
-        reengagement_opportunities: kpis.reengagement_opportunities,
-        engagement_distribution: kpis.engagement_distribution
-      },
-      highlights: {
-        distribution: engagementDistribution,
-        rfm_analysis: rfmAnalysis,
-        opportunities: reengagementOpportunities,
-        timeline: engagementTimeline
-      },
+      success: true,
       data: {
-        // Keep the original structure for backward compatibility
+        // Raw customer data
         customers: engagementData,
+        
+        // KPI data for tiles
         kpis: {
           total_customers: kpis.total_customers,
           avg_engagement_score: kpis.avg_engagement_score,
@@ -64,21 +63,35 @@ export default async function handler(req, res) {
           reengagement_opportunities: kpis.reengagement_opportunities,
           engagement_distribution: kpis.engagement_distribution
         },
+        
+        // Engagement distribution for pyramid visualization
         distribution: engagementDistribution,
+        
+        // RFM analysis for component breakdown
         rfm_analysis: rfmAnalysis,
+        
+        // Re-engagement opportunities for opportunity finder
         opportunities: reengagementOpportunities,
+        
+        // Timeline data for temporal analysis
         timeline: engagementTimeline,
+        
+        // Summary metrics
         summary: {
           total_customers: kpis.total_customers,
-          high_engagement: kpis.engagement_distribution?.high || 0,
-          medium_engagement: kpis.engagement_distribution?.medium || 0,
-          low_engagement: kpis.engagement_distribution?.low || 0,
+          high_engagement: kpis.engagement_distribution.high,
+          medium_engagement: kpis.engagement_distribution.medium,
+          low_engagement: kpis.engagement_distribution.low,
           avg_purchase_value: kpis.avg_purchase_value,
           avg_transaction_frequency: kpis.avg_transaction_frequency
         }
       },
       timestamp: new Date().toISOString(),
-      filters_applied: filters
+      filters_applied: filters,
+      debug: {
+        db_path: queries.dbPath,
+        kpis_raw: kpis
+      }
     };
 
     res.status(200).json(response);

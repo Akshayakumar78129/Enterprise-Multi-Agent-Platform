@@ -17,7 +17,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config();
 
 const app = express();
-const PORT = process.env.CHATBOT_PORT || 3001; // unchanged; using 3001 per requirement
+let PORT = parseInt(process.env.CHATBOT_PORT || '3001', 10); // base port; will auto-increment if in use
 
 // Middleware
 app.use(cors());
@@ -375,17 +375,86 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
+// Probe a free port starting at base PORT
+async function findFreePort(startPort, maxAttempts = 10) {
+  const net = await import('node:net');
+  let port = startPort;
+  for (let i = 0; i < maxAttempts; i++) {
+    const isFree = await new Promise((resolve) => {
+      const server = net.createServer()
+        .once('error', () => resolve(false))
+        .once('listening', () => server.close(() => resolve(true)))
+        .listen(port, '0.0.0.0');
+    });
+    if (isFree) return port;
+    port += 1;
+  }
+  throw new Error(`No free port found starting at ${startPort}`);
+}
+
+// Robust listen with retry that catches EADDRINUSE emitted by the server
+let __serverRef = null;
+async function listenWithRetry(app, startPort, attempts = 20) {
+  const http = await import('node:http');
+  let port = startPort;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await new Promise((resolve, reject) => {
+        const server = http.createServer(app);
+        const onListening = () => {
+          server.off('error', onError);
+          __serverRef = server; // keep a strong ref so it isn’t GC’d
+          // If OS assigned a port (e.g., when startPort=0), read it back
+          const addr = server.address();
+          if (addr && typeof addr.port === 'number') port = addr.port;
+          resolve();
+        };
+        const onError = (err) => {
+          server.off('listening', onListening);
+          reject(err);
+        };
+        server.once('listening', onListening);
+        server.once('error', onError);
+        server.listen(port, '0.0.0.0');
+      });
+      return port;
+    } catch (err) {
+      if (err && err.code === 'EADDRINUSE') {
+        console.warn(`⚠️ Port ${port} in use. Trying ${port + 1}...`);
+        port += 1;
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error(`Could not acquire a free port starting at ${startPort}`);
+}
+
 // Start server
 async function startServer() {
   // Initialize chatbot first
   await initializeChatbot();
   
-  app.listen(PORT, () => {
-    console.log(`🌐 Chatbot API server running on http://localhost:${PORT}`);
-    console.log(`📊 Health check: http://localhost:${PORT}/health`);
-    console.log(`💬 Chat endpoint: POST http://localhost:${PORT}/api/chatbot/chat`);
-    console.log(`📈 Status endpoint: GET http://localhost:${PORT}/api/chatbot/status`);
-  });
+  // Resolve a free port and start listening with robust retry
+  const basePort = PORT;
+  try {
+    PORT = await listenWithRetry(app, basePort, 20);
+    if (PORT !== basePort) {
+      console.warn(`⚠️ Port ${basePort} in use. Switching to ${PORT}.`);
+    }
+  } catch (e) {
+    console.error('❌ Failed to start server:', e.message);
+    process.exit(1);
+  }
+
+  // Export effective port for other parts of the app to read if necessary
+  process.env.NEXT_PUBLIC_CHATBOT_PORT = String(PORT);
+  process.env.NEXT_PUBLIC_CHATBOT_API_URL = `http://localhost:${PORT}`;
+
+  console.log(`🌐 Chatbot API server running on http://localhost:${PORT}`);
+  console.log(`📊 Health check: http://localhost:${PORT}/health`);
+  console.log(`💬 Chat endpoint: POST http://localhost:${PORT}/api/chatbot/chat`);
+  console.log(`📈 Status endpoint: GET http://localhost:${PORT}/api/chatbot/status`);
 }
 
 // Start the server

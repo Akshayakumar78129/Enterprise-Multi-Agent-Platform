@@ -814,8 +814,6 @@ body::before {
   color: var(--text-primary) !important;
 }
 
-/* Removed universal selector that was causing white screen on click */
-/* Only target specific interactive elements, not body/html */
 
 /* Specific overrides for all possible button/card elements */
 button,

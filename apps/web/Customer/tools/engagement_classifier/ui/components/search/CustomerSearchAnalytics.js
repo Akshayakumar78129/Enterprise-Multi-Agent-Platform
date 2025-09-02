@@ -1454,13 +1454,15 @@ const CustomerSearchAnalytics = ({ onCustomerSelect = null }) => {
       marginBottom: 'var(--spacing-xl)'
     }}>
       {/* Search Section */}
-      <div className="glass-chart-container">
+      <div className="glass-chart-container" style={{ border: '1px solid #3a4459', borderRadius: '12px', boxShadow: '0 0 0 1px rgba(0, 224, 255, 0.04) inset' }}>
         <div className="chart-header">
           <div>
             <h3 className="chart-title">🔍 Customer Search</h3>
             <p className="chart-subtitle">Search for individual customers and view their analytics</p>
           </div>
         </div>
+        {/* Inner outline under header */}
+        <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, #3a4459, transparent)', margin: '0 var(--spacing-lg)' }} />
         
         <div style={{ padding: 'var(--spacing-lg)' }}>
           {/* Search Input */}
@@ -1665,29 +1667,57 @@ const CustomerSearchAnalytics = ({ onCustomerSelect = null }) => {
                     backdropFilter: 'blur(8px)',
                     border: '1px solid rgba(58, 68, 89, 0.5)',
                     animation: 'counterUp 0.6s ease both',
-                    animationDelay: '0ms'
+                    animationDelay: '0ms',
+                    background: 'linear-gradient(135deg, rgba(30, 39, 56, 0.8) 0%, rgba(35, 42, 54, 0.8) 100%)',
+                    color: '#f7f9fb',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    borderRadius: '12px'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-5px)';
                     e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 224, 255, 0.15)';
                     e.currentTarget.style.borderColor = '#00e0ff';
+                    const p = e.currentTarget.querySelector('[data-role="particle"]');
+                    const g = e.currentTarget.querySelector('[data-role="glow"]');
+                    if (p) p.style.opacity = '1';
+                    if (g) g.style.opacity = '1';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'translateY(0)';
                     e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.2)';
                     e.currentTarget.style.borderColor = 'rgba(58, 68, 89, 0.5)';
+                    const p = e.currentTarget.querySelector('[data-role="particle"]');
+                    const g = e.currentTarget.querySelector('[data-role="glow"]');
+                    if (p) p.style.opacity = '0.6';
+                    if (g) g.style.opacity = '0';
                   }}>
+                    {/* Particle background */}
+                    <div data-role="particle" style={{
+                      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                      background: 'radial-gradient(circle at 30% 20%, rgba(0, 224, 255, 0.15) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(0, 224, 255, 0.1) 0%, transparent 50%)',
+                      opacity: 0.6, transition: 'opacity 0.3s ease', pointerEvents: 'none'
+                    }} />
+                    {/* Glow border */}
+                    <div data-role="glow" style={{
+                      position: 'absolute', top: -2, left: -2, right: -2, bottom: -2,
+                      background: 'linear-gradient(45deg, #00e0ff66, transparent, #00e0ff66)',
+                      borderRadius: 14, opacity: 0, transition: 'opacity 0.3s ease', pointerEvents: 'none'
+                    }} />
                     <div style={{ 
                       fontSize: '28px', 
-                      fontWeight: '700', 
+                      fontWeight: '800', 
                       color: '#00e0ff',
+                      textShadow: '0 0 20px #00e0ff40',
                       marginBottom: '8px'
                     }}>
                       {formatCurrency(customerData.analytics.total_purchases)}
                     </div>
-                    <div style={{ fontSize: '14px', color: '#5891cb' }}>
+                    <div style={{ fontSize: '14px', color: '#c7d2fe' }}>
                       💰 Total Purchases
                     </div>
+                    {/* Bottom accent */}
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, transparent 0%, #00e0ff 50%, transparent 100%)', opacity: 0.8 }} />
                   </div>
 
                   {/* Total Transactions Tab */}
@@ -1703,29 +1733,57 @@ const CustomerSearchAnalytics = ({ onCustomerSelect = null }) => {
                     backdropFilter: 'blur(8px)',
                     border: '1px solid rgba(58, 68, 89, 0.5)',
                     animation: 'counterUp 0.6s ease both',
-                    animationDelay: '150ms'
+                    animationDelay: '150ms',
+                    background: 'linear-gradient(135deg, rgba(30, 39, 56, 0.8) 0%, rgba(35, 42, 54, 0.8) 100%)',
+                    color: '#f7f9fb',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    borderRadius: '12px'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-5px)';
                     e.currentTarget.style.boxShadow = '0 12px 40px rgba(95, 212, 214, 0.15)';
                     e.currentTarget.style.borderColor = '#5fd4d6';
+                    const p = e.currentTarget.querySelector('[data-role="particle"]');
+                    const g = e.currentTarget.querySelector('[data-role="glow"]');
+                    if (p) p.style.opacity = '1';
+                    if (g) g.style.opacity = '1';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'translateY(0)';
                     e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.2)';
                     e.currentTarget.style.borderColor = 'rgba(58, 68, 89, 0.5)';
+                    const p = e.currentTarget.querySelector('[data-role="particle"]');
+                    const g = e.currentTarget.querySelector('[data-role="glow"]');
+                    if (p) p.style.opacity = '0.6';
+                    if (g) g.style.opacity = '0';
                   }}>
+                    {/* Particle background */}
+                    <div data-role="particle" style={{
+                      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                      background: 'radial-gradient(circle at 30% 20%, rgba(95, 212, 214, 0.15) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(95, 212, 214, 0.1) 0%, transparent 50%)',
+                      opacity: 0.6, transition: 'opacity 0.3s ease', pointerEvents: 'none'
+                    }} />
+                    {/* Glow border */}
+                    <div data-role="glow" style={{
+                      position: 'absolute', top: -2, left: -2, right: -2, bottom: -2,
+                      background: 'linear-gradient(45deg, #5fd4d666, transparent, #5fd4d666)',
+                      borderRadius: 14, opacity: 0, transition: 'opacity 0.3s ease', pointerEvents: 'none'
+                    }} />
                     <div style={{ 
                       fontSize: '28px', 
-                      fontWeight: '700', 
+                      fontWeight: '800', 
                       color: '#5fd4d6',
+                      textShadow: '0 0 20px #5fd4d640',
                       marginBottom: '8px'
                     }}>
                       {customerData.analytics.total_transactions}
                     </div>
-                    <div style={{ fontSize: '14px', color: '#5891cb' }}>
+                    <div style={{ fontSize: '14px', color: '#c7d2fe' }}>
                       🛒 Total Transactions
                     </div>
+                    {/* Bottom accent */}
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, transparent 0%, #5fd4d6 50%, transparent 100%)', opacity: 0.8 }} />
                   </div>
 
                   {/* Engagement Status Tab */}
@@ -1784,29 +1842,57 @@ const CustomerSearchAnalytics = ({ onCustomerSelect = null }) => {
                     backdropFilter: 'blur(8px)',
                     border: '1px solid rgba(58, 68, 89, 0.5)',
                     animation: 'counterUp 0.6s ease both',
-                    animationDelay: '450ms'
+                    animationDelay: '450ms',
+                    background: 'linear-gradient(135deg, rgba(30, 39, 56, 0.8) 0%, rgba(35, 42, 54, 0.8) 100%)',
+                    color: '#f7f9fb',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    borderRadius: '12px'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-5px)';
                     e.currentTarget.style.boxShadow = '0 12px 40px rgba(233, 48, 255, 0.15)';
                     e.currentTarget.style.borderColor = '#e930ff';
+                    const p = e.currentTarget.querySelector('[data-role="particle"]');
+                    const g = e.currentTarget.querySelector('[data-role="glow"]');
+                    if (p) p.style.opacity = '1';
+                    if (g) g.style.opacity = '1';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'translateY(0)';
                     e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.2)';
                     e.currentTarget.style.borderColor = 'rgba(58, 68, 89, 0.5)';
+                    const p = e.currentTarget.querySelector('[data-role="particle"]');
+                    const g = e.currentTarget.querySelector('[data-role="glow"]');
+                    if (p) p.style.opacity = '0.6';
+                    if (g) g.style.opacity = '0';
                   }}>
+                    {/* Particle background */}
+                    <div data-role="particle" style={{
+                      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                      background: 'radial-gradient(circle at 30% 20%, rgba(233, 48, 255, 0.15) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(233, 48, 255, 0.1) 0%, transparent 50%)',
+                      opacity: 0.6, transition: 'opacity 0.3s ease', pointerEvents: 'none'
+                    }} />
+                    {/* Glow border */}
+                    <div data-role="glow" style={{
+                      position: 'absolute', top: -2, left: -2, right: -2, bottom: -2,
+                      background: 'linear-gradient(45deg, #e930ff66, transparent, #e930ff66)',
+                      borderRadius: 14, opacity: 0, transition: 'opacity 0.3s ease', pointerEvents: 'none'
+                    }} />
                     <div style={{ 
                       fontSize: '28px', 
-                      fontWeight: '700', 
+                      fontWeight: '800', 
                       color: '#e930ff',
+                      textShadow: '0 0 20px #e930ff40',
                       marginBottom: '8px'
                     }}>
                       {customerData.analytics.days_since_last_activity || 0}
                     </div>
-                    <div style={{ fontSize: '14px', color: '#5891cb' }}>
+                    <div style={{ fontSize: '14px', color: '#c7d2fe' }}>
                       📅 Days Since Activity
                     </div>
+                    {/* Bottom accent */}
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, transparent 0%, #e930ff 50%, transparent 100%)', opacity: 0.8 }} />
                   </div>
                 </div>
                 </>
@@ -1843,13 +1929,15 @@ const CustomerSearchAnalytics = ({ onCustomerSelect = null }) => {
       </div>
 
       {/* Analysis Charts Section */}
-      <div className="glass-chart-container">
+      <div className="glass-chart-container" style={{ border: '1px solid #3a4459', borderRadius: '12px', boxShadow: '0 0 0 1px rgba(0, 224, 255, 0.04) inset' }}>
         <div className="chart-header">
           <div>
             <h3 className="chart-title">📊 Customer Analysis</h3>
             <p className="chart-subtitle">RCF analysis and purchase timeline for selected customer</p>
           </div>
         </div>
+        {/* Inner outline under header */}
+        <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, #3a4459, transparent)', margin: '0 var(--spacing-lg)' }} />
         
         <div style={{ padding: 'var(--spacing-lg)' }}>
           {customerData && customerData.analytics ? (
@@ -1929,24 +2017,51 @@ const CustomerSearchAnalytics = ({ onCustomerSelect = null }) => {
                         backdropFilter: 'blur(8px)',
                         border: '1px solid rgba(58, 68, 89, 0.5)',
                         animation: 'counterUp 0.6s ease both',
-                        animationDelay: '0ms'
+                        animationDelay: '0ms',
+                        background: 'linear-gradient(135deg, rgba(30, 39, 56, 0.8) 0%, rgba(35, 42, 54, 0.8) 100%)',
+                        color: '#f7f9fb',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        borderRadius: '12px'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-5px)';
                         e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 224, 255, 0.15)';
                         e.currentTarget.style.borderColor = '#00e0ff';
+                        const p = e.currentTarget.querySelector('[data-role="particle"]');
+                        const g = e.currentTarget.querySelector('[data-role="glow"]');
+                        if (p) p.style.opacity = '1';
+                        if (g) g.style.opacity = '1';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.transform = 'translateY(0)';
                         e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.2)';
                         e.currentTarget.style.borderColor = 'rgba(58, 68, 89, 0.5)';
+                        const p = e.currentTarget.querySelector('[data-role="particle"]');
+                        const g = e.currentTarget.querySelector('[data-role="glow"]');
+                        if (p) p.style.opacity = '0.6';
+                        if (g) g.style.opacity = '0';
                       }}>
-                        <div style={{ color: '#00e0ff', fontSize: '20px', fontWeight: '600', marginBottom: '4px' }}>
+                        {/* Particle background */}
+                        <div data-role="particle" style={{
+                          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                          background: 'radial-gradient(circle at 30% 20%, rgba(0, 224, 255, 0.15) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(0, 224, 255, 0.1) 0%, transparent 50%)',
+                          opacity: 0.6, transition: 'opacity 0.3s ease', pointerEvents: 'none'
+                        }} />
+                        {/* Glow border */}
+                        <div data-role="glow" style={{
+                          position: 'absolute', top: -2, left: -2, right: -2, bottom: -2,
+                          background: 'linear-gradient(45deg, #00e0ff66, transparent, #00e0ff66)',
+                          borderRadius: 14, opacity: 0, transition: 'opacity 0.3s ease', pointerEvents: 'none'
+                        }} />
+                        <div style={{ color: '#00e0ff', fontSize: '20px', fontWeight: '800', textShadow: '0 0 20px #00e0ff40', marginBottom: '4px' }}>
                           {Math.max(0, 10 - (customerData.analytics.days_since_last_activity || 0) / 10).toFixed(1)}
                         </div>
-                        <div style={{ color: '#5891cb', fontSize: '12px' }}>
+                        <div style={{ color: '#c7d2fe', fontSize: '12px' }}>
                           Recency Score
                         </div>
+                        {/* Bottom accent */}
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, transparent 0%, #00e0ff 50%, transparent 100%)', opacity: 0.8 }} />
                       </div>
                     <div 
                       className="standard-kpi-tile glass-kpi-tile" 
@@ -1960,24 +2075,51 @@ const CustomerSearchAnalytics = ({ onCustomerSelect = null }) => {
                         backdropFilter: 'blur(8px)',
                         border: '1px solid rgba(58, 68, 89, 0.5)',
                         animation: 'counterUp 0.6s ease both',
-                        animationDelay: '150ms'
+                        animationDelay: '150ms',
+                        background: 'linear-gradient(135deg, rgba(30, 39, 56, 0.8) 0%, rgba(35, 42, 54, 0.8) 100%)',
+                        color: '#f7f9fb',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        borderRadius: '12px'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-5px)';
                         e.currentTarget.style.boxShadow = '0 12px 40px rgba(95, 212, 214, 0.15)';
                         e.currentTarget.style.borderColor = '#5fd4d6';
+                        const p = e.currentTarget.querySelector('[data-role=\"particle\"]');
+                        const g = e.currentTarget.querySelector('[data-role=\"glow\"]');
+                        if (p) p.style.opacity = '1';
+                        if (g) g.style.opacity = '1';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.transform = 'translateY(0)';
                         e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.2)';
                         e.currentTarget.style.borderColor = 'rgba(58, 68, 89, 0.5)';
+                        const p = e.currentTarget.querySelector('[data-role=\"particle\"]');
+                        const g = e.currentTarget.querySelector('[data-role=\"glow\"]');
+                        if (p) p.style.opacity = '0.6';
+                        if (g) g.style.opacity = '0';
                       }}>
-                        <div style={{ color: '#5fd4d6', fontSize: '20px', fontWeight: '600', marginBottom: '4px' }}>
+                        {/* Particle background */}
+                        <div data-role="particle" style={{
+                          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                          background: 'radial-gradient(circle at 30% 20%, rgba(95, 212, 214, 0.15) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(95, 212, 214, 0.1) 0%, transparent 50%)',
+                          opacity: 0.6, transition: 'opacity 0.3s ease', pointerEvents: 'none'
+                        }} />
+                        {/* Glow border */}
+                        <div data-role="glow" style={{
+                          position: 'absolute', top: -2, left: -2, right: -2, bottom: -2,
+                          background: 'linear-gradient(45deg, #5fd4d666, transparent, #5fd4d666)',
+                          borderRadius: 14, opacity: 0, transition: 'opacity 0.3s ease', pointerEvents: 'none'
+                        }} />
+                        <div style={{ color: '#5fd4d6', fontSize: '20px', fontWeight: '800', textShadow: '0 0 20px #5fd4d640', marginBottom: '4px' }}>
                           {Math.min(10, (customerData.analytics.total_transactions || 0) / 2).toFixed(1)}
                         </div>
-                        <div style={{ color: '#5891cb', fontSize: '12px' }}>
+                        <div style={{ color: '#c7d2fe', fontSize: '12px' }}>
                           Frequency Score
                         </div>
+                        {/* Bottom accent */}
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, transparent 0%, #5fd4d6 50%, transparent 100%)', opacity: 0.8 }} />
                       </div>
                     <div 
                       className="standard-kpi-tile glass-kpi-tile" 
@@ -1991,24 +2133,51 @@ const CustomerSearchAnalytics = ({ onCustomerSelect = null }) => {
                         backdropFilter: 'blur(8px)',
                         border: '1px solid rgba(58, 68, 89, 0.5)',
                         animation: 'counterUp 0.6s ease both',
-                        animationDelay: '300ms'
+                        animationDelay: '300ms',
+                        background: 'linear-gradient(135deg, rgba(30, 39, 56, 0.8) 0%, rgba(35, 42, 54, 0.8) 100%)',
+                        color: '#f7f9fb',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        borderRadius: '12px'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-5px)';
                         e.currentTarget.style.boxShadow = '0 12px 40px rgba(233, 48, 255, 0.15)';
                         e.currentTarget.style.borderColor = '#e930ff';
+                        const p = e.currentTarget.querySelector('[data-role=\"particle\"]');
+                        const g = e.currentTarget.querySelector('[data-role=\"glow\"]');
+                        if (p) p.style.opacity = '1';
+                        if (g) g.style.opacity = '1';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.transform = 'translateY(0)';
                         e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.2)';
                         e.currentTarget.style.borderColor = 'rgba(58, 68, 89, 0.5)';
+                        const p = e.currentTarget.querySelector('[data-role=\"particle\"]');
+                        const g = e.currentTarget.querySelector('[data-role=\"glow\"]');
+                        if (p) p.style.opacity = '0.6';
+                        if (g) g.style.opacity = '0';
                       }}>
-                        <div style={{ color: '#e930ff', fontSize: '20px', fontWeight: '600', marginBottom: '4px' }}>
+                        {/* Particle background */}
+                        <div data-role="particle" style={{
+                          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                          background: 'radial-gradient(circle at 30% 20%, rgba(233, 48, 255, 0.15) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(233, 48, 255, 0.1) 0%, transparent 50%)',
+                          opacity: 0.6, transition: 'opacity 0.3s ease', pointerEvents: 'none'
+                        }} />
+                        {/* Glow border */}
+                        <div data-role="glow" style={{
+                          position: 'absolute', top: -2, left: -2, right: -2, bottom: -2,
+                          background: 'linear-gradient(45deg, #e930ff66, transparent, #e930ff66)',
+                          borderRadius: 14, opacity: 0, transition: 'opacity 0.3s ease', pointerEvents: 'none'
+                        }} />
+                        <div style={{ color: '#e930ff', fontSize: '20px', fontWeight: '800', textShadow: '0 0 20px #e930ff40', marginBottom: '4px' }}>
                           {Math.min(10, (customerData.analytics.total_purchases || 0) / 50000).toFixed(1)}
                         </div>
-                        <div style={{ color: '#5891cb', fontSize: '12px' }}>
+                        <div style={{ color: '#c7d2fe', fontSize: '12px' }}>
                           Monetary Score
                         </div>
+                        {/* Bottom accent */}
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, transparent 0%, #e930ff 50%, transparent 100%)', opacity: 0.8 }} />
                       </div>
                   </div>
                 </div>
@@ -2047,26 +2216,53 @@ const CustomerSearchAnalytics = ({ onCustomerSelect = null }) => {
                         backdropFilter: 'blur(8px)',
                         border: '1px solid rgba(58, 68, 89, 0.5)',
                         animation: 'counterUp 0.6s ease both',
-                        animationDelay: '0ms'
+                        animationDelay: '0ms',
+                        background: 'linear-gradient(135deg, rgba(30, 39, 56, 0.8) 0%, rgba(35, 42, 54, 0.8) 100%)',
+                        color: '#f7f9fb',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        borderRadius: '12px'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-5px)';
                         e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 224, 255, 0.15)';
                         e.currentTarget.style.borderColor = '#00e0ff';
+                        const p = e.currentTarget.querySelector('[data-role=\"particle\"]');
+                        const g = e.currentTarget.querySelector('[data-role=\"glow\"]');
+                        if (p) p.style.opacity = '1';
+                        if (g) g.style.opacity = '1';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.transform = 'translateY(0)';
                         e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.2)';
                         e.currentTarget.style.borderColor = 'rgba(58, 68, 89, 0.5)';
+                        const p = e.currentTarget.querySelector('[data-role=\"particle\"]');
+                        const g = e.currentTarget.querySelector('[data-role=\"glow\"]');
+                        if (p) p.style.opacity = '0.6';
+                        if (g) g.style.opacity = '0';
                       }}>
-                        <div style={{ color: '#00e0ff', fontSize: '18px', fontWeight: '600', marginBottom: '4px' }}>
+                        {/* Particle background */}
+                        <div data-role="particle" style={{
+                          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                          background: 'radial-gradient(circle at 30% 20%, rgba(0, 224, 255, 0.15) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(0, 224, 255, 0.1) 0%, transparent 50%)',
+                          opacity: 0.6, transition: 'opacity 0.3s ease', pointerEvents: 'none'
+                        }} />
+                        {/* Glow border */}
+                        <div data-role="glow" style={{
+                          position: 'absolute', top: -2, left: -2, right: -2, bottom: -2,
+                          background: 'linear-gradient(45deg, #00e0ff66, transparent, #00e0ff66)',
+                          borderRadius: 14, opacity: 0, transition: 'opacity 0.3s ease', pointerEvents: 'none'
+                        }} />
+                        <div style={{ color: '#00e0ff', fontSize: '18px', fontWeight: '800', textShadow: '0 0 20px #00e0ff40', marginBottom: '4px' }}>
                           {timelineView === 'detailed' ? 
                             drillDownData.length : 
                             customerData.analytics.timeline?.filter(t => t.purchase_amount > 0).length || 0}
                         </div>
-                        <div style={{ color: '#5891cb', fontSize: '11px' }}>
+                        <div style={{ color: '#c7d2fe', fontSize: '11px' }}>
                           {timelineView === 'detailed' ? 'Transactions' : 'Active Periods'}
                         </div>
+                        {/* Bottom accent */}
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, transparent 0%, #00e0ff 50%, transparent 100%)', opacity: 0.8 }} />
                       </div>
                     <div 
                       className="standard-kpi-tile glass-kpi-tile" 
@@ -2080,28 +2276,55 @@ const CustomerSearchAnalytics = ({ onCustomerSelect = null }) => {
                         backdropFilter: 'blur(8px)',
                         border: '1px solid rgba(58, 68, 89, 0.5)',
                         animation: 'counterUp 0.6s ease both',
-                        animationDelay: '150ms'
+                        animationDelay: '150ms',
+                        background: 'linear-gradient(135deg, rgba(30, 39, 56, 0.8) 0%, rgba(35, 42, 54, 0.8) 100%)',
+                        color: '#f7f9fb',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        borderRadius: '12px'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-5px)';
                         e.currentTarget.style.boxShadow = '0 12px 40px rgba(95, 212, 214, 0.15)';
                         e.currentTarget.style.borderColor = '#5fd4d6';
+                        const p = e.currentTarget.querySelector('[data-role=\"particle\"]');
+                        const g = e.currentTarget.querySelector('[data-role=\"glow\"]');
+                        if (p) p.style.opacity = '1';
+                        if (g) g.style.opacity = '1';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.transform = 'translateY(0)';
                         e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.2)';
                         e.currentTarget.style.borderColor = 'rgba(58, 68, 89, 0.5)';
+                        const p = e.currentTarget.querySelector('[data-role=\"particle\"]');
+                        const g = e.currentTarget.querySelector('[data-role=\"glow\"]');
+                        if (p) p.style.opacity = '0.6';
+                        if (g) g.style.opacity = '0';
                       }}>
-                        <div style={{ color: '#5fd4d6', fontSize: '18px', fontWeight: '600', marginBottom: '4px' }}>
+                        {/* Particle background */}
+                        <div data-role="particle" style={{
+                          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                          background: 'radial-gradient(circle at 30% 20%, rgba(95, 212, 214, 0.15) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(95, 212, 214, 0.1) 0%, transparent 50%)',
+                          opacity: 0.6, transition: 'opacity 0.3s ease', pointerEvents: 'none'
+                        }} />
+                        {/* Glow border */}
+                        <div data-role="glow" style={{
+                          position: 'absolute', top: -2, left: -2, right: -2, bottom: -2,
+                          background: 'linear-gradient(45deg, #5fd4d666, transparent, #5fd4d666)',
+                          borderRadius: 14, opacity: 0, transition: 'opacity 0.3s ease', pointerEvents: 'none'
+                        }} />
+                        <div style={{ color: '#5fd4d6', fontSize: '18px', fontWeight: '800', textShadow: '0 0 20px #5fd4d640', marginBottom: '4px' }}>
                           {timelineView === 'detailed' ? 
                             (drillDownData.reduce((sum, t) => sum + (t.amount || 0), 0) ? 
                               formatCurrency(drillDownData.reduce((sum, t) => sum + (t.amount || 0), 0)) : '$0') :
                             (customerData.analytics.timeline?.reduce((sum, t) => sum + (t.purchase_amount || 0), 0) ? 
                               formatCurrency(customerData.analytics.timeline.reduce((sum, t) => sum + (t.purchase_amount || 0), 0)) : '$0')}
                         </div>
-                        <div style={{ color: '#5891cb', fontSize: '11px' }}>
+                        <div style={{ color: '#c7d2fe', fontSize: '11px' }}>
                           {timelineView === 'detailed' ? 'Period Total' : 'Timeline Total'}
                         </div>
+                        {/* Bottom accent */}
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, transparent 0%, #5fd4d6 50%, transparent 100%)', opacity: 0.8 }} />
                       </div>
                     <div 
                       className="standard-kpi-tile glass-kpi-tile" 
@@ -2115,27 +2338,54 @@ const CustomerSearchAnalytics = ({ onCustomerSelect = null }) => {
                         backdropFilter: 'blur(8px)',
                         border: '1px solid rgba(58, 68, 89, 0.5)',
                         animation: 'counterUp 0.6s ease both',
-                        animationDelay: '300ms'
+                        animationDelay: '300ms',
+                        background: 'linear-gradient(135deg, rgba(30, 39, 56, 0.8) 0%, rgba(35, 42, 54, 0.8) 100%)',
+                        color: '#f7f9fb',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        borderRadius: '12px'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-5px)';
                         e.currentTarget.style.boxShadow = '0 12px 40px rgba(233, 48, 255, 0.15)';
                         e.currentTarget.style.borderColor = '#e930ff';
+                        const p = e.currentTarget.querySelector('[data-role=\"particle\"]');
+                        const g = e.currentTarget.querySelector('[data-role=\"glow\"]');
+                        if (p) p.style.opacity = '1';
+                        if (g) g.style.opacity = '1';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.transform = 'translateY(0)';
                         e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.2)';
                         e.currentTarget.style.borderColor = 'rgba(58, 68, 89, 0.5)';
+                        const p = e.currentTarget.querySelector('[data-role=\"particle\"]');
+                        const g = e.currentTarget.querySelector('[data-role=\"glow\"]');
+                        if (p) p.style.opacity = '0.6';
+                        if (g) g.style.opacity = '0';
                       }}>
-                        <div style={{ color: '#e930ff', fontSize: '18px', fontWeight: '600', marginBottom: '4px' }}>
+                        {/* Particle background */}
+                        <div data-role="particle" style={{
+                          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                          background: 'radial-gradient(circle at 30% 20%, rgba(233, 48, 255, 0.15) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(233, 48, 255, 0.1) 0%, transparent 50%)',
+                          opacity: 0.6, transition: 'opacity 0.3s ease', pointerEvents: 'none'
+                        }} />
+                        {/* Glow border */}
+                        <div data-role="glow" style={{
+                          position: 'absolute', top: -2, left: -2, right: -2, bottom: -2,
+                          background: 'linear-gradient(45deg, #e930ff66, transparent, #e930ff66)',
+                          borderRadius: 14, opacity: 0, transition: 'opacity 0.3s ease', pointerEvents: 'none'
+                        }} />
+                        <div style={{ color: '#e930ff', fontSize: '18px', fontWeight: '800', textShadow: '0 0 20px #e930ff40', marginBottom: '4px' }}>
                           {timelineView === 'detailed' ? 
                             (drillDownData.length > 0 ? formatCurrency(Math.max(...drillDownData.map(t => t.amount || 0))) : '$0') :
                             (customerData.analytics.timeline?.length > 0 ? 
                               formatCurrency(Math.max(...customerData.analytics.timeline.map(t => t.purchase_amount || 0))) : '$0')}
                         </div>
-                        <div style={{ color: '#5891cb', fontSize: '11px' }}>
+                        <div style={{ color: '#c7d2fe', fontSize: '11px' }}>
                           {timelineView === 'detailed' ? 'Largest Transaction' : 'Peak Purchase'}
                         </div>
+                        {/* Bottom accent */}
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, transparent 0%, #e930ff 50%, transparent 100%)', opacity: 0.8 }} />
                       </div>
                     {timelineView === 'detailed' && (
                       <div 

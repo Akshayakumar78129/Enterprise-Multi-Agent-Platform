@@ -4,7 +4,7 @@
     "chunk_size": 500,
     "chunk_overlap": 50,
     "model": "embedding-001",
-    "created_at": "2025-08-24T18:10:52.811Z",
+    "created_at": "2025-08-31T14:26:15.177Z",
     "version": "1.1.0",
     "notes": "Includes tagged knowledge from agent.txt for sales_agent and inventory_agent"
   },
@@ -783,7 +783,7 @@
         0.04590697
       ],
       "size": 409,
-      "created_at": "2025-08-24T18:10:03.483Z",
+      "created_at": "2025-08-31T14:25:24.331Z",
       "tag": "general",
       "source": "dashboard_explanations.txt"
     },
@@ -1561,7 +1561,7 @@
         -0.0016337505
       ],
       "size": 304,
-      "created_at": "2025-08-24T18:10:04.061Z",
+      "created_at": "2025-08-31T14:25:25.364Z",
       "tag": "general",
       "source": "dashboard_explanations.txt"
     },
@@ -2339,7 +2339,7 @@
         0.043299735
       ],
       "size": 354,
-      "created_at": "2025-08-24T18:10:05.222Z",
+      "created_at": "2025-08-31T14:25:26.152Z",
       "tag": "general",
       "source": "dashboard_explanations.txt"
     },
@@ -3117,7 +3117,7 @@
         0.01830444
       ],
       "size": 359,
-      "created_at": "2025-08-24T18:10:05.896Z",
+      "created_at": "2025-08-31T14:25:27.073Z",
       "tag": "general",
       "source": "dashboard_explanations.txt"
     },
@@ -3895,7 +3895,7 @@
         0.041775115
       ],
       "size": 3083,
-      "created_at": "2025-08-24T18:10:06.932Z",
+      "created_at": "2025-08-31T14:25:27.885Z",
       "tag": "general",
       "source": "dashboard_explanations.txt"
     },
@@ -4673,7 +4673,7 @@
         -0.009850187
       ],
       "size": 454,
-      "created_at": "2025-08-24T18:10:07.582Z",
+      "created_at": "2025-08-31T14:25:28.817Z",
       "tag": "general",
       "source": "dashboard_explanations.txt"
     },
@@ -5451,7 +5451,7 @@
         0.013438264
       ],
       "size": 916,
-      "created_at": "2025-08-24T18:10:08.665Z",
+      "created_at": "2025-08-31T14:25:29.739Z",
       "tag": "general",
       "source": "dashboard_explanations.txt"
     },
@@ -6229,7 +6229,7 @@
         0.025934696
       ],
       "size": 227,
-      "created_at": "2025-08-24T18:10:09.221Z",
+      "created_at": "2025-08-31T14:25:30.521Z",
       "tag": "general",
       "source": "dashboard_explanations.txt"
     },
@@ -7007,7 +7007,7 @@
         0.028406978
       ],
       "size": 4376,
-      "created_at": "2025-08-24T18:10:10.504Z",
+      "created_at": "2025-08-31T14:25:31.585Z",
       "tag": "general",
       "source": "dashboard_explanations.txt"
     },
@@ -7785,7 +7785,7 @@
         0.027661894
       ],
       "size": 444,
-      "created_at": "2025-08-24T18:10:11.030Z",
+      "created_at": "2025-08-31T14:25:32.329Z",
       "tag": "general",
       "source": "dashboard_explanations.txt"
     },
@@ -8563,7 +8563,7 @@
         0.009640391
       ],
       "size": 468,
-      "created_at": "2025-08-24T18:10:12.241Z",
+      "created_at": "2025-08-31T14:25:33.314Z",
       "tag": "general",
       "source": "dashboard_explanations.txt"
     },
@@ -9341,7 +9341,7 @@
         0.021197932
       ],
       "size": 396,
-      "created_at": "2025-08-24T18:10:12.787Z",
+      "created_at": "2025-08-31T14:25:33.984Z",
       "tag": "general",
       "source": "dashboard_explanations.txt"
     },
@@ -10119,7 +10119,7 @@
         -0.021899944
       ],
       "size": 306,
-      "created_at": "2025-08-24T18:10:13.920Z",
+      "created_at": "2025-08-31T14:25:35.000Z",
       "tag": "general",
       "source": "dashboard_explanations.txt"
     },
@@ -10897,7 +10897,7 @@
         0.029486518
       ],
       "size": 496,
-      "created_at": "2025-08-24T18:10:14.487Z",
+      "created_at": "2025-08-31T14:25:35.781Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -11675,7 +11675,7 @@
         0.0053641153
       ],
       "size": 472,
-      "created_at": "2025-08-24T18:10:15.583Z",
+      "created_at": "2025-08-31T14:25:36.700Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -12453,7 +12453,7 @@
         -0.021284722
       ],
       "size": 472,
-      "created_at": "2025-08-24T18:10:16.240Z",
+      "created_at": "2025-08-31T14:25:37.467Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -13231,7 +13231,7 @@
         0.010991603
       ],
       "size": 458,
-      "created_at": "2025-08-24T18:10:17.281Z",
+      "created_at": "2025-08-31T14:25:38.439Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -14009,7 +14009,7 @@
         0.01197176
       ],
       "size": 486,
-      "created_at": "2025-08-24T18:10:17.888Z",
+      "created_at": "2025-08-31T14:25:39.155Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -14787,7 +14787,7 @@
         0.00218908
       ],
       "size": 450,
-      "created_at": "2025-08-24T18:10:18.952Z",
+      "created_at": "2025-08-31T14:25:40.082Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -15565,7 +15565,7 @@
         -0.047921494
       ],
       "size": 469,
-      "created_at": "2025-08-24T18:10:19.646Z",
+      "created_at": "2025-08-31T14:25:40.901Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -16343,7 +16343,7 @@
         0.028317872
       ],
       "size": 475,
-      "created_at": "2025-08-24T18:10:20.698Z",
+      "created_at": "2025-08-31T14:25:41.824Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -17121,7 +17121,7 @@
         0.019898554
       ],
       "size": 452,
-      "created_at": "2025-08-24T18:10:21.308Z",
+      "created_at": "2025-08-31T14:25:42.663Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -17899,7 +17899,7 @@
         -0.0027008217
       ],
       "size": 471,
-      "created_at": "2025-08-24T18:10:22.377Z",
+      "created_at": "2025-08-31T14:25:43.660Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -18677,7 +18677,7 @@
         0.004162679
       ],
       "size": 284,
-      "created_at": "2025-08-24T18:10:22.965Z",
+      "created_at": "2025-08-31T14:25:44.390Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -19455,7 +19455,7 @@
         -0.038104445
       ],
       "size": 442,
-      "created_at": "2025-08-24T18:10:24.042Z",
+      "created_at": "2025-08-31T14:25:45.412Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -20233,7 +20233,7 @@
         -0.047493014
       ],
       "size": 441,
-      "created_at": "2025-08-24T18:10:24.635Z",
+      "created_at": "2025-08-31T14:25:46.124Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -21011,7 +21011,7 @@
         -0.042132482
       ],
       "size": 404,
-      "created_at": "2025-08-24T18:10:25.711Z",
+      "created_at": "2025-08-31T14:25:47.167Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -21789,7 +21789,7 @@
         -0.026071787
       ],
       "size": 347,
-      "created_at": "2025-08-24T18:10:26.373Z",
+      "created_at": "2025-08-31T14:25:47.859Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -22567,7 +22567,7 @@
         -0.028252164
       ],
       "size": 499,
-      "created_at": "2025-08-24T18:10:27.374Z",
+      "created_at": "2025-08-31T14:25:48.902Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -23345,7 +23345,7 @@
         -0.019502811
       ],
       "size": 450,
-      "created_at": "2025-08-24T18:10:28.038Z",
+      "created_at": "2025-08-31T14:25:49.536Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -24123,7 +24123,7 @@
         0.01832144
       ],
       "size": 497,
-      "created_at": "2025-08-24T18:10:29.051Z",
+      "created_at": "2025-08-31T14:25:50.640Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -24901,7 +24901,7 @@
         -0.014456172
       ],
       "size": 450,
-      "created_at": "2025-08-24T18:10:29.701Z",
+      "created_at": "2025-08-31T14:25:51.246Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -25679,7 +25679,7 @@
         -0.003943202
       ],
       "size": 502,
-      "created_at": "2025-08-24T18:10:30.735Z",
+      "created_at": "2025-08-31T14:25:52.394Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -26457,7 +26457,7 @@
         -0.041388456
       ],
       "size": 498,
-      "created_at": "2025-08-24T18:10:31.395Z",
+      "created_at": "2025-08-31T14:25:52.975Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -27235,7 +27235,7 @@
         -0.03856975
       ],
       "size": 492,
-      "created_at": "2025-08-24T18:10:32.471Z",
+      "created_at": "2025-08-31T14:25:54.124Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -28013,7 +28013,7 @@
         0.012863517
       ],
       "size": 145,
-      "created_at": "2025-08-24T18:10:33.064Z",
+      "created_at": "2025-08-31T14:25:54.802Z",
       "tag": "sales_agent",
       "source": "agent.txt"
     },
@@ -28791,7 +28791,7 @@
         0.029486518
       ],
       "size": 496,
-      "created_at": "2025-08-24T18:10:34.135Z",
+      "created_at": "2025-08-31T14:25:55.860Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -29569,7 +29569,7 @@
         0.0053641153
       ],
       "size": 472,
-      "created_at": "2025-08-24T18:10:34.730Z",
+      "created_at": "2025-08-31T14:25:56.557Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -30347,7 +30347,7 @@
         -0.021284722
       ],
       "size": 472,
-      "created_at": "2025-08-24T18:10:35.792Z",
+      "created_at": "2025-08-31T14:25:57.526Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -31125,7 +31125,7 @@
         0.010991603
       ],
       "size": 458,
-      "created_at": "2025-08-24T18:10:36.387Z",
+      "created_at": "2025-08-31T14:25:58.306Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -31903,7 +31903,7 @@
         0.01197176
       ],
       "size": 486,
-      "created_at": "2025-08-24T18:10:37.472Z",
+      "created_at": "2025-08-31T14:25:59.234Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -32681,7 +32681,7 @@
         0.00218908
       ],
       "size": 450,
-      "created_at": "2025-08-24T18:10:38.043Z",
+      "created_at": "2025-08-31T14:26:00.050Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -33459,7 +33459,7 @@
         -0.047921494
       ],
       "size": 469,
-      "created_at": "2025-08-24T18:10:39.131Z",
+      "created_at": "2025-08-31T14:26:00.987Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -34237,7 +34237,7 @@
         0.028317872
       ],
       "size": 475,
-      "created_at": "2025-08-24T18:10:39.707Z",
+      "created_at": "2025-08-31T14:26:01.715Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -35015,7 +35015,7 @@
         0.019898554
       ],
       "size": 452,
-      "created_at": "2025-08-24T18:10:40.812Z",
+      "created_at": "2025-08-31T14:26:02.821Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -35793,7 +35793,7 @@
         -0.0027008217
       ],
       "size": 471,
-      "created_at": "2025-08-24T18:10:41.392Z",
+      "created_at": "2025-08-31T14:26:03.431Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -36571,7 +36571,7 @@
         0.004162679
       ],
       "size": 284,
-      "created_at": "2025-08-24T18:10:42.547Z",
+      "created_at": "2025-08-31T14:26:04.666Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -37349,7 +37349,7 @@
         -0.038104445
       ],
       "size": 442,
-      "created_at": "2025-08-24T18:10:43.097Z",
+      "created_at": "2025-08-31T14:26:05.284Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -38127,7 +38127,7 @@
         -0.047493014
       ],
       "size": 441,
-      "created_at": "2025-08-24T18:10:44.221Z",
+      "created_at": "2025-08-31T14:26:06.392Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -38905,7 +38905,7 @@
         -0.042132482
       ],
       "size": 404,
-      "created_at": "2025-08-24T18:10:44.743Z",
+      "created_at": "2025-08-31T14:26:07.122Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -39683,7 +39683,7 @@
         -0.026071787
       ],
       "size": 347,
-      "created_at": "2025-08-24T18:10:45.892Z",
+      "created_at": "2025-08-31T14:26:08.135Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -40461,7 +40461,7 @@
         -0.028252164
       ],
       "size": 499,
-      "created_at": "2025-08-24T18:10:46.473Z",
+      "created_at": "2025-08-31T14:26:08.858Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -41239,7 +41239,7 @@
         -0.019502811
       ],
       "size": 450,
-      "created_at": "2025-08-24T18:10:47.598Z",
+      "created_at": "2025-08-31T14:26:09.877Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -42017,7 +42017,7 @@
         0.01832144
       ],
       "size": 497,
-      "created_at": "2025-08-24T18:10:48.146Z",
+      "created_at": "2025-08-31T14:26:10.592Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -42795,7 +42795,7 @@
         -0.014456172
       ],
       "size": 450,
-      "created_at": "2025-08-24T18:10:49.317Z",
+      "created_at": "2025-08-31T14:26:11.612Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -43573,7 +43573,7 @@
         -0.003943202
       ],
       "size": 502,
-      "created_at": "2025-08-24T18:10:49.839Z",
+      "created_at": "2025-08-31T14:26:12.331Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -44351,7 +44351,7 @@
         -0.041388456
       ],
       "size": 498,
-      "created_at": "2025-08-24T18:10:51.013Z",
+      "created_at": "2025-08-31T14:26:13.358Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -45129,7 +45129,7 @@
         -0.03856975
       ],
       "size": 492,
-      "created_at": "2025-08-24T18:10:51.548Z",
+      "created_at": "2025-08-31T14:26:14.085Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     },
@@ -45907,7 +45907,7 @@
         0.012863517
       ],
       "size": 145,
-      "created_at": "2025-08-24T18:10:52.699Z",
+      "created_at": "2025-08-31T14:26:15.071Z",
       "tag": "inventory_agent",
       "source": "agent.txt"
     }

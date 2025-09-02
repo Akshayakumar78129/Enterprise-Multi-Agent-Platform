@@ -273,8 +273,6 @@ const EngagementDashboard = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [isChatLoading, setIsChatLoading] = useState(false);
-  const [responseMode, setResponseMode] = useState('detailed'); // 'talk' | 'insights' | 'detailed'
-  
   // Context tags state
   const [contextTags, setContextTags] = useState([]);
 
@@ -897,27 +895,31 @@ const EngagementDashboard = () => {
 
         {/* Customer Search & Analytics Section */}
         <div className={`${styles.section} ${styles.searchSection}`}>
-          <CustomerSearchAnalytics
-            onCustomerSelect={(customer) => {
-              console.log('Customer selected for analysis:', customer);
-              // Open chat with customer context
-              setChatContext({
-                currentView: 'customer_detail',
-                customer: customer
-              });
-              setIsChatOpen(true);
-            }}
-          />
+          <div className={styles.glassInnerBg}>
+            <CustomerSearchAnalytics
+              onCustomerSelect={(customer) => {
+                console.log('Customer selected for analysis:', customer);
+                // Open chat with customer context
+                setChatContext({
+                  currentView: 'customer_detail',
+                  customer: customer
+                });
+                setIsChatOpen(true);
+              }}
+            />
+          </div>
         </div>
 
         {/* Opportunity Finder Section */}
         <div className={`${styles.section} ${styles.opportunitySection}`}>
-          <OpportunityFinder
-            opportunities={data?.opportunities}
-            isLoading={isLoading}
-            onOpportunitySelect={handleOpportunitySelect}
-            onThresholdChange={handleThresholdChange}
-          />
+          <div className={styles.glassInnerBg}>
+            <OpportunityFinder
+              opportunities={data?.opportunities}
+              isLoading={isLoading}
+              onOpportunitySelect={handleOpportunitySelect}
+              onThresholdChange={handleThresholdChange}
+            />
+          </div>
         </div>
 
         {/* Footer */}
