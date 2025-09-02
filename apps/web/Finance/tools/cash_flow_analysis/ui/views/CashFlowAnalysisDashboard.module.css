@@ -1,0 +1,724 @@
+/* Cash Flow Analysis Dashboard Styles */
+
+.dashboard {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a1224 0%, #0d1a2d 100%);
+  color: #f7f9fb;
+  padding: 20px;
+  overflow-x: hidden;
+}
+
+.loadingContainer, .errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a1224 0%, #0d1a2d 100%);
+  color: #f7f9fb;
+}
+
+.loadingSpinner {
+  width: 60px;
+  height: 60px;
+  border: 3px solid rgba(0, 224, 255, 0.1);
+  border-top: 3px solid #00e0ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.errorMessage {
+  font-size: 18px;
+  text-align: center;
+  margin-bottom: 20px;
+  color: #ff5252;
+}
+
+.retryButton {
+  background: linear-gradient(135deg, #00e0ff 0%, #0080ff 100%);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  color: #0a1224;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.retryButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 224, 255, 0.3);
+}
+
+.header {
+  margin-bottom: 30px;
+}
+
+.headerContent {
+  text-align: center;
+}
+
+.title {
+  font-size: 48px;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  background: linear-gradient(135deg, #00e0ff 0%, #e930ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.icon {
+  font-size: 56px;
+}
+
+.subtitle {
+  font-size: 18px;
+  color: rgba(247, 249, 251, 0.7);
+  margin: 0;
+  font-weight: 400;
+}
+
+.filterSection {
+  background: linear-gradient(135deg, #1e2738 0%, #1a2332 100%);
+  border: 1px solid rgba(0, 224, 255, 0.2);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.filterGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(247, 249, 251, 0.8);
+  white-space: nowrap;
+}
+
+.filterInput, .filterSelect {
+  background: rgba(0, 224, 255, 0.05);
+  border: 1px solid rgba(0, 224, 255, 0.2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #f7f9fb;
+  font-size: 14px;
+  min-width: 120px;
+}
+
+.filterSelect option {
+  background: #1a2332;
+  color: #f7f9fb;
+}
+
+.filterInput:focus, .filterSelect:focus {
+  outline: none;
+  border-color: #00e0ff;
+  box-shadow: 0 0 0 2px rgba(0, 224, 255, 0.2);
+}
+
+.refreshButton {
+  background: linear-gradient(135deg, #00e0ff 0%, #0080ff 100%);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  color: #0a1224;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-left: auto;
+}
+
+.refreshButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(0, 224, 255, 0.3);
+}
+
+.section {
+  margin-bottom: 40px;
+}
+
+.sectionTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: #f7f9fb;
+  margin: 0 0 20px 0;
+  text-align: center;
+}
+
+.visualizationsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+  gap: 30px;
+  margin-bottom: 40px;
+}
+
+.chartSection {
+  position: relative;
+}
+
+.placeholderChart {
+  background: linear-gradient(135deg, #1e2738 0%, #1a2332 100%);
+  border: 1px solid rgba(0, 224, 255, 0.2);
+  border-radius: 16px;
+  padding: 40px;
+  height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  opacity: 0.7;
+}
+
+.placeholderChart h3 {
+  font-size: 24px;
+  color: #00e0ff;
+  margin: 0 0 12px 0;
+}
+
+.placeholderChart p {
+  font-size: 16px;
+  color: rgba(247, 249, 251, 0.6);
+  margin: 0 0 20px 0;
+}
+
+.comingSoon {
+  background: rgba(233, 48, 255, 0.2);
+  border: 1px solid rgba(233, 48, 255, 0.4);
+  border-radius: 20px;
+  padding: 8px 16px;
+  color: #e930ff;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* AI Insights Modal */
+.aiInsightsModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background: linear-gradient(135deg, #1e2738 0%, #1a2332 100%);
+  border: 1px solid rgba(0, 224, 255, 0.3);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid rgba(0, 224, 255, 0.2);
+}
+
+.modalHeader h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #00e0ff;
+  margin: 0;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: rgba(247, 249, 251, 0.6);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.closeButton:hover {
+  color: #f7f9fb;
+}
+
+.modalBody {
+  padding: 24px;
+}
+
+.insightSection h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #00e0ff;
+  margin: 0 0 16px 0;
+}
+
+.insights {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.insights p {
+  font-size: 14px;
+  color: rgba(247, 249, 251, 0.8);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.actionButtons {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.chatButton {
+  background: linear-gradient(135deg, #00e0ff 0%, #0080ff 100%);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  color: #0a1224;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.chatButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 224, 255, 0.3);
+}
+
+/* Business Intelligence Panel */
+.biPanel {
+  position: fixed;
+  bottom: 100px;
+  right: 30px;
+  width: 450px;
+  height: 650px;
+  background: linear-gradient(135deg, #1e2738 0%, #1a2332 100%);
+  border: 1px solid rgba(0, 224, 255, 0.3);
+  border-radius: 24px;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.6);
+  z-index: 998;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.biHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid rgba(0, 224, 255, 0.2);
+}
+
+.biHeader h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #00e0ff;
+  margin: 0;
+}
+
+.biContent {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.biTabs {
+  display: flex;
+  border-bottom: 1px solid rgba(0, 224, 255, 0.1);
+  background: rgba(10, 18, 36, 0.3);
+}
+
+.biTab {
+  flex: 1;
+  padding: 14px 8px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: rgba(247, 249, 251, 0.6);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.biTab:hover {
+  background: rgba(0, 224, 255, 0.03);
+  color: rgba(247, 249, 251, 0.8);
+}
+
+.biTabActive {
+  color: #00e0ff !important;
+  border-bottom-color: #00e0ff !important;
+  background: rgba(0, 224, 255, 0.05) !important;
+}
+
+.biTabContent {
+  padding: 0;
+}
+
+.biCard {
+  background: rgba(0, 224, 255, 0.05);
+  border: 1px solid rgba(0, 224, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.biCard h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #00e0ff;
+  margin: 0 0 8px 0;
+}
+
+.biCard h5 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #00e0ff;
+  margin: 0 0 6px 0;
+}
+
+.biCard p {
+  font-size: 12px;
+  color: rgba(247, 249, 251, 0.7);
+  margin: 0 0 12px 0;
+}
+
+.biMetric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.biMetric span:first-child {
+  color: rgba(247, 249, 251, 0.7);
+}
+
+.biMetric span:last-child {
+  color: #f7f9fb;
+  font-weight: 600;
+}
+
+.biValue {
+  color: #00ff88 !important;
+  font-weight: 700 !important;
+}
+
+.biOptimization {
+  margin-top: 16px;
+}
+
+.biOptItem {
+  margin-bottom: 20px;
+}
+
+.biOptLabel {
+  display: block;
+  font-size: 12px;
+  color: rgba(247, 249, 251, 0.8);
+  margin-bottom: 8px;
+}
+
+.biProgressBar {
+  height: 8px;
+  background: rgba(0, 224, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.biProgress {
+  height: 100%;
+  background: linear-gradient(90deg, #00e0ff 0%, #00ff88 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.biOptValue {
+  font-size: 11px;
+  color: #00ff88;
+  font-weight: 600;
+}
+
+.biActionList,
+.biStrategyList {
+  margin-top: 12px;
+}
+
+.biAction {
+  padding: 10px;
+  background: rgba(0, 255, 136, 0.05);
+  border-left: 3px solid #00ff88;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: rgba(247, 249, 251, 0.9);
+}
+
+.biStrategy {
+  padding: 12px;
+  background: rgba(0, 224, 255, 0.03);
+  border: 1px solid rgba(0, 224, 255, 0.1);
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.biImpact {
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: rgba(233, 48, 255, 0.1);
+  border-radius: 4px;
+  font-size: 11px;
+  color: #e930ff;
+  font-weight: 600;
+}
+
+.biScenarios {
+  margin-top: 16px;
+}
+
+.biScenario {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: rgba(0, 224, 255, 0.03);
+  border: 1px solid rgba(0, 224, 255, 0.1);
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.biScenarioLabel {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.biScenarioValue {
+  font-size: 16px;
+  font-weight: 700;
+  color: #00e0ff;
+}
+
+.biScenarioProb {
+  font-size: 11px;
+  color: rgba(247, 249, 251, 0.6);
+}
+
+.biRiskList {
+  margin-top: 12px;
+}
+
+.biRisk {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: rgba(255, 0, 68, 0.05);
+  border: 1px solid rgba(255, 0, 68, 0.2);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: rgba(247, 249, 251, 0.9);
+}
+
+.biRiskLevel {
+  padding: 2px 8px;
+  background: rgba(255, 0, 68, 0.2);
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #ff0044;
+  text-transform: uppercase;
+}
+
+.biSimulator {
+  margin-top: 16px;
+}
+
+.biSimInput {
+  margin-bottom: 20px;
+}
+
+.biSimInput label {
+  display: block;
+  font-size: 12px;
+  color: rgba(247, 249, 251, 0.7);
+  margin-bottom: 8px;
+}
+
+.biSimInput input[type="range"] {
+  width: 100%;
+  height: 6px;
+  background: rgba(0, 224, 255, 0.1);
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.biSimInput input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #00e0ff;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.biSimInput span {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #00ff88;
+}
+
+.biSimResults {
+  margin-top: 24px;
+  padding: 16px;
+  background: rgba(0, 255, 136, 0.05);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: 8px;
+}
+
+.biSimResults h5 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #00ff88;
+}
+
+.biRecommendation {
+  background: rgba(233, 48, 255, 0.1);
+  border-left: 3px solid #e930ff;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: rgba(247, 249, 251, 0.8);
+  margin-top: 8px;
+}
+
+/* Responsive Design */
+@media (max-width: 1440px) {
+  .visualizationsGrid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .filterSection {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .dashboard {
+    padding: 16px;
+  }
+  
+  .title {
+    font-size: 36px;
+  }
+  
+  .icon {
+    font-size: 40px;
+  }
+  
+  .subtitle {
+    font-size: 16px;
+  }
+  
+  .filterSection {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .biPanel {
+    width: 90%;
+    height: 70%;
+    right: 5%;
+    bottom: 15%;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 12px;
+  }
+  
+  .title {
+    font-size: 28px;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .icon {
+    font-size: 36px;
+  }
+  
+  .filterGroup {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .filterInput, .filterSelect {
+    flex: 1;
+    min-width: auto;
+  }
+  
+  .modalContent {
+    width: 95%;
+    margin: 20px;
+  }
+  
+  .biPanel {
+    width: 95%;
+    height: 80%;
+    right: 2.5%;
+    bottom: 10%;
+  }
+}

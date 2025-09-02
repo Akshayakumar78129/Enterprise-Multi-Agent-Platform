@@ -1,0 +1,259 @@
+/* AI Insights Modal Styles */
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  background: linear-gradient(135deg, #1e2738 0%, #1a2332 100%);
+  border: 1px solid rgba(0, 224, 255, 0.3);
+  border-radius: 20px;
+  width: 90%;
+  max-width: 700px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+  animation: modalAppear 0.3s ease-out;
+}
+
+@keyframes modalAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 30px;
+  border-bottom: 1px solid rgba(0, 224, 255, 0.2);
+  background: rgba(0, 224, 255, 0.05);
+}
+
+.modalHeader h3 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #00e0ff;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: rgba(247, 249, 251, 0.6);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+  color: #f7f9fb;
+  background: rgba(247, 249, 251, 0.1);
+}
+
+.modalContent {
+  padding: 30px;
+}
+
+.metricInfo {
+  background: rgba(0, 224, 255, 0.08);
+  border: 1px solid rgba(0, 224, 255, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.metricInfo h4 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #00e0ff;
+  margin: 0 0 8px 0;
+}
+
+.metricValue {
+  font-size: 14px;
+  color: rgba(247, 249, 251, 0.8);
+}
+
+.metricValue strong {
+  color: #f7f9fb;
+  font-size: 16px;
+}
+
+.insightsSection,
+.recommendationsSection {
+  margin-bottom: 24px;
+}
+
+.insightsSection h4,
+.recommendationsSection h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #00e0ff;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.insightsSection h4::before {
+  content: '💡';
+}
+
+.recommendationsSection h4::before {
+  content: '🎯';
+}
+
+.insightsList,
+.recommendationsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.insightItem,
+.recommendationItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(247, 249, 251, 0.9);
+  padding: 12px;
+  background: rgba(0, 224, 255, 0.03);
+  border-radius: 8px;
+  border-left: 3px solid rgba(0, 224, 255, 0.3);
+}
+
+.insightBullet,
+.recommendationBullet {
+  flex-shrink: 0;
+  font-size: 16px;
+  margin-top: 2px;
+}
+
+.recommendationItem {
+  border-left-color: rgba(233, 48, 255, 0.4);
+  background: rgba(233, 48, 255, 0.03);
+}
+
+.modalActions {
+  padding: 20px 30px 30px;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid rgba(0, 224, 255, 0.1);
+}
+
+.chatButton {
+  background: linear-gradient(135deg, #00e0ff 0%, #0080ff 100%);
+  border: none;
+  border-radius: 12px;
+  padding: 14px 24px;
+  color: #0a1224;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chatButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 224, 255, 0.4);
+  filter: brightness(1.05);
+}
+
+.chatButton:active {
+  transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .modal {
+    width: 95%;
+    max-height: 90vh;
+    margin: 20px;
+  }
+  
+  .modalHeader {
+    padding: 20px;
+  }
+  
+  .modalHeader h3 {
+    font-size: 18px;
+  }
+  
+  .modalContent {
+    padding: 20px;
+  }
+  
+  .metricInfo {
+    padding: 16px;
+  }
+  
+  .metricInfo h4 {
+    font-size: 16px;
+  }
+  
+  .insightItem,
+  .recommendationItem {
+    padding: 10px;
+    font-size: 13px;
+  }
+  
+  .modalActions {
+    padding: 16px 20px 20px;
+  }
+  
+  .chatButton {
+    padding: 12px 20px;
+    font-size: 13px;
+  }
+}
+
+/* Custom scrollbar */
+.modal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal::-webkit-scrollbar-track {
+  background: rgba(0, 224, 255, 0.1);
+  border-radius: 3px;
+}
+
+.modal::-webkit-scrollbar-thumb {
+  background: rgba(0, 224, 255, 0.3);
+  border-radius: 3px;
+}
+
+.modal::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 224, 255, 0.5);
+}

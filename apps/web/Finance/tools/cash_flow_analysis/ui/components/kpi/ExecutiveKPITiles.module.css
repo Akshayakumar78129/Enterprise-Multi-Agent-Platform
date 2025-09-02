@@ -1,0 +1,347 @@
+/* Executive KPI Tiles Styles */
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.kpiTile {
+  background: linear-gradient(135deg, #1e2738 0%, #1a2332 100%);
+  border: 1px solid rgba(0, 224, 255, 0.2);
+  border-radius: 16px;
+  padding: 20px;
+  min-height: 160px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.kpiTile:hover {
+  border-color: rgba(0, 224, 255, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 224, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.kpiTile::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #00e0ff 0%, #e930ff 100%);
+}
+
+.kpiHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.kpiIcon {
+  font-size: 24px;
+  margin-right: 8px;
+}
+
+.kpiLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f7f9fb;
+  opacity: 0.9;
+}
+
+.kpiValue {
+  font-size: 32px;
+  font-weight: 700;
+  color: #00e0ff;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.kpiAdditional {
+  margin-bottom: 12px;
+}
+
+.kpiSubtitle {
+  font-size: 12px;
+  color: rgba(247, 249, 251, 0.7);
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.kpiTrend {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: rgba(247, 249, 251, 0.6);
+}
+
+.trendIcon {
+  margin-right: 4px;
+}
+
+.trendLabel {
+  font-weight: 500;
+}
+
+/* FCF Yield Gauge */
+.fcfYieldGauge {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gaugeContainer {
+  width: 100%;
+  height: 6px;
+  background: rgba(0, 224, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.gaugeFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.gaugeLabel {
+  font-size: 11px;
+  color: rgba(247, 249, 251, 0.6);
+}
+
+/* ROIC Spread */
+.roicSpread {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.spreadContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.spreadLabel {
+  font-size: 11px;
+  color: rgba(247, 249, 251, 0.6);
+}
+
+.spreadValue {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Quality Meter */
+.qualityMeter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.qualityScale {
+  display: flex;
+  gap: 2px;
+}
+
+.qualitySegment {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(247, 249, 251, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  color: transparent;
+  transition: all 0.3s ease;
+}
+
+.qualitySegment.active {
+  color: #0a1224;
+  font-weight: 600;
+  height: 16px;
+}
+
+/* Liquidity Gauge */
+.liquidityGauge {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.safetyGauge {
+  width: 100%;
+  height: 6px;
+  background: rgba(0, 224, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.safetyFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.safetyThreshold {
+  font-size: 11px;
+  color: rgba(247, 249, 251, 0.6);
+}
+
+/* Capacity Meter */
+.capacityMeter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.capacityIndicator {
+  display: flex;
+  justify-content: center;
+}
+
+.capacityStatus {
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.capacityStatus.high {
+  background: rgba(0, 255, 136, 0.2);
+  color: #00ff88;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.capacityStatus.medium {
+  background: rgba(255, 214, 0, 0.2);
+  color: #ffd600;
+  border: 1px solid rgba(255, 214, 0, 0.3);
+}
+
+.capacityStatus.limited {
+  background: rgba(255, 82, 82, 0.2);
+  color: #ff5252;
+  border: 1px solid rgba(255, 82, 82, 0.3);
+}
+
+.capacityLabel {
+  font-size: 11px;
+  color: rgba(247, 249, 251, 0.6);
+  text-align: center;
+}
+
+/* Skeleton Loading States */
+.kpiTileSkeleton {
+  background: linear-gradient(135deg, #1e2738 0%, #1a2332 100%);
+  border: 1px solid rgba(0, 224, 255, 0.1);
+  border-radius: 16px;
+  padding: 20px;
+  min-height: 160px;
+  position: relative;
+  overflow: hidden;
+}
+
+.kpiTileSkeleton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 224, 255, 0.1), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.skeletonHeader {
+  width: 80%;
+  height: 16px;
+  background: rgba(247, 249, 251, 0.1);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.skeletonValue {
+  width: 60%;
+  height: 32px;
+  background: rgba(0, 224, 255, 0.1);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.skeletonSubtitle {
+  width: 90%;
+  height: 12px;
+  background: rgba(247, 249, 251, 0.1);
+  border-radius: 6px;
+}
+
+/* Responsive Design */
+@media (max-width: 1440px) {
+  .kpiGrid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  
+  .kpiTile {
+    min-height: 140px;
+    padding: 16px;
+  }
+  
+  .kpiValue {
+    font-size: 28px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .kpiGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .kpiTile {
+    min-height: 120px;
+    padding: 12px;
+  }
+  
+  .kpiValue {
+    font-size: 24px;
+  }
+  
+  .kpiIcon {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .kpiGrid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .kpiTile {
+    min-height: 100px;
+    padding: 16px;
+  }
+  
+  .kpiValue {
+    font-size: 28px;
+  }
+}
