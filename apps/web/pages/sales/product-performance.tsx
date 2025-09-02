@@ -7,9 +7,24 @@ import { ThemeProvider } from '../../ui-common/design-system/theme';
 import productPerformanceReducer from '../../Sales/tools/ProductPerformanceAnalyzer/ui/state/productPerformanceSlice';
 
 // Import dynamically with SSR disabled to prevent 'self is not defined' error
-const ProductPerformanceView = dynamic(
-  () => import('../../Sales/tools/ProductPerformanceAnalyzer/ui/views/ProductPerformanceView'),
-  { ssr: false }
+const ProductPerformanceDashboard = dynamic(
+  () => import('../../Sales/tools/ProductPerformanceAnalyzer/ui/views/ProductPerformanceDashboard'),
+  { 
+    ssr: false,
+    loading: () => (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        background: 'linear-gradient(135deg, #0a1224 0%, #0d1a2d 100%)',
+        color: '#00e0ff',
+        fontSize: '1.2rem'
+      }}>
+        Loading Product Performance Analyzer...
+      </div>
+    )
+  }
 );
 
 // Configure Redux store with product performance reducer
@@ -33,23 +48,7 @@ export default function ProductPerformancePage() {
       
       <Provider store={store}>
         <ThemeProvider>
-          <div style={{ 
-            minHeight: '100vh', 
-            backgroundColor: '#0a1224',
-            padding: '24px'
-          }}>
-            <h1 style={{ 
-              color: '#f7f9fb', 
-              marginBottom: '24px',
-              fontFamily: 'Inter, sans-serif',
-              fontSize: '32px',
-              fontWeight: 700
-            }}>
-              Product Performance Analyzer
-            </h1>
-            
-            <ProductPerformanceView />
-          </div>
+          <ProductPerformanceDashboard />
         </ThemeProvider>
       </Provider>
     </>
