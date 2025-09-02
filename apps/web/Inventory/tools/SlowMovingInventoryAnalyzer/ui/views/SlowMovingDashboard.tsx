@@ -240,7 +240,7 @@ const SlowMovingDashboard: React.FC = () => {
   const getCurrentInsights = () => {
     if (!dashboardData) return [];
     
-    const { summary, insights } = dashboardData;
+    const { financial:summary, insights } = dashboardData;
     const dateRangeText = `${dateRange.startDate} to ${dateRange.endDate}`;
     const daysDiff = Math.ceil((new Date(dateRange.endDate).getTime() - new Date(dateRange.startDate).getTime()) / (1000 * 60 * 60 * 24));
     
@@ -322,7 +322,8 @@ const SlowMovingDashboard: React.FC = () => {
         throw new Error(resultJSON.error || resultJSON.message || "API request failed");
       }
       
-      const result = resultJSON.data;
+      const result = resultJSON;
+      console.log("result", result);
       // Diagnostic log: show raw API payload so we can trace why UI falls back
       try {
         console.log('SlowMovingDashboard: sample payload preview ->', {
@@ -657,7 +658,7 @@ const SlowMovingDashboard: React.FC = () => {
           {(() => {
             try {
               // Determine which source we'll pass into ItemLevelAnalyzer for debugging
-              const itemLevelLen = (dashboardData?.itemLevelData || []).length;
+              const itemLevelLen = (dashboardData?.items || []).length;
               const slowMovingLen = (dashboardData?.slowMovingItems || []).length;
               const mergedLen = (dashboardData?.merged || []).length;
               let source = 'none';
@@ -707,7 +708,7 @@ const SlowMovingDashboard: React.FC = () => {
             const slowMovingLen = (dashboardData?.slowMovingItems || []).length;
             const mergedLen = (dashboardData?.merged || []).length;
             const itemRows = dashboardData ? (itemLevelLen > 0 ? dashboardData.itemLevelData : (slowMovingLen > 0 ? dashboardData.slowMovingItems : (mergedLen > 0 ? dashboardData.merged : []))) : undefined;
-
+            console.log("itemRows", itemRows);
             return (
               <ItemLevelAnalyzer 
                 onItemSelect={(item) => {}}
