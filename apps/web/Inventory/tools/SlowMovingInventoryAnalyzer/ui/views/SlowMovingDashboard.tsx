@@ -314,13 +314,15 @@ const SlowMovingDashboard: React.FC = () => {
         throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
-      const result = await response.json();
-      
-      if (result.status !== 'success') {
-        console.error("❌ API returned error status:", result);
-        throw new Error(result.error || result.message || "API request failed");
-      }
+      const resultJSON = await response.json();
 
+      
+      if (resultJSON.status !== 'success') {
+        console.error("❌ API returned error status:", resultJSON);
+        throw new Error(resultJSON.error || resultJSON.message || "API request failed");
+      }
+      
+      const result = resultJSON.data;
       // Diagnostic log: show raw API payload so we can trace why UI falls back
       try {
         console.log('SlowMovingDashboard: sample payload preview ->', {
