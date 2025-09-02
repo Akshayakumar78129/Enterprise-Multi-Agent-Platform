@@ -1,0 +1,298 @@
+.container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.viewToggle {
+  display: flex;
+  gap: 4px;
+  background: rgba(10, 18, 36, 0.5);
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.viewButton {
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  color: rgba(247, 249, 251, 0.6);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.viewButton:hover {
+  color: rgba(247, 249, 251, 0.9);
+  background: rgba(0, 224, 255, 0.05);
+}
+
+.viewButton.active {
+  background: rgba(0, 224, 255, 0.15);
+  color: #00e0ff;
+}
+
+.chartContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.customTooltip {
+  background: rgba(10, 18, 36, 0.95);
+  border: 1px solid rgba(0, 224, 255, 0.3);
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.tooltipLabel {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #00e0ff;
+}
+
+.tooltipValue {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #f7f9fb;
+}
+
+.tooltipPercentage {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(247, 249, 251, 0.6);
+}
+
+.summaryCards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.summaryCard {
+  background: rgba(10, 18, 36, 0.4);
+  border: 1px solid rgba(0, 224, 255, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.summaryCard:hover {
+  background: rgba(0, 224, 255, 0.05);
+  border-color: rgba(0, 224, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.cardLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(247, 249, 251, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.cardValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: #00e0ff;
+  margin-bottom: 4px;
+}
+
+.cardSubtext {
+  font-size: 11px;
+  color: rgba(247, 249, 251, 0.5);
+  font-style: italic;
+}
+
+.componentBreakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 0;
+}
+
+.componentBar {
+  background: rgba(10, 18, 36, 0.3);
+  border: 1px solid rgba(0, 224, 255, 0.1);
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.componentBar:hover {
+  background: rgba(0, 224, 255, 0.05);
+  border-color: rgba(0, 224, 255, 0.3);
+  transform: translateX(4px);
+}
+
+.componentHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.componentName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f7f9fb;
+}
+
+.componentValue {
+  font-size: 14px;
+  font-weight: 700;
+  color: #00e0ff;
+}
+
+.componentProgress {
+  height: 8px;
+  background: rgba(0, 224, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.componentFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.componentPercentage {
+  font-size: 12px;
+  color: rgba(247, 249, 251, 0.6);
+  font-weight: 500;
+}
+
+.qualityScoreContainer {
+  display: flex;
+  gap: 32px;
+  padding: 20px;
+}
+
+.qualityScore {
+  display: flex;
+  gap: 32px;
+  align-items: center;
+}
+
+.scoreCircle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.qualityMetrics {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.metricRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.metricLabel {
+  min-width: 120px;
+  font-size: 13px;
+  color: rgba(247, 249, 251, 0.8);
+}
+
+.metricBar {
+  flex: 1;
+  height: 8px;
+  background: rgba(0, 224, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.metricFill {
+  height: 100%;
+  background: linear-gradient(90deg, #00e0ff 0%, #e930ff 100%);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.metricValue {
+  min-width: 40px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+  color: #00e0ff;
+}
+
+.valuationImpact {
+  flex: 1;
+  background: rgba(10, 18, 36, 0.4);
+  border: 1px solid rgba(0, 224, 255, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.valuationImpact h4 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #00e0ff;
+}
+
+.impactGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.impactItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.impactLabel {
+  font-size: 12px;
+  color: rgba(247, 249, 251, 0.6);
+}
+
+.impactValue {
+  font-size: 20px;
+  font-weight: 700;
+  color: #f7f9fb;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .summaryCards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .qualityScoreContainer {
+    flex-direction: column;
+  }
+  
+  .impactGrid {
+    grid-template-columns: 1fr;
+  }
+}

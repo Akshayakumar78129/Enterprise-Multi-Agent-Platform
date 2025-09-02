@@ -36,24 +36,29 @@ export const UniversalChatbot: React.FC<UniversalChatbotProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   
-  // Detect initial agent based on route
+  // Detect initial agent based on route with guaranteed fallback
   const initialAgent = defaultAgent 
     ? agents[defaultAgent] 
-    : detectAgentFromContext(router.pathname);
+    : detectAgentFromContext(router.pathname) || agents.enterpriseiq || agents.sales;
+
+  // Ensure we always have a valid agent
+  if (!initialAgent) {
+    console.error('No valid agent found, using fallback');
+  }
 
   const [session] = useState({
     session_id: uuidv4(),
     user_id: "ari",
-    app_name: initialAgent.appName
+    app_name: initialAgent?.appName || 'orchestration_agent'
   });
 
-  const [currentAgent, setCurrentAgent] = useState<AgentConfig>(initialAgent);
+  const [currentAgent, setCurrentAgent] = useState<AgentConfig>(initialAgent || agents.enterpriseiq);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: uuidv4(),
       type: 'agent',
       agent: initialAgent,
-      content: `👋 Welcome! I'm ${initialAgent.displayName}. ${initialAgent.description}.\n\nYou can ask me about:\n${initialAgent.capabilities.map(cap => `• ${cap}`).join('\n')}\n\nTo switch agents, use @mentions: ${Object.keys(agents).map(a => `@${a}`).join(', ')}`,
+      content: `👋 Welcome! I'm ${initialAgent?.displayName || 'your AI assistant'}. ${initialAgent?.description || 'I can help you with various tasks'}.\n\nYou can ask me about:\n${initialAgent?.capabilities?.map(cap => `• ${cap}`).join('\n') || '• General assistance'}\n\nTo switch agents, use @mentions: ${Object.keys(agents).map(a => `@${a}`).join(', ')}`,
       timestamp: new Date()
     }
   ]);
@@ -76,7 +81,7 @@ export const UniversalChatbot: React.FC<UniversalChatbotProps> = ({
     const { cleanText, targetAgent } = replaceMentionsWithAgent(inputValue);
     
     // If agent mention detected, switch agent
-    if (targetAgent && targetAgent.appName !== currentAgent.appName) {
+    if (targetAgent && targetAgent.appName && currentAgent && targetAgent.appName !== currentAgent.appName) {
       setCurrentAgent(targetAgent);
       session.app_name = targetAgent.appName;
       
@@ -123,7 +128,7 @@ export const UniversalChatbot: React.FC<UniversalChatbotProps> = ({
       const queryToSend = targetAgent ? cleanText : inputValue;
       const response = AIResponseDashboard(queryToSend, {
         ...session,
-        app_name: targetAgent ? targetAgent.appName : session.app_name
+        app_name: targetAgent?.appName || session.app_name || 'chatbot'
       });
 
       let fullResponse = '';
@@ -227,7 +232,7 @@ export const UniversalChatbot: React.FC<UniversalChatbotProps> = ({
       width: '40px',
       height: '40px',
       borderRadius: '50%',
-      background: `${currentAgent.color}20`,
+      background: `${currentAgent?.color || '#00e0ff'}20`,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -377,11 +382,11 @@ export const UniversalChatbot: React.FC<UniversalChatbotProps> = ({
     <div style={styles.container}>
       <div style={styles.header}>
         <div style={styles.headerInfo}>
-          <div style={{ ...styles.agentIcon, background: `${currentAgent.color}20` }}>
-            {currentAgent.icon}
+          <div style={{ ...styles.agentIcon, background: `${currentAgent?.color || '#00e0ff'}20` }}>
+            {currentAgent?.icon || '🤖'}
           </div>
           <div>
-            <div style={styles.agentName}>{currentAgent.displayName}</div>
+            <div style={styles.agentName}>{currentAgent?.displayName || 'AI Assistant'}</div>
             <div style={styles.agentStatus}>Ready with @mentions</div>
           </div>
         </div>

@@ -379,7 +379,7 @@ const ARAgingView: React.FC = () => {
           padding: '24px',
           overflow: 'hidden',
           minHeight: '480px',
-          overflow: 'hidden'
+          // overflow: 'hidden'
         }}>
           <h3 style={{
             color: '#f7f9fb',
