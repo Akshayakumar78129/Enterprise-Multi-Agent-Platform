@@ -101,15 +101,16 @@ const AgingAnalysisPanel: React.FC<AgingAnalysisPanelProps> = ({
           body: JSON.stringify({ category: selectedCategory !== 'All Categories' ? selectedCategory : undefined })
         });
         const json = await res.json();
+        console.log("AgingAnalysisPanel: json", json);
         if (json && json.status === 'success') {
           // Prefer server-provided agingAnalysis if available (this reflects server-side
           // annualization and any DB-side logic). Fall back to item-level bucketization
           // (itemLevelData / slowMovingItems / merged) only when the server did not return
           // an agingAnalysis payload.
-          if (json.data?.agingAnalysis?.agingBuckets) {
-            const buckets = json.data.agingAnalysis.agingBuckets || {};
-            const totalValue = json.data.agingAnalysis.totalValue || 0;
-            const totalItems = json.data.agingAnalysis.totalItems || 0;
+          if (json.data?.aging?.agingBuckets) {
+            const buckets = json.data.aging.agingBuckets || {};
+            const totalValue = json.data.aging.totalValue || 0;
+            const totalItems = json.data.aging.totalItems || 0;
             const arr = Object.entries(buckets).map(([ageRange, obj]: any) => ({
               ageRange,
               items: Number(obj.count || 0),
