@@ -10,8 +10,8 @@ interface FilterControlsProps {
   dateRange: { startDate: string; endDate: string };
   selectedDimension: string | null;
   selectedMetric: string | null;
-  availableDimensions: DimensionOption[];
-  availableMetrics: MetricOption[];
+  availableDimensions: string[];
+  availableMetrics: string[];
   onDateRangeChange: (dateRange: { startDate: string; endDate: string }) => void;
   onDimensionChange: (dimension: string) => void;
   onMetricChange: (metric: string) => void;
@@ -53,11 +53,11 @@ export const FilterControls: FC<FilterControlsProps> = ({
           <span style={{ color: theme.colors.cloudWhite, marginRight: theme.spacing[1] }}>Dimension:</span>
           {availableDimensions.map(dim => (
             <button 
-              key={dim.value} 
-              onClick={() => onDimensionChange(dim.value)} 
-              style={pillStyle(selectedDimension === dim.value)}
+              key={dim} 
+              onClick={() => onDimensionChange(dim)} 
+              style={pillStyle(selectedDimension === dim)}
             >
-              {dim.label}
+              {dim.charAt(0).toUpperCase() + dim.slice(1).replace('_', ' ')}
             </button>
           ))}
         </div>
@@ -65,11 +65,11 @@ export const FilterControls: FC<FilterControlsProps> = ({
           <span style={{ color: theme.colors.cloudWhite, marginRight: theme.spacing[1] }}>Metric:</span>
           {availableMetrics.map(met => (
             <button 
-              key={met.value} 
-              onClick={() => onMetricChange(met.value)} 
-              style={pillStyle(selectedMetric === met.value)}
+              key={met} 
+              onClick={() => onMetricChange(met)} 
+              style={pillStyle(selectedMetric === met)}
             >
-              {met.label}
+              {met.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
             </button>
           ))}
         </div>

@@ -22,8 +22,8 @@ const initialState: SalesPerformanceState = {
   loading: false,
   error: null,
   data: [], // This will be populated from analysisResult.chartData by the view or could be done here
-  dateRange: { startDate: '2020-01-01', endDate: '2020-12-31' }, // Expanded to full year
-  selectedDimension: 'region', 
+  dateRange: { startDate: '2017-01-01', endDate: '2021-12-31' }, // Full 5-year data range
+  selectedDimension: 'product', 
   selectedMetric: 'revenue', 
   analysisResult: null,
   // availableDimensions and availableMetrics could be part of state if fetched dynamically
@@ -43,8 +43,8 @@ const salesPerformanceSlice = createSlice({
       state.selectedMetric = action.payload;
     },
     resetFilters: (state) => {
-      state.dateRange = { startDate: '2020-01-01', endDate: '2020-12-31' };
-      state.selectedDimension = 'region';
+      state.dateRange = { startDate: '2017-01-01', endDate: '2021-12-31' }; // Full data range
+      state.selectedDimension = 'product';
       state.selectedMetric = 'revenue';
       state.analysisResult = null; // Clear previous results
       state.data = [];

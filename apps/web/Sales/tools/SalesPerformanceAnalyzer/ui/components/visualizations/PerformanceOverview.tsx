@@ -47,6 +47,7 @@ interface PerformanceOverviewProps {
   loading: boolean;
   selectedDimension: string | null;
   selectedMetric: string | null;
+  dateRange?: { startDate: string; endDate: string }; // Add date range to determine aggregation
   // Add props for total, period comparison, contribution, top performer as per spec 4.1 Performance Summary
   summaryData?: {
     total: string | number;
@@ -64,11 +65,39 @@ export const PerformanceOverview: FC<PerformanceOverviewProps> = ({
   loading,
   selectedDimension,
   selectedMetric,
+  dateRange,
   summaryData,
   chartType = 'bar',
   onChartTypeChange
 }) => {
   const theme = useTheme();
+
+  // Helper function to aggregate data by month
+  const aggregateByMonth = (dataPoints: SalesData[]) => {
+    const monthlyData: Record<string, { value: number; count: number }> = {};
+    
+    dataPoints.forEach(item => {
+      if (item.date) {
+        const date = new Date(item.date);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        
+        if (!monthlyData[monthKey]) {
+          monthlyData[monthKey] = { value: 0, count: 0 };
+        }
+        
+        monthlyData[monthKey].value += item.metricValue;
+        monthlyData[monthKey].count += 1;
+      }
+    });
+    
+    return Object.entries(monthlyData)
+      .map(([month, data]) => ({
+        date: `${month}-01`,
+        metricValue: data.value / data.count, // Average for the month
+        dimension: 'time'
+      }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  };
 
   const processedChartTrace = useMemo(() => {
     if (!data || data.length === 0 || !selectedDimension || !selectedMetric) {
@@ -78,13 +107,35 @@ export const PerformanceOverview: FC<PerformanceOverviewProps> = ({
     const effectiveChartType = selectedDimension === 'time' && chartType === 'bar' ? 'line' : chartType;
 
     if (selectedDimension === 'time' || effectiveChartType === 'line' || effectiveChartType === 'area') {
-      const sortedTimeData = [...data]
-        .filter(item => item.date) // Ensure date exists for time series
-        .sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime());
+      // Aggregate data to prevent too many points
+      const timeData = data.filter(item => item.date);
+      
+      // Determine aggregation level based on date range
+      let processedData = timeData;
+      
+      if (dateRange) {
+        const start = new Date(dateRange.startDate);
+        const end = new Date(dateRange.endDate);
+        const daysDiff = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+        
+        // For ranges > 90 days, aggregate by month
+        // For ranges > 30 days, aggregate by week
+        // Otherwise show daily data
+        if (daysDiff > 90 || timeData.length > 50) {
+          processedData = aggregateByMonth(timeData);
+        } else {
+          processedData = [...timeData].sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime());
+        }
+      } else {
+        // Default: if more than 50 points, aggregate by month
+        processedData = timeData.length > 50 
+          ? aggregateByMonth(timeData)
+          : [...timeData].sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime());
+      }
 
       return {
-        x: sortedTimeData.map(item => item.date),
-        y: sortedTimeData.map(item => item.metricValue),
+        x: processedData.map(item => item.date),
+        y: processedData.map(item => item.metricValue),
         type: effectiveChartType,
         mode: 'lines+markers',
         name: selectedMetric,
@@ -111,6 +162,18 @@ export const PerformanceOverview: FC<PerformanceOverviewProps> = ({
       let categories = Object.keys(aggregated);
       // Sort categories by performance (descending)
       categories.sort((a, b) => aggregated[b] - aggregated[a]);
+      
+      // Limit to top 20 categories to prevent browser crash
+      const MAX_CATEGORIES = 20;
+      if (categories.length > MAX_CATEGORIES) {
+        // Keep top performers and group the rest as "Others"
+        const topCategories = categories.slice(0, MAX_CATEGORIES - 1);
+        const othersValue = categories.slice(MAX_CATEGORIES - 1)
+          .reduce((sum, cat) => sum + aggregated[cat], 0);
+        
+        categories = [...topCategories, 'Others'];
+        aggregated['Others'] = othersValue;
+      }
       
       const metricValues = categories.map(cat => aggregated[cat]);
 

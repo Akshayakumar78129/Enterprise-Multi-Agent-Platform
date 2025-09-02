@@ -1,0 +1,223 @@
+/* Sales Performance Dashboard Styles - Matching Theme */
+
+.dashboard {
+  background: linear-gradient(135deg, #0a1224 0%, #0d1a2d 100%);
+  min-height: 100vh;
+  padding: 24px;
+  color: #f7f9fb;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Header Styles */
+.header {
+  background: linear-gradient(135deg, #1e2738 0%, #1a2332 100%);
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 32px;
+  border: 1px solid rgba(0, 224, 255, 0.3);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.headerContent {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #f7f9fb;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.icon {
+  font-size: 36px;
+}
+
+.subtitle {
+  font-size: 16px;
+  color: rgba(247, 249, 251, 0.7);
+  margin: 0;
+}
+
+/* Section Styles */
+.section {
+  margin-bottom: 32px;
+}
+
+.sectionTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: #00e0ff;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Date Range Info Section */
+.dateRangeInfo {
+  margin-bottom: 24px;
+}
+
+/* Filter Section (kept for potential future use) */
+.filterSection {
+  background: linear-gradient(135deg, #1e2738 0%, #1a2332 100%);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 32px;
+  border: 1px solid rgba(0, 224, 255, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Visualizations Grid */
+.visualizationsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.chartSection {
+  background: linear-gradient(135deg, #1e2738 0%, #1a2332 100%);
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid rgba(0, 224, 255, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.chartTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #00e0ff;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Loading & Error States */
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: linear-gradient(135deg, #0a1224 0%, #0d1a2d 100%);
+  color: #00e0ff;
+  font-size: 18px;
+  gap: 24px;
+}
+
+.loadingSpinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(0, 224, 255, 0.2);
+  border-top-color: #00e0ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: linear-gradient(135deg, #0a1224 0%, #0d1a2d 100%);
+  gap: 24px;
+}
+
+.errorMessage {
+  color: #ff5252;
+  font-size: 18px;
+  text-align: center;
+  max-width: 600px;
+}
+
+.retryButton {
+  background: linear-gradient(135deg, #00e0ff 0%, #00b8d4 100%);
+  color: #0a1224;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.retryButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(0, 224, 255, 0.4);
+}
+
+/* BI Button */
+.biButton {
+  position: fixed;
+  bottom: 100px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00e0ff 0%, #e930ff 100%);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0, 224, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  z-index: 997;
+  transition: all 0.3s ease;
+}
+
+.biButton:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 30px rgba(0, 224, 255, 0.5);
+}
+
+/* Responsive Design */
+@media (max-width: 1400px) {
+  .visualizationsGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .chartSection {
+    grid-column: span 1 !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 16px;
+  }
+  
+  .header {
+    padding: 24px;
+  }
+  
+  .title {
+    font-size: 24px;
+  }
+  
+  .icon {
+    font-size: 28px;
+  }
+  
+  .visualizationsGrid {
+    gap: 16px;
+  }
+  
+  .chartSection {
+    padding: 16px;
+  }
+}
