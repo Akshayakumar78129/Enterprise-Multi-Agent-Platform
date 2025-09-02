@@ -476,7 +476,6 @@ const FinancialImpactAnalyzer: React.FC<FinancialImpactAnalyzerProps> = ({
       className="relative z-10"
       style={{
         width: '100%',
-        height: '540px',
         backgroundColor: '#232a36',
         borderRadius: '16px',
         padding: '20px',

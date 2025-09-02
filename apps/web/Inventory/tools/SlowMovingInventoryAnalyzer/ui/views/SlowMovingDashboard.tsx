@@ -704,20 +704,20 @@ const SlowMovingDashboard: React.FC = () => {
             }
 
             // Choose first non-empty item array so we don't pass an empty itemLevelData when merged exists
-            const itemLevelLen = (dashboardData?.itemLevelData || []).length;
-            const slowMovingLen = (dashboardData?.slowMovingItems || []).length;
-            const mergedLen = (dashboardData?.merged || []).length;
-            const itemRows = dashboardData ? (itemLevelLen > 0 ? dashboardData.itemLevelData : (slowMovingLen > 0 ? dashboardData.slowMovingItems : (mergedLen > 0 ? dashboardData.merged : []))) : undefined;
-            console.log("itemRows", itemRows);
-            return (
-              <ItemLevelAnalyzer 
-                onItemSelect={(item) => {}}
-                onActionTaken={(itemId, action) => {}}
-                data={itemRows}
-                activeCategory={selectedCategory !== 'All Categories' ? selectedCategory : 'All'}
-                activeWarehouse={resolvedWarehouse}
-              />
-            );
+            // const itemLevelLen = (dashboardData?.itemLevelData || []).length;
+            // const slowMovingLen = (dashboardData?.slowMovingItems || []).length;
+            // const mergedLen = (dashboardData?.merged || []).length;
+            // const itemRows = dashboardData ? (itemLevelLen > 0 ? dashboardData.itemLevelData : (slowMovingLen > 0 ? dashboardData.slowMovingItems : (mergedLen > 0 ? dashboardData.merged : []))) : undefined;
+            // console.log("itemRows", itemRows);
+            // return (
+            //   <ItemLevelAnalyzer 
+            //     onItemSelect={(item) => {}}
+            //     onActionTaken={(itemId, action) => {}}
+            //     data={itemRows}
+            //     activeCategory={selectedCategory !== 'All Categories' ? selectedCategory : 'All'}
+            //     activeWarehouse={resolvedWarehouse}
+            //   />
+            // );
           })()}
           
           <FinancialImpactAnalyzer 
