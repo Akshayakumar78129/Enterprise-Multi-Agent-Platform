@@ -3,7 +3,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { ensureAISession, buildSimplePrompt, emitAskAI } from "../../../../../../ui-common/insights/InsightUtils";
-import { AIResponseDashboardWithViz } from "../../../../../../ui-common/ai-interaction/aiResponse";
+import { AIResponseDashboard } from "../../../../../../ui-common/ai-interaction/aiResponse";
 
 const AGENT_LIST = [
   { name: "orchestrator", displayName: "Orchestrator", avatar: "🧭" },
@@ -205,7 +205,7 @@ if (detail.tool === 'performance_deviation' && detail.intent === 'simulate_accep
       const prompt = buildSimplePrompt({ text: `${compareHint}\n${cleaned}`.trim(), agent, mode, extras });
 
       const parts = [];
-      for await (const chunk of AIResponseDashboardWithViz(prompt, session)) {
+      for await (const chunk of AIResponseDashboard(prompt, session)) {
         if (chunk === '[DONE]') break;
         if (chunk === '[ERROR]') {
           parts.push({ agent: 'system', text: 'AIResponseDashboard error' });

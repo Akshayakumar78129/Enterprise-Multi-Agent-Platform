@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { AIResponseDashboardWithViz } from './ai-interaction/aiResponse';
+import { AIResponseDashboard } from './ai-interaction/aiResponse';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
@@ -87,7 +87,7 @@ const FloatingAIChat = ({ insights = null }) => {
       
       console.log('✅ Session created successfully');
       
-      const response = AIResponseDashboardWithViz(query, session);
+      const response = AIResponseDashboard(query, session);
       let fullResponse = '';
       let hasVisualization = false;
       let visualData = null;

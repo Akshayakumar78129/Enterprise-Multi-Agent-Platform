@@ -2,7 +2,7 @@
 
 
 
-import { AIResponseDashboardWithViz } from '../ai-interaction/aiResponse';
+import { AIResponseDashboard } from '../ai-interaction/aiResponse';
 
 
 
@@ -61,7 +61,7 @@ export async function requestInsight({ variant = 'concise', text, agent = 'orche
   const session = ensureAISession({ app_name: agent });
   const prompt = buildSimplePrompt({ text, agent, mode: variant, extras });
   const chunks = [];
-  for await (const part of AIResponseDashboardWithViz(prompt, session)) {
+  for await (const part of AIResponseDashboard(prompt, session)) {
     if (part === '[DONE]') break;
     if (part === '[ERROR]') throw new Error('AIResponseDashboard error');
     if (typeof part === 'object') {

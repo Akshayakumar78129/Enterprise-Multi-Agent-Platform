@@ -11,7 +11,7 @@ import InsightModal from "../components/InsightModal";
 import FloatingAIChat from "../../../../../ui-common/FloatingAIChat";
 import { callDashboardAPI, getErrorMessage } from '../../../../../ui-common/utils/apiUtils.js';
 import styles from './PurchaseFrequencyDashboard.module.css';
-import { SegmentsCategoriesFilter } from "../../../transaction_patterns/ui/components/filters/SegmentsCategoriesFilter";
+// import { SegmentsCategoriesFilter } from "../../../transaction_patterns/ui/components/filters/SegmentsCategoriesFilter";
 import { PurchaseFrequencyDateRangeFilter } from "../components/filters/PurchaseFrequencyDateRangeFilter";
 import { FloatingPFAgent } from "../components/bi-agent/FloatingPFAgent";
 
@@ -765,7 +765,7 @@ const PurchaseFrequencyDashboard = () => {
         </div>
 
         {/* Segments + Categories Filter (shared with Transaction Patterns) */}
-        <div style={{ 
+        {/* <div style={{ 
           gridColumn: '1 / -1',
           marginBottom: '24px'
         }}>
@@ -775,13 +775,20 @@ const PurchaseFrequencyDashboard = () => {
             onChange={handleSegmentsCategoriesChange}
             isLoading={isLoading}
           />
-        </div>
+        </div> */}
 
         {isLoading && (
           <div className={styles.loadingContainer}>
             <div className={styles.loadingSpinner}></div>
             <div className={styles.loadingTitle}>Loading Dashboard</div>
             <div className={styles.loadingSubtitle}>Fetching purchase frequency data…</div>
+          </div>
+        )}
+
+        {error && !isLoading && (
+          <div className={styles.errorContainer}>
+            <div className={styles.errorTitle}>Error Loading Dashboard</div>
+            <div className={styles.errorMessage}>{error}</div>
           </div>
         )}
 
