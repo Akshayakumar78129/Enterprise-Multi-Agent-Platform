@@ -1,0 +1,186 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Dark Neo Theme - Direct Values */
+:root {
+  /* These are for reference only - we use Tailwind classes directly */
+  --container-max-width: 1440px;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply antialiased;
+    background: #f5f0f6;
+    background: linear-gradient(180deg, #f5f0f6 0%, #fef5f5 100%);
+    background-attachment: fixed;
+    color: #4a5568;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+      radial-gradient(1400px 900px at 5% 10%, rgba(183, 148, 244, 0.08), transparent 40%),
+      radial-gradient(1400px 900px at 95% 10%, rgba(159, 122, 234, 0.08), transparent 40%),
+      radial-gradient(1000px 600px at 50% 50%, rgba(252, 129, 129, 0.04), transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  #__next,
+  main {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+@layer components {
+  /* Glass Morphism Card - Soft Pastel */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px) saturate(150%);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    @apply border rounded-2xl transition-all duration-300;
+    border-color: #e2e8f0;
+    box-shadow: 0 8px 32px 0 rgba(183, 148, 244, 0.15);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent,
+      rgba(183, 148, 244, 0.2) 20%,
+      rgba(183, 148, 244, 0.2) 80%,
+      transparent);
+  }
+
+  /* Section Styles */
+  .dashboard-section {
+    @apply mb-8 animate-fade-in;
+  }
+
+  /* Neo Section Title - Soft Pastel */
+  .neo-section-title {
+    @apply font-semibold text-xl tracking-wide;
+    color: #4a5568;
+    text-shadow: 0 0 30px rgba(183, 148, 244, 0.2);
+  }
+
+  /* Container */
+  .container-custom {
+    @apply w-full mx-auto px-4 sm:px-6 lg:px-8;
+    max-width: var(--container-max-width);
+  }
+
+  /* Grid Responsive */
+  .grid-responsive {
+    @apply grid gap-6;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+
+  /* Button Neo Styles */
+  .btn-neo {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200;
+    @apply bg-gradient-to-r from-accent to-accent-secondary;
+    @apply hover:shadow-neo hover:scale-105;
+    @apply active:scale-95;
+  }
+
+
+  /* Card Hover Effects */
+  .card-hover {
+    @apply transition-all duration-300 hover:scale-[1.02];
+    @apply hover:shadow-neo-hover;
+    border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+
+  /* Smooth Scrollbar - Soft Pastel */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #f7fafc;
+    @apply rounded-lg;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    @apply rounded-lg;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+  }
+
+  /* Selection - Soft Pastel */
+  ::selection {
+    background: rgba(183, 148, 244, 0.3);
+    color: #4a5568;
+  }
+}
+
+@layer utilities {
+  /* Text Gradients */
+  .text-gradient {
+    @apply bg-gradient-to-r from-accent to-accent-secondary bg-clip-text text-transparent;
+  }
+
+  .text-gradient-secondary {
+    @apply bg-gradient-to-r from-accent-secondary to-accent-tertiary bg-clip-text text-transparent;
+  }
+
+  /* Responsive Padding */
+  .section-padding {
+    @apply py-6 sm:py-8 lg:py-10;
+  }
+
+  .card-padding {
+    @apply p-4 sm:p-6 lg:p-8;
+  }
+
+  /* Flex Utilities */
+  .flex-center {
+    @apply flex items-center justify-center;
+  }
+
+  .flex-between {
+    @apply flex items-center justify-between;
+  }
+
+  /* Grid Utilities */
+  .grid-auto-fit {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  }
+}
+
+/* Hide Next.js Dev Tools */
+#__next-build-watcher,
+[data-nextjs-dialog-overlay],
+[data-nextjs-toast] {
+  display: none !important;
+}

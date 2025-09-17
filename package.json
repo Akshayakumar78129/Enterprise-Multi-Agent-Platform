@@ -10,6 +10,7 @@
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
+    "@types/node": "^24.4.0",
     "prettier": "^3.6.2",
     "turbo": "^2.5.5",
     "typescript": "5.8.3"
@@ -17,5 +18,10 @@
   "packageManager": "pnpm@9.0.0",
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "@types/react": "^19.1.13",
+    "react": "^19.1.1",
+    "sqlite3": "^5.1.7"
   }
 }

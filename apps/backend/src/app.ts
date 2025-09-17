@@ -11,6 +11,8 @@ app.use(bodyParser.json());
 
 
 
+// Back-compat and new dashboard route namespace
 app.use("/api/churn", churnRoutes);
+app.use("/api/churn-prediction", churnRoutes);
 
 export default app;

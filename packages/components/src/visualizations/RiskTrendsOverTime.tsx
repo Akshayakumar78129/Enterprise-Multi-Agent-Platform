@@ -1,0 +1,274 @@
+"use client";
+
+import React, { useState } from "react";
+
+export interface TrendDataPoint {
+  date: string;
+  low: number;
+  medium: number;
+  high: number;
+  veryHigh: number;
+}
+
+export interface RiskTrendsOverTimeProps {
+  data: TrendDataPoint[];
+  title?: string;
+  timeRange?: "7d" | "30d" | "90d";
+  onTimeRangeChange?: (range: "7d" | "30d" | "90d") => void;
+  onDataPointClick?: (dataPoint: TrendDataPoint, event: React.MouseEvent) => void;
+  className?: string;
+}
+
+export const RiskTrendsOverTime: React.FC<RiskTrendsOverTimeProps> = ({
+  data,
+  title = "Risk Trends Over Time",
+  timeRange = "30d",
+  onTimeRangeChange,
+  onDataPointClick,
+  className = "",
+}) => {
+  const [hoveredPoint, setHoveredPoint] = useState<TrendDataPoint | null>(null);
+
+  const timeRanges: Array<{value: "7d" | "30d" | "90d", label: string}> = [
+    { value: "7d", label: "7d" },
+    { value: "30d", label: "30d" },
+    { value: "90d", label: "90d" },
+  ];
+
+  // Calculate totals for each risk level
+  const totals = data.reduce((acc, point) => ({
+    low: acc.low + point.low,
+    medium: acc.medium + point.medium,
+    high: acc.high + point.high,
+    veryHigh: acc.veryHigh + point.veryHigh,
+  }), { low: 0, medium: 0, high: 0, veryHigh: 0 });
+
+  const totalCustomers = totals.low + totals.medium + totals.high + totals.veryHigh;
+
+  // Calculate percentage changes (mock data for now)
+  const changes = {
+    low: -5.6,
+    medium: -5.3,
+    high: 9.1,
+    veryHigh: 8.2,
+  };
+
+  const riskColors = {
+    low: "#4ade80",       // muted green
+    medium: "#facc15",    // muted yellow
+    high: "#fb923c",      // muted orange
+    veryHigh: "#f87171",  // muted red
+  };
+
+  const riskLabels = {
+    low: "Low",
+    medium: "Medium", 
+    high: "High",
+    veryHigh: "Very High",
+  };
+
+  return (
+    <div className={`bg-surface rounded-xl p-6 border border-border ${className}`}>
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-lg font-semibold text-foreground">
+          {title}
+        </h3>
+        <div className="flex gap-2">
+          {timeRanges.map((range) => (
+            <button
+              key={range.value}
+              onClick={() => onTimeRangeChange?.(range.value)}
+              className={`
+                px-3 py-1 rounded-lg text-sm font-medium transition-colors
+                ${timeRange === range.value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-background text-muted hover:text-foreground'
+                }
+              `}
+            >
+              {range.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Stacked Area Chart */}
+      <div className="mb-6">
+        <div className="h-56 bg-background rounded-lg p-4 pb-16 relative" style={{ overflow: 'visible' }}>
+          <svg width="100%" height="100%" viewBox="0 0 800 200" className="absolute inset-0" style={{ overflow: 'visible' }}>
+            {/* Y-axis labels */}
+            <text x="10" y="20" fill="#64748b" fontSize="12" textAnchor="start">2500</text>
+            <text x="10" y="60" fill="#64748b" fontSize="12" textAnchor="start">2000</text>
+            <text x="10" y="100" fill="#64748b" fontSize="12" textAnchor="start">1500</text>
+            <text x="10" y="140" fill="#64748b" fontSize="12" textAnchor="start">1000</text>
+            <text x="10" y="180" fill="#64748b" fontSize="12" textAnchor="start">500</text>
+            <text x="10" y="200" fill="#64748b" fontSize="12" textAnchor="start">0</text>
+
+            {/* X-axis labels */}
+            {data.map((point, index) => {
+              if (index % Math.ceil(data.length / 8) === 0) {
+                const x = 50 + (index / (data.length - 1)) * 700;
+                return (
+                  <text
+                    key={index}
+                    x={x}
+                    y="208"
+                    fill="#64748b"
+                    fontSize="10"
+                    textAnchor="middle"
+                  >
+                    {new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </text>
+                );
+              }
+              return null;
+            })}
+
+            {/* Stacked areas */}
+            {Object.entries(riskColors).map(([riskLevel, color], levelIndex) => {
+              const points = data.map((point, index) => {
+                const x = 50 + (index / (data.length - 1)) * 700;
+                let y = 200;
+                
+                // Calculate cumulative height
+                for (let i = 0; i <= levelIndex; i++) {
+                  const level = Object.keys(riskColors)[i] as keyof typeof riskColors;
+                  y -= (point[level] / 2500) * 200;
+                }
+                
+                return `${x},${y}`;
+              });
+
+              const bottomPoints = data.map((point, index) => {
+                const x = 50 + (index / (data.length - 1)) * 700;
+                let y = 200;
+                
+                // Calculate cumulative height for bottom
+                for (let i = 0; i < levelIndex; i++) {
+                  const level = Object.keys(riskColors)[i] as keyof typeof riskColors;
+                  y -= (point[level] / 2500) * 200;
+                }
+                
+                return `${x},${y}`;
+              });
+
+              const pathData = `${points.join(' ')} L ${bottomPoints.reverse().join(' ')} Z`;
+
+              return (
+                <path
+                  key={riskLevel}
+                  d={pathData}
+                  fill={color}
+                  fillOpacity={0.7}
+                  stroke={color}
+                  strokeWidth={1}
+                />
+              );
+            })}
+
+            {/* Invisible hover areas for tooltips */}
+            {data.map((point, index) => {
+              const x = 50 + (index / (data.length - 1)) * 700;
+              const width = 700 / data.length;
+              
+              return (
+                <rect
+                  key={index}
+                  x={x - width/2}
+                  y={0}
+                  width={width}
+                  height={200}
+                  fill="transparent"
+                  onMouseEnter={() => setHoveredPoint(point)}
+                  onMouseLeave={() => setHoveredPoint(null)}
+                  style={{ cursor: "pointer" }}
+                />
+              );
+            })}
+          </svg>
+        </div>
+
+        {/* Legend */}
+        <div className="flex justify-center gap-6 mt-4">
+          {Object.entries(riskColors).map(([riskLevel, color]) => (
+            <div key={riskLevel} className="flex items-center gap-2">
+              <div
+                className="w-3 h-3 rounded"
+                style={{ backgroundColor: color }}
+              />
+              <span className="text-sm text-muted">{riskLabels[riskLevel as keyof typeof riskLabels]} Risk</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Hover Tooltip */}
+        {hoveredPoint && (
+          <div
+            className="absolute bg-background/98 backdrop-blur-sm border border-border rounded-lg p-3 pointer-events-none shadow-lg"
+            style={{
+              left: `${Math.min(Math.max(20, 50 + (data.indexOf(hoveredPoint) / (data.length - 1)) * 50), 80)}%`,
+              top: "20px",
+              zIndex: 9999,
+              transform: "translateX(-50%)",
+              maxWidth: "250px",
+            }}
+          >
+            <div className="text-xs text-foreground">
+              <div className="font-semibold mb-2">
+                {new Date(hoveredPoint.date).toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: riskColors.low }} />
+                  <span>Low: {hoveredPoint.low}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: riskColors.medium }} />
+                  <span>Medium: {hoveredPoint.medium}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: riskColors.high }} />
+                  <span>High: {hoveredPoint.high}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: riskColors.veryHigh }} />
+                  <span>Very High: {hoveredPoint.veryHigh}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        {Object.entries(riskLabels).map(([riskLevel, label]) => {
+          const count = totals[riskLevel as keyof typeof totals];
+          const change = changes[riskLevel as keyof typeof changes];
+          const color = riskColors[riskLevel as keyof typeof riskColors];
+          
+          return (
+            <div key={riskLevel} className="bg-background rounded-lg p-4 border border-border">
+              <div className="flex items-center gap-2 mb-2">
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: color }}
+                />
+                <span className="text-sm font-medium text-foreground">{label}</span>
+              </div>
+              <div className="text-2xl font-bold text-foreground mb-1">{count}</div>
+              <div className={`text-sm ${change > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                {(change > 0 ? '+' : '-')}{Math.abs(change).toFixed(1)}%
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {/* Footer note removed */}
+    </div>
+  );
+};

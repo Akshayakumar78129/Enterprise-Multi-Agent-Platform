@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Default theme: Soft Pastel */
+    --background: #f5f0f6;
+    --surface: #ffffff;
+    --surface-light: #faf8fc;
+    --foreground: #4a5568;
+    --foreground-muted: #718096;
+    --muted: #a0aec0;
+    --accent: #b794f4;
+    --accent-secondary: #9f7aea;
+    --accent-tertiary: #fc8181;
+    --accent-hover: #d6bcfa;
+    --accent-secondary-hover: #b794f4;
+    --border: #e2e8f0;
+    --border-light: #f7fafc;
+    --success: #9ae6b4;
+    --warning: #fbd38d;
+    --error: #feb2b2;
+    --info: #90cdf4;
+
+    /* header vars removed in revert */
+  }
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+@layer components {
+  /* Glass Card with Enhanced Effects */
+  .glass-card {
+    @apply border border-border rounded-2xl transition-all duration-300;
+    background-color: color-mix(in srgb, var(--surface) 60%, transparent);
+    backdrop-filter: blur(12px) saturate(150%);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    box-shadow: var(--shadow-glass);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .glass-card:hover {
+    box-shadow: 0 12px 48px 0 rgba(31, 38, 135, 0.45);
+    @apply border-white/15;
+    transform: translateY(-2px);
+  }
+
+
+  /* Neo Section Title */
+  .neo-section-title {
+    @apply font-semibold text-xl tracking-wide text-foreground;
+  }
+
+    color: #e8eaed;
+    text-shadow: 0 0 30px rgba(56,189,248,0.4);
+
+  /* Chart Container */
+  .chart-container {
+    background: rgba(30, 36, 51, 0.5);
+    @apply rounded-xl p-6;
+    border: 1px solid rgba(42, 49, 66, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  /* Data Grid */
+  .data-grid {
+    @apply grid gap-4;
+    @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+
+  /* Responsive Table */
+  .responsive-table {
+    @apply w-full overflow-x-auto;
+  }
+
+  .responsive-table table {
+    @apply w-full min-w-[600px];
+  }
+
+  /* Filter Bar */
+  .filter-bar {
+    @apply flex flex-wrap gap-4 items-center;
+    @apply p-4 rounded-xl;
+    background: rgba(21, 25, 38, 0.5);
+    border: 1px solid rgba(42, 49, 66, 0.5);
+  }
+
+  /* KPI Card */
+  .kpi-card {
+    @apply p-4 sm:p-5 lg:p-6 rounded-xl transition-all duration-300 border border-border hover:scale-[1.02];
+  }
+
+    background: linear-gradient(135deg, #151926 0%, #1e2433 100%);
+    border: 1px solid rgba(42, 49, 66, 0.5);
+
+  .kpi-card:hover {
+    box-shadow: 0 0 25px rgba(56, 189, 248, 0.15), 0 0 50px rgba(56, 189, 248, 0.08);
+    border-color: rgba(56, 189, 248, 0.3);
+  }
+
+  /* Visualization Card */
+  .viz-card {
+    @apply rounded-xl p-4 sm:p-5 lg:p-6 transition-all duration-300 border border-border;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    overflow: visible;
+    position: relative;
+  }
+
+    background: rgba(21, 25, 38, 0.8);
+
+  .viz-card:hover {
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.15), 0 0 40px rgba(56, 189, 248, 0.08);
+  }
+}
