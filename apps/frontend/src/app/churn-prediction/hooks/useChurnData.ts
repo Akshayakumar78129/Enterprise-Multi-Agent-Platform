@@ -47,6 +47,22 @@ export function useChurnData(filters: ChurnFilters, timeRange: "7d" | "30d" | "9
   const [hasNoData, setHasNoData] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Map frontend segment labels to backend values
+  const segmentMap: Record<string, string> = {
+    'Enterprise': 'High-Value',
+    'Mid-Market': 'Mid-Value',
+    'Small Business': 'Standard',
+    'Startup': 'Small'
+  };
+
+  // Reverse map for display (backend to frontend)
+  const segmentDisplayMap: Record<string, string> = {
+    'High-Value': 'Enterprise',
+    'Mid-Value': 'Mid-Market',
+    'Standard': 'Small Business',
+    'Small': 'Startup'
+  };
+
   const client = useMemo(() => getDashboardClient("churn"), []);
   function normalizeSummary(summary: any) {
     const s = summary || {};
@@ -100,12 +116,18 @@ export function useChurnData(filters: ChurnFilters, timeRange: "7d" | "30d" | "9
         const filterParams: Record<string, any> = {
           dateFrom: filters.dateRange.startDate,
           dateTo: filters.dateRange.endDate,
-          riskLevel: (filters.riskLevels[0] ?? "") as string,
-          segment: (filters.segments[0] ?? "") as string,
+          riskLevels: filters.riskLevels.length > 0 ? filters.riskLevels : undefined,
+          segments: filters.segments.length > 0 ? filters.segments.map(s => segmentMap[s] || s) : undefined,
         };
 
+        // Only add timeRange if no explicit date range is provided
+        if (!filters.dateRange.startDate && !filters.dateRange.endDate) {
+          filterParams.timeRange = timeRange;
+        }
+
+        console.log('[useChurnData] Fetching with params:', filterParams);
         const summaryResponse = await client.fetchSummary(filterParams, { signal: ac.signal } as any) as any;
-        console.log("summaryResponse", summaryResponse);
+        console.log('[useChurnData] Response received:', summaryResponse);
         const effective = summaryResponse ? normalizeSummary(summaryResponse) : emptyData;
 
         const isEmpty = !effective.customerStats || effective.customerStats.length === 0;
@@ -127,7 +149,7 @@ export function useChurnData(filters: ChurnFilters, timeRange: "7d" | "30d" | "9
           return riskLevels.map((level) => {
             const key = level.toLowerCase().replace(" ", "_");
             return {
-              segment: seg.segment,
+              segment: segmentDisplayMap[seg.segment] || seg.segment, // Map to frontend display names
               riskLevel: level,
               count: Number(seg[key] ?? 0),
               percentage: 0,
@@ -138,10 +160,10 @@ export function useChurnData(filters: ChurnFilters, timeRange: "7d" | "30d" | "9
 
         setRiskTrends(((effective as any).monthlyRisk || []).map((m: any) => ({
           date: m.month,
-          low: Number(m.low_risk ?? 0),
-          medium: Number(m.medium_risk ?? 0),
-          high: Number(m.high_risk ?? 0),
-          veryHigh: Number(m.very_high_risk ?? 0),
+          low: Number(m.low_risk ?? m.low ?? 0),
+          medium: Number(m.medium_risk ?? m.medium ?? 0),
+          high: Number(m.high_risk ?? m.high ?? 0),
+          veryHigh: Number(m.very_high_risk ?? m.veryHigh ?? 0),
         })));
 
         setCustomers(((effective as any).customerStats || []).map((c: any, index: number) => ({

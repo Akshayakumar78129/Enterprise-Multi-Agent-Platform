@@ -37,6 +37,11 @@ export { ProbabilityHistogram } from "./visualizations/ProbabilityHistogram";
 export { AIFeatureImportance } from "./visualizations/AIFeatureImportance";
 export { SegmentComparisonMatrix } from "./visualizations/SegmentComparisonMatrix";
 export { RiskTrendsOverTime } from "./visualizations/RiskTrendsOverTime";
+export { LineChart } from "./visualizations/LineChart";
+export { BarChart } from "./visualizations/BarChart";
+
+// AI Components
+export { AIInsightBlock } from "./ui/AIInsightBlock";
 
 // Filter Components
 export { DateRangeFilter } from "./filters/DateRangeFilter";

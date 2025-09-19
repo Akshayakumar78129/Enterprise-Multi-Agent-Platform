@@ -75,6 +75,7 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="w-full px-3 py-2 bg-surface border-0 rounded-lg text-left text-foreground focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors min-h-[48px] text-sm"
+        suppressHydrationWarning
       >
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">

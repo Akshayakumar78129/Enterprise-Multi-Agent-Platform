@@ -35,8 +35,12 @@ export const RiskTrendsOverTime: React.FC<RiskTrendsOverTimeProps> = ({
     { value: "90d", label: "90d" },
   ];
 
-  // Calculate totals for each risk level
-  const totals = data.reduce((acc, point) => ({
+  // Compute visible window based on selected range
+  const windowSize = timeRange === "7d" ? 7 : timeRange === "90d" ? 90 : 30;
+  const visibleData = data.slice(-Math.min(windowSize, data.length));
+
+  // Calculate totals for each risk level (visible window)
+  const totals = visibleData.reduce((acc, point) => ({
     low: acc.low + point.low,
     medium: acc.medium + point.medium,
     high: acc.high + point.high,
@@ -45,13 +49,19 @@ export const RiskTrendsOverTime: React.FC<RiskTrendsOverTimeProps> = ({
 
   const totalCustomers = totals.low + totals.medium + totals.high + totals.veryHigh;
 
-  // Calculate percentage changes (mock data for now)
-  const changes = {
-    low: -5.6,
-    medium: -5.3,
-    high: 9.1,
-    veryHigh: 8.2,
+  // Calculate percentage change per risk between first and last visible points
+  const first = visibleData[0];
+  const last = visibleData[visibleData.length - 1];
+  const pct = (a: number, b: number) => {
+    const base = a === 0 ? 1 : a;
+    return ((b - a) / base) * 100;
   };
+  const changes = first && last ? {
+    low: Number(pct(first.low, last.low).toFixed(1)),
+    medium: Number(pct(first.medium, last.medium).toFixed(1)),
+    high: Number(pct(first.high, last.high).toFixed(1)),
+    veryHigh: Number(pct(first.veryHigh, last.veryHigh).toFixed(1)),
+  } : { low: 0, medium: 0, high: 0, veryHigh: 0 };
 
   const riskColors = {
     low: "#4ade80",       // muted green
@@ -85,6 +95,7 @@ export const RiskTrendsOverTime: React.FC<RiskTrendsOverTimeProps> = ({
                   : 'bg-background text-muted hover:text-foreground'
                 }
               `}
+              suppressHydrationWarning
             >
               {range.label}
             </button>
@@ -105,9 +116,9 @@ export const RiskTrendsOverTime: React.FC<RiskTrendsOverTimeProps> = ({
             <text x="10" y="200" fill="#64748b" fontSize="12" textAnchor="start">0</text>
 
             {/* X-axis labels */}
-            {data.map((point, index) => {
+            {visibleData.map((point, index) => {
               if (index % Math.ceil(data.length / 8) === 0) {
-                const x = 50 + (index / (data.length - 1)) * 700;
+                const x = 50 + (index / (visibleData.length - 1 || 1)) * 700;
                 return (
                   <text
                     key={index}
@@ -126,8 +137,8 @@ export const RiskTrendsOverTime: React.FC<RiskTrendsOverTimeProps> = ({
 
             {/* Stacked areas */}
             {Object.entries(riskColors).map(([riskLevel, color], levelIndex) => {
-              const points = data.map((point, index) => {
-                const x = 50 + (index / (data.length - 1)) * 700;
+              const points = visibleData.map((point, index) => {
+                const x = 50 + (index / (visibleData.length - 1 || 1)) * 700;
                 let y = 200;
                 
                 // Calculate cumulative height
@@ -139,8 +150,8 @@ export const RiskTrendsOverTime: React.FC<RiskTrendsOverTimeProps> = ({
                 return `${x},${y}`;
               });
 
-              const bottomPoints = data.map((point, index) => {
-                const x = 50 + (index / (data.length - 1)) * 700;
+              const bottomPoints = visibleData.map((point, index) => {
+                const x = 50 + (index / (visibleData.length - 1 || 1)) * 700;
                 let y = 200;
                 
                 // Calculate cumulative height for bottom
@@ -167,9 +178,9 @@ export const RiskTrendsOverTime: React.FC<RiskTrendsOverTimeProps> = ({
             })}
 
             {/* Invisible hover areas for tooltips */}
-            {data.map((point, index) => {
-              const x = 50 + (index / (data.length - 1)) * 700;
-              const width = 700 / data.length;
+            {visibleData.map((point, index) => {
+              const x = 50 + (index / (visibleData.length - 1 || 1)) * 700;
+              const width = 700 / (visibleData.length || 1);
               
               return (
                 <rect
@@ -206,7 +217,7 @@ export const RiskTrendsOverTime: React.FC<RiskTrendsOverTimeProps> = ({
           <div
             className="absolute bg-background/98 backdrop-blur-sm border border-border rounded-lg p-3 pointer-events-none shadow-lg"
             style={{
-              left: `${Math.min(Math.max(20, 50 + (data.indexOf(hoveredPoint) / (data.length - 1)) * 50), 80)}%`,
+              left: `${Math.min(Math.max(20, 50 + (visibleData.indexOf(hoveredPoint) / Math.max(visibleData.length - 1, 1)) * 50), 80)}%`,
               top: "20px",
               zIndex: 9999,
               transform: "translateX(-50%)",

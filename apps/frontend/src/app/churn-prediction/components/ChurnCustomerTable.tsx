@@ -20,7 +20,16 @@ export function ChurnCustomerTable({ data, loading, onRowClick }: ChurnCustomerT
       ? c.riskPercentage
       : Math.round(((c.churn_probability ?? 0) as number) * 100);
     const id = (c.id ?? c.customer_id ?? index).toString();
-    return { id, name, riskLevel, riskPercentage };
+
+    // Add numeric value for proper risk level sorting
+    const riskSortValue = {
+      "Low": 1,
+      "Medium": 2,
+      "High": 3,
+      "Very High": 4
+    }[riskLevel] || 0;
+
+    return { id, name, riskLevel, riskPercentage, riskSortValue };
   });
 
   const tableColumns = [
@@ -33,17 +42,18 @@ export function ChurnCustomerTable({ data, loading, onRowClick }: ChurnCustomerT
     {
       id: "riskLevel",
       header: "Risk Level",
-      accessor: "riskLevel" as const,
+      accessor: (row: any) => row.riskSortValue, // Use numeric value for sorting
       sortable: true,
-      render: (value: string) => {
+      render: (_: any, row: any) => {
+        const value = row.riskLevel;
         const colors: Record<string, string> = {
-          "Very High": "text-error bg-error/20",
-          High: "text-warning bg-warning/20",
-          Medium: "text-yellow-500 bg-yellow-500/20",
-          Low: "text-success bg-success/20",
+          "Very High": "text-error",
+          High: "text-warning",
+          Medium: "text-yellow-500",
+          Low: "text-success",
         };
         return (
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[value] || ""}`}>
+          <span className={`text-xs font-medium ${colors[value] || ""}`}>
             {value}
           </span>
         );

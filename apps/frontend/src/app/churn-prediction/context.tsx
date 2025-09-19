@@ -36,9 +36,10 @@ export function ChurnProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [filters, setFilters] = React.useState<ChurnFilters>(() => {
-    // Use more recent dates that likely have data
+    // Use date range that matches actual data (2017-01-20 to 2021-12-31)
+    // Using last year of data for better results
     const defaultFilters = {
-      dateRange: { startDate: "2020-01-01", endDate: "2023-12-31" },
+      dateRange: { startDate: "2021-01-01", endDate: "2021-12-31" },
       riskLevels: [],
       segments: [],
       search: "",

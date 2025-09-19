@@ -45,6 +45,10 @@ export function ChurnAIInsights({
     );
   }
 
+  // Extract unique segments from the data
+  const uniqueSegments = Array.from(new Set(segmentComparison.map(item => item.segment))).filter(Boolean);
+  const segments = uniqueSegments.length > 0 ? uniqueSegments : ["Enterprise", "Mid-Market", "Small Business", "Startup"];
+
   return (
     <>
       <div className="glass-card card-padding card-hover">
@@ -57,6 +61,7 @@ export function ChurnAIInsights({
       <div className="glass-card card-padding card-hover">
         <SegmentComparisonMatrix
           data={segmentComparison}
+          segments={segments}
           title="Segment Comparison Matrix"
           onCellClick={onCellClick || ((segment, riskLevel, data) =>
             console.log("Cell clicked:", { segment, riskLevel, data })

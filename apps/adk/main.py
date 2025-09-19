@@ -30,6 +30,9 @@ from finance.agent import root_agent as finance_agent
 from inventory.agent import root_agent as inventory_agent
 from sales.agent import root_agent as sales_agent
 
+# Import dashboard API routers
+from api.routers import churn_router
+
 logger = logging.getLogger(__name__)
 
 class AgentRunRequest(BaseModel):
@@ -57,6 +60,8 @@ app.add_middleware(
 
 memory_session_service = InMemorySessionService()
 
+# Include dashboard API routers
+app.include_router(churn_router.router)
 
 agents_list = ["orchestration_agent", "inventory_agent", "sales_agent", "customer_insights_agent", "financial_agent"]
 

@@ -30,7 +30,13 @@ export default function ChurnPredictionPage() {
     probabilityArray,
     
   } = useChurnData(filters, timeRange);
-console.log("data", data);
+  // Debug logging
+  React.useEffect(() => {
+    console.log('[ChurnPage] Current data:', data);
+    console.log('[ChurnPage] Current filters:', filters);
+    console.log('[ChurnPage] Current timeRange:', timeRange);
+  }, [data, filters, timeRange]);
+
   return (
     <>
     

@@ -14,7 +14,7 @@ export interface KPIRowProps {
 }
 
 export const KPIRow: React.FC<KPIRowProps> = ({
-  kpis,
+  kpis = [],
   columns = 4,
   animationDelay = 100,
   onKPIClick,
@@ -41,7 +41,7 @@ export const KPIRow: React.FC<KPIRowProps> = ({
 
   return (
     <div className={`grid ${getGridCols()} gap-3 sm:gap-4 lg:gap-5 ${className}`}>
-      {kpis.map((kpi, index) => (
+      {(kpis || []).map((kpi, index) => (
         <div
           key={kpi.id}
           className="animate-slide-up"

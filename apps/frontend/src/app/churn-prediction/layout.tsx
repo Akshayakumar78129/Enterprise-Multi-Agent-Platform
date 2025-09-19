@@ -14,8 +14,9 @@ function HeaderFilters() {
       onReset={() =>
         setFilters({
           dateRange: {
-            startDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-            endDate: new Date().toISOString().split("T")[0],
+            // Use last 90 days of 2021 data (Oct 1 - Dec 31, 2021)
+            startDate: "2021-10-01",
+            endDate: "2021-12-31",
           },
           riskLevels: [],
           segments: [],
