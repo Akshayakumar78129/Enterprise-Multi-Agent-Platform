@@ -83,3 +83,14 @@ class DatabaseConnection:
             cursor.execute(sql, params)
             conn.commit()
             return cursor.rowcount
+
+
+# Global database connection instance
+_db_connection = None
+
+def get_connection() -> DatabaseConnection:
+    """Get the global database connection instance"""
+    global _db_connection
+    if _db_connection is None:
+        _db_connection = DatabaseConnection()
+    return _db_connection

@@ -5,6 +5,8 @@ import io
 import importlib
 import asyncio
 from time import sleep
+from datetime import datetime
+from typing import Optional, Any, Dict, Union
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -13,11 +15,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 from pydantic import BaseModel
-from typing import Optional, Any
 from pydantic import BaseModel, Field
 from lib.utils import get_audio, get_visualisation, get_audio_from_file, get_audio_groq, get_audio_deepgram
 from dotenv import load_dotenv
 load_dotenv()
+
 # ADK imports
 from google.adk.sessions import InMemorySessionService, Session
 from google.adk.runners import Runner
@@ -25,13 +27,16 @@ from orchestration_agent import root_agent
 from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.genai.types import Content
 
+# Import ChurnProcessingService for ML model
+from domains.churn_prediction.processing_service import ChurnProcessingService
+
 from customer.agent import root_agent as customer_agent
 from finance.agent import root_agent as finance_agent
 from inventory.agent import root_agent as inventory_agent
 from sales.agent import root_agent as sales_agent
 
 # Import dashboard API routers
-from api.routers import churn_router
+from api.routers.churn_router import router as churn_router
 
 logger = logging.getLogger(__name__)
 
@@ -43,12 +48,28 @@ class AgentRunRequest(BaseModel):
   streaming: bool = False
   state_delta: Optional[dict[str, Any]] = None
 
+# Support SimpleQueryRequest from frontend
+class SimpleQueryRequest(BaseModel):
+    user_query: str
+    session_id: str
+    user_id: str
+    app_name: str
+    is_canvas: bool = False
+    agent_type: Optional[str] = None
+
 ALLOWED_ORIGINS = [
     "http://localhost",
     "*",
 ]
 
-app = FastAPI()
+app = FastAPI(
+    title="Multi-Agent Orchestration Server",
+    description="Unified server for AI agents and dashboard APIs",
+    version="3.0.0"
+)
+
+# Global service instances
+churn_service = ChurnProcessingService()
 
 app.add_middleware(
     CORSMiddleware,
@@ -61,15 +82,49 @@ app.add_middleware(
 memory_session_service = InMemorySessionService()
 
 # Include dashboard API routers
-app.include_router(churn_router.router)
+app.include_router(churn_router)
+
+# Simple in-memory session storage for fallback
+simple_sessions: Dict[str, Dict[str, Any]] = {}
 
 agents_list = ["orchestration_agent", "inventory_agent", "sales_agent", "customer_insights_agent", "financial_agent"]
 
 
 
+@app.on_event("startup")
+async def startup_event():
+    """Train ML model on startup to avoid retraining on every request"""
+    print("[Main Server] Training ML model on startup...")
+    await churn_service._train_ml_model()
+    print("[Main Server] ML model training complete")
+    # Store the service instance for use in routers
+    app.state.churn_service = churn_service
+
 @app.get("/")
 def read_root():
-    return {"message": "Hello, World!"}
+    return {
+        "message": "Multi-Agent Orchestration Server",
+        "version": "3.0.0",
+        "endpoints": {
+            "ai_agents": [
+                "/run_sse - AI query endpoint (SimpleQueryRequest format)",
+                "/run_sse_agent - AI query endpoint (AgentRunRequest format)",
+                "/apps/{app_name}/users/{user_id}/sessions/{session_id} - Session management"
+            ],
+            "dashboard_apis": [
+                "/api/churn/summary",
+                "/api/churn/feature-importance",
+                "/api/churn/segment-comparison",
+                "/api/churn/risk-trends",
+                "/api/churn/customers",
+                "/api/churn/export"
+            ]
+        }
+    }
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "adk_enabled": True}
 
 
 @app.get("/apps/{app_name}/users/{user_id}/sessions/{session_id}")
@@ -89,30 +144,68 @@ async def create_session(app_name: str, user_id: str, session_id: str, state: Op
         return {"error": str(e)}
 
 @app.post("/run_sse")
-async def run_agent(req: AgentRunRequest) -> StreamingResponse:
+async def run_agent(req: Union[SimpleQueryRequest, AgentRunRequest]) -> StreamingResponse:
+    """Handle both SimpleQueryRequest (from frontend) and AgentRunRequest formats"""
     try:
-        print(req)
-        session = await get_session(app_name=req.app_name, user_id=req.user_id, session_id=req.session_id)
-        print(session)
-        if not session:
-            print("Session not found")
-            return StreamingResponse(
-                (b"", 404),
-                media_type="text/event-stream",
-                status_code=404,
-            )
+        # Convert SimpleQueryRequest to AgentRunRequest format
+        if isinstance(req, SimpleQueryRequest):
+            # Create Content object from simple query
+            new_message = Content(parts=[{"text": req.user_query}])
+
+            # Check if session exists, create if not
+            try:
+                session = await memory_session_service.get_session(
+                    app_name=req.app_name,
+                    user_id=req.user_id,
+                    session_id=req.session_id
+                )
+            except:
+                # Create new session if doesn't exist
+                session = await memory_session_service.create_session(
+                    app_name=req.app_name,
+                    user_id=req.user_id,
+                    session_id=req.session_id
+                )
+
+            # Convert to internal format for processing
+            app_name = req.app_name
+            user_id = req.user_id
+            session_id = req.session_id
+            streaming = True  # Always stream for frontend
+        else:
+            # Handle original AgentRunRequest format
+            new_message = req.new_message
+            app_name = req.app_name
+            user_id = req.user_id
+            session_id = req.session_id
+            streaming = req.streaming
+
+            # Check if session exists, create if not
+            try:
+                session = await memory_session_service.get_session(
+                    app_name=app_name,
+                    user_id=user_id,
+                    session_id=session_id
+                )
+            except:
+                # Create new session if doesn't exist
+                session = await memory_session_service.create_session(
+                    app_name=app_name,
+                    user_id=user_id,
+                    session_id=session_id
+                )
 
         async def event_generator():
             try:
-                stream_mode = StreamingMode.SSE if req.streaming else StreamingMode.NONE
-                runner = Runner(agent=root_agent, app_name=req.app_name, session_service=memory_session_service)
+                stream_mode = StreamingMode.SSE if streaming else StreamingMode.NONE
+                runner = Runner(agent=root_agent, app_name=app_name, session_service=memory_session_service)
                 visualisation = None
                 visualisation_text = None
                 is_visualisation = False
                 async for event in runner.run_async(
-                    user_id=req.user_id,
-                    session_id=req.session_id,
-                    new_message=req.new_message,
+                    user_id=user_id,
+                    session_id=session_id,
+                    new_message=new_message,
                     run_config=RunConfig(streaming_mode=stream_mode),
                 ):
                     if event.content and event.content.parts and event.author:
@@ -149,7 +242,9 @@ async def run_agent(req: AgentRunRequest) -> StreamingResponse:
                         tasks.append(get_audio_deepgram(output))
                         if is_visualisation:
                             print("Generating visualisation")
-                            tasks.append(get_visualisation(req.new_message.parts[0].text, visualisation_text))
+                            # Get query text from new_message
+                            query_text = new_message.parts[0].get("text", "") if new_message.parts else ""
+                            tasks.append(get_visualisation(query_text, visualisation_text))
                         
                         results = await asyncio.gather(*tasks)
                         audio_base64 = results[0]

@@ -1,6 +1,5 @@
 """Churn prediction tool for orchestration agent using shared ML predictor"""
 
-import asyncio
 import json
 from typing import Optional
 from datetime import datetime, timedelta
@@ -10,7 +9,7 @@ import os
 # Add parent directories to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from domains.churn_prediction.processing_service import ChurnProcessingService
+from domains.churn_prediction.sync_processing_service import SyncChurnProcessingService
 from domains.churn_prediction.ml_predictor import ChurnMLPredictor
 
 
@@ -35,16 +34,16 @@ def predict_churn_risk(
     Returns:
         String containing the analysis results
     """
-    # Run async function in sync context
-    result = asyncio.run(_predict_churn_risk_async(time_period, segment_id))
+    # Call the synchronous version directly
+    result = _predict_churn_risk_sync(time_period, segment_id)
     return result
 
 
-async def _predict_churn_risk_async(time_period: str, segment_id: Optional[str]) -> str:
-    """Async implementation of churn risk prediction."""
+def _predict_churn_risk_sync(time_period: str, segment_id: Optional[str]) -> str:
+    """Synchronous implementation of churn risk prediction."""
 
-    # Initialize the shared processing service
-    service = ChurnProcessingService()
+    # Initialize the sync wrapper for agent framework
+    service = SyncChurnProcessingService()
 
     # Build filters based on parameters
     filters = {}
@@ -65,7 +64,8 @@ async def _predict_churn_risk_async(time_period: str, segment_id: Optional[str])
         filters['dateFrom'] = (reference_date - timedelta(days=180)).strftime('%Y-%m-%d')
         filters['dateTo'] = reference_date.strftime('%Y-%m-%d')
     elif time_period == "last_year":
-        filters['dateFrom'] = '2021-01-01'
+        # Match frontend behavior - use Q4 2021 for "last year"
+        filters['dateFrom'] = '2021-10-01'
         filters['dateTo'] = '2021-12-31'
     else:
         # Default to last 90 days of 2021
@@ -79,7 +79,7 @@ async def _predict_churn_risk_async(time_period: str, segment_id: Optional[str])
 
     try:
         # Get dashboard summary data (same data shown in UI)
-        summary_data = await service.get_dashboard_summary(filters)
+        summary_data = service.get_dashboard_summary(filters)
 
         # Get customer stats for detailed analysis
         customer_stats = summary_data.get('customerStats', [])
@@ -117,11 +117,13 @@ Please check:
 
         # Calculate average risk percentages by level
         risk_averages = {'Low': [], 'Medium': [], 'High': [], 'Very High': []}
+        all_risk_percentages = []
         for customer in customer_stats:
             risk_level = customer.get('riskLevel', 'Low')
             risk_pct = customer.get('riskPercentage', 0)
             if risk_level in risk_averages:
                 risk_averages[risk_level].append(risk_pct)
+            all_risk_percentages.append(risk_pct)
 
         avg_risk_by_level = {}
         for level, values in risk_averages.items():
@@ -130,12 +132,28 @@ Please check:
             else:
                 avg_risk_by_level[level] = 0
 
+        # Calculate overall metrics matching frontend
+        # Include Medium, High, and Very High as "at risk" customers
+        at_risk_count = risk_counts['Medium'] + risk_counts['High'] + risk_counts['Very High']
+        overall_risk_percentage = at_risk_count / total_customers * 100 if total_customers > 0 else 0
+        average_churn_probability = sum(all_risk_percentages) / len(all_risk_percentages) if all_risk_percentages else 0
+
         # Format the results
         result = f"""# Churn Risk Analysis Report
 
 ## Analysis Period: {time_period}
 {f"Segment: {segment_id}" if segment_id else "All Customers"}
 Date Range: {filters.get('dateFrom', 'N/A')} to {filters.get('dateTo', 'N/A')}
+
+## Overall Metrics
+
+**Overall Churn Risk: {overall_risk_percentage:.1f}%** (matches dashboard display)
+- This represents the percentage of customers classified as at-risk (Medium, High, or Very High)
+- Same calculation as frontend dashboard: (Medium + High + Very High) / Total × 100
+
+**Average Churn Probability: {average_churn_probability:.1f}%**
+- This is the mean probability across all customers
+- Provides insight into the overall churn likelihood
 
 ## Risk Distribution Summary
 

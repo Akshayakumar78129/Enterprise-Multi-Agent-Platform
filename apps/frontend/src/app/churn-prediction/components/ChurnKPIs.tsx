@@ -55,19 +55,20 @@ export function ChurnKPIs({ data, loading }: ChurnKPIsProps) {
 
     // Calculate totals from segmentRisk data
     let totalCustomers = 0;
-    let highRiskCount = 0;
+    let atRiskCount = 0;  // Medium + High + Very High (all at-risk customers)
     let veryHighRiskCount = 0;
 
     data.segmentRisk.forEach((segment: any) => {
       const segmentTotal = (segment.low || 0) + (segment.medium || 0) +
                           (segment.high || 0) + (segment.very_high || 0);
       totalCustomers += segmentTotal;
-      highRiskCount += (segment.high || 0) + (segment.very_high || 0);
+      // Include Medium, High, and Very High as "at risk"
+      atRiskCount += (segment.medium || 0) + (segment.high || 0) + (segment.very_high || 0);
       veryHighRiskCount += (segment.very_high || 0);
     });
 
     const overallRisk = totalCustomers > 0
-      ? Math.round((highRiskCount / totalCustomers) * 100)
+      ? Math.round((atRiskCount / totalCustomers) * 100)
       : 0;
 
     // Get primary risk factor from feature importance

@@ -51,10 +51,8 @@ export default function ChatInterface({ sessionId }: ChatInterfaceProps) {
     dispatch(setStreamingState(true));
 
     try {
-      const backendAiUrl = process.env.NEXT_PUBLIC_BACKEND_AI_URL || 'http://127.0.0.1:8001';
-      console.log('Using backend AI URL:', backendAiUrl);
-      
-      const response = await fetch(`${backendAiUrl}/run_sse`, {
+      // Use relative URL to leverage Next.js proxy
+      const response = await fetch('/run_sse', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

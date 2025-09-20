@@ -69,13 +69,10 @@ export class AIClient {
         'Accept': 'text/event-stream'
       },
       body: JSON.stringify({
-        app_name: this.session!.app_name,
-        user_id: this.session!.user_id,
+        user_query: query,
         session_id: this.session!.session_id,
-        new_message: {
-          parts: [{ text: query }]
-        },
-        streaming: true
+        user_id: this.session!.user_id,
+        app_name: this.session!.app_name
       })
     });
 

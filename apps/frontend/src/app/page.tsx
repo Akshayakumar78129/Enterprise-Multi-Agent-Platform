@@ -71,7 +71,7 @@ export default function HomePage() {
       // Clear user selections when AI starts processing a new general query
       setUserSelectedChartPoints([]);
       
-      const backendAiUrl = process.env.NEXT_PUBLIC_BACKEND_AI_URL || 'http://127.0.0.1:8001';
+      const backendAiUrl = process.env.NEXT_PUBLIC_BACKEND_AI_URL || 'http://127.0.0.1:8000';
       console.log('Using backend AI URL:', backendAiUrl);
       
       const response = await fetch(`${backendAiUrl}/run_sse`, {
@@ -180,7 +180,7 @@ export default function HomePage() {
       
       if (error instanceof Error) {
         if (error.message === 'Failed to fetch') {
-          errorMessage = `Cannot connect to the AI backend service. Please ensure the service is running on port 8001.`;
+          errorMessage = `Cannot connect to the AI backend service. Please ensure the service is running on port 8000.`;
         } else {
           errorMessage = `Error: ${error.message}`;
         }
