@@ -1,6 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { LaserPointer } from './LaserPointer';
-import { SpeechBubble } from './SpeechBubble';
 
 interface RobotCharacterProps {
   initialPosition?: { x: number; y: number };
@@ -34,9 +33,7 @@ export const RobotCharacter: React.FC<RobotCharacterProps> = ({
     eye: '#4a5568',        // Dark gray for contrast
   };
 
-  const [position, setPosition] = useState(initialPosition);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const position = initialPosition; // Fixed position, no dragging
   const robotRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -46,93 +43,18 @@ export const RobotCharacter: React.FC<RobotCharacterProps> = ({
   const [queryInputValue, setQueryInputValue] = useState('');
   
   // Used to calculate the robot's "eye" position for laser origin
-  const getRobotEyePosition = () => {
+  const getRobotEyePosition = useCallback(() => {
     if (!robotRef.current) return { x: 0, y: 0 };
-    
+
     const robotRect = robotRef.current.getBoundingClientRect();
     // Return the center of the robot head area for laser origin
     return {
       x: robotRect.left + (robotRect.width / 2),
       y: robotRect.top + (robotRect.height / 3), // Approximately where the visor/eye would be
     };
-  };
+  }, []);
   
-  // Handle mouse down on robot (start dragging)
-  const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!robotRef.current) return;
-    
-    const clientX = 'clientX' in e ? e.clientX : e.touches[0].clientX;
-    const clientY = 'clientY' in e ? e.clientY : e.touches[0].clientY;
-    
-    const robotRect = robotRef.current.getBoundingClientRect();
-    setDragOffset({
-      x: clientX - robotRect.left,
-      y: clientY - robotRect.top,
-    });
-    
-    setIsDragging(true);
-    e.preventDefault();
-  };
-  
-  // Handle mouse move (continue dragging)
-  const handleMouseMove = (e: MouseEvent | TouchEvent) => {
-    if (!isDragging || !containerRef.current || !robotRef.current) return;
-    
-    const clientX = 'clientX' in e ? e.clientX : e.touches[0].clientX;
-    const clientY = 'clientY' in e ? e.clientY : e.touches[0].clientY;
-    
-    const containerRect = containerRef.current.getBoundingClientRect();
-    const newX = clientX - dragOffset.x - containerRect.left;
-    const newY = clientY - dragOffset.y - containerRect.top;
-    
-    // Make sure robot stays within bounds
-    const robotWidth = robotRef.current.offsetWidth;
-    const robotHeight = robotRef.current.offsetHeight;
-    
-    const boundedX = Math.max(20, Math.min(newX, containerRect.width - robotWidth - 20));
-    const boundedY = Math.max(20, Math.min(newY, containerRect.height - robotHeight - 20));
-    
-    setPosition({ x: boundedX, y: boundedY });
-  };
-  
-  // Handle mouse up (end dragging)
-  const handleMouseUp = () => {
-    if (isDragging && robotRef.current && containerRef.current) {
-      // Update position state when drag ends to ensure laser tracking
-      const robotRect = robotRef.current.getBoundingClientRect();
-      const containerRect = containerRef.current.getBoundingClientRect();
-      
-      const newPosition = {
-        x: robotRect.left - containerRect.left,
-        y: robotRect.top - containerRect.top
-      };
-      
-      setPosition(newPosition);
-    }
-    setIsDragging(false);
-  };
-  
-  // Add and remove event listeners
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.addEventListener('touchmove', handleMouseMove);
-      document.addEventListener('touchend', handleMouseUp);
-    } else {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('touchmove', handleMouseMove);
-      document.removeEventListener('touchend', handleMouseUp);
-    }
-    
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('touchmove', handleMouseMove);
-      document.removeEventListener('touchend', handleMouseUp);
-    };
-  }, [isDragging, dragOffset]);
+  // Robot is fixed position, no dragging needed
   
   // Handle laser pointer logic
   const [laserOrigin, setLaserOrigin] = useState({ x: 0, y: 0 });
@@ -143,29 +65,37 @@ export const RobotCharacter: React.FC<RobotCharacterProps> = ({
       const updateOrigin = () => {
         setLaserOrigin(getRobotEyePosition());
       };
-      
+
       // Update immediately
       updateOrigin();
-      
+
       // Set up regular updates while robot is visible and pointing
       const intervalId = setInterval(updateOrigin, 100);
-      
+
       return () => clearInterval(intervalId);
     }
-  }, [position, isVisible, state]);
-  
-  // Update internal selected points and context message when prop changes
+  }, [isVisible, state, getRobotEyePosition]);
+
+  // Helper function to build context summary
+  const buildContextSummary = (points: any[]) => {
+    if (!points || points.length === 0) return '';
+    let summary = "Context:\n";
+    summary += points.map(p => {
+      const chartLabel = p.chartLabel || `Chart ${p.chartId || ''}`;
+      const pointLabel = p.label || `Index ${p.index}`;
+      const pointValue = p.value !== undefined ? p.value : '';
+      return `• ${chartLabel} | ${pointLabel}: ${pointValue}`;
+    }).join('\n');
+    return summary;
+  };
+
+  // Set initial selected points if provided
   useEffect(() => {
-    console.log('RobotCharacter: userSelectedPoints prop changed:', userSelectedPoints);
-    setCurrentSelectedPoints(userSelectedPoints);
     if (userSelectedPoints && userSelectedPoints.length > 0) {
-      console.log('RobotCharacter: Setting context summary for', userSelectedPoints.length, 'points');
+      setCurrentSelectedPoints(userSelectedPoints);
       setContextSummaryMessage(buildContextSummary(userSelectedPoints));
-    } else {
-      console.log('RobotCharacter: Clearing context summary');
-      setContextSummaryMessage('');
     }
-  }, [userSelectedPoints]);
+  }, []); // Only run once on mount
   
   // Robot appearance based on state
   const getRobotStyles = () => {
@@ -175,9 +105,9 @@ export const RobotCharacter: React.FC<RobotCharacterProps> = ({
       position: 'absolute',
       left: `${position.x}px`,
       top: `${position.y}px`,
-      cursor: isDragging ? 'grabbing' : 'grab',
+      cursor: 'default',
       zIndex: 60,
-      transition: isDragging ? 'none' : 'all 0.3s ease',
+      transition: 'all 0.3s ease',
     };
     
     // Additional styles based on state
@@ -207,19 +137,6 @@ export const RobotCharacter: React.FC<RobotCharacterProps> = ({
   
   // Don't render if not visible
   if (!isVisible) return null;
-  
-  // Helper function to build context summary
-  const buildContextSummary = (points: any[]) => {
-    if (!points || points.length === 0) return '';
-    let summary = "Context:\n";
-    summary += points.map(p => {
-      const chartLabel = p.chartLabel || `Chart ${p.chartId || ''}`;
-      const pointLabel = p.label || `Index ${p.index}`;
-      const pointValue = p.value !== undefined ? p.value : '';
-      return `• ${chartLabel} | ${pointLabel}: ${pointValue}`;
-    }).join('\n');
-    return summary;
-  };
 
   const handleQueryInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQueryInputValue(e.target.value);
@@ -242,8 +159,6 @@ export const RobotCharacter: React.FC<RobotCharacterProps> = ({
         ref={robotRef}
         className={`robot-character ${className}`}
         style={getRobotStyles()}
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleMouseDown}
       >
         <svg viewBox="0 0 44 65" xmlns="http://www.w3.org/2000/svg" style={{ pointerEvents: 'auto' }}>
           {/* Robot Body Parts styled with soft pastel colors */}
@@ -318,14 +233,37 @@ export const RobotCharacter: React.FC<RobotCharacterProps> = ({
         );
       })}
       
-      {/* Speech Bubble */}
-      {(state === 'speaking' || state === 'thinking' || (currentSelectedPoints && currentSelectedPoints.length > 0)) && (message || contextSummaryMessage) && (
-        <SpeechBubble
-          anchorElement={robotRef.current}
-          message={message || contextSummaryMessage}
-          isThinking={state === 'thinking' || (currentSelectedPoints && currentSelectedPoints.length > 0 && !message)}
-          position="right"
-        />
+      {/* Chat-style Message Display Next to Robot */}
+      {(state === 'speaking' || state === 'thinking' || state === 'idle') && message && (
+        <div
+          style={{
+            position: 'absolute',
+            left: position.x + 60,
+            top: position.y,
+            maxWidth: '500px',
+            padding: '12px 16px',
+            backgroundColor: 'rgba(255, 255, 255, 0.98)',
+            border: '1px solid #e0d9f2',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(183, 148, 244, 0.1)',
+            zIndex: 61,
+            fontSize: '14px',
+            lineHeight: '1.5',
+            color: '#4a5568'
+          }}
+        >
+          <div style={{
+            wordWrap: 'break-word',
+            whiteSpace: 'pre-wrap'
+          }}>
+            {state === 'thinking' && (
+              <span style={{ color: '#9f7aea', fontStyle: 'italic' }}>
+                Thinking...
+              </span>
+            )}
+            {message}
+          </div>
+        </div>
       )}
       
       {/* Global styles for animations */}

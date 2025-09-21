@@ -19,7 +19,7 @@ export interface AIFeatureImportanceProps {
 }
 
 export const AIFeatureImportance: React.FC<AIFeatureImportanceProps> = ({
-  data,
+  data = [],
   title = "AI Feature Importance",
   sortBy = "importance",
   onFeatureClick,
@@ -27,14 +27,19 @@ export const AIFeatureImportance: React.FC<AIFeatureImportanceProps> = ({
 }) => {
   const [selectedSort, setSelectedSort] = useState(sortBy);
 
-  const sortedData = [...data].sort((a, b) => {
+  // Ensure data is an array before spreading
+  const safeData = Array.isArray(data) ? data : [];
+
+  const sortedData = [...safeData].sort((a, b) => {
     if (selectedSort === "importance") {
       return b.importance - a.importance;
     }
     return a.name.localeCompare(b.name);
   });
 
-  const maxImportance = Math.max(...data.map(d => d.importance));
+  const maxImportance = safeData.length > 0
+    ? Math.max(...safeData.map(d => d.importance))
+    : 1;
 
   return (
     <div className={`p-6 ${className}`}>

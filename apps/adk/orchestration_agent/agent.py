@@ -1,6 +1,7 @@
 """Root orchestration agent for the travel concierge."""
 
 import os
+from typing import List
 
 from google.adk.agents import Agent, LlmAgent, SequentialAgent, LoopAgent
 from google.adk.tools import FunctionTool, ToolContext
@@ -53,6 +54,7 @@ print(f"Using model: {model}")
 class StandardOutputSchema(BaseModel):
         text: str = Field(description="The text output should be what you want to convey to the user.")
         is_visualisation: bool = Field(description="Whether the output uses visualisation or not.")
+        tools_called: List[str] = Field(default_factory=list, description="List of tool names that were called during analysis (e.g., ['churn-prediction', 'customer-segmentation'])")
 
 
 # def standard_output(text: str) -> Agent:

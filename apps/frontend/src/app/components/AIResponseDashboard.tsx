@@ -95,13 +95,15 @@ export function AIResponseDashboard({
         </div>
 
         {/* Response Text */}
-        <div className="prose prose-sm max-w-none text-foreground">
-          <div
-            dangerouslySetInnerHTML={{
-              __html: response.text.replace(/\n/g, '<br />')
-            }}
-          />
-        </div>
+        {response.text && (
+          <div className="prose prose-sm max-w-none text-foreground">
+            <div
+              dangerouslySetInnerHTML={{
+                __html: response.text.replace(/\n/g, '<br />')
+              }}
+            />
+          </div>
+        )}
 
         {/* Visualization */}
         {response.visualisation && (

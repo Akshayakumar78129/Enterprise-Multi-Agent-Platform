@@ -21,13 +21,28 @@ const componentRegistry: Record<string, Record<string, () => Promise<any>>> = {
   'customer-segmentation': {
     matrix: () => import('../Visualizations/IntervalHeatmap'),
     distribution: () => import('../Visualizations/FrequencyHistogram'),
+    distributionMap: () => import('../Visualizations/FrequencyHistogram'),
+    profileCards: () => import('../Visualizations/FrequencyHistogram'),
+    metricComparison: () => import('components/index').then(mod => ({ default: mod.SegmentComparisonMatrix })),
     flow: () => import('../Visualizations/FrequencyHistogram'),
     analysis: () => import('../Visualizations/IntervalHeatmap')
   },
   'churn-prediction': {
     risk: () => import('../Visualizations/IntervalHeatmap'),
+    riskPyramid: () => import('components/index').then(mod => ({ default: mod.RiskPyramid })),
+    featureImportance: () => import('components/index').then(mod => ({ default: mod.AIFeatureImportance })),
+    probabilityHistogram: () => import('components/index').then(mod => ({ default: mod.ProbabilityHistogram })),
     factors: () => import('../Visualizations/FrequencyHistogram'),
     timeline: () => import('../Visualizations/FrequencyHistogram'),
+    heatmap: () => import('../Visualizations/IntervalHeatmap'),
+    churnAnalysis: () => import('../../../churn-prediction/components/ChurnRiskAnalysis').then(mod => ({
+      default: mod.ChurnRiskAnalysis
+    }))
+  },
+  'visualization': {
+    barchart: () => import('components/index').then(mod => ({ default: mod.BarChart })),
+    linechart: () => import('components/index').then(mod => ({ default: mod.LineChart })),
+    histogram: () => import('../Visualizations/FrequencyHistogram'),
     heatmap: () => import('../Visualizations/IntervalHeatmap')
   },
   'inventory-management': {

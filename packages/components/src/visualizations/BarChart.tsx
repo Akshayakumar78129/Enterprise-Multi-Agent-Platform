@@ -24,11 +24,11 @@ ChartJS.register(
 );
 
 interface BarChartProps {
-  data: {
-    labels: string[];
-    datasets: Array<{
-      label: string;
-      data: number[];
+  data?: {
+    labels?: string[];
+    datasets?: Array<{
+      label?: string;
+      data?: number[];
       backgroundColor?: string | string[];
       borderColor?: string | string[];
       borderWidth?: number;
@@ -51,6 +51,11 @@ export const BarChart: React.FC<BarChartProps> = ({
   stacked = false,
   className = ""
 }) => {
+  // Provide fallback data if none is provided
+  const defaultData = {
+    labels: [],
+    datasets: []
+  };
   const options: ChartOptions<'bar'> = {
     responsive: true,
     maintainAspectRatio: false,
@@ -111,14 +116,16 @@ export const BarChart: React.FC<BarChartProps> = ({
     }
   };
 
-  // Apply default colors if not provided
+  // Apply default colors if not provided, with proper null/undefined checks
+  const safeData = data || defaultData;
   const chartData = {
-    ...data,
-    datasets: data.datasets.map((dataset, index) => ({
-      ...dataset,
-      backgroundColor: dataset.backgroundColor || `hsl(var(--primary) / ${0.8 - index * 0.1})`,
-      borderColor: dataset.borderColor || `hsl(var(--primary))`,
-      borderWidth: dataset.borderWidth || 1
+    labels: safeData.labels || [],
+    datasets: (safeData.datasets || []).map((dataset, index) => ({
+      label: dataset?.label || `Dataset ${index + 1}`,
+      data: dataset?.data || [],
+      backgroundColor: dataset?.backgroundColor || `hsl(var(--primary) / ${0.8 - index * 0.1})`,
+      borderColor: dataset?.borderColor || `hsl(var(--primary))`,
+      borderWidth: dataset?.borderWidth || 1
     }))
   };
 

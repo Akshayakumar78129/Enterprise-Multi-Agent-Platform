@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { X, Minimize2, Maximize2, Move, GripVertical } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { getComponentFromRegistry } from './ComponentRegistry';
+import { ComponentErrorBoundary } from '../ErrorBoundary';
 
 export interface CanvasComponentData {
   id: string;
@@ -201,7 +202,9 @@ export default function CanvasComponent({
             </div>
           )}
           {!loading && !error && Component && (
-            <Component {...component.data} />
+            <ComponentErrorBoundary componentType={`${component.toolId}.${component.type}`}>
+              <Component {...component.data} />
+            </ComponentErrorBoundary>
           )}
 
           {/* Resize Handle */}

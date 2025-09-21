@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 
 interface SpeechBubbleProps {
   anchorElement: HTMLElement | null;
@@ -15,36 +15,38 @@ export const SpeechBubble: React.FC<SpeechBubbleProps> = ({
 }) => {
   const [bubblePosition, setBubblePosition] = useState({ x: 0, y: 0 });
 
-  useEffect(() => {
+  const updatePosition = useCallback(() => {
     if (!anchorElement) return;
 
-    const updatePosition = () => {
-      const rect = anchorElement.getBoundingClientRect();
-      let x = rect.left;
-      let y = rect.top;
+    const rect = anchorElement.getBoundingClientRect();
+    let x = rect.left;
+    let y = rect.top;
 
-      // Adjust position based on specified direction
-      switch (position) {
-        case 'right':
-          x = rect.right + 10;
-          y = rect.top + rect.height / 2;
-          break;
-        case 'left':
-          x = rect.left - 10;
-          y = rect.top + rect.height / 2;
-          break;
-        case 'top':
-          x = rect.left + rect.width / 2;
-          y = rect.top - 10;
-          break;
-        case 'bottom':
-          x = rect.left + rect.width / 2;
-          y = rect.bottom + 10;
-          break;
-      }
+    // Adjust position based on specified direction
+    switch (position) {
+      case 'right':
+        x = rect.right + 10;
+        y = rect.top + rect.height / 2;
+        break;
+      case 'left':
+        x = rect.left - 10;
+        y = rect.top + rect.height / 2;
+        break;
+      case 'top':
+        x = rect.left + rect.width / 2;
+        y = rect.top - 10;
+        break;
+      case 'bottom':
+        x = rect.left + rect.width / 2;
+        y = rect.bottom + 10;
+        break;
+    }
 
-      setBubblePosition({ x, y });
-    };
+    setBubblePosition({ x, y });
+  }, [anchorElement, position]);
+
+  useEffect(() => {
+    if (!anchorElement) return;
 
     updatePosition();
     // Update position on window resize/scroll
@@ -55,7 +57,7 @@ export const SpeechBubble: React.FC<SpeechBubbleProps> = ({
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('scroll', updatePosition);
     };
-  }, [anchorElement, position]);
+  }, [updatePosition]);
 
   if (!message || !anchorElement) return null;
 

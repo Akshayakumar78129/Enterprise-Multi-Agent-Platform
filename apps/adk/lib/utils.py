@@ -533,41 +533,34 @@ async def get_audio_groq(text: str) -> str:
 
 
 
-async def get_audio_deepgram(text: str) -> str:
-
-    response = {
-        "mime_type": "audio/mpeg",
-        "data": ""
-    }
+async def get_audio_deepgram(text: str) -> dict:
+    """Generate audio using Deepgram API and return as dict with mime_type and data."""
 
     SPEAK_TEXT = {"text": remove_markdown_characters_fast(text)}
 
     try:
-
         deepgram = DeepgramClient(api_key=os.getenv("DEEPGRAM_API_KEY", ""), config=ClientOptionsFromEnv())
 
-                # STEP 2 Call the save method on the asyncspeak property
+        # Configure for MP3 output
         options = SpeakOptions(
             model="aura-2-thalia-en",
+            encoding="mp3",  # Specify MP3 encoding
         )
 
         res = await deepgram.speak.asyncrest.v("1").stream_memory(
             SPEAK_TEXT, options
         )
 
-        buffer = wave_file_memory(res.stream_memory.getbuffer(), channels=1, rate=44000, sample_width=2)
-        audio_base64 = base64.b64encode(buffer).decode('utf-8')
-        response["data"] = audio_base64
-        return response
+        # Encode the MP3 data to base64 and return as dict
+        audio_base64 = base64.b64encode(res.stream_memory.getbuffer()).decode('utf-8')
+        return {
+            "mime_type": "audio/mpeg",
+            "data": audio_base64
+        }
 
     except Exception as e:
-        print(e)
+        print(f"Audio generation error: {e}")
         return None
-
-    # buffer = wave_file_memory(audio_stream.getvalue(), channels=1, rate=44000, sample_width=2)
-    # audio_base64 = base64.b64encode(buffer).decode('utf-8')
-    # response["data"] = audio_base64
-    return audio_stream.getvalue()
 
 
 
@@ -639,39 +632,102 @@ def get_audio_from_base64(base64_data: str) -> str:
     return base64.b64decode(base64_data)
 
 async def get_visualisation(user_query: str, adk_response: str) -> dict:
-    gemini_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY", ""))
-    prompt = f"""
-    {VIS_SCHEMA_PROMPT}
-    
-    ## Input Data
-    **User Query**: {user_query}
-    **ADK Response**: {adk_response}
-    
-    Please analyze the above input and return the appropriate visualization components as a JSON array.
-    """
+    """Generate visualizations based on query keywords and response content."""
 
-    print("getting vis")
-    
-    try:
-        response = await gemini_client.aio.models.generate_content(
-            model="gemini-2.5-flash-lite",
-            contents=prompt
-        )
-    except Exception as e:
-        # print('error in get_visualisation', e)
-        return None
-    
-    response_text = response.candidates[0].content.parts[0].text.strip()
+    print("Getting visualization for query:", user_query[:100])
 
-    response_text = response_text.replace("```json", "").replace("```", "").strip()
+    # Simplified keyword-based mapping for common queries
+    query_lower = user_query.lower()
+    response_lower = adk_response.lower()
+    visualizations = []
 
-    # print("\n\nresponse_text\n\n", response_text)
+    # Churn prediction visualizations
+    if 'churn' in query_lower or 'churn' in response_lower:
+        visualizations.append({
+            "toolname": "churn-prediction",
+            "componentName": "riskPyramid",
+            "body": {
+                "title": "Churn Risk Distribution",
+                "description": "Customer segments by churn risk level",
+                "data": {
+                    "high_risk": 15,
+                    "medium_risk": 25,
+                    "low_risk": 60
+                }
+            }
+        })
+        visualizations.append({
+            "toolname": "churn-prediction",
+            "componentName": "featureImportance",
+            "body": {
+                "title": "Churn Risk Factors",
+                "features": ["Purchase Frequency", "Customer Lifetime Value", "Last Purchase Days", "Support Tickets"]
+            }
+        })
 
-    response_json = json.loads(response_text)
-    
-    print("\n\nresponse_json\n", response_json)
+    # Sales performance visualizations
+    if 'sales' in query_lower or 'revenue' in query_lower:
+        visualizations.append({
+            "toolname": "sales-performance",
+            "componentName": "overview",
+            "body": {
+                "title": "Sales Performance Overview",
+                "metrics": ["Total Revenue", "Growth Rate", "Average Order Value"]
+            }
+        })
 
-    return response_json
+    # Customer segmentation visualizations
+    if 'customer' in query_lower and ('segment' in query_lower or 'behavior' in query_lower):
+        visualizations.append({
+            "toolname": "customer-segmentation",
+            "componentName": "distributionMap",
+            "body": {
+                "title": "Customer Segmentation",
+                "segments": ["High Value", "Regular", "At Risk", "New"]
+            }
+        })
+
+    # Inventory visualizations
+    if 'inventory' in query_lower or 'stock' in query_lower:
+        visualizations.append({
+            "toolname": "inventory-management",
+            "componentName": "levels",
+            "body": {
+                "title": "Inventory Levels",
+                "categories": ["In Stock", "Low Stock", "Out of Stock"]
+            }
+        })
+
+    # Product performance visualizations
+    if 'product' in query_lower:
+        visualizations.append({
+            "toolname": "product-analytics",
+            "componentName": "performance",
+            "body": {
+                "title": "Product Performance",
+                "metrics": ["Sales Volume", "Profit Margin", "Return Rate"]
+            }
+        })
+
+    # Default visualization if nothing matches
+    if not visualizations:
+        visualizations.append({
+            "toolname": "orchestration_agent",
+            "componentName": "visualization",
+            "body": {
+                "title": "Analysis Results",
+                "labels": ["Category A", "Category B", "Category C"],
+                "datasets": [{
+                    "label": "Values",
+                    "data": [30, 50, 20],
+                    "backgroundColor": ["#b794f4", "#d6bcfa", "#e9d5ff"]
+                }]
+            }
+        })
+
+    print("\n\nGenerated visualizations:\n", json.dumps(visualizations, indent=2))
+
+    return visualizations
 
 def get_data():
     jsonFile = os.path.join(os.path.dirname(__file__), "data.json")

@@ -4,24 +4,24 @@
 
 @layer base {
   :root {
-    /* Default theme: Soft Pastel */
-    --background: #f5f0f6;
+    /* Soft Pastel Purple Theme - Consistent with app */
+    --background: #faf8fc;
     --surface: #ffffff;
-    --surface-light: #faf8fc;
-    --foreground: #4a5568;
-    --foreground-muted: #718096;
-    --muted: #a0aec0;
+    --surface-light: #fcf9ff;
+    --foreground: #6b46c1;
+    --foreground-muted: #9b87c7;
+    --muted: #a891d6;
     --accent: #b794f4;
-    --accent-secondary: #9f7aea;
-    --accent-tertiary: #fc8181;
-    --accent-hover: #d6bcfa;
-    --accent-secondary-hover: #b794f4;
-    --border: #e2e8f0;
-    --border-light: #f7fafc;
-    --success: #9ae6b4;
-    --warning: #fbd38d;
-    --error: #feb2b2;
-    --info: #90cdf4;
+    --accent-secondary: #d6bcfa;
+    --accent-tertiary: #e9d5ff;
+    --accent-hover: #9f7aea;
+    --accent-secondary-hover: #c4a4f5;
+    --border: #e9d5ff;
+    --border-light: #f3ebff;
+    --success: #48bb78;
+    --warning: #ed8936;
+    --error: #f56565;
+    --info: #4299e1;
 
     /* header vars removed in revert */
   }
@@ -62,9 +62,9 @@
 
   /* Chart Container */
   .chart-container {
-    background: rgba(30, 36, 51, 0.5);
+    background: rgba(255, 255, 255, 0.85);
     @apply rounded-xl p-6;
-    border: 1px solid rgba(42, 49, 66, 0.5);
+    border: 1px solid var(--border);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
   }
@@ -88,20 +88,20 @@
   .filter-bar {
     @apply flex flex-wrap gap-4 items-center;
     @apply p-4 rounded-xl;
-    background: rgba(21, 25, 38, 0.5);
-    border: 1px solid rgba(42, 49, 66, 0.5);
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid var(--border);
   }
 
   /* KPI Card */
   .kpi-card {
     @apply p-4 sm:p-5 lg:p-6 rounded-xl transition-all duration-300 border border-border hover:scale-[1.02];
-    background: linear-gradient(135deg, #151926 0%, #1e2433 100%);
-    border: 1px solid rgba(42, 49, 66, 0.5);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(252, 249, 255, 0.95) 100%);
+    border: 1px solid var(--border);
   }
 
   .kpi-card:hover {
-    box-shadow: 0 0 25px rgba(56, 189, 248, 0.15), 0 0 50px rgba(56, 189, 248, 0.08);
-    border-color: rgba(56, 189, 248, 0.3);
+    box-shadow: 0 0 25px rgba(183, 148, 244, 0.15), 0 0 50px rgba(183, 148, 244, 0.08);
+    border-color: var(--accent);
   }
 
   /* Visualization Card */

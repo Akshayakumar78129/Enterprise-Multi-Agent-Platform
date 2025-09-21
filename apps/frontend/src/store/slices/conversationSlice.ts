@@ -2,10 +2,12 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 export interface Message {
   id: string;
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant' | 'system' | 'status';
   content: string;
   timestamp: number;
   agent?: string;
+  isStreaming?: boolean;
+  audioData?: string;
   components?: Array<{
     type: string;
     toolId: string;
@@ -27,6 +29,8 @@ interface ConversationState {
   isStreaming: boolean;
   streamingContent: string;
   selectedAgent: string;
+  currentProcessingAgent: string | null;
+  processingSteps: string[];
 }
 
 const initialState: ConversationState = {
@@ -34,7 +38,9 @@ const initialState: ConversationState = {
   activeConversationId: null,
   isStreaming: false,
   streamingContent: '',
-  selectedAgent: 'general'
+  selectedAgent: 'general',
+  currentProcessingAgent: null,
+  processingSteps: []
 };
 
 const conversationSlice = createSlice({
@@ -77,6 +83,25 @@ const conversationSlice = createSlice({
     },
     setSelectedAgent: (state, action: PayloadAction<string>) => {
       state.selectedAgent = action.payload;
+    },
+    updateMessage: (state, action: PayloadAction<{ id: string; content: string }>) => {
+      if (state.activeConversationId && state.conversations[state.activeConversationId]) {
+        const messages = state.conversations[state.activeConversationId].messages;
+        const messageIndex = messages.findIndex(msg => msg.id === action.payload.id);
+        if (messageIndex !== -1) {
+          messages[messageIndex].content = action.payload.content;
+          messages[messageIndex].isStreaming = true;
+        }
+      }
+    },
+    setCurrentProcessingAgent: (state, action: PayloadAction<string | null>) => {
+      state.currentProcessingAgent = action.payload;
+    },
+    addProcessingStep: (state, action: PayloadAction<string>) => {
+      state.processingSteps.push(action.payload);
+    },
+    clearProcessingSteps: (state) => {
+      state.processingSteps = [];
     }
   }
 });
@@ -88,7 +113,11 @@ export const {
   appendStreamingContent,
   setActiveConversation,
   clearConversation,
-  setSelectedAgent
+  setSelectedAgent,
+  updateMessage,
+  setCurrentProcessingAgent,
+  addProcessingStep,
+  clearProcessingSteps
 } = conversationSlice.actions;
 
 export default conversationSlice.reducer;

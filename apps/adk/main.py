@@ -1,27 +1,22 @@
 import os
 import json
 import re
-import io
-import importlib
 import asyncio
-from time import sleep
 from datetime import datetime
 from typing import Optional, Any, Dict, Union
-from fastapi.responses import FileResponse, StreamingResponse
-from fastapi.staticfiles import StaticFiles
-from pathlib import Path
+from uuid import uuid4
+from fastapi.responses import StreamingResponse
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 from pydantic import BaseModel
-from pydantic import BaseModel, Field
-from lib.utils import get_audio, get_visualisation, get_audio_from_file, get_audio_groq, get_audio_deepgram
+from lib.utils import get_visualisation, get_audio_deepgram
 from dotenv import load_dotenv
 load_dotenv()
 
 # ADK imports
-from google.adk.sessions import InMemorySessionService, Session
+from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 from orchestration_agent import root_agent
 from google.adk.agents.run_config import RunConfig, StreamingMode
@@ -149,28 +144,23 @@ async def run_agent(req: Union[SimpleQueryRequest, AgentRunRequest]) -> Streamin
     try:
         # Convert SimpleQueryRequest to AgentRunRequest format
         if isinstance(req, SimpleQueryRequest):
-            # Create Content object from simple query
-            new_message = Content(parts=[{"text": req.user_query}])
+            # Create Content object from simple query with proper structure
+            # Ensure the user's actual query is passed, not default ADK messages
+            new_message = Content(parts=[{"text": req.user_query}], role="user")
 
-            # Check if session exists, create if not
-            try:
-                session = await memory_session_service.get_session(
-                    app_name=req.app_name,
-                    user_id=req.user_id,
-                    session_id=req.session_id
-                )
-            except:
-                # Create new session if doesn't exist
-                session = await memory_session_service.create_session(
-                    app_name=req.app_name,
-                    user_id=req.user_id,
-                    session_id=req.session_id
-                )
+            # Create a fresh session for each query to avoid ADK default messages
+            # This ensures the user's actual query is processed
+            unique_session_id = f"{req.session_id}_{uuid4()}"
+            session = await memory_session_service.create_session(
+                app_name=req.app_name,
+                user_id=req.user_id,
+                session_id=unique_session_id
+            )
 
             # Convert to internal format for processing
             app_name = req.app_name
             user_id = req.user_id
-            session_id = req.session_id
+            session_id = unique_session_id  # Use unique session to avoid ADK default messages
             streaming = True  # Always stream for frontend
         else:
             # Handle original AgentRunRequest format
@@ -198,80 +188,207 @@ async def run_agent(req: Union[SimpleQueryRequest, AgentRunRequest]) -> Streamin
         async def event_generator():
             try:
                 stream_mode = StreamingMode.SSE if streaming else StreamingMode.NONE
+                # Create a new runner for each request to avoid session persistence issues
                 runner = Runner(agent=root_agent, app_name=app_name, session_service=memory_session_service)
-                visualisation = None
-                visualisation_text = None
+
+                # Variables to accumulate the complete response
+                accumulated_text = ""
                 is_visualisation = False
+                last_author = None
+                response_sent = False
+                current_partial_text = ""  # Track partial text across events
+
+                # Force clear any previous conversation history to ensure fresh context
                 async for event in runner.run_async(
                     user_id=user_id,
                     session_id=session_id,
                     new_message=new_message,
                     run_config=RunConfig(streaming_mode=stream_mode),
                 ):
-                    if event.content and event.content.parts and event.author:
+                    if event.content and event.content.parts:
                         logger.info("Generated event in agent run streaming: %s", event)
-                        audio_base64 = None
-                        if event.author in agents_list:
-                            
-                            if event.content.parts[0].text:
-                                agent_response = event.content.parts[0].text
-                                
-                                # Extract output and is_visualisation from agent response
-                                output_match = re.search(r'<output>(.*?)</output>', agent_response, re.DOTALL)
-                                is_vis_match = re.search(r'<is_visualisation>(.*?)</is_visualisation>', agent_response)
-                                
-                                output = output_match.group(1).strip() if output_match else agent_response
-                                is_visualisation = is_vis_match.group(1).strip().lower() == 'true' if is_vis_match else False
-                                
-                                visualisation_text = output if not visualisation_text else visualisation_text
-                                # audio_base64 = get_audio_from_file()
-                                # audio_base64 = {"mime_type": "audio/wav", "data": "test"}
 
-                            # if event.content.parts[0].function_call:
-                            #     if event.content.parts[0].function_call.name != "transfer_to_agent":
-                            #         visualisation_text = event.content.parts[0].function_call.arguments["text"]
+                        # Process events from all agents
+                        if event.author:
+                            last_author = event.author
 
-                                # visualisation = get_visualisation(req.new_message.parts[0].text, visualisation_text)
-                        if not visualisation_text:
-                            continue
+                            # Check for text content in parts
+                            for part in event.content.parts:
+                                if hasattr(part, 'text') and part.text:
+                                    agent_response = part.text
+                                    current_partial_text += agent_response
+
+                                    # Check if we have complete output tags
+                                    output_match = re.search(r'<output>(.*?)</output>', current_partial_text, re.DOTALL)
+                                    is_vis_match = re.search(r'<is_visualisation>(.*?)</is_visualisation>', current_partial_text)
+
+                                    # If we have both tags, we have a complete response
+                                    if output_match and is_vis_match:
+                                        response_text = output_match.group(1).strip()
+                                        is_vis = is_vis_match.group(1).strip().lower() == 'true'
+
+                                        if response_text:
+                                            accumulated_text = response_text
+                                            is_visualisation = is_vis
+
+                                            # Send complete response at once with audio
+                                            response_data = {
+                                                "text": response_text,
+                                                "content": response_text,
+                                                "author": event.author if event.author else "orchestration_agent",
+                                                "partial": False
+                                            }
+
+                                            # Generate audio if visualization is needed
+                                            if is_vis and isinstance(req, SimpleQueryRequest) and req.is_canvas:
+                                                try:
+                                                    print("Generating audio for response...")
+                                                    audio_text = response_text[:500] if len(response_text) > 500 else response_text
+                                                    audio_obj = await get_audio_deepgram(audio_text)
+                                                    if audio_obj and audio_obj.get("data"):
+                                                        response_data["audio"] = audio_obj
+                                                        print(f"Audio added, length: {len(audio_obj['data'])}")
+                                                except Exception as audio_err:
+                                                    logger.error(f"Audio generation failed: {audio_err}")
+
+                                            # Send the complete response
+                                            yield f"data: {json.dumps(response_data)}\n\n"
+
+                                            # Generate and send visualization if needed
+                                            if is_vis and isinstance(req, SimpleQueryRequest) and req.is_canvas:
+                                                try:
+                                                    print("Generating visualisation")
+                                                    # Get query text for visualization generation
+                                                    query_text = new_message.parts[0].text if new_message.parts and new_message.parts[0].text else ""
+
+                                                    # Generate visualization
+                                                    visualisation = await get_visualisation(query_text, response_text)
+
+                                                    if visualisation:
+                                                        print(f"✅ Visualization generated successfully")
+                                                        print(f"Visualization type: {type(visualisation)}")
+                                                        print(f"Visualization data: {json.dumps(visualisation, indent=2) if isinstance(visualisation, (dict, list)) else str(visualisation)[:200]}")
+                                                        # Send visualization as a separate message
+                                                        viz_response = {
+                                                            "text": "",
+                                                            "content": "",
+                                                            "author": event.author if event.author else "orchestration_agent",
+                                                            "partial": False,
+                                                            "visualisation": visualisation,
+                                                            "component": {
+                                                                "type": "visualization",
+                                                                "toolId": event.author if event.author else "orchestration_agent",
+                                                                "data": {
+                                                                    "visualization": visualisation,
+                                                                    "text": response_text,
+                                                                    "timestamp": datetime.now().isoformat()
+                                                                }
+                                                            }
+                                                        }
+                                                        yield f"data: {json.dumps(viz_response)}\n\n"
+
+                                                except Exception as vis_err:
+                                                    logger.error(f"Visualization generation failed: {vis_err}")
+
+                                            response_sent = True
+
+                                        # Clear partial text after processing complete response
+                                        current_partial_text = ""
+
+                # After the loop completes, process audio generation only
+                # Visualization was already handled in the immediate response above
+                if accumulated_text and is_visualisation and not response_sent:
+                    try:
+                        # Check if this is from frontend canvas request
+                        is_canvas = isinstance(req, SimpleQueryRequest) and req.is_canvas
 
                         # Run audio and visualisation tasks in parallel
                         tasks = []
-                        # tasks.append(get_audio(output))
-                        # tasks = [get_audio_groq(output)]
-                        tasks.append(get_audio_deepgram(output))
-                        if is_visualisation:
-                            print("Generating visualisation")
-                            # Get query text from new_message
-                            query_text = new_message.parts[0].get("text", "") if new_message.parts else ""
-                            tasks.append(get_visualisation(query_text, visualisation_text))
-                        
-                        results = await asyncio.gather(*tasks)
-                        audio_base64 = results[0]
-                        visualisation = results[1] if len(results) > 1 else None                        
+                        visualisation = None
+                        audio_obj = None
 
+                        # Generate audio
+                        try:
+                            tasks.append(get_audio_deepgram(accumulated_text))
+                        except Exception as audio_err:
+                            logger.error(f"Audio generation failed: {audio_err}")
+                            tasks.append(asyncio.create_task(asyncio.coroutine(lambda: None)()))
+
+                        # Only generate visualization if it wasn't already sent in immediate response
+                        if is_visualisation and not response_sent:
+                            print("Generating visualisation (fallback)")
+                            try:
+                                # Get query text from new_message
+                                query_text = new_message.parts[0].text if new_message.parts and new_message.parts[0].text else ""
+                                tasks.append(get_visualisation(query_text, accumulated_text))
+                            except Exception as vis_err:
+                                logger.error(f"Visualization generation failed: {vis_err}")
+                                tasks.append(asyncio.create_task(asyncio.coroutine(lambda: None)()))
+
+                        # Wait for all tasks to complete
+                        if tasks:
+                            try:
+                                results = await asyncio.gather(*tasks, return_exceptions=True)
+                                audio_obj = results[0] if results[0] and not isinstance(results[0], Exception) else None
+                                visualisation = results[1] if len(results) > 1 and results[1] and not isinstance(results[1], Exception) else None
+                            except Exception as gather_err:
+                                logger.error(f"Task gathering failed: {gather_err}")
+
+                        # Build response
                         response = {
-                            "audio": audio_base64,
-                            "text": visualisation_text,
-                            "visualisation": visualisation
+                            "text": accumulated_text,
+                            "content": accumulated_text  # Add content field for frontend
                         }
 
+                        # Add audio if available
+                        if audio_obj and audio_obj.get("data"):
+                            response["audio"] = audio_obj
+
+                        # Add component info for canvas spawning if visualization available
+                        if is_canvas and visualisation:
+                            response["component"] = {
+                                "type": "visualization",
+                                "toolId": last_author if last_author else "orchestration_agent",
+                                "data": {
+                                    "visualization": visualisation,
+                                    "text": accumulated_text,
+                                    "timestamp": datetime.now().isoformat()
+                                }
+                            }
+                        elif is_canvas and is_visualisation:
+                            # Even without actual visualization, signal that this should spawn a component
+                            response["component"] = {
+                                "type": "chart",
+                                "toolId": last_author if last_author else "orchestration_agent",
+                                "data": {
+                                    "text": accumulated_text,
+                                    "timestamp": datetime.now().isoformat()
+                                }
+                            }
+
+                        # Keep visualisation for backward compatibility
+                        if visualisation:
+                            response["visualisation"] = visualisation
+
+                        # Send visualization data if available
                         response_data = json.dumps(response)
                         yield f"data: {response_data}\n\n"
-                        visualisation = None
-                        visualisation_text = None
+
+                    except Exception as process_err:
+                        logger.error(f"Error processing visualization: {process_err}")
+                        # Don't send error for visualization processing failures
+                        pass
+
+                # Always send the [DONE] signal to indicate stream completion
+                yield f"data: [DONE]\n\n"
+
             except Exception as e:
                 logger.exception("Error in event_generator: %s", e)
-
-                # imported = importlib.import_module("lib.utils")
-                # response = imported.get_data()
-
-                # newResponse = imported.new_response
-                # You might want to yield an error event here
-                yield f'error: {str(e)}\n\n'
-                # yield f'data: {json.dumps(response)}\n\n'
-                # sleep(2)
-                # yield f'data: {json.dumps(response)}\n\n'
+                # Send error as SSE data event so frontend can parse it
+                error_response = json.dumps({"error": str(e), "text": f"Error: {str(e)}"})
+                yield f'data: {error_response}\n\n'
+                # Still send [DONE] even on error to close the stream
+                yield f"data: [DONE]\n\n"
 
         return StreamingResponse(
             event_generator(),

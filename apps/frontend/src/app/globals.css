@@ -2,10 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Dark Neo Theme - Direct Values */
+/* Soft Pastel Purple Theme - Force Override */
 :root {
-  /* These are for reference only - we use Tailwind classes directly */
+  /* Container */
   --container-max-width: 1440px;
+
+  /* Colors - Soft Pastel Purple Theme with !important to override components */
+  --background: #faf8fc !important;
+  --surface: #ffffff !important;
+  --surface-light: #fcf9ff !important;
+  --foreground: #6b46c1 !important;
+  --foreground-muted: #9b87c7 !important;
+  --accent: #b794f4 !important;
+  --accent-secondary: #d6bcfa !important;
+  --accent-tertiary: #e9d5ff !important;
+  --accent-hover: #9f7aea !important;
+  --accent-secondary-hover: #c4a4f5 !important;
+  --border: #e9d5ff !important;
+  --border-light: #f3ebff !important;
+  --muted: #a891d6 !important;
+  --success: #48bb78 !important;
+  --warning: #ed8936 !important;
+  --error: #f56565 !important;
+  --info: #4299e1 !important;
 }
 
 @layer base {
@@ -19,10 +38,10 @@
 
   body {
     @apply antialiased;
-    background: #f5f0f6;
-    background: linear-gradient(180deg, #f5f0f6 0%, #fef5f5 100%);
+    background: #faf8fc;
+    background: linear-gradient(180deg, #faf8fc 0%, #f5f0ff 100%);
     background-attachment: fixed;
-    color: #553c9a;
+    color: var(--foreground) !important;
     min-height: 100vh;
     position: relative;
     overflow-x: hidden;
@@ -36,9 +55,9 @@
     right: 0;
     bottom: 0;
     background-image:
-      radial-gradient(1400px 900px at 5% 10%, rgba(183, 148, 244, 0.08), transparent 40%),
-      radial-gradient(1400px 900px at 95% 10%, rgba(159, 122, 234, 0.08), transparent 40%),
-      radial-gradient(1000px 600px at 50% 50%, rgba(252, 129, 129, 0.04), transparent 50%);
+      radial-gradient(1400px 900px at 5% 10%, rgba(183, 148, 244, 0.12), transparent 40%),
+      radial-gradient(1400px 900px at 95% 10%, rgba(214, 188, 250, 0.12), transparent 40%),
+      radial-gradient(1000px 600px at 50% 50%, rgba(233, 213, 255, 0.08), transparent 50%);
     pointer-events: none;
     z-index: 0;
   }
@@ -51,13 +70,13 @@
 }
 
 @layer components {
-  /* Glass Morphism Card - Soft Pastel */
+  /* Glass Morphism Card - Soft Pastel Purple */
   .glass-card {
-    background: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(12px) saturate(150%);
     -webkit-backdrop-filter: blur(12px) saturate(150%);
-    @apply border rounded-2xl transition-all duration-300;
-    border-color: #e2e8f0;
+    @apply border-2 rounded-2xl transition-all duration-300;
+    border-color: var(--border);
     box-shadow: 0 8px 32px 0 rgba(183, 148, 244, 0.15);
     position: relative;
     overflow: hidden;
@@ -82,11 +101,11 @@
     @apply mb-8 animate-fade-in;
   }
 
-  /* Neo Section Title - Soft Pastel */
+  /* Neo Section Title - Soft Pastel Purple */
   .neo-section-title {
     @apply font-semibold text-xl tracking-wide;
-    color: #4a5568;
-    text-shadow: 0 0 30px rgba(183, 148, 244, 0.2);
+    color: var(--foreground);
+    text-shadow: 0 0 30px rgba(183, 148, 244, 0.3);
   }
 
   /* Container */
@@ -124,23 +143,23 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: #f7fafc;
+    background: var(--surface-light);
     @apply rounded-lg;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #cbd5e0;
+    background: var(--accent);
     @apply rounded-lg;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #a0aec0;
+    background: var(--accent-hover);
   }
 
-  /* Selection - Soft Pastel */
+  /* Selection - Soft Pastel Purple */
   ::selection {
     background: rgba(183, 148, 244, 0.3);
-    color: #4a5568;
+    color: var(--foreground);
   }
 }
 

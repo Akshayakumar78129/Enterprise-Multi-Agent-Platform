@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Minus, Maximize2, Grid, Move } from 'lucide-react';
+import { Plus, Minus, Maximize2, Minimize2, Grid, Move } from 'lucide-react';
 import CanvasComponent from './CanvasComponent';
 // ComponentRegistry removed to avoid duplicate navigation
 import { RootState } from '@/store';
@@ -17,18 +17,32 @@ import {
 
 interface ConversationalCanvasProps {
   sessionId?: string;
+  components?: any;
+  onChartInteraction?: (data: any) => void;
+  onLaserMove?: (position: { x: number; y: number } | null) => void;
+  conversationHistory?: any[];
 }
 
-export default function ConversationalCanvas({ sessionId }: ConversationalCanvasProps) {
+export default function ConversationalCanvas({
+  sessionId,
+  components: propsComponents,
+  onChartInteraction,
+  onLaserMove,
+  conversationHistory
+}: ConversationalCanvasProps) {
   const dispatch = useDispatch();
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [showGrid, setShowGrid] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   
-  const { components, transform, selectedComponents } = useSelector(
+  const { components: storeComponents, transform, selectedComponents } = useSelector(
     (state: RootState) => state.canvas
   );
+
+  // Use props components if provided, otherwise use store components
+  const components = propsComponents || storeComponents;
 
   // Pan canvas
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -96,6 +110,29 @@ export default function ConversationalCanvas({ sessionId }: ConversationalCanvas
     dispatch(setCanvasTransform({ x: 0, y: 0, scale: 1 }));
   };
 
+  // Toggle fullscreen mode
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+    if (!isFullscreen) {
+      // Reset zoom when entering fullscreen
+      dispatch(setCanvasTransform({ x: 0, y: 0, scale: 1 }));
+    }
+  };
+
+  // Handle ESC key to exit fullscreen
+  useEffect(() => {
+    const handleEscKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+
+    if (isFullscreen) {
+      document.addEventListener('keydown', handleEscKey);
+      return () => document.removeEventListener('keydown', handleEscKey);
+    }
+  }, [isFullscreen]);
+
   // Component registry functionality removed to avoid duplicate navigation
 
   // Handle component selection with shift-click
@@ -118,7 +155,7 @@ export default function ConversationalCanvas({ sessionId }: ConversationalCanvas
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-background">
+    <div className={`${isFullscreen ? 'fixed inset-0 z-[1000]' : 'relative w-full h-screen'} overflow-hidden bg-background`}>
       {/* Canvas Controls */}
       <div className="absolute top-4 right-4 z-20 flex gap-2">
         <button
@@ -138,9 +175,22 @@ export default function ConversationalCanvas({ sessionId }: ConversationalCanvas
         <button
           onClick={handleResetZoom}
           className="p-2 glass-card hover:bg-accent/10 rounded-lg transition-all"
-          title="Reset View"
+          title="Reset Zoom"
         >
           <Maximize2 className="w-5 h-5 text-foreground" />
+        </button>
+        <button
+          onClick={toggleFullscreen}
+          className={`p-2 rounded-lg transition-all ${
+            isFullscreen ? 'bg-accent/20 hover:bg-accent/30 border-accent' : 'glass-card hover:bg-accent/10'
+          }`}
+          title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+        >
+          {isFullscreen ? (
+            <Minimize2 className="w-5 h-5 text-foreground" />
+          ) : (
+            <Maximize2 className="w-5 h-5 text-foreground" />
+          )}
         </button>
         <button
           onClick={() => setShowGrid(!showGrid)}
@@ -154,8 +204,8 @@ export default function ConversationalCanvas({ sessionId }: ConversationalCanvas
       </div>
 
       {/* Zoom/Scale Indicator */}
-      <div className="absolute bottom-4 right-4 z-20 px-3 py-1 glass-card rounded-lg">
-        <span className="text-sm text-muted-foreground">
+      <div className="absolute bottom-4 right-4 z-30 px-3 py-2 glass-card rounded-lg shadow-lg border border-accent/20">
+        <span className="text-sm font-medium text-foreground">
           {Math.round(transform.scale * 100)}%
         </span>
       </div>

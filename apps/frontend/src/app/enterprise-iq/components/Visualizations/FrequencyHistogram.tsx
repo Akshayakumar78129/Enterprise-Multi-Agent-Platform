@@ -9,8 +9,8 @@ interface FrequencyHistogramProps {
 }
 
 export default function FrequencyHistogram({ data, title = "Frequency Distribution" }: FrequencyHistogramProps) {
-  // Generate sample data if none provided
-  const chartData = data || {
+  // Generate fallback data with proper structure validation
+  const defaultData = {
     labels: ['0-10', '10-20', '20-30', '30-40', '40-50', '50+'],
     datasets: [{
       label: 'Frequency',
@@ -18,6 +18,18 @@ export default function FrequencyHistogram({ data, title = "Frequency Distributi
       backgroundColor: 'rgba(0, 224, 255, 0.8)'
     }]
   };
+
+  // Validate and sanitize input data
+  const chartData = data && data.labels && data.datasets
+    ? {
+        labels: data.labels || [],
+        datasets: (data.datasets || []).map((dataset, index) => ({
+          label: dataset?.label || `Dataset ${index + 1}`,
+          data: dataset?.data || [],
+          backgroundColor: dataset?.backgroundColor || `rgba(0, 224, 255, ${0.8 - index * 0.1})`
+        }))
+      }
+    : defaultData;
 
   return (
     <div className="w-full h-full flex flex-col">
