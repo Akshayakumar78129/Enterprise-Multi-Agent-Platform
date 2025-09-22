@@ -195,8 +195,8 @@ async def run_agent(req: Union[SimpleQueryRequest, AgentRunRequest]) -> Streamin
                 accumulated_text = ""
                 is_visualisation = False
                 last_author = None
-                response_sent = False
                 current_partial_text = ""  # Track partial text across events
+                visualisation = None  # Track if visualization was generated
 
                 # Force clear any previous conversation history to ensure fresh context
                 async for event in runner.run_async(
@@ -222,16 +222,22 @@ async def run_agent(req: Union[SimpleQueryRequest, AgentRunRequest]) -> Streamin
                                     output_match = re.search(r'<output>(.*?)</output>', current_partial_text, re.DOTALL)
                                     is_vis_match = re.search(r'<is_visualisation>(.*?)</is_visualisation>', current_partial_text)
 
-                                    # If we have both tags, we have a complete response
+                                    # If we have both tags, we have a complete response chunk
                                     if output_match and is_vis_match:
                                         response_text = output_match.group(1).strip()
                                         is_vis = is_vis_match.group(1).strip().lower() == 'true'
 
                                         if response_text:
-                                            accumulated_text = response_text
+                                            # Always accumulate text chunks
+                                            print(f"📝 Accumulating chunk {len(response_text)} chars")
+                                            if not accumulated_text:
+                                                accumulated_text = response_text
+                                            elif response_text not in accumulated_text:  # Avoid exact duplicates
+                                                accumulated_text += "\n\n" + response_text
+                                                print(f"📝 Total accumulated: {len(accumulated_text)} chars")
                                             is_visualisation = is_vis
 
-                                            # Send complete response at once with audio
+                                            # Send text response WITHOUT audio (we'll send audio at the end)
                                             response_data = {
                                                 "text": response_text,
                                                 "content": response_text,
@@ -239,19 +245,7 @@ async def run_agent(req: Union[SimpleQueryRequest, AgentRunRequest]) -> Streamin
                                                 "partial": False
                                             }
 
-                                            # Generate audio if visualization is needed
-                                            if is_vis and isinstance(req, SimpleQueryRequest) and req.is_canvas:
-                                                try:
-                                                    print("Generating audio for response...")
-                                                    audio_text = response_text[:500] if len(response_text) > 500 else response_text
-                                                    audio_obj = await get_audio_deepgram(audio_text)
-                                                    if audio_obj and audio_obj.get("data"):
-                                                        response_data["audio"] = audio_obj
-                                                        print(f"Audio added, length: {len(audio_obj['data'])}")
-                                                except Exception as audio_err:
-                                                    logger.error(f"Audio generation failed: {audio_err}")
-
-                                            # Send the complete response
+                                            # Send the text response immediately
                                             yield f"data: {json.dumps(response_data)}\n\n"
 
                                             # Generate and send visualization if needed
@@ -261,13 +255,14 @@ async def run_agent(req: Union[SimpleQueryRequest, AgentRunRequest]) -> Streamin
                                                     # Get query text for visualization generation
                                                     query_text = new_message.parts[0].text if new_message.parts and new_message.parts[0].text else ""
 
-                                                    # Generate visualization
-                                                    visualisation = await get_visualisation(query_text, response_text)
+                                                    # Generate visualization using accumulated text for complete data
+                                                    visualisation = await get_visualisation(query_text, accumulated_text)
 
                                                     if visualisation:
                                                         print(f"✅ Visualization generated successfully")
                                                         print(f"Visualization type: {type(visualisation)}")
-                                                        print(f"Visualization data: {json.dumps(visualisation, indent=2) if isinstance(visualisation, (dict, list)) else str(visualisation)[:200]}")
+                                                        print(f"Visualization data: {json.dumps(visualisation, indent=2) if isinstance(visualisation, (dict, list)) else str(visualisation)}")
+                                                        print(f"📊 SENDING VISUALIZATION TO FRONTEND")
                                                         # Send visualization as a separate message
                                                         viz_response = {
                                                             "text": "",
@@ -290,89 +285,70 @@ async def run_agent(req: Union[SimpleQueryRequest, AgentRunRequest]) -> Streamin
                                                 except Exception as vis_err:
                                                     logger.error(f"Visualization generation failed: {vis_err}")
 
-                                            response_sent = True
-
                                         # Clear partial text after processing complete response
                                         current_partial_text = ""
 
-                # After the loop completes, process audio generation only
-                # Visualization was already handled in the immediate response above
-                if accumulated_text and is_visualisation and not response_sent:
+                # After the loop completes, generate audio for complete text and handle fallback
+                if accumulated_text:
                     try:
                         # Check if this is from frontend canvas request
                         is_canvas = isinstance(req, SimpleQueryRequest) and req.is_canvas
 
-                        # Run audio and visualisation tasks in parallel
-                        tasks = []
-                        visualisation = None
-                        audio_obj = None
+                        # Generate audio for the complete accumulated text
+                        if is_canvas and is_visualisation and accumulated_text:
+                            try:
+                                print(f"\n🎵 Generating audio for COMPLETE response ({len(accumulated_text)} chars)...")
+                                print(f"First 200 chars of accumulated text: {accumulated_text[:200]}")
+                                print(f"Last 200 chars of accumulated text: {accumulated_text[-200:]}")
 
-                        # Generate audio
-                        try:
-                            tasks.append(get_audio_deepgram(accumulated_text))
-                        except Exception as audio_err:
-                            logger.error(f"Audio generation failed: {audio_err}")
-                            tasks.append(asyncio.create_task(asyncio.coroutine(lambda: None)()))
+                                # Split text into chunks of 2000 chars and send multiple audio messages
+                                chunk_size = 2000
+                                text_chunks = [accumulated_text[i:i+chunk_size]
+                                             for i in range(0, len(accumulated_text), chunk_size)]
 
-                        # Only generate visualization if it wasn't already sent in immediate response
-                        if is_visualisation and not response_sent:
+                                print(f"📄 Splitting audio into {len(text_chunks)} chunks")
+
+                                for i, audio_text in enumerate(text_chunks):
+                                    print(f"🎵 Generating audio chunk {i+1}/{len(text_chunks)} ({len(audio_text)} chars)")
+                                    audio_obj = await get_audio_deepgram(audio_text)
+
+                                    if audio_obj and audio_obj.get("data"):
+                                        # Send each audio chunk as a separate message
+                                        audio_response = {
+                                            "text": "",
+                                            "content": "",
+                                            "author": last_author if last_author else "orchestration_agent",
+                                            "partial": False,
+                                            "audio": audio_obj,
+                                            "audio_chunk_index": i,
+                                            "audio_total_chunks": len(text_chunks)
+                                        }
+                                        yield f"data: {json.dumps(audio_response)}\n\n"
+                                        print(f"✅ Audio chunk {i+1}/{len(text_chunks)} sent, length: {len(audio_obj['data'])} bytes")
+                            except Exception as audio_err:
+                                logger.error(f"Audio generation failed: {audio_err}")
+
+                        # Generate visualization fallback (if needed)
+                        if is_visualisation and is_canvas and not visualisation:
                             print("Generating visualisation (fallback)")
                             try:
                                 # Get query text from new_message
                                 query_text = new_message.parts[0].text if new_message.parts and new_message.parts[0].text else ""
-                                tasks.append(get_visualisation(query_text, accumulated_text))
+                                visualisation = await get_visualisation(query_text, accumulated_text)
+
+                                if visualisation:
+                                    viz_response = {
+                                        "text": "",
+                                        "content": "",
+                                        "author": last_author if last_author else "orchestration_agent",
+                                        "partial": False,
+                                        "visualisation": visualisation
+                                    }
+                                    yield f"data: {json.dumps(viz_response)}\n\n"
+                                    print("✅ Visualization sent (fallback)")
                             except Exception as vis_err:
                                 logger.error(f"Visualization generation failed: {vis_err}")
-                                tasks.append(asyncio.create_task(asyncio.coroutine(lambda: None)()))
 
-                        # Wait for all tasks to complete
-                        if tasks:
-                            try:
-                                results = await asyncio.gather(*tasks, return_exceptions=True)
-                                audio_obj = results[0] if results[0] and not isinstance(results[0], Exception) else None
-                                visualisation = results[1] if len(results) > 1 and results[1] and not isinstance(results[1], Exception) else None
-                            except Exception as gather_err:
-                                logger.error(f"Task gathering failed: {gather_err}")
-
-                        # Build response
-                        response = {
-                            "text": accumulated_text,
-                            "content": accumulated_text  # Add content field for frontend
-                        }
-
-                        # Add audio if available
-                        if audio_obj and audio_obj.get("data"):
-                            response["audio"] = audio_obj
-
-                        # Add component info for canvas spawning if visualization available
-                        if is_canvas and visualisation:
-                            response["component"] = {
-                                "type": "visualization",
-                                "toolId": last_author if last_author else "orchestration_agent",
-                                "data": {
-                                    "visualization": visualisation,
-                                    "text": accumulated_text,
-                                    "timestamp": datetime.now().isoformat()
-                                }
-                            }
-                        elif is_canvas and is_visualisation:
-                            # Even without actual visualization, signal that this should spawn a component
-                            response["component"] = {
-                                "type": "chart",
-                                "toolId": last_author if last_author else "orchestration_agent",
-                                "data": {
-                                    "text": accumulated_text,
-                                    "timestamp": datetime.now().isoformat()
-                                }
-                            }
-
-                        # Keep visualisation for backward compatibility
-                        if visualisation:
-                            response["visualisation"] = visualisation
-
-                        # Send visualization data if available
-                        response_data = json.dumps(response)
-                        yield f"data: {response_data}\n\n"
 
                     except Exception as process_err:
                         logger.error(f"Error processing visualization: {process_err}")

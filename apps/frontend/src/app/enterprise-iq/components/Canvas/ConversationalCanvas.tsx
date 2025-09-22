@@ -173,13 +173,6 @@ export default function ConversationalCanvas({
           <Minus className="w-5 h-5 text-foreground" />
         </button>
         <button
-          onClick={handleResetZoom}
-          className="p-2 glass-card hover:bg-accent/10 rounded-lg transition-all"
-          title="Reset Zoom"
-        >
-          <Maximize2 className="w-5 h-5 text-foreground" />
-        </button>
-        <button
           onClick={toggleFullscreen}
           className={`p-2 rounded-lg transition-all ${
             isFullscreen ? 'bg-accent/20 hover:bg-accent/30 border-accent' : 'glass-card hover:bg-accent/10'

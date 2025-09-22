@@ -203,17 +203,25 @@ COMPONENT_SCHEMA = {
 
 
 VIS_SCHEMA_PROMPT = """
-You are an intelligent component resolver for a business analytics visualization system. Your task is to analyze user queries and ADK (MultiAgent-adk) responses to determine the most appropriate spawnable components for data visualization.
+You are an intelligent data extractor and visualization mapper. Your PRIMARY task is to EXTRACT ACTUAL DATA from ADK responses and format it for visualization components.
 
-## Your Role
-You act as a bridge between business analysis responses and data visualization. You must:
-1. Parse user queries to understand their analytical intent
-2. Analyze ADK responses to identify ALL tools that were called and their outputs
-3. Map each tool's analysis to appropriate visualization components
-4. Extract relevant parameters from the user query (NOT generate random values)
-5. Return a structured JSON array with tool names and their components with parameters
-6. Handle multiple tool outputs by including components for ALL tools that were called
-7. Return empty array if no tool outputs are found in ADK response
+## Your Critical Role
+You must:
+1. EXTRACT all numerical data, percentages, counts, and values from the ADK response text
+2. Parse and identify actual numbers mentioned in the analysis
+3. Convert extracted data into chart-ready data structures
+4. Map the analysis to appropriate visualization components
+5. Return properly formatted data for immediate visualization
+
+## Data Extraction Rules
+**MOST IMPORTANT**: Extract REAL NUMBERS from the ADK response, not parameters!
+
+Examples of data extraction:
+- "150 high-risk customers (15%)" → {count: 150, percentage: 15, level: "High Risk"}
+- "Revenue was $45,000 in January, $52,000 in February" → {labels: ["January", "February"], data: [45000, 52000]}
+- "Sales increased by 25% month-over-month" → {growth: 25}
+- "500 transactions on Monday, 650 on Tuesday" → {Monday: 500, Tuesday: 650}
+- "Product A: 1200 units, Product B: 890 units" → {labels: ["Product A", "Product B"], data: [1200, 890]}
 
 ## Available Components Schema
 """ + json.dumps(COMPONENT_SCHEMA, indent=2) + """
@@ -237,34 +245,60 @@ You will receive:
 - **Context**: Any additional context about the analysis
 
 ## Output Requirements
-Return a JSON array containing objects in this EXACT format:
+Return a JSON array with EXTRACTED DATA from the ADK response:
 
-**For multiple tools called in ADK:**
+**CRITICAL: Extract actual numbers from the ADK response text and put them in the body field!**
+
+**For chart components - EXTRACT numbers from text:**
 ```json
-[
-  {
-    "toolname": "first-tool-name-from-adk-output",
-    "componentName": "component-from-first-tool",
-    "body": {
-      "parameter1": "value_extracted_from_user_query",
-      "parameter2": "value_extracted_from_user_query"
-    }
-  },
-  {
-    "toolname": "first-tool-name-from-adk-output",
-    "componentName": "another-component-from-first-tool",
-    "body": {
-      "parameter1": "value_extracted_from_user_query"
-    }
-  },
-  {
-    "toolname": "second-tool-name-from-adk-output",
-    "componentName": "component-from-second-tool",
-    "body": {
-      "parameter1": "value_extracted_from_user_query"
-    }
+{
+  "toolname": "sales-performance",
+  "componentName": "barchart",
+  "body": {
+    "labels": ["Jan", "Feb", "Mar"],  // Extract month names from ADK text
+    "datasets": [{
+      "label": "Revenue",
+      "data": [45000, 52000, 61000],  // EXTRACT these numbers from ADK response!
+      "backgroundColor": "rgba(0, 224, 255, 0.8)"
+    }]
   }
-]
+}
+```
+
+**For heatmap components:**
+```json
+{
+  "toolname": "tool-name",
+  "componentName": "heatmap",
+  "body": {
+    "days": ["Mon", "Tue", "Wed", "Thu", "Fri"],
+    "hours": [9, 10, 11, 12, 13, 14, 15, 16, 17],
+    "values": [
+      [10, 20, 30, 40, 35, 30, 25, 20, 15],
+      [15, 25, 35, 45, 40, 35, 30, 25, 20],
+      [20, 30, 40, 50, 45, 40, 35, 30, 25],
+      [25, 35, 45, 55, 50, 45, 40, 35, 30],
+      [30, 40, 50, 60, 55, 50, 45, 40, 35]
+    ],
+    "title": "Weekly Activity Heatmap"
+  }
+}
+```
+
+**For risk/segmentation components:**
+```json
+{
+  "toolname": "churn-prediction",
+  "componentName": "riskPyramid",
+  "body": {
+    "data": [
+      {"level": "High Risk", "count": 150, "percentage": 15, "color": "#f56565"},
+      {"level": "Medium Risk", "count": 350, "percentage": 35, "color": "#ed8936"},
+      {"level": "Low Risk", "count": 500, "percentage": 50, "color": "#48bb78"}
+    ],
+    "title": "Customer Risk Distribution"
+  }
+}
 ```
 
 **For no tools called in ADK:**
@@ -297,13 +331,26 @@ Return a JSON array containing objects in this EXACT format:
 
 ## Critical Rules
 
+### Data EXTRACTION Rules (NOT Generation!)
+1. **PARSE the ADK response text to find ALL numbers, percentages, and values**
+2. **EXTRACT actual data mentioned in the ADK response** - don't make up numbers
+3. **If ADK says "150 customers"** → extract 150, don't generate random data
+4. **If ADK says "$45,000 revenue"** → extract 45000 for the chart
+5. **If ADK mentions percentages like "15% high-risk"** → extract 15
+6. **Create data arrays from the extracted numbers** for chart visualization
+
+### What to Extract:
+- Numbers with units: "1200 units", "$45K", "150 customers" → extract the numbers
+- Percentages: "increased 25%", "15% of total" → extract the percentages
+- Time series: "Jan: 100, Feb: 150, Mar: 200" → extract as array [100, 150, 200]
+- Categories: "High: 150, Medium: 350, Low: 500" → extract as structured data
+
 ### Parameter Extraction Rules
-1. **NEVER generate random or calculated values** - all parameter values must come directly from the user query
-2. **Date parameters**: Extract dates mentioned in user query (e.g., "2023 sales" → start_date: "2023-01-01", end_date: "2023-12-31")
-3. **Metrics**: Use metrics explicitly mentioned or strongly implied in the query
-4. **Categories/Dimensions**: Extract specific categories, regions, products mentioned by user
-5. **Time granularity**: Infer from user's time-related language ("monthly trends" → "monthly", "daily performance" → "daily")
-6. **Thresholds**: Use exact numbers mentioned in query, or use schema defaults if not specified
+1. **Date parameters**: Extract dates mentioned in user query (e.g., "2023 sales" → start_date: "2023-01-01", end_date: "2023-12-31")
+2. **Metrics**: Use metrics explicitly mentioned or strongly implied in the query
+3. **Categories/Dimensions**: Extract specific categories, regions, products mentioned by user
+4. **Time granularity**: Infer from user's time-related language ("monthly trends" → "monthly", "daily performance" → "daily")
+5. **Thresholds**: Use exact numbers mentioned in query, or use schema defaults if not specified
 
 ### Tool and Component Selection Logic
 1. **Analyze ADK output first**: Look for tool execution results, function calls, or analysis outputs
@@ -632,102 +679,43 @@ def get_audio_from_base64(base64_data: str) -> str:
     return base64.b64decode(base64_data)
 
 async def get_visualisation(user_query: str, adk_response: str) -> dict:
-    """Generate visualizations based on query keywords and response content."""
+    """Generate visualizations by analyzing ADK response using AI to map tools to components."""
+    gemini_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY", ""))
+    prompt = f"""
+    {VIS_SCHEMA_PROMPT}
 
-    print("Getting visualization for query:", user_query[:100])
+    ## Input Data
+    **User Query**: {user_query}
+    **ADK Response**: {adk_response}
 
-    # Simplified keyword-based mapping for common queries
-    query_lower = user_query.lower()
-    response_lower = adk_response.lower()
-    visualizations = []
+    Please analyze the above input and return the appropriate visualization components as a JSON array.
+    """
 
-    # Churn prediction visualizations
-    if 'churn' in query_lower or 'churn' in response_lower:
-        visualizations.append({
-            "toolname": "churn-prediction",
-            "componentName": "riskPyramid",
-            "body": {
-                "title": "Churn Risk Distribution",
-                "description": "Customer segments by churn risk level",
-                "data": {
-                    "high_risk": 15,
-                    "medium_risk": 25,
-                    "low_risk": 60
-                }
-            }
-        })
-        visualizations.append({
-            "toolname": "churn-prediction",
-            "componentName": "featureImportance",
-            "body": {
-                "title": "Churn Risk Factors",
-                "features": ["Purchase Frequency", "Customer Lifetime Value", "Last Purchase Days", "Support Tickets"]
-            }
-        })
+    print("getting vis")
+    print(f"Query: {user_query[:100]}")
+    print(f"ADK Response length: {len(adk_response)} chars")
 
-    # Sales performance visualizations
-    if 'sales' in query_lower or 'revenue' in query_lower:
-        visualizations.append({
-            "toolname": "sales-performance",
-            "componentName": "overview",
-            "body": {
-                "title": "Sales Performance Overview",
-                "metrics": ["Total Revenue", "Growth Rate", "Average Order Value"]
-            }
-        })
+    try:
+        response = await gemini_client.aio.models.generate_content(
+            model="gemini-2.5-flash-lite",
+            contents=prompt
+        )
+    except Exception as e:
+        print('error in get_visualisation', e)
+        return None
 
-    # Customer segmentation visualizations
-    if 'customer' in query_lower and ('segment' in query_lower or 'behavior' in query_lower):
-        visualizations.append({
-            "toolname": "customer-segmentation",
-            "componentName": "distributionMap",
-            "body": {
-                "title": "Customer Segmentation",
-                "segments": ["High Value", "Regular", "At Risk", "New"]
-            }
-        })
+    response_text = response.candidates[0].content.parts[0].text.strip()
+    response_text = response_text.replace("```json", "").replace("```", "").strip()
 
-    # Inventory visualizations
-    if 'inventory' in query_lower or 'stock' in query_lower:
-        visualizations.append({
-            "toolname": "inventory-management",
-            "componentName": "levels",
-            "body": {
-                "title": "Inventory Levels",
-                "categories": ["In Stock", "Low Stock", "Out of Stock"]
-            }
-        })
+    print("\n\nVisualization AI response:\n", response_text[:500])
 
-    # Product performance visualizations
-    if 'product' in query_lower:
-        visualizations.append({
-            "toolname": "product-analytics",
-            "componentName": "performance",
-            "body": {
-                "title": "Product Performance",
-                "metrics": ["Sales Volume", "Profit Margin", "Return Rate"]
-            }
-        })
-
-    # Default visualization if nothing matches
-    if not visualizations:
-        visualizations.append({
-            "toolname": "orchestration_agent",
-            "componentName": "visualization",
-            "body": {
-                "title": "Analysis Results",
-                "labels": ["Category A", "Category B", "Category C"],
-                "datasets": [{
-                    "label": "Values",
-                    "data": [30, 50, 20],
-                    "backgroundColor": ["#b794f4", "#d6bcfa", "#e9d5ff"]
-                }]
-            }
-        })
-
-    print("\n\nGenerated visualizations:\n", json.dumps(visualizations, indent=2))
-
-    return visualizations
+    try:
+        response_json = json.loads(response_text)
+        print("\n\nParsed visualization JSON:\n", json.dumps(response_json, indent=2)[:500])
+        return response_json
+    except json.JSONDecodeError as e:
+        print(f"Failed to parse visualization JSON: {e}")
+        return None
 
 def get_data():
     jsonFile = os.path.join(os.path.dirname(__file__), "data.json")

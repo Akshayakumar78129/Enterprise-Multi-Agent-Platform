@@ -203,7 +203,7 @@ export default function CanvasComponent({
           )}
           {!loading && !error && Component && (
             <ComponentErrorBoundary componentType={`${component.toolId}.${component.type}`}>
-              <Component {...component.data} />
+              <Component data={component.data} />
             </ComponentErrorBoundary>
           )}
 

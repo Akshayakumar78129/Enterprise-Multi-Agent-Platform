@@ -831,11 +831,22 @@ export default function EnterpriseIQPage() {
 
                     console.log(`🎵 Audio blob created: ${blob.size} bytes, type: ${blob.type}`);
 
-                    // Update robot state with audio data - this will trigger the queue
+                    // Add directly to audio queue instead of replacing via state
+                    audioQueueRef.current.push({
+                      url,
+                      blob,
+                      mimeType: jsonData.audio.mime_type,
+                      hash: audioDataHash,
+                      size: jsonData.audio.data.length
+                    });
+
+                    // Process the queue
+                    processAudioQueue();
+
+                    // Update robot state without audio data
                     setRobotState(prev => ({
                       ...prev,
-                      state: 'speaking',
-                      audioData: { url, blob, mimeType: jsonData.audio.mime_type }
+                      state: 'speaking'
                     }));
 
                     // Track audio-text correlation
