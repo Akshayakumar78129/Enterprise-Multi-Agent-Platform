@@ -78,7 +78,7 @@ export function ChurnCustomerTable({ data, loading, onRowClick }: ChurnCustomerT
         data={rows}
         columns={tableColumns}
         searchable
-        selectable
+        selectable={false}
         pageSize={10}
         onRowClick={onRowClick || ((row) => console.log("Row clicked:", row))}
       />

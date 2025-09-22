@@ -42,11 +42,8 @@ export const AIFeatureImportance: React.FC<AIFeatureImportanceProps> = ({
     : 1;
 
   return (
-    <div className={`p-6 ${className}`}>
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-semibold text-foreground">
-          {title}
-        </h3>
+    <div className={`${className}`}>
+      <div className="flex justify-end items-center mb-4">
         <select
           value={selectedSort}
           onChange={(e) => setSelectedSort(e.target.value as "importance" | "name")}
@@ -100,7 +97,6 @@ export const AIFeatureImportance: React.FC<AIFeatureImportanceProps> = ({
             <div className="text-2xl font-bold text-foreground">
               {feature.impact.toFixed(1)}%
             </div>
-            <div className="text-xs text-muted">impact</div>
           </div>
         ))}
       </div>

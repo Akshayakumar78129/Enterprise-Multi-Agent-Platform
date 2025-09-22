@@ -3,8 +3,10 @@ import React from "react";
 import {
   AIFeatureImportance,
   SegmentComparisonMatrix,
-  Skeleton
+  Skeleton,
+  ChartCard
 } from "components/index";
+import { useChurnContext } from "../context";
 
 interface FeatureImportanceData {
   name: string;
@@ -36,6 +38,7 @@ export function ChurnAIInsights({
   onFeatureClick,
   onCellClick,
 }: ChurnAIInsightsProps) {
+  const { selectionManager } = useChurnContext();
   if (loading) {
     return (
       <>
@@ -51,23 +54,47 @@ export function ChurnAIInsights({
 
   return (
     <>
-      <div className="glass-card card-padding card-hover">
+      <ChartCard
+        title="AI Feature Importance"
+        className="glass-card card-hover"
+      >
         <AIFeatureImportance
           data={featureImportance}
-          title="AI Feature Importance"
-          onFeatureClick={onFeatureClick || ((feature) => console.log("Feature clicked:", feature))}
+          onFeatureClick={(feature, event) => {
+            if (event?.shiftKey) {
+              // Shift+click: Add to selection
+              selectionManager.addPoint({
+                label: feature.name,
+                value: `${feature.importance}%`,
+                source: "Feature Importance"
+              }, true);
+            } else if (onFeatureClick) {
+              onFeatureClick(feature);
+            }
+          }}
         />
-      </div>
-      <div className="glass-card card-padding card-hover">
+      </ChartCard>
+      <ChartCard
+        title="Segment Comparison Matrix"
+        className="glass-card card-hover"
+      >
         <SegmentComparisonMatrix
           data={segmentComparison}
           segments={segments}
-          title="Segment Comparison Matrix"
-          onCellClick={onCellClick || ((segment, riskLevel, data) =>
-            console.log("Cell clicked:", { segment, riskLevel, data })
-          )}
+          onCellClick={(segment, riskLevel, data, event) => {
+            if (event?.shiftKey) {
+              // Shift+click: Add to selection
+              selectionManager.addPoint({
+                label: `${segment} - ${riskLevel}`,
+                value: data.count || 0,
+                source: "Segment Matrix"
+              }, true);
+            } else if (onCellClick) {
+              onCellClick(segment, riskLevel, data);
+            }
+          }}
         />
-      </div>
+      </ChartCard>
     </>
   );
 }

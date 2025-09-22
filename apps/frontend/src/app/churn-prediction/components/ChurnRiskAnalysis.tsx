@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
-import { RiskPyramid, ProbabilityHistogram, Skeleton } from "components/index";
+import { RiskPyramid, ProbabilityHistogram, Skeleton, ChartCard } from "components/index";
+import { useChurnContext } from "../context";
 
 interface ChurnRiskAnalysisProps {
   riskPyramidData: Array<{
@@ -20,6 +21,7 @@ export function ChurnRiskAnalysis({
   loading,
   onRiskLevelClick,
 }: ChurnRiskAnalysisProps) {
+  const { selectionManager } = useChurnContext();
   if (loading) {
     return (
       <>
@@ -31,21 +33,47 @@ export function ChurnRiskAnalysis({
 
   return (
     <>
-      <div className="glass-card card-padding card-hover">
+      <ChartCard
+        title="Risk Distribution Pyramid"
+        className="glass-card card-hover"
+      >
         <RiskPyramid
           data={riskPyramidData}
-          title="Risk Distribution Pyramid"
-          onSegmentClick={(level) => onRiskLevelClick(level.level)}
+          onSegmentClick={(level, event) => {
+            if (event?.shiftKey) {
+              // Shift+click: Add to selection
+              selectionManager.addPoint({
+                label: `${level.level} Risk`,
+                value: `${level.count}`,
+                source: "Risk Pyramid"
+              }, true);
+            } else {
+              // Regular click: Filter
+              onRiskLevelClick(level.level);
+            }
+          }}
         />
-      </div>
-      <div className="glass-card card-padding card-hover">
+      </ChartCard>
+      <ChartCard
+        title="Churn Probability Distribution"
+        className="glass-card card-hover"
+      >
         <ProbabilityHistogram
           data={probabilityData}
-          title="Churn Probability Distribution"
           bins={30}
           color="#8ba6ff"
+          onBarClick={(bin, event) => {
+            if (event?.shiftKey && bin) {
+              // Shift+click: Add to selection
+              selectionManager.addPoint({
+                label: bin.label || `${bin.range[0]}-${bin.range[1]}%`,
+                value: `${bin.count} customers`,
+                source: "Probability Histogram"
+              }, true);
+            }
+          }}
         />
-      </div>
+      </ChartCard>
     </>
   );
 }

@@ -43,7 +43,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       ${leftIcon ? "pl-10" : "pl-4"}
       ${error ? "border-error focus:border-error" : ""}
       ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
-      w-full pr-10 py-2 rounded-xl text-foreground min-h-[48px]
+      ${props.value === "" || props.value === undefined ? "text-muted" : "text-foreground"}
+      w-full pr-10 py-2 rounded-lg min-h-[48px] text-sm
       appearance-none
       transition-all duration-200
       focus:outline-none focus:ring-2 focus:ring-accent/20 focus:shadow-neo
@@ -71,7 +72,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             {...props}
           >
             {placeholder && (
-              <option value="" disabled>
+              <option value="" disabled className="text-muted">
                 {placeholder}
               </option>
             )}

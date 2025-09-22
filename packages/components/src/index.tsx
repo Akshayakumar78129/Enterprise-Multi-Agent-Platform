@@ -1,11 +1,16 @@
 // UI Components
 export { Card } from "./ui/Card";
+export { ChartCard, MetricChartCard, DashboardChartCard } from "./ui/ChartCard";
+export type { ChartCardProps } from "./ui/ChartCard";
 export { Button } from "./ui/Button";
 export { Badge, Chip } from "./ui/Badge";
 export { Skeleton, SkeletonGroup, SkeletonCard } from "./ui/Skeleton";
 export { Tabs, TabPanel } from "./ui/Tabs";
 export { Tooltip, TooltipProvider } from "./ui/Tooltip";
+export { ChartTooltip, useChartTooltip } from "./ui/ChartTooltip";
+export type { ChartTooltipProps, TooltipItem } from "./ui/ChartTooltip";
 export { ThemeSwitcher } from "./ui/ThemeSwitcher";
+export { FloatingActionButtons } from "./ui/FloatingActionButtons";
 
 // Form Components
 export { Input } from "./forms/Input";
@@ -26,6 +31,8 @@ export {
   ChartContainer
 } from "./layout/DashboardLayout";
 export { DashboardNavigation, DashboardMegaMenu } from "./layout/DashboardNavigation";
+export { SidePanelLayout } from "./layout/SidePanelLayout";
+export { AppLayout } from "./layout/AppLayout";
 
 // KPI Components
 export { KPICard } from "./kpi/KPICard";
@@ -37,11 +44,20 @@ export { ProbabilityHistogram } from "./visualizations/ProbabilityHistogram";
 export { AIFeatureImportance } from "./visualizations/AIFeatureImportance";
 export { SegmentComparisonMatrix } from "./visualizations/SegmentComparisonMatrix";
 export { RiskTrendsOverTime } from "./visualizations/RiskTrendsOverTime";
+export { TemporalRiskPattern } from "./visualizations/TemporalRiskPattern";
 export { LineChart } from "./visualizations/LineChart";
 export { BarChart } from "./visualizations/BarChart";
 
 // AI Components
 export { AIInsightBlock } from "./ui/AIInsightBlock";
+export { ChatInterface, ChatButton } from "./chat";
+export { ChatPanel } from "./chat/ChatPanel";
+export type { ChatInterfaceProps, ChatButtonProps, Message, SelectedPoint } from "./chat";
+export { BusinessIntelligenceTrigger, BusinessIntelligenceModal } from "./bi";
+export { BusinessIntelligencePanel } from "./bi/BusinessIntelligencePanel";
+export type { BusinessIntelligenceTriggerProps, BusinessIntelligenceModalProps, ChurnCustomer } from "./bi";
+export { InsightCard } from "./insights";
+export type { InsightCardProps, InsightData } from "./insights";
 
 // Filter Components
 export { DateRangeFilter } from "./filters/DateRangeFilter";

@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 
 function getDashboardClient(dashboardType: string) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
   return {
     fetchSummary: async (params: any, options?: RequestInit) => {
@@ -102,7 +102,7 @@ export function useChurnData(filters: ChurnFilters, timeRange: "7d" | "30d" | "9
     let isMounted = true;
 
     // Abort previous request if exists (switching to latest)
-    if (abortControllerRef.current) abortControllerRef.current.abort();
+    if (abortControllerRef.current) abortControllerRef.current.abort('Filter changed');
 
     // Create new AbortController for this request
     const ac = new AbortController();
@@ -114,14 +114,17 @@ export function useChurnData(filters: ChurnFilters, timeRange: "7d" | "30d" | "9
         setError(null);
 
         const filterParams: Record<string, any> = {
-          dateFrom: filters.dateRange.startDate,
-          dateTo: filters.dateRange.endDate,
           riskLevels: filters.riskLevels.length > 0 ? filters.riskLevels : undefined,
           segments: filters.segments.length > 0 ? filters.segments.map(s => segmentMap[s] || s) : undefined,
         };
 
-        // Only add timeRange if no explicit date range is provided
-        if (!filters.dateRange.startDate && !filters.dateRange.endDate) {
+        // Only send either dateRange OR timeRange, not both
+        if (filters.dateRange.startDate && filters.dateRange.endDate) {
+          // If explicit date range is set, use it
+          filterParams.dateFrom = filters.dateRange.startDate;
+          filterParams.dateTo = filters.dateRange.endDate;
+        } else {
+          // Otherwise use the timeRange
           filterParams.timeRange = timeRange;
         }
 
@@ -175,11 +178,20 @@ export function useChurnData(filters: ChurnFilters, timeRange: "7d" | "30d" | "9
           riskPercentage: c.riskPercentage ?? Math.round((c.churn_probability ?? 0) * 100),
         })));
       } catch (err: any) {
-        console.error("Error fetching churn data:", err);
-        if (err?.name === "AbortError" || err?.code === 20) {
-          // Don't change loading state on abort - request was cancelled
+        // Check if it's an abort error (various forms)
+        const isAbortError =
+          err?.name === "AbortError" ||
+          err?.code === 20 ||
+          err?.message === "Filter changed" ||
+          err?.message === "Cleanup" ||
+          err?.message?.includes("abort") ||
+          err?.message?.includes("cancelled");
+
+        if (isAbortError) {
+          // Don't log or change state on expected aborts - request was cancelled
           return;
         }
+        console.error("Error fetching churn data:", err);
 
         if (isMounted) {
           setError(err instanceof Error ? err.message : "Failed to fetch data");
@@ -206,18 +218,28 @@ export function useChurnData(filters: ChurnFilters, timeRange: "7d" | "30d" | "9
 
     return () => {
       isMounted = false;
-      // Abort in-flight request on cleanup
-      if (abortControllerRef.current) abortControllerRef.current.abort();
+      // Abort in-flight request on cleanup - only use 'Component unmounted' when truly unmounting
+      if (abortControllerRef.current) {
+        // This cleanup runs on dependency changes AND unmounting
+        // We check isMounted to differentiate (though it's set to false above)
+        abortControllerRef.current.abort('Cleanup');
+      }
       abortControllerRef.current = null;
     };
   }, [filters, client, timeRange]);
 
   const riskPyramidData = useMemo(() => {
-    if (!data?.segmentRisk) return [];
+    if (!data?.segmentRisk || data.segmentRisk.length === 0) {
+      console.log('[useChurnData] No segmentRisk data available');
+      return [];
+    }
+
+    console.log('[useChurnData] Processing segmentRisk:', data.segmentRisk);
 
     const totals = data.segmentRisk.reduce(
       (acc: any, seg: any) => {
-        acc["Very High"] += Number(seg.very_high || 0);
+        // Handle both snake_case and camelCase field names
+        acc["Very High"] += Number(seg.very_high || seg.veryHigh || 0);
         acc.High += Number(seg.high || 0);
         acc.Medium += Number(seg.medium || 0);
         acc.Low += Number(seg.low || 0);
@@ -226,13 +248,20 @@ export function useChurnData(filters: ChurnFilters, timeRange: "7d" | "30d" | "9
       { "Very High": 0, High: 0, Medium: 0, Low: 0 }
     );
 
-    const total = Object.values(totals).reduce((a: any, b: any) => a + b, 0) || 1;
+    const total = Object.values(totals).reduce((a: any, b: any) => a + b, 0);
+
+    console.log('[useChurnData] Risk totals:', totals, 'Total customers:', total);
+
+    // If no data, return empty array
+    if (total === 0) {
+      return [];
+    }
 
     return [
-      { level: "Very High", count: totals["Very High"], percentage: (totals["Very High"] / (total as number)) * 100, color: "#ef4444" },
-      { level: "High", count: totals.High, percentage: (totals.High / (total as number)) * 100, color: "#f59e0b" },
-      { level: "Medium", count: totals.Medium, percentage: (totals.Medium / (total as number)) * 100, color: "#eab308" },
-      { level: "Low", count: totals.Low, percentage: (totals.Low / (total as number)) * 100, color: "#10b981" },
+      { level: "Very High", count: totals["Very High"], percentage: Number(((totals["Very High"] / total) * 100).toFixed(1)), color: "#ef4444" },
+      { level: "High", count: totals.High, percentage: Number(((totals.High / total) * 100).toFixed(1)), color: "#f59e0b" },
+      { level: "Medium", count: totals.Medium, percentage: Number(((totals.Medium / total) * 100).toFixed(1)), color: "#eab308" },
+      { level: "Low", count: totals.Low, percentage: Number(((totals.Low / total) * 100).toFixed(1)), color: "#10b981" },
     ];
   }, [data]);
 

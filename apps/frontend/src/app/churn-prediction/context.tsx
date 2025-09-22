@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { SelectedPoint } from "components";
+import { SelectionManager, getSelectionManager } from "./services/SelectionManager";
 
 export type TimeRange = "7d" | "30d" | "90d";
 
@@ -11,7 +13,7 @@ export interface ChurnFilters {
   };
   riskLevels: string[];
   segments: string[];
-  search: string;
+  productCategories: string[];
 }
 
 type ChurnContextValue = {
@@ -19,6 +21,16 @@ type ChurnContextValue = {
   setFilters: React.Dispatch<React.SetStateAction<ChurnFilters>>;
   timeRange: TimeRange;
   setTimeRange: React.Dispatch<React.SetStateAction<TimeRange>>;
+  selectedPoints: SelectedPoint[];
+  selectionManager: SelectionManager;
+  // Panel state management
+  isChatOpen: boolean;
+  setIsChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  isBIModalOpen: boolean;
+  setIsBIModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  // Data sharing for BI panel
+  churnCustomers: any[];
+  setChurnCustomers: React.Dispatch<React.SetStateAction<any[]>>;
 };
 
 const ChurnContext = React.createContext<ChurnContextValue | undefined>(undefined);
@@ -30,18 +42,28 @@ export function useChurnContext(): ChurnContextValue {
 }
 
 export function ChurnProvider({ children }: { children: React.ReactNode }) {
+  const [selectedPoints, setSelectedPoints] = React.useState<SelectedPoint[]>([]);
+  const [selectionManager] = React.useState(() => getSelectionManager());
+
+  // Panel state management
+  const [isChatOpen, setIsChatOpen] = React.useState(false);
+  const [isBIModalOpen, setIsBIModalOpen] = React.useState(false);
+
+  // Data sharing for BI panel
+  const [churnCustomers, setChurnCustomers] = React.useState<any[]>([]);
+
   const [timeRange, setTimeRange] = React.useState<TimeRange>(() => {
     if (typeof window === "undefined") return "30d";
     return (localStorage.getItem("churnTimeRange") as TimeRange) || "30d";
   });
 
   const [filters, setFilters] = React.useState<ChurnFilters>(() => {
-    // Use date range that matches actual data (2017-01-20 to 2021-12-31)
-    // Using last year of data for better results
+    // Default to empty date range to allow timeRange to work
     const defaultFilters = {
-      dateRange: { startDate: "2021-01-01", endDate: "2021-12-31" },
+      dateRange: { startDate: "", endDate: "" },
       riskLevels: [],
       segments: [],
+      productCategories: [],
       search: "",
     };
 
@@ -53,10 +75,11 @@ export function ChurnProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem("churnFilters");
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Ensure date range is valid
-        if (parsed.dateRange?.startDate && parsed.dateRange?.endDate) {
-          return parsed;
-        }
+        // Return parsed filters but with cleared dateRange to use timeRange
+        return {
+          ...parsed,
+          dateRange: { startDate: "", endDate: "" }
+        };
       }
       return defaultFilters;
     } catch {
@@ -75,6 +98,17 @@ export function ChurnProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("churnTimeRange", timeRange);
     } catch {}
   }, [timeRange]);
+
+  // Subscribe to selection manager
+  React.useEffect(() => {
+    const unsubscribe = selectionManager.subscribe((points) => {
+      setSelectedPoints(points);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [selectionManager]);
 
   // Memoize setFilters to prevent unnecessary recreations
   const memoizedSetFilters = React.useCallback(
@@ -98,8 +132,16 @@ export function ChurnProvider({ children }: { children: React.ReactNode }) {
       setFilters: memoizedSetFilters,
       timeRange,
       setTimeRange: memoizedSetTimeRange,
+      selectedPoints,
+      selectionManager,
+      isChatOpen,
+      setIsChatOpen,
+      isBIModalOpen,
+      setIsBIModalOpen,
+      churnCustomers,
+      setChurnCustomers,
     }),
-    [filters, memoizedSetFilters, timeRange, memoizedSetTimeRange]
+    [filters, memoizedSetFilters, timeRange, memoizedSetTimeRange, selectedPoints, selectionManager, isChatOpen, isBIModalOpen, churnCustomers]
   );
 
   return <ChurnContext.Provider value={value}>{children}</ChurnContext.Provider>;

@@ -14,6 +14,7 @@ class ChurnFilters(BaseModel):
     search: Optional[str] = Field(None, description="Search term")
     riskLevels: Optional[List[str]] = Field(default_factory=list, description="Multiple risk levels")
     segments: Optional[List[str]] = Field(default_factory=list, description="Multiple segments")
+    productCategories: Optional[List[str]] = Field(default_factory=list, description="Product categories filter")
 
 
 class CustomerStat(BaseModel):

@@ -47,6 +47,10 @@ async def get_dashboard_summary(filters: ChurnFilters, request: Request):
         elif filters.segment:
             filter_dict['segments'] = [filters.segment]
 
+        # Handle product categories
+        if filters.productCategories and len(filters.productCategories) > 0:
+            filter_dict['productCategories'] = filters.productCategories
+
         result = await service.get_dashboard_summary(filter_dict)
         return result
     except Exception as e:
@@ -178,3 +182,5 @@ async def export_data(
 
 # Import datetime for export endpoint
 from datetime import datetime
+
+

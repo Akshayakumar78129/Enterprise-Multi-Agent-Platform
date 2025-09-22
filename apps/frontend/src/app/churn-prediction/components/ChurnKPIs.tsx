@@ -8,8 +8,6 @@ interface ChurnKPIsProps {
 }
 
 export function ChurnKPIs({ data, loading }: ChurnKPIsProps) {
-  console.log("ChurnKPIs - data:", data, "loading:", loading);
-
   const kpis = useMemo(() => {
     // Calculate KPIs from actual data
     if (!data || !data.segmentRisk || data.segmentRisk.length === 0) {
@@ -59,12 +57,16 @@ export function ChurnKPIs({ data, loading }: ChurnKPIsProps) {
     let veryHighRiskCount = 0;
 
     data.segmentRisk.forEach((segment: any) => {
-      const segmentTotal = (segment.low || 0) + (segment.medium || 0) +
-                          (segment.high || 0) + (segment.very_high || 0);
+      const low = Number(segment.low || 0);
+      const medium = Number(segment.medium || 0);
+      const high = Number(segment.high || 0);
+      const veryHigh = Number(segment.very_high || 0);
+
+      const segmentTotal = low + medium + high + veryHigh;
       totalCustomers += segmentTotal;
       // Include Medium, High, and Very High as "at risk"
-      atRiskCount += (segment.medium || 0) + (segment.high || 0) + (segment.very_high || 0);
-      veryHighRiskCount += (segment.very_high || 0);
+      atRiskCount += medium + high + veryHigh;
+      veryHighRiskCount += veryHigh;
     });
 
     const overallRisk = totalCustomers > 0
@@ -86,10 +88,10 @@ export function ChurnKPIs({ data, loading }: ChurnKPIsProps) {
       },
       {
         id: "critical-risk-customers",
-        title: "Critical Risk Customers",
-        value: veryHighRiskCount,
+        title: "At Risk Customers",
+        value: atRiskCount,
         format: "number" as const,
-        color: "#38bdf8",
+        color: "#ef4444",
       },
       {
         id: "ai-model-accuracy",

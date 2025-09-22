@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 
 export interface KPICardProps {
   title: string;
@@ -34,13 +34,21 @@ export const KPICard: React.FC<KPICardProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [animatedValue, setAnimatedValue] = useState(0);
+  const animationRef = useRef<number | null>(null);
+  const hasAnimatedRef = useRef(false);
 
   useEffect(() => {
+    // Reset animation flag if value changes significantly
+    if (typeof value === "number" && Math.abs(Number(animatedValue) - value) > 1) {
+      hasAnimatedRef.current = false;
+    }
+
     const timer = setTimeout(() => {
       setIsVisible(true);
 
       // Animate the value if it's a number and animation is enabled
-      if (animate && typeof value === "number") {
+      if (animate && typeof value === "number" && !hasAnimatedRef.current) {
+        hasAnimatedRef.current = true;
         let start = 0;
         const end = value;
         const duration = 1500;
@@ -59,16 +67,25 @@ export const KPICard: React.FC<KPICardProps> = ({
           }
 
           if (progress < 1) {
-            requestAnimationFrame(animateValue);
+            animationRef.current = requestAnimationFrame(animateValue);
+          } else {
+            animationRef.current = null;
           }
         };
 
         animateValue();
+      } else if (!animate || typeof value !== "number") {
+        setAnimatedValue(typeof value === "number" ? value : 0);
       }
     }, delay);
 
-    return () => clearTimeout(timer);
-  }, [value, delay, animate, format]);
+    return () => {
+      clearTimeout(timer);
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [value, delay, animate]);
 
   const formatValue = (val: string | number) => {
     if (format === "text" || typeof val === "string") return val;
@@ -137,9 +154,10 @@ export const KPICard: React.FC<KPICardProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`
-        relative overflow-hidden rounded-2xl p-6
+        relative overflow-hidden rounded-2xl p-4 sm:p-6
         glass-card
         transition-all duration-300 ease-out
+        min-w-0
         ${onClick ? "cursor-pointer" : ""}
         ${isHovered ? "transform -translate-y-1" : ""}
         ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
@@ -167,7 +185,7 @@ export const KPICard: React.FC<KPICardProps> = ({
 
         {/* Value */}
         <div className="mb-2">
-          <p className="text-3xl font-bold text-foreground">
+          <p className="text-2xl sm:text-3xl font-bold text-foreground">
             {displayValue}
           </p>
           {subtitle && (

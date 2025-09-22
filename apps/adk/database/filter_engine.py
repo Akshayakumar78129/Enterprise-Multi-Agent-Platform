@@ -65,6 +65,13 @@ class FilterEngine:
                 where_clauses.append(f"{schema.CUSTOMER.refs['type']} IN ({placeholders})")
                 params.extend(segments)
 
+        # Product categories filter - based on customer behavior patterns
+        # Note: Since product categories are derived from customer behavior rather than
+        # stored directly, this filter would need to be applied at the application level
+        # after retrieving customers and calculating their categories
+        # For now, we skip SQL-level filtering for productCategories
+        # The application layer will handle this using the category determination logic
+
         # Risk level to loyalty status mapping (from Express) - handle arrays
         risk_levels = []
         if filters.get('riskLevel'):

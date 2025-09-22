@@ -59,7 +59,7 @@ export const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
             <div className="p-6">
               {/* Header */}
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-foreground">Dashboards</h2>
+                <h2 className="text-xl font-bold text-foreground">Thoughtlets</h2>
                 <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)}>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -71,7 +71,7 @@ export const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
               <div className="mb-4">
                 <input
                   type="text"
-                  placeholder="Search dashboards..."
+                  placeholder="Search thoughtlets..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent"
@@ -154,7 +154,7 @@ export const DashboardMegaMenu: React.FC<MegaMenuProps> = ({ className = "" }) =
             {hoveredDomain === domain.id && (
               <div className="absolute top-full left-0 mt-2 w-96 bg-surface border border-border rounded-lg shadow-neo p-4 z-50">
                 <h3 className="text-lg font-semibold text-foreground mb-3">
-                  {domain.icon} {domain.name} Dashboards
+                  {domain.icon} {domain.name} Thoughtlets
                 </h3>
                 <div className="grid grid-cols-2 gap-2">
                   {DASHBOARDS.filter(d => d.domain === domain.id).map(dashboard => (

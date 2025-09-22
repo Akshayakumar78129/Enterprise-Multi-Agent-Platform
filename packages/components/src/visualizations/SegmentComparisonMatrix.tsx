@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { ChartTooltip, useChartTooltip, TooltipItem } from "../ui/ChartTooltip";
 
 export interface SegmentData {
   segment: string;
@@ -11,7 +12,6 @@ export interface SegmentData {
 
 export interface SegmentComparisonMatrixProps {
   data: SegmentData[];
-  title?: string;
   segments?: string[];
   riskLevels?: string[];
   onCellClick?: (segment: string, riskLevel: string, data: SegmentData, event: React.MouseEvent) => void;
@@ -20,13 +20,13 @@ export interface SegmentComparisonMatrixProps {
 
 export const SegmentComparisonMatrix: React.FC<SegmentComparisonMatrixProps> = ({
   data,
-  title = "Segment Comparison Matrix",
   segments = ["Enterprise", "Mid-Market", "SMB", "Consumer"],
   riskLevels = ["Very High", "High", "Medium", "Low"],
   onCellClick,
   className = "",
 }) => {
   const [hoveredCell, setHoveredCell] = useState<{segment: string, riskLevel: string} | null>(null);
+  const { tooltipData, showTooltip, hideTooltip } = useChartTooltip();
 
   // Create matrix data
   const matrixData = segments.map(segment => 
@@ -59,17 +59,18 @@ export const SegmentComparisonMatrix: React.FC<SegmentComparisonMatrixProps> = (
     return intensity > 0.5 ? "#ffffff" : "#e8eaed";
   };
 
-  return (
-    <div className={`${className}`}>
-      <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4 sm:mb-6">{title}</h3>
+  const gridCols = segments.length + 1; // +1 for row labels
+  const colsClass = `grid-cols-${gridCols}`;
 
-      <div className="overflow-x-auto -mx-2 sm:mx-0">
-        <div className="min-w-[500px] px-2 sm:px-0">
+  return (
+    <div className={`relative ${className}`}>
+      <div className="w-full flex justify-center">
+        <div className="w-full max-w-[500px]">
           {/* Header */}
-          <div className="grid grid-cols-5 gap-2 sm:gap-3 mb-3">
-            <div className="text-xs sm:text-sm font-medium text-muted"></div>
+          <div className="flex gap-[2px] sm:gap-1 lg:gap-2 mb-2">
+            <div className="flex-shrink-0 w-14 sm:w-16 md:w-20 lg:w-24"></div>
             {segments.map(segment => (
-              <div key={segment} className="text-xs sm:text-sm font-medium text-foreground text-center truncate px-1">
+              <div key={segment} className="flex-1 text-[9px] sm:text-[10px] md:text-xs lg:text-sm font-medium text-foreground text-center truncate px-[2px]">
                 {segment}
               </div>
             ))}
@@ -77,8 +78,8 @@ export const SegmentComparisonMatrix: React.FC<SegmentComparisonMatrixProps> = (
 
           {/* Matrix */}
           {riskLevels.map((riskLevel, rowIndex) => (
-            <div key={riskLevel} className="grid grid-cols-5 gap-2 sm:gap-3 mb-2 sm:mb-3">
-              <div className="text-xs sm:text-sm font-medium text-foreground flex items-center justify-end pr-2">
+            <div key={riskLevel} className="flex gap-[2px] sm:gap-1 lg:gap-2 mb-[2px] sm:mb-1">
+              <div className="flex-shrink-0 w-14 sm:w-16 md:w-20 lg:w-24 text-[9px] sm:text-[10px] md:text-xs lg:text-sm font-medium text-foreground flex items-center justify-end pr-[2px] sm:pr-1">
                 {riskLevel}
               </div>
               {segments.map((segment, colIndex) => {
@@ -89,9 +90,9 @@ export const SegmentComparisonMatrix: React.FC<SegmentComparisonMatrixProps> = (
                   <div
                     key={`${segment}-${riskLevel}`}
                     className={`
-                      relative h-10 sm:h-12 rounded-lg flex items-center justify-center cursor-pointer
-                      transition-all duration-200 border-2 shadow-sm
-                      ${isHovered ? 'border-accent/50 scale-105 shadow-neo z-10' : 'border-transparent'}
+                      flex-1 aspect-square max-w-[80px] lg:max-w-[100px] rounded-md flex items-center justify-center cursor-pointer
+                      transition-all duration-200 border shadow-sm
+                      ${isHovered ? 'border-accent/50 scale-105 shadow-lg z-20' : 'border-transparent'}
                       hover:shadow-md
                     `}
                     style={{
@@ -100,38 +101,45 @@ export const SegmentComparisonMatrix: React.FC<SegmentComparisonMatrixProps> = (
                     }}
                     onClick={(e) => onCellClick?.(segment, riskLevel, cellData, e)}
                     onMouseEnter={() => setHoveredCell({segment, riskLevel})}
-                    onMouseLeave={() => setHoveredCell(null)}
+                    onMouseMove={(e) => {
+                      const tooltipItems: TooltipItem[] = [
+                        {
+                          label: "Segment",
+                          value: segment,
+                        },
+                        {
+                          label: "Risk Level",
+                          value: riskLevel,
+                          color: getCellColor(cellData.count),
+                        },
+                        {
+                          label: "Count",
+                          value: cellData.count,
+                        },
+                        {
+                          label: "Percentage",
+                          value: `${cellData.percentage.toFixed(1)}%`,
+                        },
+                      ];
+                      showTooltip(
+                        e.clientX,
+                        e.clientY,
+                        `${segment} - ${riskLevel}`,
+                        tooltipItems
+                      );
+                    }}
+                    onMouseLeave={() => {
+                      setHoveredCell(null);
+                      hideTooltip();
+                    }}
                   >
                     <span
-                      className="text-xs sm:text-sm font-bold"
+                      className="text-[9px] sm:text-[11px] md:text-xs lg:text-sm font-bold"
                       style={{ color: getTextColor(cellData.count) }}
                     >
                       {cellData.count}
                     </span>
 
-                    {/* Tooltip */}
-                    {isHovered && (
-                      <div
-                        className="absolute -top-16 left-1/2 transform -translate-x-1/2 whitespace-nowrap"
-                        style={{
-                          background: 'rgba(10, 18, 36, 0.95)',
-                          border: '1px solid #00e0ff',
-                          borderRadius: 12,
-                          padding: '10px 12px',
-                          boxShadow: '0 12px 28px rgba(0,0,0,0.35)',
-                          color: '#f7f9fb',
-                          fontSize: 12,
-                          zIndex: 10000,
-                          pointerEvents: 'none'
-                        }}
-                      >
-                        <div style={{ fontWeight: 700, color: '#00e0ff', marginBottom: 2 }}>{segment}</div>
-                        <div style={{ opacity: 0.9 }}>{riskLevel}: {cellData.count} customers</div>
-                        {cellData.percentage > 0 && (
-                          <div style={{ color: '#00e0ff', fontWeight: 600 }}>{cellData.percentage.toFixed(1)}%</div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -140,15 +148,13 @@ export const SegmentComparisonMatrix: React.FC<SegmentComparisonMatrixProps> = (
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="text-xs sm:text-sm text-muted font-medium">Customer Count</div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="text-xs text-muted">0</div>
-          <div className="flex h-3 sm:h-4 flex-1 sm:w-32 bg-gradient-to-r from-surface to-accent rounded-full shadow-inner"></div>
-          <div className="text-xs text-muted font-semibold">{maxCount}</div>
-        </div>
-      </div>
+      {/* Unified Chart Tooltip */}
+      <ChartTooltip
+        {...tooltipData}
+        variant="dark"
+        size="sm"
+        showArrow={false}
+      />
     </div>
   );
 };

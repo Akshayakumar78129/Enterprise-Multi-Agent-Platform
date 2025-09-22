@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { ChartTooltip, useChartTooltip, TooltipItem } from "../ui/ChartTooltip";
 
 export interface TrendDataPoint {
   date: string;
@@ -12,7 +13,6 @@ export interface TrendDataPoint {
 
 export interface RiskTrendsOverTimeProps {
   data: TrendDataPoint[];
-  title?: string;
   timeRange?: "7d" | "30d" | "90d";
   onTimeRangeChange?: (range: "7d" | "30d" | "90d") => void;
   onDataPointClick?: (dataPoint: TrendDataPoint, event: React.MouseEvent) => void;
@@ -21,13 +21,13 @@ export interface RiskTrendsOverTimeProps {
 
 export const RiskTrendsOverTime: React.FC<RiskTrendsOverTimeProps> = ({
   data,
-  title = "Risk Trends Over Time",
   timeRange = "30d",
   onTimeRangeChange,
   onDataPointClick,
   className = "",
 }) => {
   const [hoveredPoint, setHoveredPoint] = useState<TrendDataPoint | null>(null);
+  const { tooltipData, showTooltip, hideTooltip } = useChartTooltip();
 
   const timeRanges: Array<{value: "7d" | "30d" | "90d", label: string}> = [
     { value: "7d", label: "7d" },
@@ -78,11 +78,8 @@ export const RiskTrendsOverTime: React.FC<RiskTrendsOverTimeProps> = ({
   };
 
   return (
-    <div className={`bg-surface rounded-xl p-6 border border-border ${className}`}>
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-semibold text-foreground">
-          {title}
-        </h3>
+    <div className={`${className}`}>
+      <div className="flex justify-end items-center mb-4">
         <div className="flex gap-2">
           {timeRanges.map((range) => (
             <button
@@ -163,7 +160,7 @@ export const RiskTrendsOverTime: React.FC<RiskTrendsOverTimeProps> = ({
                 return `${x},${y}`;
               });
 
-              const pathData = `${points.join(' ')} L ${bottomPoints.reverse().join(' ')} Z`;
+              const pathData = `M ${points.join(' L ')} L ${bottomPoints.reverse().join(' L ')} Z`;
 
               return (
                 <path
@@ -181,7 +178,7 @@ export const RiskTrendsOverTime: React.FC<RiskTrendsOverTimeProps> = ({
             {visibleData.map((point, index) => {
               const x = 50 + (index / (visibleData.length - 1 || 1)) * 700;
               const width = 700 / (visibleData.length || 1);
-              
+
               return (
                 <rect
                   key={index}
@@ -190,9 +187,82 @@ export const RiskTrendsOverTime: React.FC<RiskTrendsOverTimeProps> = ({
                   width={width}
                   height={200}
                   fill="transparent"
-                  onMouseEnter={() => setHoveredPoint(point)}
-                  onMouseLeave={() => setHoveredPoint(null)}
+                  onMouseEnter={(e) => {
+                    setHoveredPoint(point);
+                    const tooltipItems: TooltipItem[] = [
+                      {
+                        label: "Low",
+                        value: point.low,
+                        color: riskColors.low,
+                      },
+                      {
+                        label: "Medium",
+                        value: point.medium,
+                        color: riskColors.medium,
+                      },
+                      {
+                        label: "High",
+                        value: point.high,
+                        color: riskColors.high,
+                      },
+                      {
+                        label: "Very High",
+                        value: point.veryHigh,
+                        color: riskColors.veryHigh,
+                      },
+                    ];
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    showTooltip(
+                      rect.left + rect.width / 2,
+                      rect.top,
+                      new Date(point.date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      }),
+                      tooltipItems
+                    );
+                  }}
+                  onMouseLeave={() => {
+                    setHoveredPoint(null);
+                    hideTooltip();
+                  }}
+                  onMouseMove={(e) => {
+                    const tooltipItems: TooltipItem[] = [
+                      {
+                        label: "Low",
+                        value: point.low,
+                        color: riskColors.low,
+                      },
+                      {
+                        label: "Medium",
+                        value: point.medium,
+                        color: riskColors.medium,
+                      },
+                      {
+                        label: "High",
+                        value: point.high,
+                        color: riskColors.high,
+                      },
+                      {
+                        label: "Very High",
+                        value: point.veryHigh,
+                        color: riskColors.veryHigh,
+                      },
+                    ];
+                    showTooltip(
+                      e.clientX,
+                      e.clientY,
+                      new Date(point.date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      }),
+                      tooltipItems
+                    );
+                  }}
                   style={{ cursor: "pointer" }}
+                  onClick={(e) => onDataPointClick?.(point, e)}
                 />
               );
             })}
@@ -212,47 +282,6 @@ export const RiskTrendsOverTime: React.FC<RiskTrendsOverTimeProps> = ({
           ))}
         </div>
 
-        {/* Hover Tooltip */}
-        {hoveredPoint && (
-          <div
-            className="absolute bg-background/98 backdrop-blur-sm border border-border rounded-lg p-3 pointer-events-none shadow-lg"
-            style={{
-              left: `${Math.min(Math.max(20, 50 + (visibleData.indexOf(hoveredPoint) / Math.max(visibleData.length - 1, 1)) * 50), 80)}%`,
-              top: "20px",
-              zIndex: 9999,
-              transform: "translateX(-50%)",
-              maxWidth: "250px",
-            }}
-          >
-            <div className="text-xs text-foreground">
-              <div className="font-semibold mb-2">
-                {new Date(hoveredPoint.date).toLocaleDateString('en-US', { 
-                  month: 'short', 
-                  day: 'numeric',
-                  year: 'numeric'
-                })}
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: riskColors.low }} />
-                  <span>Low: {hoveredPoint.low}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: riskColors.medium }} />
-                  <span>Medium: {hoveredPoint.medium}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: riskColors.high }} />
-                  <span>High: {hoveredPoint.high}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: riskColors.veryHigh }} />
-                  <span>Very High: {hoveredPoint.veryHigh}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Summary Cards */}
@@ -264,22 +293,27 @@ export const RiskTrendsOverTime: React.FC<RiskTrendsOverTimeProps> = ({
           
           return (
             <div key={riskLevel} className="bg-background rounded-lg p-4 border border-border">
-              <div className="flex items-center gap-2 mb-2">
-                <div
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: color }}
-                />
+              <div className="mb-2">
                 <span className="text-sm font-medium text-foreground">{label}</span>
               </div>
               <div className="text-2xl font-bold text-foreground mb-1">{count}</div>
-              <div className={`text-sm ${change > 0 ? 'text-red-500' : 'text-green-500'}`}>
-                {(change > 0 ? '+' : '-')}{Math.abs(change).toFixed(1)}%
+              <div className={`text-sm ${change > 0 ? 'text-red-500' : change < 0 ? 'text-green-500' : 'text-muted'}`}>
+                {change > 0 ? '+' : ''}{change.toFixed(1)}%
               </div>
             </div>
           );
         })}
       </div>
       {/* Footer note removed */}
+
+      {/* Chart Tooltip */}
+      <ChartTooltip
+        {...tooltipData}
+        variant="dark"
+        size="sm"
+        showArrow={false}
+        footer={hoveredPoint ? `Total: ${(hoveredPoint.low + hoveredPoint.medium + hoveredPoint.high + hoveredPoint.veryHigh).toLocaleString()}` : undefined}
+      />
     </div>
   );
 };

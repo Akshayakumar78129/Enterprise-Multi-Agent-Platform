@@ -20,27 +20,16 @@ export const KPIRow: React.FC<KPIRowProps> = ({
   onKPIClick,
   className = "",
 }) => {
-  const getGridCols = () => {
-    switch (columns) {
-      case 1:
-        return "grid-cols-1";
-      case 2:
-        return "grid-cols-1 xs:grid-cols-2";
-      case 3:
-        return "grid-cols-1 xs:grid-cols-2 md:grid-cols-3";
-      case 4:
-        return "grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
-      case 5:
-        return "grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
-      case 6:
-        return "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6";
-      default:
-        return "grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
-    }
+  // Use CSS grid with auto-fit to allow wrapping when cards get too narrow
+  // Maintains minimum readable width and allows wrapping to preserve content quality
+  const gridStyle: React.CSSProperties = {
+    display: 'grid',
+    gap: '1rem',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
   };
 
   return (
-    <div className={`grid ${getGridCols()} gap-3 sm:gap-4 lg:gap-5 ${className}`}>
+    <div style={gridStyle} className={className}>
       {(kpis || []).map((kpi, index) => (
         <div
           key={kpi.id}

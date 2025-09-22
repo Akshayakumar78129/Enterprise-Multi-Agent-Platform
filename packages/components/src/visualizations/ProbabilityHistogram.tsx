@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { ChartTooltip, useChartTooltip, TooltipItem } from "../ui/ChartTooltip";
 
 export interface HistogramBin {
   range: [number, number];
@@ -12,7 +13,6 @@ export interface HistogramBin {
 export interface ProbabilityHistogramProps {
   data: number[];
   bins?: number;
-  title?: string;
   xLabel?: string;
   yLabel?: string;
   color?: string;
@@ -24,7 +24,6 @@ export interface ProbabilityHistogramProps {
 export const ProbabilityHistogram: React.FC<ProbabilityHistogramProps> = ({
   data,
   bins = 10,
-  title = "Probability Distribution",
   xLabel = "Probability",
   yLabel = "Count",
   color = "#8ba6ff",
@@ -33,6 +32,7 @@ export const ProbabilityHistogram: React.FC<ProbabilityHistogramProps> = ({
   className = "",
 }) => {
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
+  const { tooltipData, showTooltip, hideTooltip } = useChartTooltip();
 
   const histogram = useMemo(() => {
     const values = Array.isArray(data) ? data.filter(v => Number.isFinite(v)) : [];
@@ -71,12 +71,7 @@ export const ProbabilityHistogram: React.FC<ProbabilityHistogramProps> = ({
   const barWidth = 100 / safeBins;
 
   return (
-    <div className={`${className}`}>
-      {title && (
-        <h3 className="text-lg font-semibold text-foreground mb-4">{title}</h3>
-      )}
-
-      <div className="relative" style={{ height }}>
+    <div className={`relative ${className}`} style={{ height }}>
         <svg width="100%" height={height} viewBox={`0 0 420 ${height}`}>
           {/* Y-axis */}
           <line
@@ -139,7 +134,33 @@ export const ProbabilityHistogram: React.FC<ProbabilityHistogramProps> = ({
                 key={index}
                 onClick={(e) => onBarClick?.(bin, e)}
                 onMouseEnter={() => setHoveredBar(index)}
-                onMouseLeave={() => setHoveredBar(null)}
+                onMouseMove={(e) => {
+                  const tooltipItems: TooltipItem[] = [
+                    {
+                      label: "Range",
+                      value: bin.label,
+                      color: color,
+                    },
+                    {
+                      label: "Count",
+                      value: bin.count,
+                    },
+                    {
+                      label: "Percentage",
+                      value: `${bin.percentage.toFixed(1)}%`,
+                    },
+                  ];
+                  showTooltip(
+                    e.clientX,
+                    e.clientY,
+                    "Probability Distribution",
+                    tooltipItems
+                  );
+                }}
+                onMouseLeave={() => {
+                  setHoveredBar(null);
+                  hideTooltip();
+                }}
                 style={{ cursor: onBarClick ? "pointer" : "default" }}
               >
                 <rect
@@ -153,29 +174,16 @@ export const ProbabilityHistogram: React.FC<ProbabilityHistogramProps> = ({
                   className="transition-all duration-200"
                 />
 
-                {/* Value label on hover */}
-                {isHovered && (
-                  <text
-                    x={x + width / 2}
-                    y={y - 5}
-                    textAnchor="middle"
-                    fill="#e2e8f0"
-                    fontSize="12"
-                    fontWeight="600"
-                  >
-                    {bin.count}
-                  </text>
-                )}
 
                 {/* X-axis label */}
                 {index % Math.ceil(bins / 5) === 0 && (
                   <text
                     x={x + width / 2}
-                    y={height - 18}
+                    y={height - 25}
                     textAnchor="middle"
                     fill="#94a3b8"
                     fontSize="10"
-                    transform={`rotate(-45 ${x + width / 2} ${height - 18})`}
+                    transform={`rotate(-45 ${x + width / 2} ${height - 25})`}
                   >
                     {bin.range[0].toFixed(2)}
                   </text>
@@ -187,7 +195,7 @@ export const ProbabilityHistogram: React.FC<ProbabilityHistogramProps> = ({
           {/* Axis labels */}
           <text
             x="210"
-            y={height - 6}
+            y={height - 3}
             textAnchor="middle"
             fill="#94a3b8"
             fontSize="12"
@@ -204,29 +212,15 @@ export const ProbabilityHistogram: React.FC<ProbabilityHistogramProps> = ({
           >
             {yLabel}
           </text>
-        </svg>
+      </svg>
 
-        {/* Tooltip */}
-        {hoveredBar !== null && (
-          <div
-            className="absolute bg-background/95 backdrop-blur-sm border border-border rounded-lg p-3 pointer-events-none shadow-lg"
-            style={{
-              left: `${45 + (hoveredBar * 85) / bins}%`,
-              top: "10px",
-              zIndex: 1000,
-              transform: "translateX(-50%)",
-            }}
-          >
-            <div className="text-xs text-foreground">
-              <div className="font-semibold mb-1">
-                Range: {histogram[hoveredBar].label}
-              </div>
-              <div>Count: {histogram[hoveredBar].count}</div>
-              <div>Percentage: {histogram[hoveredBar].percentage.toFixed(1)}%</div>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Unified Chart Tooltip */}
+      <ChartTooltip
+        {...tooltipData}
+        variant="dark"
+        size="sm"
+        showArrow={false}
+      />
     </div>
   );
 };
