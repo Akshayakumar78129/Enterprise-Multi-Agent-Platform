@@ -37,6 +37,7 @@ export { AppLayout } from "./layout/AppLayout";
 // KPI Components
 export { KPICard } from "./kpi/KPICard";
 export { KPIRow, AnimatedKPITile } from "./kpi/KPIRow";
+export { KPITiles } from "./kpi/KPITiles";
 
 // Visualization Components
 export { RiskPyramid } from "./visualizations/RiskPyramid";

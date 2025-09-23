@@ -1,6 +1,20 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { LaserPointer } from './LaserPointer';
 
+// Z-Index hierarchy system
+const Z_INDEX = {
+  ROBOT: 900,  // Below components (1000) but above most UI
+  ROBOT_MESSAGE: 910,  // Below components but visible
+  ROBOT_QUERY_INPUT: 920,  // Below components but visible
+  SPEECH_BUBBLE: 100,
+  AUDIO_CONTROLS: 200,
+  CANVAS_BASE: 300,
+  COMPONENTS_BASE: 1000,
+  COMPONENTS_SELECTED: 2000,
+  FULLSCREEN: 5000,
+  FULLSCREEN_CONTROLS: 5001
+};
+
 interface RobotCharacterProps {
   initialPosition?: { x: number; y: number };
   laserTarget?: { x: number; y: number } | null;
@@ -106,7 +120,7 @@ export const RobotCharacter: React.FC<RobotCharacterProps> = ({
       left: `${position.x}px`,
       top: `${position.y}px`,
       cursor: 'default',
-      zIndex: 60,
+      zIndex: Z_INDEX.ROBOT,
       transition: 'all 0.3s ease',
     };
     
@@ -153,7 +167,7 @@ export const RobotCharacter: React.FC<RobotCharacterProps> = ({
   };
 
   return (
-    <div ref={containerRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 10 }}>
+    <div ref={containerRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: Z_INDEX.ROBOT }}>
       {/* Robot Character */}
       <div
         ref={robotRef}
@@ -246,7 +260,7 @@ export const RobotCharacter: React.FC<RobotCharacterProps> = ({
             border: '1px solid #e0d9f2',
             borderRadius: '12px',
             boxShadow: '0 2px 8px rgba(183, 148, 244, 0.1)',
-            zIndex: 61,
+            zIndex: Z_INDEX.ROBOT_MESSAGE,
             fontSize: '14px',
             lineHeight: '1.5',
             color: '#4a5568'
@@ -294,7 +308,7 @@ export const RobotCharacter: React.FC<RobotCharacterProps> = ({
             left: '50%',
             transform: 'translateX(-50%)',
             width: '280px',
-            zIndex: 70,
+            zIndex: Z_INDEX.ROBOT_QUERY_INPUT,
             backgroundColor: '#ffffff',
             padding: '8px',
             borderRadius: '6px',

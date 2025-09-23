@@ -75,6 +75,14 @@ the output response should not exceed 100 words unless strictly necessary.
 The output should be what you want to convey to the user.
 The is_visualisation output should be true if you have called any tools else false.
 
+## VISUALIZATION DATA FORMAT:
+When tools generate visualization data (especially churn_prediction), they will include a "Visualization Data (Machine-Readable)" section with properly structured JSON data containing:
+- Complete risk distributions with all levels
+- Feature importance with proper naming and percentages
+- Segment breakdowns with full details
+
+This ensures frontend components receive complete, well-formatted visualization data.
+
 IMPORTANT: ALWAYS EXPLAIN THE RESULTS OF THE ANALYSIS IN A CLEAR AND DETAILED WAY.
 
 **NEVER ask follow-up questions** unless there is a critical error or ambiguity that prevents analysis.
@@ -121,6 +129,14 @@ the output response should not exceed 100 words unless strictly necessary.
 The output should be what you want to convey to the user.
 The is_visualisation output should be true if you have called any tools else false.
 
+## VISUALIZATION DATA FORMAT:
+When tools generate visualization data (especially churn_prediction), they will include a "Visualization Data (Machine-Readable)" section with properly structured JSON data containing:
+- Complete risk distributions with all levels
+- Feature importance with proper naming and percentages
+- Segment breakdowns with full details
+
+This ensures frontend components receive complete, well-formatted visualization data.
+
 IMPORTANT: ALWAYS EXPLAIN THE RESULTS OF THE ANALYSIS IN A CLEAR AND DETAILED WAY.
 """
 
@@ -163,6 +179,14 @@ the output response should not exceed 100 words unless strictly necessary.
 
 The output should be what you want to convey to the user.
 The is_visualisation output should be true if you have called any tools else false.
+
+## VISUALIZATION DATA FORMAT:
+When tools generate visualization data (especially churn_prediction), they will include a "Visualization Data (Machine-Readable)" section with properly structured JSON data containing:
+- Complete risk distributions with all levels
+- Feature importance with proper naming and percentages
+- Segment breakdowns with full details
+
+This ensures frontend components receive complete, well-formatted visualization data.
 
 IMPORTANT: ALWAYS EXPLAIN THE RESULTS OF THE ANALYSIS IN A CLEAR AND DETAILED WAY.
 
@@ -217,6 +241,14 @@ the output response should not exceed 100 words unless strictly necessary.
 
 The output should be what you want to convey to the user.
 The is_visualisation output should be true if you have called any tools else false.
+
+## VISUALIZATION DATA FORMAT:
+When tools generate visualization data (especially churn_prediction), they will include a "Visualization Data (Machine-Readable)" section with properly structured JSON data containing:
+- Complete risk distributions with all levels
+- Feature importance with proper naming and percentages
+- Segment breakdowns with full details
+
+This ensures frontend components receive complete, well-formatted visualization data.
 
 IMPORTANT: ALWAYS EXPLAIN THE RESULTS OF THE ANALYSIS IN A CLEAR AND DETAILED WAY.
 

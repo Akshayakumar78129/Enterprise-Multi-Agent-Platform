@@ -31,40 +31,56 @@ export const RiskPyramid: React.FC<RiskPyramidProps> = ({
   const { tooltipData, showTooltip, hideTooltip } = useChartTooltip();
 
   const safeData = Array.isArray(data) ? data : [];
+
+  // Handle empty data case
+  if (safeData.length === 0) {
+    return (
+      <div className={`flex items-center justify-center ${className}`} style={{ height }}>
+        <div className="text-center text-muted-foreground">
+          <svg className="w-16 h-16 mx-auto mb-2 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          <p className="text-sm">No risk data available</p>
+          <p className="text-xs mt-1">Try adjusting your filters or time range</p>
+        </div>
+      </div>
+    );
+  }
+
   const counts = safeData.map(d => (typeof d.count === "number" ? d.count : 0));
   const maxCount = counts.length > 0 ? Math.max(...counts, 1) : 1;
   const segmentHeight = safeData.length > 0 ? height / safeData.length : height;
 
-  const getSegmentWidth = (count: number) => {
-    // Smart sizing algorithm that ensures all segments are visible
-    const minWidth = 15; // Minimum width percentage to ensure visibility
-    const maxWidth = 85; // Maximum width percentage to leave some padding
+  const getSegmentWidth = (count: number, index: number) => {
+    // Pyramid-style relative sizing - top segments are narrower, bottom wider
+    const levelMultiplier = 1 - (index * 0.15); // Each level gets 15% narrower
+    const baseWidth = 60; // Base width percentage
 
     if (count === 0) {
-      // For zero values, show a minimal but visible segment
-      return 8;
+      // For zero values, still show a visible segment with pyramid shape
+      return baseWidth * levelMultiplier * 0.6; // 60% of normal width for zero values
     }
 
     if (maxCount === 0) {
-      // If all counts are zero, show equal minimal segments
-      return minWidth;
+      // If all counts are zero, show pyramid shape with equal relative segments
+      return baseWidth * levelMultiplier;
     }
 
-    // Calculate logarithmic scale for better distribution
-    // This compresses the range while maintaining relative differences
-    const logScale = Math.log(count + 1) / Math.log(maxCount + 1);
+    // Calculate relative scale based on data
+    const dataScale = (count / maxCount);
 
-    // Apply the scale with minimum and maximum bounds
-    const scaledWidth = minWidth + (logScale * (maxWidth - minWidth));
+    // Combine pyramid shape with data scaling
+    // Minimum 50% of base width to ensure visibility
+    const scaledWidth = baseWidth * levelMultiplier * Math.max(0.5, dataScale);
 
-    return Math.max(minWidth, Math.min(maxWidth, scaledWidth));
+    return Math.min(85, scaledWidth); // Cap at 85% max width
   };
 
   return (
     <div className={`relative ${className}`} style={{ height }}>
       <svg width="100%" height={height} viewBox={`0 0 400 ${height}`} preserveAspectRatio="xMidYMid meet">
           {safeData.map((level, index) => {
-            const width = getSegmentWidth(level.count || 0) * 3.5; // Scale for viewBox
+            const width = getSegmentWidth(level.count || 0, index) * 3.5; // Scale for viewBox with pyramid shape
             const x = (400 - width) / 2;
             const y = index * segmentHeight;
             const isHovered = hoveredSegment === level.level;
@@ -85,7 +101,7 @@ export const RiskPyramid: React.FC<RiskPyramidProps> = ({
                     },
                     {
                       label: "Percentage",
-                      value: `${level.percentage.toFixed(1)}%`,
+                      value: `${(level.percentage || 0).toFixed(1)}%`,
                     },
                   ];
                   // Use mouse cursor position
@@ -143,7 +159,7 @@ export const RiskPyramid: React.FC<RiskPyramidProps> = ({
                     fontSize={Math.max(9, Math.min(12, segmentHeight / 4))}
                     opacity={0.95}
                   >
-                    {level.count === 0 ? "0" : `${level.count} (${level.percentage.toFixed(1)}%)`}
+                    {level.count === 0 ? "0" : `${level.count} (${(level.percentage || 0).toFixed(1)}%)`}
                   </text>
                 )}
 

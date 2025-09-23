@@ -10,7 +10,7 @@ class ChurnFilters(BaseModel):
     dateTo: Optional[str] = Field(None, description="End date filter")
     riskLevel: Optional[str] = Field(None, description="Risk level filter")
     segment: Optional[str] = Field(None, description="Customer segment filter")
-    timeRange: Optional[str] = Field(None, description="Time range (7d, 30d, 90d)")
+    timeRange: Optional[str] = Field(None, description="Time range (30d, 90d)")
     search: Optional[str] = Field(None, description="Search term")
     riskLevels: Optional[List[str]] = Field(default_factory=list, description="Multiple risk levels")
     segments: Optional[List[str]] = Field(default_factory=list, description="Multiple segments")

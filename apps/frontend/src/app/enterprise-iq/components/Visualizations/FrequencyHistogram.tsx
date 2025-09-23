@@ -83,13 +83,14 @@ export default function FrequencyHistogram(props: FrequencyHistogramProps) {
   })();
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full h-full flex flex-col p-2">
       <h3 className="text-sm font-medium text-gray-300 mb-2">{title}</h3>
-      <div className="flex-1">
+      <div className="flex-1 min-h-0">
         <BarChart
           data={chartData}
           height={250}
           showLegend={false}
+          className="w-full"
         />
       </div>
     </div>

@@ -1,5 +1,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
 
+// Z-Index hierarchy system
+const Z_INDEX = {
+  ROBOT: 50,
+  SPEECH_BUBBLE: 100,
+  AUDIO_CONTROLS: 200,
+  CANVAS_BASE: 300,
+  COMPONENTS_BASE: 1000,
+  COMPONENTS_SELECTED: 2000,
+  FULLSCREEN: 5000,
+  FULLSCREEN_CONTROLS: 5001
+};
+
 interface SpeechBubbleProps {
   anchorElement: HTMLElement | null;
   message: string;
@@ -75,7 +87,7 @@ export const SpeechBubble: React.FC<SpeechBubbleProps> = ({
     padding: '12px 16px',
     maxWidth: '250px',
     boxShadow: '0 4px 16px rgba(183, 148, 244, 0.15)',
-    zIndex: 61,
+    zIndex: Z_INDEX.SPEECH_BUBBLE,  // Below graphs (1000+) but above robot (50)
     fontSize: '14px',
     color: '#4a5568',
     whiteSpace: 'pre-wrap',

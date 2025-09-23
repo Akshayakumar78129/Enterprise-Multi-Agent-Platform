@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { FilterBar } from "components/index";
 
 interface ChurnFiltersProps {
@@ -17,43 +17,15 @@ interface ChurnFiltersProps {
 }
 
 export function ChurnFilters({ filters, onFiltersChange, onReset }: ChurnFiltersProps) {
-  const [categories, setCategories] = useState<string[]>([
-    // SaaS/B2B product categories matching web folder
+  // Static product categories - no need to fetch from API
+  const categories = [
     "Core Platform",
     "Analytics Suite",
     "API Services",
     "Professional Services",
     "Support Packages",
     "Add-ons"
-  ]);
-
-  useEffect(() => {
-    // Try to fetch categories from backend, but use defaults if it fails
-    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/churn/categories`;
-    console.log('Fetching categories from:', url);
-    fetch(url)
-      .then(res => {
-        console.log('Categories response status:', res.status);
-        // Don't throw error, just handle gracefully
-        if (!res.ok) {
-          console.log('Categories endpoint not available, using defaults');
-          return null;
-        }
-        return res.json();
-      })
-      .then(data => {
-        if (data) {
-          console.log('Categories data:', data);
-          if (data.categories && data.categories.length > 0) {
-            setCategories(data.categories);
-          }
-        }
-      })
-      .catch(err => {
-        console.log('Categories endpoint not available, using defaults');
-        // Keep default categories on error - no need to log as error
-      });
-  }, []);
+  ];
   return (
     <FilterBar
       config={{

@@ -32,10 +32,11 @@ interface ChurnFilters {
   };
   riskLevels: string[];
   segments: string[];
+  productCategories?: string[];
   search: string;
 }
 
-export function useChurnData(filters: ChurnFilters, timeRange: "7d" | "30d" | "90d") {
+export function useChurnData(filters: ChurnFilters) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
@@ -116,16 +117,17 @@ export function useChurnData(filters: ChurnFilters, timeRange: "7d" | "30d" | "9
         const filterParams: Record<string, any> = {
           riskLevels: filters.riskLevels.length > 0 ? filters.riskLevels : undefined,
           segments: filters.segments.length > 0 ? filters.segments.map(s => segmentMap[s] || s) : undefined,
+          productCategories: filters.productCategories && filters.productCategories.length > 0 ? filters.productCategories : undefined,
         };
 
-        // Only send either dateRange OR timeRange, not both
+        // Always use dateRange - no timeRange fallback
         if (filters.dateRange.startDate && filters.dateRange.endDate) {
-          // If explicit date range is set, use it
           filterParams.dateFrom = filters.dateRange.startDate;
           filterParams.dateTo = filters.dateRange.endDate;
         } else {
-          // Otherwise use the timeRange
-          filterParams.timeRange = timeRange;
+          // If no dates are set (shouldn't happen with new defaults), use last 30 days of 2021
+          filterParams.dateFrom = "2021-12-01";
+          filterParams.dateTo = "2021-12-31";
         }
 
         console.log('[useChurnData] Fetching with params:', filterParams);
@@ -185,10 +187,12 @@ export function useChurnData(filters: ChurnFilters, timeRange: "7d" | "30d" | "9
           err?.message === "Filter changed" ||
           err?.message === "Cleanup" ||
           err?.message?.includes("abort") ||
-          err?.message?.includes("cancelled");
+          err?.message?.includes("cancelled") ||
+          err?.message?.includes("The user aborted a request");
 
         if (isAbortError) {
           // Don't log or change state on expected aborts - request was cancelled
+          console.log("[useChurnData] Request cancelled (expected behavior on unmount or filter change)");
           return;
         }
         console.error("Error fetching churn data:", err);
@@ -226,7 +230,7 @@ export function useChurnData(filters: ChurnFilters, timeRange: "7d" | "30d" | "9
       }
       abortControllerRef.current = null;
     };
-  }, [filters, client, timeRange]);
+  }, [filters, client]);
 
   const riskPyramidData = useMemo(() => {
     if (!data?.segmentRisk || data.segmentRisk.length === 0) {

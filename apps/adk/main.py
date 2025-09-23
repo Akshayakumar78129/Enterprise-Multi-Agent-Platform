@@ -88,10 +88,17 @@ agents_list = ["orchestration_agent", "inventory_agent", "sales_agent", "custome
 
 @app.on_event("startup")
 async def startup_event():
-    """Train ML model on startup to avoid retraining on every request"""
+    """Train ML model on startup and initialize caching"""
+    # Initialize caching
+    from domains.common.simple_cache import dashboard_cache_manager
+    dashboard_cache_manager.enable()
+    print("[Main Server] Dashboard caching enabled")
+
+    # Train ML model on startup to avoid retraining on every request
     print("[Main Server] Training ML model on startup...")
     await churn_service._train_ml_model()
     print("[Main Server] ML model training complete")
+
     # Store the service instance for use in routers
     app.state.churn_service = churn_service
 

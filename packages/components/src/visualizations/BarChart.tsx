@@ -131,7 +131,7 @@ export const BarChart: React.FC<BarChartProps> = ({
 
   return (
     <Card className={`p-4 ${className}`}>
-      <div style={{ height }}>
+      <div style={{ height, width: '100%', position: 'relative' }}>
         <Bar options={options} data={chartData} />
       </div>
     </Card>

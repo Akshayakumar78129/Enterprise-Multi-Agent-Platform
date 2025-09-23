@@ -70,7 +70,7 @@ export function ChurnKPIs({ data, loading }: ChurnKPIsProps) {
     });
 
     const overallRisk = totalCustomers > 0
-      ? Math.round((atRiskCount / totalCustomers) * 100)
+      ? (atRiskCount / totalCustomers) * 100
       : 0;
 
     // Get primary risk factor from feature importance

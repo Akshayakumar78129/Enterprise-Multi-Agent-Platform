@@ -5,7 +5,7 @@ export const componentRegistry = {
   // Churn Prediction components
   'churn-prediction': {
     dashboard: dynamic(() => import('../churn-prediction/page'), { ssr: false }),
-    riskPyramid: dynamic(() => import('components').then(mod => mod.ChurnRiskPyramid), { ssr: false }),
+    riskPyramid: dynamic(() => import('components').then(mod => mod.RiskPyramid), { ssr: false }),
     featureImportance: dynamic(() => import('components').then(mod => mod.AIFeatureImportance), { ssr: false }),
     segmentMatrix: dynamic(() => import('components').then(mod => mod.SegmentComparisonMatrix), { ssr: false }),
     riskTrends: dynamic(() => import('components').then(mod => mod.RiskTrendsOverTime), { ssr: false }),
@@ -129,6 +129,16 @@ export const componentRegistry = {
     forecast: dynamic(() => import('components').then(mod => mod.RevenueForecast).catch(() => null), { ssr: false }),
     confidence: dynamic(() => import('components').then(mod => mod.ForecastConfidence).catch(() => null), { ssr: false }),
     scenarios: dynamic(() => import('components').then(mod => mod.ScenarioAnalysis).catch(() => null), { ssr: false }),
+  },
+
+  // Retention Planner components
+  'retention-planner': {
+    dashboard: dynamic(() => import('../retention-planner/page').catch(() => null), { ssr: false }),
+    kpiTiles: dynamic(() => import('components').then(mod => mod.KPITiles).catch(() => null), { ssr: false }),
+    churnRiskGauge: dynamic(() => import('components').then(mod => mod.ChurnRiskGauge).catch(() => null), { ssr: false }),
+    valueRiskMatrix: dynamic(() => import('components').then(mod => mod.ValueRiskMatrix).catch(() => null), { ssr: false }),
+    actionSankey: dynamic(() => import('components').then(mod => mod.ActionSankey).catch(() => null), { ssr: false }),
+    roiWaterfall: dynamic(() => import('components').then(mod => mod.ROIWaterfall).catch(() => null), { ssr: false }),
   },
 };
 

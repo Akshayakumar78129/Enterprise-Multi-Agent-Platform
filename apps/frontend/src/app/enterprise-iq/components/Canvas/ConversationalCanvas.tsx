@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { createPortal } from 'react-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { Plus, Minus, Maximize2, Minimize2, Grid, Move } from 'lucide-react';
 import CanvasComponent from './CanvasComponent';
@@ -14,6 +15,18 @@ import {
   setCanvasTransform,
   setSelectedComponents
 } from '@/store/slices/canvasSlice';
+
+// Z-Index hierarchy system
+const Z_INDEX = {
+  ROBOT: 50,
+  SPEECH_BUBBLE: 100,
+  AUDIO_CONTROLS: 200,
+  CANVAS_BASE: 300,
+  COMPONENTS_BASE: 1000,
+  COMPONENTS_SELECTED: 2000,
+  FULLSCREEN: 10000,
+  FULLSCREEN_CONTROLS: 10001
+};
 
 interface ConversationalCanvasProps {
   sessionId?: string;
@@ -154,10 +167,10 @@ export default function ConversationalCanvas({
     }
   };
 
-  return (
-    <div className={`${isFullscreen ? 'fixed inset-0 z-[1000]' : 'relative w-full h-screen'} overflow-hidden bg-background`}>
+  const canvasContent = (
+    <div className={`${isFullscreen ? 'fixed inset-0' : 'relative w-full h-screen'} overflow-hidden bg-background`} style={{ zIndex: isFullscreen ? Z_INDEX.FULLSCREEN : undefined }}>
       {/* Canvas Controls */}
-      <div className="absolute top-4 right-4 z-20 flex gap-2">
+      <div className={`absolute top-4 right-4 flex gap-2`} style={{ zIndex: isFullscreen ? Z_INDEX.FULLSCREEN_CONTROLS : 20 }}>
         <button
           onClick={handleZoomIn}
           className="p-2 glass-card hover:bg-accent/10 rounded-lg transition-all"
@@ -174,10 +187,8 @@ export default function ConversationalCanvas({
         </button>
         <button
           onClick={toggleFullscreen}
-          className={`p-2 rounded-lg transition-all ${
-            isFullscreen ? 'bg-accent/20 hover:bg-accent/30 border-accent' : 'glass-card hover:bg-accent/10'
-          }`}
-          title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+          className="p-2 glass-card hover:bg-accent/10 rounded-lg transition-all"
+          title={isFullscreen ? "Exit Fullscreen (ESC)" : "Enter Fullscreen"}
         >
           {isFullscreen ? (
             <Minimize2 className="w-5 h-5 text-foreground" />
@@ -257,4 +268,11 @@ export default function ConversationalCanvas({
       {/* Component Registry Panel - Removed to avoid duplicate navigation */}
     </div>
   );
+
+  // Use portal for true fullscreen that covers everything including title bar
+  if (isFullscreen && typeof document !== 'undefined') {
+    return createPortal(canvasContent, document.body);
+  }
+
+  return canvasContent;
 }

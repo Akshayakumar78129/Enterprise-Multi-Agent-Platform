@@ -223,6 +223,68 @@ Examples of data extraction:
 - "500 transactions on Monday, 650 on Tuesday" → {Monday: 500, Tuesday: 650}
 - "Product A: 1200 units, Product B: 890 units" → {labels: ["Product A", "Product B"], data: [1200, 890]}
 
+## CRITICAL REQUIREMENTS FOR CHURN-PREDICTION COMPONENTS:
+
+### For riskPyramid:
+**MUST include ALL 4 risk levels** with complete data:
+```json
+{
+  "toolname": "churn-prediction",
+  "componentName": "riskPyramid",
+  "body": {
+    "data": [
+      {"level": "Very High", "count": NUMBER, "percentage": NUMBER, "color": "#ef4444"},
+      {"level": "High", "count": NUMBER, "percentage": NUMBER, "color": "#f59e0b"},
+      {"level": "Medium", "count": NUMBER, "percentage": NUMBER, "color": "#eab308"},
+      {"level": "Low", "count": NUMBER, "percentage": NUMBER, "color": "#10b981"}
+    ]
+  }
+}
+```
+- Extract counts from text like "Low Risk: 500 customers"
+- Calculate percentages if not provided
+- ALWAYS include all 4 levels, even if count is 0
+
+### For featureImportance:
+**MUST include feature names and importance values**:
+```json
+{
+  "toolname": "churn-prediction",
+  "componentName": "featureImportance",
+  "body": {
+    "data": [
+      {"name": "Recency", "importance": 90, "impact": 90},
+      {"name": "Frequency", "importance": 75, "impact": 75},
+      {"name": "Monetary", "importance": 60, "impact": 60}
+    ]
+  }
+}
+```
+- Extract feature names exactly as mentioned (e.g., "Recency", not "Feature 1")
+- Convert percentages properly (90%, not 905)
+- Use importance value for impact if impact not specified
+
+### For segmentMatrix:
+**MUST include segment and risk level breakdown**:
+```json
+{
+  "toolname": "churn-prediction",
+  "componentName": "segmentMatrix",
+  "body": {
+    "data": [
+      {"segment": "Enterprise", "Low": 20, "Medium": 30, "High": 35, "Very High": 15},
+      {"segment": "Mid-Market", "Low": 40, "Medium": 25, "High": 20, "Very High": 15}
+    ]
+  }
+}
+```
+
+## Special Parsing Rules for Churn Data:
+1. If ADK mentions "Visualization Data (Machine-Readable)" section, PRIORITIZE extracting from that JSON
+2. Look for structured data sections in the ADK response first
+3. Risk levels MUST be: "Very High", "High", "Medium", "Low" (exact casing)
+4. Feature names should be meaningful (Recency, Frequency, etc.), not generic (Feature 1, Feature 2)
+
 ## Available Components Schema
 """ + json.dumps(COMPONENT_SCHEMA, indent=2) + """
 
@@ -680,6 +742,73 @@ def get_audio_from_base64(base64_data: str) -> str:
 
 async def get_visualisation(user_query: str, adk_response: str) -> dict:
     """Generate visualizations by analyzing ADK response using AI to map tools to components."""
+
+    print("getting vis")
+    print(f"Query: {user_query[:100]}")
+    print(f"ADK Response length: {len(adk_response)} chars")
+
+    # First try to extract JSON directly from the "Visualization Data (Machine-Readable)" section
+    if "Visualization Data (Machine-Readable)" in adk_response:
+        try:
+            print("Found Visualization Data section, extracting JSON directly...")
+
+            # Find the JSON block after "Visualization Data (Machine-Readable)"
+            viz_section_start = adk_response.find("Visualization Data (Machine-Readable)")
+            if viz_section_start != -1:
+                # Look for ```json after this section
+                json_start = adk_response.find("```json", viz_section_start)
+                if json_start != -1:
+                    json_end = adk_response.find("```", json_start + 7)
+                    if json_end != -1:
+                        json_str = adk_response[json_start + 7:json_end].strip()
+                        print(f"Extracted JSON string: {json_str[:200]}...")
+
+                        viz_data = json.loads(json_str)
+                        print(f"Parsed visualization data: {json.dumps(viz_data, indent=2)[:500]}")
+                        print(f"[DEBUG] riskPyramid data: {viz_data.get('riskPyramid', 'NOT FOUND')}")
+                        print(f"[DEBUG] featureImportance data: {viz_data.get('featureImportance', 'NOT FOUND')}")
+
+                        # Transform to expected format for frontend
+                        result = []
+
+                        # Check if this is churn prediction data
+                        if "riskPyramid" in viz_data and viz_data["riskPyramid"]:
+                            print(f"Adding riskPyramid with {len(viz_data['riskPyramid'])} levels")
+                            # Wrap array in 'data' property as expected by RiskPyramid component
+                            result.append({
+                                "toolname": "churn-prediction",
+                                "componentName": "riskPyramid",
+                                "body": {"data": viz_data["riskPyramid"]}  # Wrap in data property
+                            })
+
+                        if "featureImportance" in viz_data and viz_data["featureImportance"]:
+                            print(f"Adding featureImportance with {len(viz_data['featureImportance'])} features")
+                            # Wrap array in 'data' property as expected by AIFeatureImportance component
+                            result.append({
+                                "toolname": "churn-prediction",
+                                "componentName": "featureImportance",
+                                "body": {"data": viz_data["featureImportance"]}  # Wrap in data property
+                            })
+
+                        if "segmentMatrix" in viz_data and viz_data["segmentMatrix"]:
+                            print(f"Adding segmentMatrix with {len(viz_data['segmentMatrix'])} segments")
+                            # Wrap array in 'data' property for consistency
+                            result.append({
+                                "toolname": "churn-prediction",
+                                "componentName": "segmentMatrix",
+                                "body": {"data": viz_data["segmentMatrix"]}  # Wrap in data property
+                            })
+
+                        if len(result) > 0:
+                            print(f"Successfully extracted {len(result)} visualizations from JSON")
+                            print(f"Final visualization response: {json.dumps(result, indent=2)[:500]}")
+                            return json.dumps(result)  # Return JSON string for consistency
+
+        except Exception as e:
+            print(f"Failed to extract JSON directly: {e}")
+            print("Falling back to AI extraction...")
+
+    # Fall back to AI extraction if direct extraction failed
     gemini_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY", ""))
     prompt = f"""
     {VIS_SCHEMA_PROMPT}
@@ -690,10 +819,6 @@ async def get_visualisation(user_query: str, adk_response: str) -> dict:
 
     Please analyze the above input and return the appropriate visualization components as a JSON array.
     """
-
-    print("getting vis")
-    print(f"Query: {user_query[:100]}")
-    print(f"ADK Response length: {len(adk_response)} chars")
 
     try:
         response = await gemini_client.aio.models.generate_content(
@@ -712,6 +837,27 @@ async def get_visualisation(user_query: str, adk_response: str) -> dict:
     try:
         response_json = json.loads(response_text)
         print("\n\nParsed visualization JSON:\n", json.dumps(response_json, indent=2)[:500])
+
+        # Post-process to ensure consistent data structure for visualization components
+        if isinstance(response_json, list):
+            for item in response_json:
+                if item.get("toolname") == "churn-prediction" and item.get("body"):
+                    # Check if body contains raw array data (from AI response)
+                    body = item["body"]
+
+                    # If body is a list, wrap it in { data: [...] }
+                    if isinstance(body, list):
+                        item["body"] = {"data": body}
+                        print(f"Wrapped {item['componentName']} body in data property")
+
+                    # If body is an object but doesn't have 'data' property and isn't parameters
+                    elif isinstance(body, dict) and "data" not in body:
+                        # Check if it looks like parameter data (has start_date, end_date, etc)
+                        param_keys = {"start_date", "end_date", "riskThreshold", "modelType", "customerSegment", "count"}
+                        if not any(key in body for key in param_keys):
+                            # This might be misformatted data, log it
+                            print(f"Warning: {item['componentName']} body doesn't have 'data' property: {body}")
+
         return response_json
     except json.JSONDecodeError as e:
         print(f"Failed to parse visualization JSON: {e}")

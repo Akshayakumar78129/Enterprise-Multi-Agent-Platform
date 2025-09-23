@@ -80,7 +80,7 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
             {value.length === 0 ? (
-              <span className="text-muted">{placeholder}</span>
+              <span className="text-muted" suppressHydrationWarning>{placeholder}</span>
             ) : (
               <>
                 {value.slice(0, maxDisplay).map((v) => {
@@ -93,8 +93,9 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
                       removable
                       onRemove={() => handleToggleOption(v)}
                       className="shrink-0"
+                      suppressHydrationWarning
                     >
-                      {option?.label || v}
+                      <span suppressHydrationWarning>{option?.label || v}</span>
                     </Badge>
                   );
                 })}

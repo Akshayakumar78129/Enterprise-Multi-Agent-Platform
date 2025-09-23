@@ -34,8 +34,27 @@ export const ProbabilityHistogram: React.FC<ProbabilityHistogramProps> = ({
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
   const { tooltipData, showTooltip, hideTooltip } = useChartTooltip();
 
+  // Ensure data is an array
+  const safeData = Array.isArray(data) ? data : [];
+
+  // Handle empty data case
+  if (safeData.length === 0) {
+    return (
+      <div className={`flex items-center justify-center ${className}`} style={{ height }}>
+        <div className="text-center text-muted-foreground">
+          <svg className="w-16 h-16 mx-auto mb-2 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+          </svg>
+          <p className="text-sm">No probability distribution data available</p>
+          <p className="text-xs mt-1">Try adjusting your filters or time range</p>
+        </div>
+      </div>
+    );
+  }
+
   const histogram = useMemo(() => {
-    const values = Array.isArray(data) ? data.filter(v => Number.isFinite(v)) : [];
+    const values = safeData.filter(v => Number.isFinite(v));
     if (values.length === 0) return [];
 
     const min = Math.min(...values);
@@ -64,11 +83,27 @@ export const ProbabilityHistogram: React.FC<ProbabilityHistogramProps> = ({
     }
 
     return histogramBins;
-  }, [data, bins]);
+  }, [safeData, bins]);
 
   const maxCount = Math.max(1, ...histogram.map((bin) => bin.count));
   const safeBins = Math.max(1, Math.floor(bins));
   const barWidth = 100 / safeBins;
+
+  // Handle case where histogram is empty after processing
+  if (histogram.length === 0) {
+    return (
+      <div className={`flex items-center justify-center ${className}`} style={{ height }}>
+        <div className="text-center text-muted-foreground">
+          <svg className="w-16 h-16 mx-auto mb-2 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+          </svg>
+          <p className="text-sm">No probability distribution data available</p>
+          <p className="text-xs mt-1">Try adjusting your filters or time range</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`relative ${className}`} style={{ height }}>

@@ -32,6 +32,9 @@ const componentRegistry: Record<string, Record<string, () => Promise<any>>> = {
     riskPyramid: () => import('components/index').then(mod => ({ default: mod.RiskPyramid })),
     featureImportance: () => import('components/index').then(mod => ({ default: mod.AIFeatureImportance })),
     probabilityHistogram: () => import('components/index').then(mod => ({ default: mod.ProbabilityHistogram })),
+    temporalRisk: () => import('components/index').then(mod => ({ default: mod.RiskPyramid })), // Using RiskPyramid as placeholder
+    segmentMatrix: () => import('components/index').then(mod => ({ default: mod.SegmentComparisonMatrix })),
+    kpiTiles: () => import('components/index').then(mod => ({ default: mod.KPITiles })),
     factors: () => import('../Visualizations/FrequencyHistogram'),
     timeline: () => import('../Visualizations/FrequencyHistogram'),
     heatmap: () => import('../Visualizations/IntervalHeatmap'),
@@ -80,6 +83,14 @@ const componentRegistry: Record<string, Record<string, () => Promise<any>>> = {
     patterns: () => import('../Visualizations/FrequencyHistogram'),
     timeline: () => import('../Visualizations/FrequencyHistogram'),
     distribution: () => import('../Visualizations/FrequencyHistogram')
+  },
+  'retention-planner': {
+    kpiTiles: () => import('components/index').then(mod => ({ default: mod.KPITiles })),
+    dashboard: () => import('../Visualizations/FrequencyHistogram'), // Using histogram as placeholder
+    churnRiskGauge: () => import('../Visualizations/IntervalHeatmap'), // Using heatmap as placeholder
+    valueRiskMatrix: () => import('../Visualizations/IntervalHeatmap'), // Using heatmap as placeholder
+    actionSankey: () => import('../Visualizations/FrequencyHistogram'), // Using histogram as placeholder
+    roiWaterfall: () => import('../Visualizations/FrequencyHistogram') // Using histogram as placeholder
   }
 };
 

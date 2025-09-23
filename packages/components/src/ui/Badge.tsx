@@ -7,6 +7,7 @@ type BadgeProps = {
   removable?: boolean;
   onRemove?: () => void;
   className?: string;
+  suppressHydrationWarning?: boolean;
 };
 
 export const Badge = ({
@@ -16,6 +17,7 @@ export const Badge = ({
   removable = false,
   onRemove,
   className = "",
+  suppressHydrationWarning = false,
 }: BadgeProps) => {
   const variants = {
     default: "bg-surface text-foreground border border-border",
@@ -42,6 +44,7 @@ export const Badge = ({
         transition-all duration-200
         ${className}
       `}
+      suppressHydrationWarning={suppressHydrationWarning}
     >
       {children}
       {removable && (

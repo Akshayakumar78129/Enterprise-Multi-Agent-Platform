@@ -31,12 +31,9 @@ class AsyncChurnProcessingService:
 
     async def get_dashboard_summary(self, filters: Dict) -> Dict:
         """Async wrapper for dashboard summary"""
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            self.executor,
-            self.sync_service.get_dashboard_summary,
-            filters
-        )
+        # The base service is ChurnProcessingService which has async methods
+        # We need to call them directly since they're already async
+        return await self.sync_service.get_dashboard_summary(filters)
 
     async def get_customer_stats(self, filters: Dict) -> List[Dict]:
         """Async wrapper for customer stats"""

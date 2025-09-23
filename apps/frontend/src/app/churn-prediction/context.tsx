@@ -4,7 +4,7 @@ import React from "react";
 import { SelectedPoint } from "components";
 import { SelectionManager, getSelectionManager } from "./services/SelectionManager";
 
-export type TimeRange = "7d" | "30d" | "90d";
+export type TimeRange = "30d" | "90d";
 
 export interface ChurnFilters {
   dateRange: {
@@ -58,9 +58,15 @@ export function ChurnProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [filters, setFilters] = React.useState<ChurnFilters>(() => {
-    // Default to empty date range to allow timeRange to work
+    // Calculate default date range (last 30 days from 2021-12-31 since our data is from 2017-2021)
+    const defaultEndDate = "2021-12-31";
+    const endDate = new Date(defaultEndDate);
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - 30);
+    const defaultStartDate = startDate.toISOString().split('T')[0];
+
     const defaultFilters = {
-      dateRange: { startDate: "", endDate: "" },
+      dateRange: { startDate: defaultStartDate, endDate: defaultEndDate },
       riskLevels: [],
       segments: [],
       productCategories: [],
@@ -75,11 +81,8 @@ export function ChurnProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem("churnFilters");
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Return parsed filters but with cleared dateRange to use timeRange
-        return {
-          ...parsed,
-          dateRange: { startDate: "", endDate: "" }
-        };
+        // Keep the saved dateRange values
+        return parsed;
       }
       return defaultFilters;
     } catch {

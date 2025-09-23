@@ -10,6 +10,7 @@ from collections import defaultdict
 from .data_service import ChurnDataService
 from database.filter_engine import FilterEngine
 from .ml_predictor import ChurnMLPredictor
+from domains.common.simple_cache import cache_dashboard_endpoint
 
 
 class ChurnProcessingService:
@@ -23,8 +24,51 @@ class ChurnProcessingService:
 
     async def _ensure_model_trained(self):
         """Ensure ML model is trained before use"""
-        if not self.model_trained:
+        if not self.model_trained and not self.ml_predictor.is_trained:
             await self._train_ml_model()
+
+    def _determine_customer_categories(self, customer_row: pd.Series) -> List[str]:
+        """Determine customer's product categories based on purchase patterns.
+
+        This is a simplified approach based on customer metrics.
+        In production, you'd have actual product purchase data.
+        """
+        categories = []
+
+        # Based on spending patterns and frequency, infer likely product categories
+        total_sales = customer_row.get('total_sales', 0)
+        frequency = customer_row.get('transaction_count', 0)
+        avg_order = customer_row.get('avg_transaction_value', 0)
+
+        # Core Platform - regular users with consistent purchases
+        if frequency > 10:
+            categories.append("Core Platform")
+
+        # Analytics Suite - data-driven customers with higher engagement
+        if total_sales > 5000 and frequency > 5:
+            categories.append("Analytics Suite")
+
+        # API Services - technical customers with frequent small transactions
+        if frequency > 20 and avg_order < 500:
+            categories.append("API Services")
+
+        # Professional Services - high-value customers
+        if avg_order > 1000 or total_sales > 20000:
+            categories.append("Professional Services")
+
+        # Support Packages - customers with regular engagement
+        if frequency > 6 and total_sales > 3000:
+            categories.append("Support Packages")
+
+        # Add-ons - most customers have some add-ons
+        if total_sales > 1000:
+            categories.append("Add-ons")
+
+        # If no categories matched, assign Core Platform as default
+        if not categories:
+            categories.append("Core Platform")
+
+        return categories
 
     async def _train_ml_model(self):
         """Train the ML model with current data from service"""
@@ -45,10 +89,12 @@ class ChurnProcessingService:
                 labels = self.ml_predictor.generate_labels(customer_df)
                 metrics = self.ml_predictor.train_model(features, labels)
                 self.model_trained = True
+                self.ml_predictor.is_trained = True
                 print(f"[ChurnProcessingService] ML model trained successfully. ROC AUC: {metrics.get('roc_auc', 0):.3f}")
         except Exception as e:
             print(f"[ChurnProcessingService] Failed to train ML model: {e}")
 
+    @cache_dashboard_endpoint(dashboard_type='churn', ttl=300)
     async def get_dashboard_summary(self, filters: Dict) -> Dict:
         """Main dashboard endpoint - combines SQL and ML
 
@@ -79,7 +125,9 @@ class ChurnProcessingService:
                 "featureImportance": feature_importance or []
             }
         except Exception as e:
+            import traceback
             print(f"[ChurnProcessingService] Error in getDashboardSummary: {e}")
+            print(f"[ChurnProcessingService] Full traceback: {traceback.format_exc()}")
             # Return empty structure on error (matching Express)
             return {
                 "customerStats": [],
@@ -89,19 +137,22 @@ class ChurnProcessingService:
                 "featureImportance": []
             }
 
+    @cache_dashboard_endpoint(dashboard_type='churn', ttl=300)
     async def get_customer_stats(self, filters: Dict) -> List[Dict]:
         """Port of Express getCustomerStats - uses ML predictor with service data"""
         try:
             # Ensure model is trained
             await self._ensure_model_trained()
 
-            # Get segment filter if present
+            # Get segment and category filters if present
             segment_filter = filters.get('segments', [])
+            category_filter = filters.get('productCategories', [])
 
-            # Remove segments from filters for DB query (since it's not in DB)
+            # Remove segments and categories from filters for DB query (since they're not in DB)
             db_filters = filters.copy()
             db_filters.pop('segments', None)
             db_filters.pop('segment', None)
+            db_filters.pop('productCategories', None)
 
             # Get data from database using data service
             txns_res = await self.data_service.get_transactions(db_filters)
@@ -135,6 +186,16 @@ class ChurnProcessingService:
                 # Apply segment filter if present
                 if segment_filter and customer_segment not in segment_filter:
                     continue
+
+                # Apply category filter if present
+                # For now, we'll determine customer's primary category based on their purchase patterns
+                # This is a simplified approach - in production, you'd have actual product purchase data
+                if category_filter:
+                    # Determine customer's primary product category based on spending patterns
+                    customer_categories = self._determine_customer_categories(row)
+                    # Check if customer has purchased from any of the filtered categories
+                    if not any(cat in category_filter for cat in customer_categories):
+                        continue
 
                 # Handle NaN values comprehensively
                 rfm = row.get('rfm_score', 0)
@@ -175,19 +236,22 @@ class ChurnProcessingService:
             print(f"[ChurnProcessingService] Error in getCustomerStats: {e}")
             return []
 
+    @cache_dashboard_endpoint(dashboard_type='churn', ttl=300)
     async def get_segment_risk(self, filters: Dict) -> List[Dict]:
         """Port of Express getSegmentRisk - uses ML predictor with service data"""
         try:
             # Ensure model is trained
             await self._ensure_model_trained()
 
-            # Get segment filter if present
+            # Get segment and category filters if present
             segment_filter = filters.get('segments', [])
+            category_filter = filters.get('productCategories', [])
 
-            # Remove segments from filters for DB query (since it's not in DB)
+            # Remove segments and categories from filters for DB query (since they're not in DB)
             db_filters = filters.copy()
             db_filters.pop('segments', None)
             db_filters.pop('segment', None)
+            db_filters.pop('productCategories', None)
 
             # Get data from database using data service
             txns_res = await self.data_service.get_transactions(db_filters)
@@ -233,6 +297,12 @@ class ChurnProcessingService:
                 if segment_filter and segment not in segment_filter:
                     continue
 
+                # Apply category filter if present
+                if category_filter:
+                    customer_categories = self._determine_customer_categories(customer)
+                    if not any(cat in category_filter for cat in customer_categories):
+                        continue
+
                 # Get risk level from ML predictions
                 risk_level = customer['risk_level']
                 risk_key = risk_level.lower().replace(" ", "_")
@@ -249,6 +319,7 @@ class ChurnProcessingService:
             print(f"[ChurnProcessingService] Error in getSegmentRisk: {e}")
             return []
 
+    @cache_dashboard_endpoint(dashboard_type='churn', ttl=300)
     async def get_monthly_risk(self, filters: Dict) -> List[Dict]:
         """Port of Express getMonthlyRisk
 
@@ -315,6 +386,7 @@ class ChurnProcessingService:
             print(f"[ChurnProcessingService] Error in getMonthlyRisk: {e}")
             return []
 
+    @cache_dashboard_endpoint(dashboard_type='churn', ttl=300)
     async def get_probability_distribution(self, filters: Dict) -> List[Dict]:
         """Get probability distribution using ML model predictions"""
         try:
@@ -355,6 +427,7 @@ class ChurnProcessingService:
             return []
 
 
+    @cache_dashboard_endpoint(dashboard_type='churn', ttl=300)
     async def get_feature_importance(self, filters: Dict) -> List[Dict]:
         """Get feature importance from ML model - no icons"""
         try:

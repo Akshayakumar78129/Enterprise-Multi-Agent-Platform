@@ -22,15 +22,63 @@ interface RobotState {
   laserTarget?: { x: number; y: number } | null;
 }
 
+// Z-Index hierarchy system
+const Z_INDEX = {
+  ROBOT: 50,
+  SPEECH_BUBBLE: 100,
+  AUDIO_CONTROLS: 200,
+  CANVAS_BASE: 300,
+  COMPONENTS_BASE: 1000,
+  COMPONENTS_SELECTED: 2000,
+  FULLSCREEN: 5000,
+  FULLSCREEN_CONTROLS: 5001
+};
+
+// Component registry with available components - moved outside component to prevent re-creation
+const componentRegistry: any = {
+  'purchase-frequency': {
+    histogram: dynamic(() => import('./components/Visualizations/FrequencyHistogram')),
+    heatmap: dynamic(() => import('./components/Visualizations/IntervalHeatmap')),
+  },
+  'customer-segmentation': {
+    // Use the histogram as fallback for missing components
+    distributionMap: dynamic(() => import('./components/Visualizations/FrequencyHistogram')),
+    profileCards: dynamic(() => import('./components/Visualizations/FrequencyHistogram')),
+    metricComparison: dynamic(() => import('components').then(mod => mod.SegmentComparisonMatrix)),
+  },
+  'churn-prediction': {
+    riskPyramid: dynamic(() => import('components').then(mod => mod.RiskPyramid)),
+    featureImportance: dynamic(() => import('components').then(mod => mod.AIFeatureImportance)),
+    probabilityHistogram: dynamic(() => import('components').then(mod => mod.ProbabilityHistogram)),
+    temporalRisk: dynamic(() => import('components').then(mod => mod.RiskPyramid)), // Map to RiskPyramid as fallback
+    segmentMatrix: dynamic(() => import('components').then(mod => mod.SegmentComparisonMatrix)), // Map to SegmentComparisonMatrix
+    kpiTiles: dynamic(() => import('components').then(mod => mod.KPITiles)),
+  },
+  'visualization': {
+    barchart: dynamic(() => import('components').then(mod => mod.BarChart)),
+    linechart: dynamic(() => import('components').then(mod => mod.LineChart)),
+    histogram: dynamic(() => import('./components/Visualizations/FrequencyHistogram')),
+    heatmap: dynamic(() => import('./components/Visualizations/IntervalHeatmap')),
+  },
+  'retention-planner': {
+    kpiTiles: dynamic(() => import('components').then(mod => mod.KPITiles)),
+    dashboard: dynamic(() => import('./components/Visualizations/FrequencyHistogram')), // Using histogram as placeholder
+    churnRiskGauge: dynamic(() => import('./components/Visualizations/IntervalHeatmap')), // Using heatmap as placeholder
+    valueRiskMatrix: dynamic(() => import('./components/Visualizations/IntervalHeatmap')), // Using heatmap as placeholder
+    actionSankey: dynamic(() => import('./components/Visualizations/FrequencyHistogram')), // Using histogram as placeholder
+    roiWaterfall: dynamic(() => import('./components/Visualizations/FrequencyHistogram')) // Using histogram as placeholder
+  }
+};
+
 export default function EnterpriseIQPage() {
   const dispatch = useDispatch();
-  const { components } = useSelector((state: RootState) => state.canvas);
+  const { components, transform } = useSelector((state: RootState) => state.canvas);
   const { conversations, activeConversationId } = useSelector((state: RootState) => state.conversation);
 
   // Robot state management
   const [robotState, setRobotState] = useState<RobotState>({
     state: 'idle',
-    message: null,
+    message: "Hello! I'm your Enterprise IQ assistant. Ask me anything about your business data!",
     position: { x: 50, y: 100 },
     laserTarget: null,
     audioData: null
@@ -38,10 +86,12 @@ export default function EnterpriseIQPage() {
 
   const [userSelectedChartPoints, setUserSelectedChartPoints] = useState<any[]>([]);
   const [showQueryInput, setShowQueryInput] = useState(true);
-  const [isRobotVisible, setIsRobotVisible] = useState(true);
+  // Robot visibility removed - using chat panel instead
   const [isMuted, setIsMuted] = useState(false);
   const [audioPlaybackFailed, setAudioPlaybackFailed] = useState(false);
   const [pendingAudio, setPendingAudio] = useState<{ url: string; blob: Blob; mimeType: string } | null>(null);
+  const [showWelcome, setShowWelcome] = useState(true);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioQueueRef = useRef<{ url: string; blob: Blob; mimeType: string; hash: string; size: number }[]>([]);
   const isPlayingRef = useRef(false);
@@ -85,10 +135,20 @@ export default function EnterpriseIQPage() {
     return Math.abs(hash).toString(36).substring(0, 12);
   };
 
-  // Spawned components tracking to prevent duplicates
+  // Global visualization registry to prevent duplicates across sessions
+  const globalVisualizationRegistryRef = useRef<Map<string, { id: string; timestamp: number }>>(new Map());
   const [spawnedComponents, setSpawnedComponents] = useState<Set<string>>(new Set());
   const processedVisualizationsRef = useRef<Set<string>>(new Set());
   const currentSessionRef = useRef<string>('');
+
+  // STRICT SINGLETON: Only ONE instance of each visualization TYPE allowed
+  const activeVisualizationTypesRef = useRef<Set<string>>(new Set());
+
+  // Visualization queue to prevent duplicate spawning
+  const visualizationQueueRef = useRef<Map<string, any>>(new Map());
+  const processingVisualizationRef = useRef(false);
+  const occupiedPositionsRef = useRef<Set<string>>(new Set());
+  const visualizationProcessingLock = useRef<Set<string>>(new Set()); // Synchronous lock
 
 
   // Session state for SSE communication
@@ -122,38 +182,26 @@ export default function EnterpriseIQPage() {
     }
   }, []);
 
-  // Component registry with available components
-  const componentRegistry: any = {
-    'purchase-frequency': {
-      histogram: dynamic(() => import('./components/Visualizations/FrequencyHistogram')),
-      heatmap: dynamic(() => import('./components/Visualizations/IntervalHeatmap')),
-    },
-    'customer-segmentation': {
-      // Use the histogram as fallback for missing components
-      distributionMap: dynamic(() => import('./components/Visualizations/FrequencyHistogram')),
-      profileCards: dynamic(() => import('./components/Visualizations/FrequencyHistogram')),
-      metricComparison: dynamic(() => import('components').then(mod => mod.SegmentComparisonMatrix)),
-    },
-    'churn-prediction': {
-      riskPyramid: dynamic(() => import('components').then(mod => mod.RiskPyramid)),
-      featureImportance: dynamic(() => import('components').then(mod => mod.AIFeatureImportance)),
-      probabilityHistogram: dynamic(() => import('components').then(mod => mod.ProbabilityHistogram)),
-    },
-    'visualization': {
-      barchart: dynamic(() => import('components').then(mod => mod.BarChart)),
-      linechart: dynamic(() => import('components').then(mod => mod.LineChart)),
-      histogram: dynamic(() => import('./components/Visualizations/FrequencyHistogram')),
-      heatmap: dynamic(() => import('./components/Visualizations/IntervalHeatmap')),
-    }
-  };
-
-  // Audio queue processing function
-  const processAudioQueue = useCallback(() => {
+  // Audio queue processing function - with interrupt support
+  const processAudioQueue = useCallback((forceInterrupt: boolean = false) => {
     console.log('🎵 processAudioQueue called:', {
       isPlaying: isPlayingRef.current,
       queueLength: audioQueueRef.current.length,
+      forceInterrupt,
       queue: audioQueueRef.current.map(a => ({ hash: a.hash, size: a.size }))
     });
+
+    // If forced interrupt and new audio available, stop current and play new
+    if (forceInterrupt && audioQueueRef.current.length > 0 && isPlayingRef.current) {
+      console.log('🛑 Force interrupting current audio to play new chunk immediately');
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.currentTime = 0;
+        URL.revokeObjectURL(currentAudioRef.current.src);
+        currentAudioRef.current = null;
+      }
+      isPlayingRef.current = false;
+    }
 
     if (isPlayingRef.current || audioQueueRef.current.length === 0) {
       if (isPlayingRef.current) {
@@ -201,6 +249,7 @@ export default function EnterpriseIQPage() {
     audioElement.volume = isMuted ? 0 : 0.8;
     currentAudioRef.current = audioElement;
     isPlayingRef.current = true;
+    setIsAudioPlaying(true); // Update state for UI
 
     // Set up event listeners with detailed logging
     audioElement.addEventListener('loadstart', () => {
@@ -221,6 +270,12 @@ export default function EnterpriseIQPage() {
       isPlayingRef.current = false;
       URL.revokeObjectURL(audioData.url);
       currentAudioRef.current = null;
+
+      // Update state - no audio playing if queue is empty
+      if (audioQueueRef.current.length === 0) {
+        setIsAudioPlaying(false);
+      }
+
       // Process next audio in queue with a small delay
       console.log(`🔄 Will process next audio in queue after 200ms delay`);
       setTimeout(() => {
@@ -236,6 +291,12 @@ export default function EnterpriseIQPage() {
       isPlayingRef.current = false;
       URL.revokeObjectURL(audioData.url);
       currentAudioRef.current = null;
+
+      // Update state - no audio playing if queue is empty
+      if (audioQueueRef.current.length === 0) {
+        setIsAudioPlaying(false);
+      }
+
       // Process next audio in queue
       setTimeout(processAudioQueue, 100);
     });
@@ -450,118 +511,174 @@ export default function EnterpriseIQPage() {
     return matchingComponents.length > 0;
   };
 
-  // Function to spawn component with smart duplicate prevention
+  // Function to spawn component with STRICT SINGLETON enforcement
   const spawnComponent = async (componentType: string, props: any = {}) => {
     setComponentSpawning(true);
     setSpawnProgress(prev => ({ ...prev, currentComponent: componentType }));
 
-    // Smart duplicate prevention: only prevent if component exists AND is visible
-    const existingComponents = Object.values(components).filter(
+    // DATA VALIDATION: Check if props has valid data for visualization
+    console.log(`🔍 [spawnComponent] Component: ${componentType}`);
+    console.log(`🔍 [spawnComponent] Props received:`, JSON.stringify(props, null, 2));
+
+    if (!props || Object.keys(props).length === 0) {
+      console.warn(`⚠️ No data provided for ${componentType}, skipping spawn`);
+      setComponentSpawning(false);
+      return null;
+    }
+
+    // Check for common data fields that indicate actual content
+    const hasValidData =
+      props.data ||
+      props.chart_data ||
+      props.values ||
+      props.series ||
+      props.datasets ||
+      props.labels ||
+      props.categories ||
+      props.metrics ||
+      (Array.isArray(props) && props.length > 0);
+
+    if (!hasValidData) {
+      console.warn(`⚠️ No valid visualization data found in props for ${componentType}:`, props);
+      setComponentSpawning(false);
+      return null;
+    }
+
+    // STRICT SINGLETON CHECK: Only ONE of each type allowed globally
+    if (activeVisualizationTypesRef.current.has(componentType)) {
+      console.log(`🔒 SINGLETON: ${componentType} already active, blocking duplicate`);
+      setComponentSpawning(false);
+      return null;
+    }
+
+    // Check if this type already exists in current components
+    const existingOfType = Object.values(components).find(
       comp => `${comp.toolId}.${comp.type}` === componentType
     );
 
-    const visibleComponents = existingComponents.filter(comp => !comp.minimized);
-    const minimizedComponents = existingComponents.filter(comp => comp.minimized);
-
-    console.log(`🔍 Component analysis for ${componentType}:`);
-    console.log(`   Total existing: ${existingComponents.length}`);
-    console.log(`   Visible: ${visibleComponents.length}`);
-    console.log(`   Minimized: ${minimizedComponents.length}`);
-
-    // If there's already a visible component, don't spawn
-    if (visibleComponents.length > 0) {
-      console.log(`🚫 Component ${componentType} already visible, skipping spawn`);
+    if (existingOfType) {
+      console.log(`🚫 Component ${componentType} already exists (id: ${existingOfType.id}), blocking duplicate`);
       setComponentSpawning(false);
       return null;
     }
 
-    // If there are only minimized components, we can spawn (user closed them)
-    if (minimizedComponents.length > 0) {
-      console.log(`✅ Component ${componentType} exists but is minimized, allowing respawn`);
-    }
-
-    // Prevent too many total instances (including minimized)
-    if (existingComponents.length >= 5) {
-      console.log(`⚠️ Too many total instances of ${componentType} (${existingComponents.length}), skipping`);
-      setErrorWithAutoClear(`Too many ${componentType} components. Please remove some first.`);
-      setComponentSpawning(false);
-      return null;
-    }
+    // Mark this type as active IMMEDIATELY
+    activeVisualizationTypesRef.current.add(componentType);
+    console.log(`✅ Marked ${componentType} as active singleton`);
 
     const id = `component-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const [toolName, componentName] = componentType.split('.');
 
     // Verify component exists in registry with better error handling
-    const Component = componentRegistry[toolName]?.[componentName];
-    if (!Component) {
-      const errorMsg = `Component not found: ${componentType}. Available components: ${Object.keys(componentRegistry).join(', ')}`;
-      console.warn(errorMsg);
+    console.log(`🔍 Looking for component: toolName="${toolName}", componentName="${componentName}"`);
+    console.log(`📦 Registry has tools:`, Object.keys(componentRegistry));
+    if (componentRegistry[toolName]) {
+      console.log(`📦 Tool "${toolName}" has components:`, Object.keys(componentRegistry[toolName]));
+    }
+
+    const ComponentLoader = componentRegistry[toolName]?.[componentName];
+    if (!ComponentLoader) {
+      const availableTools = Object.keys(componentRegistry);
+      const availableComponents = toolName && componentRegistry[toolName]
+        ? Object.keys(componentRegistry[toolName])
+        : [];
+      const errorMsg = `Component not found: ${componentType}. Available tools: ${availableTools.join(', ')}. Available components for ${toolName}: ${availableComponents.join(', ')}`;
+      console.error(errorMsg);
       // Don't show persistent error for spawn failures - just log it
       setComponentSpawning(false);
+      // Remove from active types since it failed
+      activeVisualizationTypesRef.current.delete(componentType);
       return null;
     }
 
-    // Test dynamic import to catch errors early
-    try {
-      await Component.preload?.();
-    } catch (importError) {
-      const errorMsg = `Failed to load component ${componentType}: ${importError}`;
-      console.error(errorMsg);
-      // Don't show persistent error for component load failures - just log it
-      setComponentSpawning(false);
-      return null;
-    }
+    // Dynamic imports from Next.js are already loaded, no need to preload
+    // The component will be loaded when it's rendered
 
-    // Intelligent positioning with bounds checking - avoid overlaps and ensure within canvas
-    const findNonOverlappingPosition = (size: { width: number; height: number }) => {
+    // Grid-based positioning with slot tracking
+    const findNonOverlappingPosition = (size: { width: number; height: number }, componentIndex: number) => {
       const padding = 30;
-      const step = 50;
-      // Get actual canvas dimensions (conservative estimate)
-      const canvasWidth = Math.min(window.innerWidth - 100, 1200);
-      const canvasHeight = Math.min(window.innerHeight - 250, 600);
+      const gridCols = 3;
+      const gridRows = 3;
+      const cellWidth = 450;
+      const cellHeight = 350;
 
-      console.log(`🎯 Finding position for component (${size.width}x${size.height}) in canvas (${canvasWidth}x${canvasHeight})`);
+      // Define the text area bounds (robot message area)
+      // Robot is at (20, 20), text starts at robot.x + 60 = 80
+      // Text has maxWidth of 500px + padding 24px = 524px total
+      // Assume height of 200px for safety
+      const textAreaBounds = {
+        x: 80,
+        y: 20,
+        width: 524,
+        height: 200
+      };
 
-      for (let y = padding; y <= canvasHeight - size.height - padding; y += step) {
-        for (let x = padding; x <= canvasWidth - size.width - padding; x += step) {
-          const newRect = { x, y, width: size.width, height: size.height };
+      console.log(`🎯 Finding position for component #${componentIndex}`);
 
-          // Check if this position overlaps with existing components
-          const overlaps = Object.values(components).some(component => {
-            const compRect = {
-              x: component.position.x,
-              y: component.position.y,
-              width: component.size.width,
-              height: component.size.height
-            };
-            return (
-              newRect.x < compRect.x + compRect.width &&
-              newRect.x + newRect.width > compRect.x &&
-              newRect.y < compRect.y + compRect.height &&
-              newRect.y + newRect.height > compRect.y
+      // Try each grid slot in order
+      for (let row = 0; row < gridRows; row++) {
+        for (let col = 0; col < gridCols; col++) {
+          const slotKey = `${row}-${col}`;
+
+          // Check if this slot is already occupied
+          if (!occupiedPositionsRef.current.has(slotKey)) {
+            const x = col * cellWidth + padding;
+            const y = row * cellHeight + padding;
+
+            // Check if this position would overlap with the text area
+            const newRect = { x, y, width: size.width, height: size.height };
+            const overlapsWithText = (
+              newRect.x < textAreaBounds.x + textAreaBounds.width &&
+              newRect.x + newRect.width > textAreaBounds.x &&
+              newRect.y < textAreaBounds.y + textAreaBounds.height &&
+              newRect.y + newRect.height > textAreaBounds.y
             );
-          });
 
-          if (!overlaps) {
-            console.log(`✅ Found non-overlapping position at (${x}, ${y})`);
-            return { x, y };
+            if (overlapsWithText) {
+              console.log(`⚠️ Grid slot [${row},${col}] at (${x}, ${y}) overlaps with text area, skipping`);
+              continue;
+            }
+
+            // Also check for actual overlaps with existing components
+            const overlaps = Object.values(components).some(component => {
+              if (component.minimized) return false;
+
+              const compRect = {
+                x: component.position.x,
+                y: component.position.y,
+                width: component.size.width,
+                height: component.size.height
+              };
+
+              return (
+                newRect.x < compRect.x + compRect.width &&
+                newRect.x + newRect.width > compRect.x &&
+                newRect.y < compRect.y + compRect.height &&
+                newRect.y + newRect.height > compRect.y
+              );
+            });
+
+            if (!overlaps) {
+              occupiedPositionsRef.current.add(slotKey);
+              console.log(`✅ Assigned grid slot [${row},${col}] at position (${x}, ${y})`);
+              return { x, y, zIndex: Z_INDEX.COMPONENTS_BASE + componentIndex * 10 };
+            }
           }
         }
       }
 
-      // If no non-overlapping position found, use constrained random position
-      const safeX = Math.max(padding, Math.min(canvasWidth - size.width - padding, 100 + Math.random() * 200));
-      const safeY = Math.max(padding, Math.min(canvasHeight - size.height - padding, 100 + Math.random() * 150));
+      // Fallback: cascade positioning with offset
+      const cascadeOffset = occupiedPositionsRef.current.size;
+      const x = padding + (cascadeOffset * 50) % 600;
+      const y = padding + (cascadeOffset * 50) % 400;
 
-      console.log(`⚠️ Using fallback position at (${safeX}, ${safeY})`);
-      return {
-        x: safeX,
-        y: safeY
-      };
+      console.log(`⚠️ Using cascade fallback at (${x}, ${y})`);
+      return { x, y, zIndex: Z_INDEX.COMPONENTS_BASE + componentIndex * 10 };
     };
 
-    const componentSize = { width: 400, height: 300 };
-    const position = findNonOverlappingPosition(componentSize);
+    const componentSize = { width: 500, height: 400 };  // Increased default size for better visibility
+    const componentIndex = Object.keys(components).length;
+    const positionData = findNonOverlappingPosition(componentSize, componentIndex);
 
     // Track spawned component - but don't block respawning entirely
     setSpawnedComponents(prev => new Set([...prev, `${componentType}-${id}`]));
@@ -571,14 +688,16 @@ export default function EnterpriseIQPage() {
       id,
       type: componentName,
       toolId: toolName,
-      position,
+      position: { x: positionData.x, y: positionData.y },
       size: componentSize,
       data: props,
-      minimized: false
+      minimized: false,
+      zIndex: positionData.zIndex
     };
 
     console.log(`📦 Dispatching component to Redux:`, componentData);
-    console.log(`   Position: (${position.x}, ${position.y})`);
+    console.log(`   Position: (${positionData.x}, ${positionData.y})`);
+    console.log(`   Z-Index: ${positionData.zIndex}`);
     console.log(`   Size: ${componentSize.width}x${componentSize.height}`);
     console.log(`   Total components in canvas: ${Object.keys(components).length + 1}`);
 
@@ -588,10 +707,84 @@ export default function EnterpriseIQPage() {
     setSpawnProgress(prev => ({ ...prev, current: prev.current + 1 }));
 
     console.log(`✅ Component ${componentType} spawned successfully with ID: ${id}`);
+    console.log(`   Active singletons: ${Array.from(activeVisualizationTypesRef.current).join(', ')}`);
     return id;
   };
 
-  // Set visualization with deduplication and session management
+  // Queue visualization to prevent duplicates
+  const queueVisualization = (visualization: any) => {
+    // Extract only the content for hashing, ignore metadata/timestamps
+    const contentForHash = Array.isArray(visualization)
+      ? visualization.map(v => ({
+          toolname: v.toolname,
+          componentName: v.componentName,
+          body: v.body
+        }))
+      : visualization;
+
+    const key = JSON.stringify(contentForHash);
+    const keyHash = createFallbackHash(key);
+
+    // SYNCHRONOUS LOCK: Check if this exact visualization is already being processed
+    if (visualizationProcessingLock.current.has(keyHash)) {
+      console.log(`🔒 LOCKED: Visualization already being processed (hash: ${keyHash})`);
+      return;
+    }
+
+    // Lock it immediately
+    visualizationProcessingLock.current.add(keyHash);
+
+    // Check if already processed in global registry
+    if (Array.isArray(visualization)) {
+      for (const vis of visualization) {
+        const componentType = `${vis.toolname}.${vis.componentName}`;
+        const vizKey = `${componentType}-${JSON.stringify(vis.body || {})}`;
+        const vizHash = createFallbackHash(vizKey);
+
+        if (globalVisualizationRegistryRef.current.has(vizHash)) {
+          console.log(`🚫 Visualization ${componentType} already processed globally, skipping entire batch`);
+          visualizationProcessingLock.current.delete(keyHash); // Unlock
+          return;
+        }
+      }
+    }
+
+    if (!visualizationQueueRef.current.has(keyHash)) {
+      console.log(`📦 Adding visualization to queue (hash: ${keyHash})`);
+      visualizationQueueRef.current.set(keyHash, visualization);
+      processVisualizationQueue();
+    } else {
+      console.log(`🚫 Visualization already in queue (hash: ${keyHash}), skipping`);
+      visualizationProcessingLock.current.delete(keyHash); // Unlock if not queued
+    }
+  };
+
+  // Process visualization queue one at a time
+  const processVisualizationQueue = async () => {
+    if (processingVisualizationRef.current || visualizationQueueRef.current.size === 0) {
+      return;
+    }
+
+    processingVisualizationRef.current = true;
+
+    // Get first item from queue
+    const [keyHash, visualization] = visualizationQueueRef.current.entries().next().value;
+    visualizationQueueRef.current.delete(keyHash);
+
+    console.log(`🎭 Processing visualization from queue (hash: ${keyHash})`);
+    await setVisualisation(visualization);
+
+    // Unlock after processing
+    visualizationProcessingLock.current.delete(keyHash);
+    processingVisualizationRef.current = false;
+
+    // Process next item if any
+    if (visualizationQueueRef.current.size > 0) {
+      setTimeout(() => processVisualizationQueue(), 100);
+    }
+  };
+
+  // Set visualization with global deduplication
   const setVisualisation = async (visualisation: any) => {
     if (!visualisation) {
       console.warn('No visualization data received');
@@ -602,23 +795,6 @@ export default function EnterpriseIQPage() {
       console.warn('Visualization data is not an array:', visualisation);
       return;
     }
-
-    // Create content hash for deduplication
-    const visualizationHash = JSON.stringify(visualisation.map(v => ({
-      toolname: v.toolname,
-      componentName: v.componentName,
-      bodyKeys: Object.keys(v.body || {}).sort()
-    })));
-
-    // Check if this visualization was already processed in current session
-    const sessionKey = `${currentSessionRef.current}-${visualizationHash}`;
-    if (processedVisualizationsRef.current.has(sessionKey)) {
-      console.log(`🚫 Skipping duplicate visualization in session ${currentSessionRef.current}`);
-      return;
-    }
-
-    // Mark as processed
-    processedVisualizationsRef.current.add(sessionKey);
 
     console.log(`📊 Processing NEW visualization data (session: ${currentSessionRef.current}):`, visualisation);
 
@@ -637,15 +813,89 @@ export default function EnterpriseIQPage() {
         continue;
       }
 
-      const componentType = `${toolname}.${componentName}`;
-      console.log(`🔄 Queuing component: ${componentType}`, body);
+      // Validate that body has actual data
+      if (!body || (typeof body === 'object' && Object.keys(body).length === 0)) {
+        console.warn(`⚠️ Empty or missing body data for ${toolname}.${componentName}, skipping`);
+        continue;
+      }
 
-      const spawnPromise = spawnComponent(componentType, body || {})
+      const componentType = `${toolname}.${componentName}`;
+
+      // Validate and transform body data for visualization components
+      let processedBody = body;
+
+      // Special handling for churn-prediction components that expect data array
+      if (toolname === 'churn-prediction' && ['riskPyramid', 'featureImportance', 'segmentMatrix', 'probabilityHistogram'].includes(componentName)) {
+        // If body is a direct array, wrap it in { data: [...] }
+        if (Array.isArray(body)) {
+          processedBody = { data: body };
+          console.log(`📦 Wrapped ${componentType} array in data property`);
+        }
+        // If body is an object without 'data' property and looks like array data
+        else if (body && typeof body === 'object' && !('data' in body)) {
+          // Check if it's parameter data (has start_date, etc.) or actual visualization data
+          const paramKeys = ['start_date', 'end_date', 'riskThreshold', 'modelType', 'customerSegment', 'count'];
+          const hasParamKeys = paramKeys.some(key => key in body);
+
+          if (!hasParamKeys) {
+            console.warn(`⚠️ ${componentType} body missing 'data' property and doesn't look like parameters:`, body);
+            // If it has array-like values, try to extract them
+            const values = Object.values(body);
+            if (values.length > 0 && values.every(v => typeof v === 'object')) {
+              processedBody = { data: values };
+              console.log(`📦 Extracted array values from ${componentType} body`);
+            }
+          }
+        }
+        // Body already has correct structure
+        else if (body && body.data) {
+          console.log(`✅ ${componentType} already has correct data structure`);
+        }
+      }
+
+      // Create unique hash for this specific visualization
+      const visualizationKey = `${componentType}-${JSON.stringify(processedBody || {})}`;
+      const vizHash = createFallbackHash(visualizationKey);
+
+      // Check global registry to prevent duplicates
+      if (globalVisualizationRegistryRef.current.has(vizHash)) {
+        const existing = globalVisualizationRegistryRef.current.get(vizHash);
+        console.log(`🚫 Skipping duplicate visualization ${componentType} (already spawned as ${existing?.id})`);
+        continue;
+      }
+
+      // IMMEDIATELY register to prevent duplicates (with pending status)
+      globalVisualizationRegistryRef.current.set(vizHash, {
+        id: 'pending',
+        timestamp: Date.now()
+      });
+
+      console.log(`🔄 Queuing new component: ${componentType}`, processedBody);
+
+      // Pass the processed body - the components should handle the data structure
+      // The processedBody has been validated and transformed as needed
+      console.log(`📊 Component props (processed):`, processedBody);
+      console.log(`📊 Body structure for ${componentType}:`, {
+        isObject: typeof processedBody === 'object' && processedBody !== null,
+        hasDataProperty: processedBody && typeof processedBody === 'object' && 'data' in processedBody,
+        dataValue: processedBody && processedBody.data ? processedBody.data : 'N/A',
+        dataIsArray: processedBody && processedBody.data && Array.isArray(processedBody.data),
+        dataLength: processedBody && processedBody.data && Array.isArray(processedBody.data) ? processedBody.data.length : 'N/A'
+      });
+
+      const spawnPromise = spawnComponent(componentType, processedBody || {})
         .then(result => {
           if (result) {
             console.log(`✅ Successfully spawned: ${componentType}`);
+            // Update registry with actual ID
+            globalVisualizationRegistryRef.current.set(vizHash, {
+              id: result,
+              timestamp: Date.now()
+            });
           } else {
             console.warn(`❌ Failed to spawn: ${componentType}`);
+            // Remove from registry if failed
+            globalVisualizationRegistryRef.current.delete(vizHash);
           }
           return result;
         })
@@ -666,11 +916,12 @@ export default function EnterpriseIQPage() {
       console.log(`📈 Visualization spawning complete: ${successful} successful, ${failed} failed`);
 
       if (failed > 0 && successful === 0) {
-        setErrorWithAutoClear(`Failed to load any visualizations. Check console for details.`);
+        // Don't show error to user - visualizations may still load
+        console.log(`Failed to load visualizations initially, but they may still render.`);
       }
     } catch (error) {
       console.error('Error during visualization spawning:', error);
-      setErrorWithAutoClear('Error occurred while loading visualizations');
+      // Don't show error to user - visualizations may still load
     } finally {
       setComponentSpawning(false);
       setSpawnProgress({ current: 0, total: 0, currentComponent: '' });
@@ -680,11 +931,35 @@ export default function EnterpriseIQPage() {
   const toggleMute = () => {
     const newMutedState = !isMuted;
     setIsMuted(newMutedState);
+
+    // Update the volume of currently playing audio
+    if (currentAudioRef.current) {
+      currentAudioRef.current.volume = newMutedState ? 0 : 0.8;
+    }
+
     console.log(`🔊 Audio ${newMutedState ? 'muted' : 'unmuted'}`);
+  };
+
+  // Suggested queries for quick start with icons
+  const suggestedQueries = [
+    { text: "Show me customer churn risk analysis", icon: "📊" },
+    { text: "What are my top performing products?", icon: "🏆" },
+    { text: "Analyze sales trends for the last quarter", icon: "📈" },
+    { text: "Show customer segmentation insights", icon: "👥" },
+    { text: "What's driving revenue growth?", icon: "💹" },
+    { text: "Identify at-risk customers", icon: "⚠️" },
+    { text: "Compare regional sales performance", icon: "🗺️" },
+    { text: "Show inventory optimization opportunities", icon: "📦" }
+  ];
+
+  const handleSuggestedQuery = (query: string) => {
+    setShowWelcome(false);
+    handleUserQuery(query);
   };
 
   const handleUserQuery = async (query: string, dataPoints?: any[]) => {
     if (!query.trim()) return;
+    setShowWelcome(false);
 
     // Cancel any ongoing requests first
     cancelOngoingRequests();
@@ -692,6 +967,10 @@ export default function EnterpriseIQPage() {
     // Clear previous selections and spawned components for new query
     setUserSelectedChartPoints([]);
     setSpawnedComponents(new Set());
+    occupiedPositionsRef.current.clear(); // Clear grid positions
+    visualizationQueueRef.current.clear(); // Clear any pending visualizations
+    visualizationProcessingLock.current.clear(); // Clear processing locks
+    activeVisualizationTypesRef.current.clear(); // Clear active singletons
 
     // Create new session ID and clear processed visualizations
     const sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -840,8 +1119,8 @@ export default function EnterpriseIQPage() {
                       size: jsonData.audio.data.length
                     });
 
-                    // Process the queue
-                    processAudioQueue();
+                    // Process the queue with interrupt to play immediately
+                    processAudioQueue(true);
 
                     // Update robot state without audio data
                     setRobotState(prev => ({
@@ -863,14 +1142,36 @@ export default function EnterpriseIQPage() {
                 }
               }
 
-              // Normalize visualization key and handle immediately
+              // Normalize visualization key and queue for processing
               if (jsonData.visualization_output && !jsonData.visualisation) {
                 jsonData.visualisation = jsonData.visualization_output;
               }
 
               if (jsonData.visualisation) {
-                console.log('📊 Spawning visualization:', jsonData.visualisation);
-                setVisualisation(jsonData.visualisation);
+                console.log('📊 Raw visualization data:', jsonData.visualisation);
+                console.log('📊 Visualization data type:', typeof jsonData.visualisation);
+
+                // Parse if it's a JSON string
+                let vizData = jsonData.visualisation;
+                if (typeof vizData === 'string') {
+                  try {
+                    vizData = JSON.parse(vizData);
+                    console.log('📊 Parsed visualization data:', vizData);
+                  } catch (parseError) {
+                    console.error('Failed to parse visualization JSON:', parseError);
+                    console.error('Raw string:', vizData);
+                    return;
+                  }
+                }
+
+                console.log('📊 Queueing visualization:', vizData);
+                console.log('📊 Visualization structure:', {
+                  isArray: Array.isArray(vizData),
+                  length: Array.isArray(vizData) ? vizData.length : 'N/A',
+                  firstItem: Array.isArray(vizData) && vizData.length > 0 ? vizData[0] : 'N/A',
+                  firstItemBody: Array.isArray(vizData) && vizData.length > 0 && vizData[0].body ? vizData[0].body : 'N/A'
+                });
+                queueVisualization(vizData);
               }
 
             } catch (e) {
@@ -883,7 +1184,12 @@ export default function EnterpriseIQPage() {
       console.error('Query error:', err);
       const errorMsg = err instanceof Error ? err.message : 'Sorry, I encountered an error processing your request.';
 
-      setErrorWithAutoClear(errorMsg);
+      // Only show network/critical errors, not visualization loading issues
+      if (errorMsg.includes('network') || errorMsg.includes('Network') || errorMsg.includes('fetch') || errorMsg.includes('500') || errorMsg.includes('404')) {
+        setErrorWithAutoClear(errorMsg);
+      } else {
+        console.error('Request error:', errorMsg);
+      }
 
       setRobotState(prev => ({
         ...prev,
@@ -936,101 +1242,142 @@ export default function EnterpriseIQPage() {
     console.log('Chart interaction:', data);
   };
 
-  const toggleRobotVisibility = () => {
-    setIsRobotVisible(!isRobotVisible);
-  };
+  // Robot visibility toggle removed - using chat panel instead
+
+
+  // Error display component
+  const ErrorDisplay = () => (
+    <>
+      {error && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-lg flex items-center space-x-2 max-w-md">
+            <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <p className="text-sm">{error}</p>
+            <button
+              onClick={() => setErrorWithAutoClear(null)}
+              className="ml-auto text-red-500 hover:text-red-700"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  // Robot visibility removed - using chat panel instead
 
   return (
     <DashboardLayout
       title="Enterprise IQ"
       currentPath="/enterprise-iq"
     >
-      <div className="h-[calc(100vh-160px)] overflow-hidden flex flex-col">
-        {/* Main content area with soft pastel border */}
-        <div className="flex-1 min-h-0 relative overflow-hidden border-2 border-accent-tertiary rounded-lg mx-2 mt-2 bg-white">
-          {/* Conversational Canvas */}
-          <ConversationalCanvas
-            components={components}
-            onChartInteraction={handleChartInteraction}
-            onLaserMove={handleLaserMove}
-            conversationHistory={conversations[activeConversationId || ''] || []}
-          />
+      {/* Remove default padding from DashboardLayout by using negative margins */}
+      <div className="h-[calc(100vh-80px)] -mx-4 sm:-mx-6 lg:-mx-8 -my-6 sm:-my-8 relative overflow-hidden bg-gradient-to-b from-white via-purple-50/10 to-violet-50/20">
+              {/* Error Display */}
+              {/* Error display removed - visualizations will render even if initial load fails */}
 
-          {/* Robot Character - Fixed position */}
-          {isRobotVisible && (
-            <RobotCharacter
-              isVisible={isRobotVisible}
-              state={robotState.state}
-              message={robotState.message}
-              initialPosition={{ x: 50, y: 50 }}
-              laserTarget={robotState.laserTarget}
-            />
-          )}
+              {/* Welcome Screen */}
+              {showWelcome && components.length === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-50/50 to-violet-50/50 backdrop-blur-sm z-10">
+                  <div className="max-w-4xl mx-auto p-8 text-center">
+                    <h1 className="text-4xl font-bold text-gray-800 mb-4">
+                      Welcome to Enterprise IQ
+                    </h1>
+                    <p className="text-lg text-gray-600 mb-8">
+                      Your AI-powered business intelligence assistant. Ask questions in natural language to explore your data.
+                    </p>
 
-          {/* Audio Controls - Bottom left corner */}
-          <div className="absolute bottom-4 left-4 flex gap-2 z-30">
-            {/* Play Pending Audio Button */}
-            {audioPlaybackFailed && pendingAudio && (
-              <button
-                onClick={playPendingAudio}
-                className="p-3 bg-green-500/20 hover:bg-green-500/30 rounded-lg transition-all"
-                title="Click to play audio"
-              >
-                <Volume2 className="w-5 h-5 text-green-500" />
-              </button>
-            )}
+                    {/* Quick Start Cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                      {suggestedQueries.map((query, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleSuggestedQuery(query.text)}
+                          className="p-4 bg-white hover:bg-purple-50 rounded-lg shadow-md hover:shadow-lg transition-all border border-gray-200 hover:border-purple-300 group"
+                        >
+                          <div className="text-2xl mb-2">{query.icon}</div>
+                          <div className="text-sm font-medium text-gray-700 group-hover:text-purple-700">
+                            {query.text}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
 
-            {/* Mute Button */}
-            <button
-              onClick={toggleMute}
-              className="p-3 bg-accent/20 hover:bg-accent/30 rounded-lg transition-all"
-              title={isMuted ? 'Unmute' : 'Mute'}
-            >
-              {isMuted ? (
-                <VolumeX className="w-5 h-5 text-error" />
-              ) : (
-                <Volume2 className="w-5 h-5 text-accent" />
+                    <div className="text-sm text-gray-500">
+                      Or type your own question below
+                    </div>
+                  </div>
+                </div>
               )}
-            </button>
-          </div>
 
-        </div>
-
-        {/* Query Input - Fixed height bottom area, same width as canvas */}
-        {showQueryInput && (
-          <div className="h-20 px-2 py-2 flex items-center">
-            <div className="w-full">
-              <QueryInput
-                onSubmit={handleUserQuery}
-                disabled={loading}
+              {/* Conversational Canvas */}
+              <ConversationalCanvas
+                components={components}
+                onChartInteraction={handleChartInteraction}
+                onLaserMove={handleLaserMove}
+                conversationHistory={conversations[activeConversationId || ''] || []}
               />
-            </div>
-          </div>
-        )}
 
-        {/* Show robot button if hidden */}
-        {!isRobotVisible && (
-          <button
-            onClick={toggleRobotVisibility}
-            className="fixed bottom-4 left-4 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded-lg text-white transition-all"
-          >
-            Show Assistant
-          </button>
-        )}
+              {/* Robot Character - Top-left position */}
+              <RobotCharacter
+                isVisible={true}
+                state={robotState.state}
+                message={robotState.message}
+                initialPosition={{ x: 20, y: 20 }}
+                laserTarget={robotState.laserTarget}
+              />
 
-        {/* Show query input button if hidden */}
-        {!showQueryInput && (
-          <button
-            onClick={() => setShowQueryInput(true)}
-            className="fixed bottom-4 right-4 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded-lg text-white transition-all"
-          >
-            Ask Question
-          </button>
-        )}
+              {/* Query Input - Centered at bottom inside canvas */}
+              <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-full max-w-3xl px-4" style={{ zIndex: Z_INDEX.AUDIO_CONTROLS + 1 }}>
+                <QueryInput
+                  onSubmit={handleUserQuery}
+                  disabled={loading}
+                />
+              </div>
 
-        {/* Component spawning progress */}
-        {componentSpawning && (
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-3 bg-blue-600/90 text-white rounded-lg backdrop-blur-sm flex items-center gap-3">
+              {/* Zoom Percentage - Bottom right corner */}
+              <div className="absolute bottom-4 right-4 px-3 py-2 glass-card rounded-lg shadow-lg border border-accent/20" style={{ zIndex: Z_INDEX.AUDIO_CONTROLS }}>
+                <span className="text-sm font-medium text-foreground">
+                  {Math.round(transform.scale * 100)}%
+                </span>
+              </div>
+
+              {/* Audio Controls - Above zoom percentage */}
+              <div className="absolute bottom-16 right-4 flex gap-2" style={{ zIndex: Z_INDEX.AUDIO_CONTROLS }}>
+                {/* Play Pending Audio Button - Only show when needed */}
+                {audioPlaybackFailed && pendingAudio && (
+                  <button
+                    onClick={playPendingAudio}
+                    className="p-3 bg-white/90 hover:bg-gray-100 rounded-lg transition-all shadow-md border border-gray-200"
+                    title="Click to play audio"
+                  >
+                    <Volume2 className="w-5 h-5 text-green-500" />
+                  </button>
+                )}
+
+                {/* Mute/Unmute Button - Only show when audio is playing */}
+                {isAudioPlaying && (
+                  <button
+                    onClick={toggleMute}
+                    className="p-3 bg-white/90 hover:bg-gray-100 rounded-lg transition-all shadow-md border border-gray-200"
+                    title={isMuted ? 'Unmute' : 'Mute'}
+                  >
+                    {isMuted ? (
+                      <VolumeX className="w-5 h-5 text-red-500" />
+                    ) : (
+                      <Volume2 className="w-5 h-5 text-purple-600" />
+                    )}
+                  </button>
+                )}
+              </div>
+      </div>
+
+      {/* Component spawning progress */}
+      {componentSpawning && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-3 bg-blue-600/90 text-white rounded-lg backdrop-blur-sm flex items-center gap-3 z-50">
             <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
             <div className="text-sm">
               {spawnProgress.total > 0 ? (
@@ -1044,17 +1391,6 @@ export default function EnterpriseIQPage() {
             </div>
           </div>
         )}
-
-        {/* Error display - Soft Pastel Theme */}
-        {error && (
-          <div className="fixed top-20 left-1/2 transform -translate-x-1/2 px-6 py-3 glass-card border-2 border-accent/30 bg-accent/10 backdrop-blur-md rounded-2xl shadow-lg z-[9999] animate-fade-in">
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-accent animate-pulse"></div>
-              <span className="text-foreground font-medium">{error}</span>
-            </div>
-          </div>
-        )}
-      </div>
     </DashboardLayout>
   );
 }

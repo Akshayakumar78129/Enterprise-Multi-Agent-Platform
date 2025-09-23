@@ -134,14 +134,13 @@ class FilterEngine:
             python_filters['date_from'] = express_filters['dateFrom']
             python_filters['date_to'] = express_filters['dateTo']
 
-        # Time range (7d, 30d, 90d)
+        # Time range (30d, 90d)
         elif express_filters.get('timeRange'):
             time_map = {
-                '7d': 7,
                 '30d': 30,
                 '90d': 90
             }
-            python_filters['lookback_days'] = time_map.get(express_filters['timeRange'], 90)
+            python_filters['lookback_days'] = time_map.get(express_filters['timeRange'], 30)
 
         # Default lookback
         else:

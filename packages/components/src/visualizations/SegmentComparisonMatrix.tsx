@@ -28,10 +28,28 @@ export const SegmentComparisonMatrix: React.FC<SegmentComparisonMatrixProps> = (
   const [hoveredCell, setHoveredCell] = useState<{segment: string, riskLevel: string} | null>(null);
   const { tooltipData, showTooltip, hideTooltip } = useChartTooltip();
 
+  // Ensure data is an array
+  const safeData = Array.isArray(data) ? data : [];
+
+  // Handle empty data case
+  if (safeData.length === 0) {
+    return (
+      <div className={`flex items-center justify-center h-64 ${className}`}>
+        <div className="text-center text-muted-foreground">
+          <svg className="w-16 h-16 mx-auto mb-2 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+          </svg>
+          <p className="text-sm">No segment comparison data available</p>
+          <p className="text-xs mt-1">Try adjusting your filters or time range</p>
+        </div>
+      </div>
+    );
+  }
+
   // Create matrix data
-  const matrixData = segments.map(segment => 
+  const matrixData = segments.map(segment =>
     riskLevels.map(riskLevel => {
-      const cellData = data.find(d => d.segment === segment && d.riskLevel === riskLevel);
+      const cellData = safeData.find(d => d.segment === segment && d.riskLevel === riskLevel);
       return {
         segment,
         riskLevel,
@@ -41,8 +59,8 @@ export const SegmentComparisonMatrix: React.FC<SegmentComparisonMatrixProps> = (
     })
   );
 
-  const maxCount = Math.max(...data.map(d => d.count));
-  const minCount = Math.min(...data.map(d => d.count));
+  const maxCount = safeData.length > 0 ? Math.max(...safeData.map(d => d.count || 0), 1) : 1;
+  const minCount = safeData.length > 0 ? Math.min(...safeData.map(d => d.count || 0)) : 0;
 
   const getCellColor = (count: number) => {
     if (count === 0) return "#151926"; // dark surface for zero

@@ -27,18 +27,66 @@ export const AIFeatureImportance: React.FC<AIFeatureImportanceProps> = ({
 }) => {
   const [selectedSort, setSelectedSort] = useState(sortBy);
 
-  // Ensure data is an array before spreading
-  const safeData = Array.isArray(data) ? data : [];
+  // Ensure data is an array and fix malformed data
+  let safeData = Array.isArray(data) ? data : [];
+
+  // Fix malformed data from agent
+  safeData = safeData.map((item, index) => {
+    // Fix importance values that might be sent as "905" instead of "90.5"
+    let importance = Number(item.importance) || 0;
+    if (importance > 100) {
+      // Likely missing decimal point - divide by 10
+      importance = importance / 10;
+    }
+
+    // Get the name from the data - use what agent provides
+    let name = item.name || item.label || item.feature || item.factor || "";
+
+    // Only use a generic label if name is completely missing or is just the number value
+    if (!name || name === importance.toString() || name === String(importance * 10)) {
+      // If we have other fields that might contain the name
+      if (item.description) {
+        name = item.description;
+      } else if (item.metric) {
+        name = item.metric;
+      } else {
+        // Only as last resort, use a generic label
+        name = `Feature ${index + 1}`;
+      }
+    }
+
+    return {
+      ...item,
+      name,
+      importance,
+      impact: item.impact || importance
+    };
+  });
+
+  // Handle empty data case
+  if (safeData.length === 0) {
+    return (
+      <div className={`flex items-center justify-center h-64 ${className}`}>
+        <div className="text-center text-muted-foreground">
+          <svg className="w-16 h-16 mx-auto mb-2 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          <p className="text-sm">No feature importance data available</p>
+          <p className="text-xs mt-1">Model needs more data to generate insights</p>
+        </div>
+      </div>
+    );
+  }
 
   const sortedData = [...safeData].sort((a, b) => {
     if (selectedSort === "importance") {
-      return b.importance - a.importance;
+      return (Number(b.importance) || 0) - (Number(a.importance) || 0);
     }
-    return a.name.localeCompare(b.name);
+    return (a.name || "").localeCompare(b.name || "");
   });
 
   const maxImportance = safeData.length > 0
-    ? Math.max(...safeData.map(d => d.importance))
+    ? Math.max(...safeData.map(d => Number(d.importance) || 0))
     : 1;
 
   return (
@@ -57,18 +105,18 @@ export const AIFeatureImportance: React.FC<AIFeatureImportanceProps> = ({
       {/* Horizontal Bar Chart */}
       <div className="space-y-4 mb-6">
         {sortedData.map((feature, index) => {
-          const width = (feature.importance / maxImportance) * 100;
-          const color = feature.color || getFeatureColor(feature.importance, maxImportance);
+          const width = (Number(feature.importance || 0) / maxImportance) * 100;
+          const color = feature.color || getFeatureColor(Number(feature.importance || 0), maxImportance);
           
           return (
             <div
-              key={feature.name}
+              key={`feature-${index}-${feature.name || 'unknown'}`}
               className="group cursor-pointer"
               onClick={(e) => onFeatureClick?.(feature, e)}
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm font-medium text-foreground">{feature.name}</span>
-                <span className="text-sm text-muted">{feature.importance.toFixed(1)}%</span>
+                <span className="text-sm text-muted">{(Number(feature.importance) || 0).toFixed(1)}%</span>
               </div>
               <div className="relative h-6 bg-background rounded-full overflow-hidden">
                 <div
@@ -88,14 +136,14 @@ export const AIFeatureImportance: React.FC<AIFeatureImportanceProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {sortedData.slice(0, 3).map((feature, index) => (
           <div
-            key={feature.name}
+            key={`metric-${index}-${feature.name || 'unknown'}`}
             className="bg-background rounded-lg p-4"
           >
             <div className="flex items-center gap-2 mb-2">
               <span className="text-sm font-medium text-foreground">{feature.name}</span>
             </div>
             <div className="text-2xl font-bold text-foreground">
-              {feature.impact.toFixed(1)}%
+              {(feature.impact || 0).toFixed(1)}%
             </div>
           </div>
         ))}

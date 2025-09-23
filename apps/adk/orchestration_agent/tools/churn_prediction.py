@@ -79,10 +79,13 @@ def _predict_churn_risk_sync(time_period: str, segment_id: Optional[str]) -> str
 
     try:
         # Get dashboard summary data (same data shown in UI)
+        print(f"[churn_prediction] Fetching data with filters: {filters}")
         summary_data = service.get_dashboard_summary(filters)
+        print(f"[churn_prediction] Summary data keys: {summary_data.keys() if summary_data else 'None'}")
 
         # Get customer stats for detailed analysis
         customer_stats = summary_data.get('customerStats', [])
+        print(f"[churn_prediction] Customer stats count: {len(customer_stats)}")
 
         # Get feature importance
         feature_importance = summary_data.get('featureImportance', [])
@@ -254,7 +257,87 @@ Based on ML model feature importance:
 
 This analysis uses the same ML model and data as the Churn Prediction Dashboard,
 ensuring complete consistency between agent responses and dashboard visualizations.
+
+## Visualization Data (Machine-Readable)
 """
+
+        # Add structured visualization data for easier parsing
+        viz_data = {
+            "riskPyramid": [
+                {
+                    "level": "Very High",
+                    "count": risk_counts['Very High'],
+                    "percentage": round(risk_counts['Very High'] / total_customers * 100, 1) if total_customers > 0 else 0,
+                    "color": "#ef4444"
+                },
+                {
+                    "level": "High",
+                    "count": risk_counts['High'],
+                    "percentage": round(risk_counts['High'] / total_customers * 100, 1) if total_customers > 0 else 0,
+                    "color": "#f59e0b"
+                },
+                {
+                    "level": "Medium",
+                    "count": risk_counts['Medium'],
+                    "percentage": round(risk_counts['Medium'] / total_customers * 100, 1) if total_customers > 0 else 0,
+                    "color": "#eab308"
+                },
+                {
+                    "level": "Low",
+                    "count": risk_counts['Low'],
+                    "percentage": round(risk_counts['Low'] / total_customers * 100, 1) if total_customers > 0 else 0,
+                    "color": "#10b981"
+                }
+            ],
+            "featureImportance": [
+                {
+                    "name": feature['name'],
+                    "importance": round(feature['importance'], 1),
+                    "impact": round(feature.get('impact', feature['importance']), 1)
+                }
+                for feature in feature_importance[:8]  # Include top 8 features
+            ],
+            "segmentMatrix": [
+                # Transform to match SegmentComparisonMatrix component expectations
+                # Each item should have: segment, riskLevel, count, percentage
+                item
+                for segment in segment_risk
+                for item in [
+                    {
+                        "segment": segment['segment'],
+                        "riskLevel": "Low",
+                        "count": segment['low'],
+                        "percentage": round(segment['low'] / total_customers * 100, 1) if total_customers > 0 else 0
+                    },
+                    {
+                        "segment": segment['segment'],
+                        "riskLevel": "Medium",
+                        "count": segment['medium'],
+                        "percentage": round(segment['medium'] / total_customers * 100, 1) if total_customers > 0 else 0
+                    },
+                    {
+                        "segment": segment['segment'],
+                        "riskLevel": "High",
+                        "count": segment['high'],
+                        "percentage": round(segment['high'] / total_customers * 100, 1) if total_customers > 0 else 0
+                    },
+                    {
+                        "segment": segment['segment'],
+                        "riskLevel": "Very High",
+                        "count": segment['very_high'],
+                        "percentage": round(segment['very_high'] / total_customers * 100, 1) if total_customers > 0 else 0
+                    }
+                ]
+            ],
+            "overallMetrics": {
+                "totalCustomers": total_customers,
+                "overallRiskPercentage": round(overall_risk_percentage, 1),
+                "atRiskCount": at_risk_count,
+                "averageChurnProbability": round(average_churn_probability, 1)
+            }
+        }
+
+        result += f"```json\n{json.dumps(viz_data, indent=2)}\n```\n"
 
         return result
 

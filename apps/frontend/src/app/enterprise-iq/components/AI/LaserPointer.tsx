@@ -1,5 +1,18 @@
 import React from 'react';
 
+// Z-Index hierarchy system
+const Z_INDEX = {
+  ROBOT: 50,
+  LASER: 999,  // Below components but visible
+  SPEECH_BUBBLE: 100,
+  AUDIO_CONTROLS: 200,
+  CANVAS_BASE: 300,
+  COMPONENTS_BASE: 1000,
+  COMPONENTS_SELECTED: 2000,
+  FULLSCREEN: 5000,
+  FULLSCREEN_CONTROLS: 5001
+};
+
 interface LaserPointerProps {
   origin: { x: number; y: number };
   target: { x: number; y: number };
@@ -35,7 +48,7 @@ export const LaserPointer: React.FC<LaserPointerProps> = ({
         width: '100%',
         height: '100%',
         pointerEvents: 'none',
-        zIndex: 999,
+        zIndex: Z_INDEX.LASER,
       }}
     >
       <svg

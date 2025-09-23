@@ -38,7 +38,7 @@ export default function ChurnPredictionPage() {
     riskPyramidData,
     probabilityArray,
 
-  } = useChurnData(filters, timeRange);
+  } = useChurnData(filters);
 
   // Helper function to show insight card
   const showInsight = (data: InsightData, event?: React.MouseEvent) => {

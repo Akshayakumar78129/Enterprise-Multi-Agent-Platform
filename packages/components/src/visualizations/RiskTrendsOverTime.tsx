@@ -13,8 +13,8 @@ export interface TrendDataPoint {
 
 export interface RiskTrendsOverTimeProps {
   data: TrendDataPoint[];
-  timeRange?: "7d" | "30d" | "90d";
-  onTimeRangeChange?: (range: "7d" | "30d" | "90d") => void;
+  timeRange?: "30d" | "90d";
+  onTimeRangeChange?: (range: "30d" | "90d") => void;
   onDataPointClick?: (dataPoint: TrendDataPoint, event: React.MouseEvent) => void;
   className?: string;
 }
@@ -29,14 +29,13 @@ export const RiskTrendsOverTime: React.FC<RiskTrendsOverTimeProps> = ({
   const [hoveredPoint, setHoveredPoint] = useState<TrendDataPoint | null>(null);
   const { tooltipData, showTooltip, hideTooltip } = useChartTooltip();
 
-  const timeRanges: Array<{value: "7d" | "30d" | "90d", label: string}> = [
-    { value: "7d", label: "7d" },
+  const timeRanges: Array<{value: "30d" | "90d", label: string}> = [
     { value: "30d", label: "30d" },
     { value: "90d", label: "90d" },
   ];
 
   // Compute visible window based on selected range
-  const windowSize = timeRange === "7d" ? 7 : timeRange === "90d" ? 90 : 30;
+  const windowSize = timeRange === "90d" ? 90 : 30;
   const visibleData = data.slice(-Math.min(windowSize, data.length));
 
   // Calculate totals for each risk level (visible window)

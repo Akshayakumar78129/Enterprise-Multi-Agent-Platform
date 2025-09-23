@@ -6,6 +6,18 @@ import dynamic from 'next/dynamic';
 import { getComponentFromRegistry } from './ComponentRegistry';
 import { ComponentErrorBoundary } from '../ErrorBoundary';
 
+// Z-Index hierarchy system (imported from main page)
+const Z_INDEX = {
+  ROBOT: 50,
+  SPEECH_BUBBLE: 100,
+  AUDIO_CONTROLS: 200,
+  CANVAS_BASE: 300,
+  COMPONENTS_BASE: 1000,
+  COMPONENTS_SELECTED: 2000,
+  FULLSCREEN: 5000,
+  FULLSCREEN_CONTROLS: 5001
+};
+
 export interface CanvasComponentData {
   id: string;
   type: string;
@@ -102,8 +114,8 @@ export default function CanvasComponent({
       const deltaY = e.clientY - startY;
       onUpdate({
         size: {
-          width: Math.max(200, startWidth + deltaX),
-          height: Math.max(150, startHeight + deltaY)
+          width: Math.max(500, startWidth + deltaX),  // Increased minimum width to 500
+          height: Math.max(400, startHeight + deltaY)  // Increased minimum height to 400
         }
       });
     };
@@ -150,7 +162,7 @@ export default function CanvasComponent({
         top: component.position.y,
         width: component.minimized ? 'auto' : component.size.width,
         height: component.minimized ? 'auto' : component.size.height,
-        zIndex: isSelected ? 1000 : 100
+        zIndex: isSelected ? Z_INDEX.COMPONENTS_SELECTED : Z_INDEX.COMPONENTS_BASE + (component.zIndex || 0)
       }}
       onClick={handleClick}
     >
@@ -203,7 +215,41 @@ export default function CanvasComponent({
           )}
           {!loading && !error && Component && (
             <ComponentErrorBoundary componentType={`${component.toolId}.${component.type}`}>
-              <Component data={component.data} />
+              <div className="w-full h-full">
+                {/* Pass the data with proper format handling */}
+                {(() => {
+                  console.log(`[CanvasComponent] ${component.type} - component.data:`, component.data);
+                  console.log(`[CanvasComponent] ${component.type} - data structure:`, {
+                    isObject: typeof component.data === 'object' && component.data !== null,
+                    hasDataProperty: component.data && typeof component.data === 'object' && 'data' in component.data,
+                    dataValue: component.data && component.data.data ? component.data.data : 'Direct data',
+                    dataIsArray: component.data && component.data.data && Array.isArray(component.data.data),
+                    directIsArray: Array.isArray(component.data)
+                  });
+
+                  // Handle different data formats
+                  let propsToPass = component.data;
+
+                  // If component.data is already in the correct format { data: [...] }, use it as-is
+                  if (component.data && typeof component.data === 'object' && 'data' in component.data) {
+                    propsToPass = component.data;
+                    console.log(`[CanvasComponent] ${component.type} - Using data as-is (already has data property)`);
+                  }
+                  // If component.data is a direct array, wrap it in { data: [...] }
+                  else if (Array.isArray(component.data)) {
+                    propsToPass = { data: component.data };
+                    console.log(`[CanvasComponent] ${component.type} - Wrapping array in data property`);
+                  }
+                  // Otherwise, assume it's already properly formatted or has other props
+                  else {
+                    propsToPass = component.data || {};
+                    console.log(`[CanvasComponent] ${component.type} - Using data as-is (other format)`);
+                  }
+
+                  console.log(`[CanvasComponent] ${component.type} - Final props:`, propsToPass);
+                  return <Component {...propsToPass} />;
+                })()}
+              </div>
             </ComponentErrorBoundary>
           )}
 
