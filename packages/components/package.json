@@ -4,10 +4,15 @@
   "main": "src/index.tsx",
   "types": "src/index.tsx",
   "dependencies": {
+    "clsx": "^2.0.0",
+    "date-fns": "^2.30.0",
     "install": "^0.13.0",
+    "lucide-react": "^0.263.1",
     "next": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "recharts": "^2.9.0",
+    "tailwind-merge": "^2.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.4.0",
