@@ -310,16 +310,21 @@ As per the new architecture, visualization components should:
 """ + json.dumps(COMPONENT_SCHEMA, indent=2) + """
 
 ## IMPORTANT: Tool and Component Selection
-The schema above shows TOOLS (like "sales-performance", "product-performance") and each tool has a "components" array. 
+The schema above shows TOOLS (like "sales-performance", "product-performance") and each tool has a "components" array.
 You must:
 1. ANALYZE the ADK response to identify ALL tools that were called/executed
 2. For EACH tool found in the ADK response, SELECT THE APPROPRIATE TOOL NAME from the schema keys
-3. SELECT COMPONENT NAME FROM THE "components" ARRAY of each identified tool
-4. INCLUDE BOTH the tool name and the component details for ALL tools in your response
+3. SELECT ALL RELEVANT COMPONENTS from the "components" ARRAY of each identified tool
+4. INCLUDE BOTH the tool name and the component details for ALL components in your response
 5. If NO tools were called in the ADK response, return an empty array []
 6. If MULTIPLE tools were called, include components for ALL of them
-7. For each tool, you must select the most appropriate component from the "components" array
-8. Each tool must have only one component, of the best fit for the analysis.
+7. For churn-prediction tool specifically, include ALL relevant visualizations mentioned:
+   - riskPyramid (if risk distribution is discussed)
+   - featureImportance (if key factors are mentioned)
+   - segmentMatrix (if segment analysis is present)
+   - temporalRisk (if time trends are shown)
+   - probabilityHistogram (if probability distribution is mentioned)
+8. Return MULTIPLE component objects if multiple visualizations are appropriate for the analysis
 
 ## Input Format
 You will receive:
@@ -331,20 +336,36 @@ You will receive:
 Return a JSON array with METADATA ONLY from the user query:
 
 **CRITICAL: Return metadata parameters ONLY, no data arrays!**
+**IMPORTANT: Return MULTIPLE components for comprehensive analysis!**
 
-**For all components - METADATA ONLY:**
+**Example for churn-prediction with MULTIPLE components:**
 ```json
-{
-  "toolname": "sales-performance",
-  "componentName": "timeSeries",
-  "body": {
-    "dateFrom": "2024-01-01",
-    "dateTo": "2024-03-31",
-    "dimension": "region",
-    "metric": "revenue",
-    "time_granularity": "monthly"
+[
+  {
+    "toolname": "churn-prediction",
+    "componentName": "riskPyramid",
+    "body": {
+      "dateFrom": "2021-01-01",
+      "dateTo": "2021-12-31"
+    }
+  },
+  {
+    "toolname": "churn-prediction",
+    "componentName": "featureImportance",
+    "body": {
+      "dateFrom": "2021-01-01",
+      "dateTo": "2021-12-31"
+    }
+  },
+  {
+    "toolname": "churn-prediction",
+    "componentName": "segmentMatrix",
+    "body": {
+      "dateFrom": "2021-01-01",
+      "dateTo": "2021-12-31"
+    }
   }
-}
+]
 ```
 
 **For heatmap components:**
@@ -485,19 +506,37 @@ Return a JSON array with METADATA ONLY from the user query:
 
 ## CRITICAL: Date Extraction Example
 
-### EXAMPLE OF CORRECT DATE EXTRACTION:
+### EXAMPLE OF CORRECT EXTRACTION WITH MULTIPLE COMPONENTS:
 **User Query**: "Show me churn risk analysis"
-**ADK Response**: "I'll analyze customer churn risk for the period from 2021-10-01 to 2021-12-31. Looking at the data..."
-**CORRECT EXTRACTION**:
+**ADK Response**: "I'll analyze customer churn risk for the period from 2021-01-01 to 2021-12-31. Looking at risk distribution, key factors, and segment analysis..."
+**CORRECT EXTRACTION** (return ALL relevant components):
 ```json
-{
-  "toolname": "churn-prediction",
-  "componentName": "riskPyramid",
-  "body": {
-    "dateFrom": "2021-10-01",  // EXTRACTED FROM ADK TEXT: "from 2021-10-01"
-    "dateTo": "2021-12-31"      // EXTRACTED FROM ADK TEXT: "to 2021-12-31"
+[
+  {
+    "toolname": "churn-prediction",
+    "componentName": "riskPyramid",
+    "body": {
+      "dateFrom": "2021-01-01",
+      "dateTo": "2021-12-31"
+    }
+  },
+  {
+    "toolname": "churn-prediction",
+    "componentName": "featureImportance",
+    "body": {
+      "dateFrom": "2021-01-01",
+      "dateTo": "2021-12-31"
+    }
+  },
+  {
+    "toolname": "churn-prediction",
+    "componentName": "segmentMatrix",
+    "body": {
+      "dateFrom": "2021-01-01",
+      "dateTo": "2021-12-31"
+    }
   }
-}
+]
 ```
 **WRONG** (DO NOT DO THIS):
 ```json
@@ -840,7 +879,13 @@ async def get_visualisation(user_query: str, adk_response: str) -> dict:
        - "last month" → Previous month range
        - If still no dates: Omit date fields to let backend use its own defaults
 
-    Please analyze the above input and return the appropriate visualization components as a JSON array.
+    IMPORTANT REMINDERS FOR CHURN-PREDICTION:
+    - Return ALL relevant visualizations (riskPyramid, featureImportance, segmentMatrix)
+    - Each visualization should be a separate object in the array
+    - DO NOT limit yourself to just one component
+    - If the ADK response mentions risk levels, key factors, and segments, return ALL THREE
+
+    Please analyze the above input and return ALL appropriate visualization components as a JSON array.
     """
 
     try:

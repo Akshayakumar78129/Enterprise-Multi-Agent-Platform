@@ -141,6 +141,9 @@ class ChurnProcessingService:
     async def get_customer_stats(self, filters: Dict) -> List[Dict]:
         """Port of Express getCustomerStats - uses ML predictor with service data"""
         try:
+            # Log the incoming filters to debug
+            print(f"[ChurnProcessingService] get_customer_stats filters: {filters}")
+
             # Ensure model is trained
             await self._ensure_model_trained()
 
@@ -154,10 +157,16 @@ class ChurnProcessingService:
             db_filters.pop('segment', None)
             db_filters.pop('productCategories', None)
 
+            # Log the DB filters being used
+            print(f"[ChurnProcessingService] DB filters: {db_filters}")
+
             # Get data from database using data service
             txns_res = await self.data_service.get_transactions(db_filters)
             loyalty_res = await self.data_service.get_loyalty(db_filters)
             customers_res = await self.data_service.get_customers(db_filters)
+
+            # Log the data counts
+            print(f"[ChurnProcessingService] Data counts - Txns: {len(txns_res.get('rows', []))}, Loyalty: {len(loyalty_res.get('rows', []))}, Customers: {len(customers_res.get('rows', []))}")
 
             # Use ML predictor to get predictions
             predictions_df = self.ml_predictor.predict_from_service_data(
@@ -168,6 +177,11 @@ class ChurnProcessingService:
 
             if predictions_df.empty:
                 return []
+
+            # Log prediction statistics
+            avg_risk = predictions_df['risk_percentage'].mean() if 'risk_percentage' in predictions_df else 0
+            high_risk_count = len(predictions_df[predictions_df['risk_level'] == 'High']) if 'risk_level' in predictions_df else 0
+            print(f"[ChurnProcessingService] Predictions - Avg Risk: {avg_risk:.1f}%, High Risk Count: {high_risk_count}")
 
             # Format results for API response
             results = []

@@ -203,11 +203,10 @@ export default function EnterpriseIQPage() {
     const audioData = audioQueueRef.current.shift();
     if (!audioData) return;
 
-    console.log('🎵 Processing audio from queue:');
-    console.log(`   Hash: ${audioData.hash}`);
-    console.log(`   Size: ${audioData.size} bytes`);
-    console.log(`   Type: ${audioData.mimeType}`);
-    console.log(`   Remaining in queue: ${audioQueueRef.current.length}`);
+    // Log only essential info
+    if (audioQueueRef.current.length > 0) {
+      console.log(`🎵 Processing audio queue (${audioQueueRef.current.length + 1} items)`);
+    }
 
     // Stop current audio if playing
     if (currentAudioRef.current) {
@@ -238,22 +237,8 @@ export default function EnterpriseIQPage() {
     isPlayingRef.current = true;
     setIsAudioPlaying(true); // Update state for UI
 
-    // Set up event listeners with detailed logging
-    audioElement.addEventListener('loadstart', () => {
-      console.log(`🎵 Audio loading started (hash: ${audioData.hash})`);
-    });
-
-    audioElement.addEventListener('loadeddata', () => {
-      console.log(`🎵 Audio data loaded - Duration: ${audioElement.duration}s`);
-    });
-
-    audioElement.addEventListener('canplay', () => {
-      console.log(`🎵 Audio can start playing`);
-    });
-
+    // Set up event listeners (minimal logging)
     audioElement.addEventListener('ended', () => {
-      console.log(`🎵 Audio finished playing (hash: ${audioData.hash}, duration: ${audioElement.duration}s)`);
-      console.log(`📊 Queue status after playback: ${audioQueueRef.current.length} items remaining`);
       isPlayingRef.current = false;
       URL.revokeObjectURL(audioData.url);
       currentAudioRef.current = null;
@@ -264,17 +249,27 @@ export default function EnterpriseIQPage() {
       }
 
       // Process next audio in queue with a small delay
-      console.log(`🔄 Will process next audio in queue after 200ms delay`);
       setTimeout(() => {
-        console.log('⏰ Delay complete, calling processAudioQueue');
         processAudioQueue();
       }, 200);
     });
 
     audioElement.addEventListener('error', (e) => {
-      console.error(`❌ Audio playback error (hash: ${audioData.hash}):`, e);
-      console.error(`   Error code: ${audioElement.error?.code}`);
-      console.error(`   Error message: ${audioElement.error?.message}`);
+      // Handle audio errors more gracefully
+      const errorCode = audioElement.error?.code;
+      const errorMessages: Record<number, string> = {
+        1: 'Audio loading aborted',
+        2: 'Network error loading audio',
+        3: 'Audio decoding error',
+        4: 'Audio format not supported'
+      };
+
+      const errorMessage = errorMessages[errorCode || 0] || 'Unknown audio error';
+
+      // Only log a concise warning instead of multiple error lines
+      console.warn(`Audio playback issue: ${errorMessage} (${audioData.hash})`);
+
+      // Clean up
       isPlayingRef.current = false;
       URL.revokeObjectURL(audioData.url);
       currentAudioRef.current = null;
@@ -284,33 +279,24 @@ export default function EnterpriseIQPage() {
         setIsAudioPlaying(false);
       }
 
-      // Process next audio in queue
+      // Process next audio in queue silently
       setTimeout(processAudioQueue, 100);
     });
 
-    audioElement.addEventListener('timeupdate', () => {
-      // Log progress occasionally (every 2 seconds)
-      if (audioElement.currentTime > 0 && Math.floor(audioElement.currentTime) % 2 === 0) {
-        console.log(`🔊 Audio progress: ${audioElement.currentTime.toFixed(1)}s / ${audioElement.duration.toFixed(1)}s`);
-      }
-    });
+    // Remove verbose timeupdate logging to reduce console noise
 
     audioElement.play().then(() => {
-      console.log(`✅ Audio playback started successfully (hash: ${audioData.hash})`);
-      console.log(`   Duration: ${audioElement.duration}s`);
-      console.log(`   Volume: ${audioElement.volume}`);
-      console.log(`   Queue remaining: ${audioQueueRef.current.length}`);
+      // Successfully started playback - log minimal info
+      console.log(`🎵 Audio started (${audioData.hash})`);
       setAudioPlaybackFailed(false);
       setPendingAudio(null);
     }).catch((error) => {
-      console.error(`❌ Audio playback failed (hash: ${audioData.hash}):`, error);
-      console.error(`   Error name: ${error.name}`);
-      console.error(`   Error message: ${error.message}`);
+      // Handle playback errors gracefully
       isPlayingRef.current = false;
 
       // Some browsers require user interaction before playing audio
       if (error.name === 'NotAllowedError') {
-        console.warn('Audio autoplay blocked by browser. User interaction required.');
+        console.info('Audio autoplay blocked - user interaction required');
         setAudioPlaybackFailed(true);
         setPendingAudio({
           url: audioData.url,
@@ -318,8 +304,8 @@ export default function EnterpriseIQPage() {
           mimeType: audioData.mimeType
         });
       } else {
-        // For other errors, clean up the URL
-        console.error('Cleaning up failed audio and trying next in queue');
+        // For other errors, silently skip and continue
+        console.warn(`Audio skipped: ${error.name || 'playback error'}`);
         URL.revokeObjectURL(audioData.url);
         currentAudioRef.current = null;
         // Process next audio in queue
@@ -331,8 +317,6 @@ export default function EnterpriseIQPage() {
   // Simplified audio handling - similar to web folder
   useEffect(() => {
     if (robotState.audioData?.url && robotState.audioData?.blob) {
-      console.log('🎵 New audio received, adding to queue');
-
       // Simply add to queue without complex validation
       const audioItem = {
         url: robotState.audioData.url,
@@ -343,7 +327,6 @@ export default function EnterpriseIQPage() {
       };
 
       audioQueueRef.current.push(audioItem);
-      console.log(`🎵 Audio queue length: ${audioQueueRef.current.length}`);
 
       // Process queue if not already playing
       if (!isPlayingRef.current) {

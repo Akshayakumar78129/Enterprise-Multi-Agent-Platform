@@ -76,6 +76,18 @@ class ChurnMLPredictor:
                 avg_value = 0.0
 
             total_sales = float(cust_txns['net_sales_amount'].sum()) if not cust_txns.empty else 0.0
+
+            # Add time-based features to make predictions time-aware
+            if not cust_txns.empty and 'transaction_date' in cust_txns.columns:
+                # Convert transaction dates to datetime if they're strings
+                cust_txns['transaction_date'] = pd.to_datetime(cust_txns['transaction_date'])
+
+                # Extract year and quarter from transactions
+                avg_year = cust_txns['transaction_date'].dt.year.mean() if not cust_txns.empty else 2021
+                avg_quarter = cust_txns['transaction_date'].dt.quarter.mean() if not cust_txns.empty else 2
+            else:
+                avg_year = 2021
+                avg_quarter = 2
             if pd.isna(total_sales):
                 total_sales = 0.0
 
@@ -89,7 +101,9 @@ class ChurnMLPredictor:
                 'rfm_score': float(loyalty_row.get('rfm_score', 0) or 0),
                 'lifetime_sales': float(loyalty_row.get('lifetime_sales', 0) or 0),
                 'loyalty_status': loyalty_row.get('loyalty_status', 'Unknown'),
-                'last_purchase_date': cust_txns['txn_date'].max() if not cust_txns.empty else None
+                'last_purchase_date': cust_txns['txn_date'].max() if not cust_txns.empty else None,
+                'avg_year': avg_year,  # Time-based feature
+                'avg_quarter': avg_quarter  # Time-based feature
             }
 
             customer_features.append(features)
@@ -97,13 +111,15 @@ class ChurnMLPredictor:
         # Convert to DataFrame
         result_df = pd.DataFrame(customer_features)
 
-        # Prepare feature array for ML model
+        # Prepare feature array for ML model (including time features)
         self.feature_cols = [
             'days_since_last_activity',
             'transaction_count',
             'avg_transaction_value',
             'rfm_score',
-            'lifetime_sales'
+            'lifetime_sales',
+            'avg_year',  # Add time features
+            'avg_quarter'
         ]
 
         # Create feature array with proper handling of missing values

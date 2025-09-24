@@ -13,7 +13,7 @@ from domains.churn_prediction.sync_processing_service import SyncChurnProcessing
 
 
 def predict_churn_risk(
-    time_period: str = "last_90_days",
+    time_period: str = "default",
     segment_id: Optional[str] = None,
     include_visualization: bool = False,
     training_epochs: int = 100,
@@ -23,8 +23,26 @@ def predict_churn_risk(
     Predict customer churn risk using the shared ML predictor.
     This ensures consistency with the dashboard data.
 
+    IMPORTANT: Parse the user's date request and pass it in time_period!
+
     Args:
-        time_period: Analysis period ('last_30_days', 'last_90_days', 'last_180_days', 'last_year', or date range)
+        time_period: Analysis period - MUST be one of:
+            - "default" - Uses full year 2021 (default if not specified)
+            - "last_30_days" - Last 30 days from current date
+            - "last_90_days" - Last 90 days from current date
+            - "last_180_days" - Last 180 days from current date
+            - "last_year" - Last 365 days from current date
+            - "YYYY" - Full year (e.g., "2017", "2018", "2019", "2020", "2021")
+            - "YYYY-MM-DD:YYYY-MM-DD" - Custom date range (e.g., "2017-01-01:2017-12-31")
+            - "QX YYYY" - Quarter (e.g., "Q1 2017", "Q4 2021")
+
+            EXAMPLES FROM USER QUERIES:
+            - "churn risk for 2017" → time_period="2017"
+            - "churn risk for Q4 2021" → time_period="Q4 2021"
+            - "churn risk from Jan to March 2019" → time_period="2019-01-01:2019-03-31"
+            - "analyze churn for last 30 days" → time_period="last_30_days"
+            - "churn risk" (no date specified) → time_period="default"
+
         segment_id: Optional customer segment to analyze
         include_visualization: Whether to include visualizations (not implemented for consistency)
         training_epochs: Number of training epochs for the ML model (kept for compatibility)
@@ -134,10 +152,67 @@ The requested time period (last year from {current_date.strftime('%Y-%m-%d')}) i
 Please specify a date range within the available data or use the default view.
 """
     else:
-        # Default to full year 2021 (changed from Q4)
-        filters['dateFrom'] = '2021-01-01'
-        filters['dateTo'] = '2021-12-31'
-        filters['timeRange'] = 'full_year'
+        # Check if time_period contains a custom date range or year
+        # Handle formats like: "2017", "2017-01-01:2017-12-31", "2017-01-01 to 2017-12-31"
+
+        # Check for year only (e.g., "2017", "2018", etc.)
+        if time_period and time_period.isdigit() and len(time_period) == 4:
+            year = int(time_period)
+            filters['dateFrom'] = f'{year}-01-01'
+            filters['dateTo'] = f'{year}-12-31'
+            print(f"[churn_prediction] Parsed year {year} to date range: {filters['dateFrom']} to {filters['dateTo']}")
+
+        # Check for date range with colon separator (e.g., "2017-01-01:2017-12-31")
+        elif ':' in time_period:
+            parts = time_period.split(':')
+            if len(parts) == 2:
+                filters['dateFrom'] = parts[0].strip()
+                filters['dateTo'] = parts[1].strip()
+                print(f"[churn_prediction] Parsed date range: {filters['dateFrom']} to {filters['dateTo']}")
+
+        # Check for date range with " to " separator (e.g., "2017-01-01 to 2017-12-31")
+        elif ' to ' in time_period.lower():
+            parts = time_period.lower().split(' to ')
+            if len(parts) == 2:
+                filters['dateFrom'] = parts[0].strip()
+                filters['dateTo'] = parts[1].strip()
+                print(f"[churn_prediction] Parsed date range: {filters['dateFrom']} to {filters['dateTo']}")
+
+        # Check for quarter format (e.g., "Q1 2017", "2017 Q1")
+        elif 'q' in time_period.lower():
+            import re
+            match = re.search(r'(q[1-4])\s*(\d{4})|(\d{4})\s*(q[1-4])', time_period.lower())
+            if match:
+                groups = match.groups()
+                quarter = groups[0] or groups[3]
+                year = groups[1] or groups[2]
+
+                quarter_ranges = {
+                    'q1': ('01-01', '03-31'),
+                    'q2': ('04-01', '06-30'),
+                    'q3': ('07-01', '09-30'),
+                    'q4': ('10-01', '12-31')
+                }
+
+                if quarter in quarter_ranges:
+                    start, end = quarter_ranges[quarter]
+                    filters['dateFrom'] = f'{year}-{start}'
+                    filters['dateTo'] = f'{year}-{end}'
+                    print(f"[churn_prediction] Parsed quarter {quarter.upper()} {year}: {filters['dateFrom']} to {filters['dateTo']}")
+
+        # Default to full year 2021 if no pattern matched or "default" specified
+        elif time_period == "default" or not time_period:
+            filters['dateFrom'] = '2021-01-01'
+            filters['dateTo'] = '2021-12-31'
+            filters['timeRange'] = 'full_year'
+            print(f"[churn_prediction] Using default date range (full 2021): {filters['dateFrom']} to {filters['dateTo']}")
+
+        # Fallback for any unrecognized format
+        else:
+            filters['dateFrom'] = '2021-01-01'
+            filters['dateTo'] = '2021-12-31'
+            filters['timeRange'] = 'full_year'
+            print(f"[churn_prediction] Unrecognized time_period '{time_period}', using default (full 2021): {filters['dateFrom']} to {filters['dateTo']}")
 
     # Add segment filter if specified
     if segment_id:
