@@ -7,12 +7,18 @@ import { v4 as uuidv4 } from 'uuid';
 import { DashboardLayout } from 'components/index';
 import { Volume2, VolumeX } from 'lucide-react';
 import { RootState } from '@/store';
-import { addComponent } from '@/store/slices/canvasSlice';
+import { addComponent, replaceComponentByType } from '@/store/slices/canvasSlice';
 import {
   ConversationalCanvas,
   RobotCharacter,
   QueryInput
 } from './components';
+
+// Import new configuration modules
+import { getToolApiConfig } from './config/toolApiRegistry';
+import { normalizeMetadata } from './config/normalizeMetadata';
+import { summaryClient } from './services/summaryClient';
+import { mapSummaryToProps } from './config/componentPropMappers';
 
 interface RobotState {
   state: 'idle' | 'thinking' | 'speaking' | 'pointing' | 'error';
@@ -50,7 +56,7 @@ const componentRegistry: any = {
     riskPyramid: dynamic(() => import('components').then(mod => mod.RiskPyramid)),
     featureImportance: dynamic(() => import('components').then(mod => mod.AIFeatureImportance)),
     probabilityHistogram: dynamic(() => import('components').then(mod => mod.ProbabilityHistogram)),
-    temporalRisk: dynamic(() => import('components').then(mod => mod.RiskPyramid)), // Map to RiskPyramid as fallback
+    temporalRisk: dynamic(() => import('components').then(mod => mod.LineChart)), // Use LineChart for risk trends over time
     segmentMatrix: dynamic(() => import('components').then(mod => mod.SegmentComparisonMatrix)), // Map to SegmentComparisonMatrix
     kpiTiles: dynamic(() => import('components').then(mod => mod.KPITiles)),
   },
@@ -95,16 +101,7 @@ export default function EnterpriseIQPage() {
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioQueueRef = useRef<{ url: string; blob: Blob; mimeType: string; hash: string; size: number }[]>([]);
   const isPlayingRef = useRef(false);
-  const audioSequenceRef = useRef<number>(0);
-  const isDevelopmentMode = process.env.NODE_ENV === 'development';
-  const audioProcessingGuardRef = useRef<boolean>(false);
-  const lastProcessedAudioRef = useRef<string>('');
-  // Removed audio buffering - now using direct queue processing
-  const sseStatsRef = useRef({ totalChunks: 0, audioChunks: 0, textChunks: 0, duplicates: 0 });
-  const textAudioCorrelationRef = useRef<Map<string, { text: string; audioHashes: string[] }>>(new Map());
   const sseReaderRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
-  const processedChunksRef = useRef<Set<string>>(new Set());
-  const processedAudioHashesRef = useRef<Set<string>>(new Set());
 
   // Helper function to create robust content hash
   const createContentHash = async (data: any, includeTimestamp: boolean = false): Promise<string> => {
@@ -135,20 +132,10 @@ export default function EnterpriseIQPage() {
     return Math.abs(hash).toString(36).substring(0, 12);
   };
 
-  // Global visualization registry to prevent duplicates across sessions
-  const globalVisualizationRegistryRef = useRef<Map<string, { id: string; timestamp: number }>>(new Map());
   const [spawnedComponents, setSpawnedComponents] = useState<Set<string>>(new Set());
-  const processedVisualizationsRef = useRef<Set<string>>(new Set());
-  const currentSessionRef = useRef<string>('');
-
-  // STRICT SINGLETON: Only ONE instance of each visualization TYPE allowed
   const activeVisualizationTypesRef = useRef<Set<string>>(new Set());
-
-  // Visualization queue to prevent duplicate spawning
-  const visualizationQueueRef = useRef<Map<string, any>>(new Map());
-  const processingVisualizationRef = useRef(false);
   const occupiedPositionsRef = useRef<Set<string>>(new Set());
-  const visualizationProcessingLock = useRef<Set<string>>(new Set()); // Synchronous lock
+  const currentQuerySessionRef = useRef<Set<string>>(new Set());
 
 
   // Session state for SSE communication
@@ -341,82 +328,29 @@ export default function EnterpriseIQPage() {
     });
   }, [isMuted]);
 
-  // Note: Removed processBufferedAudio - now using direct queue processing
-
-  // Audio handling with smart queue system and development mode guards
+  // Simplified audio handling - similar to web folder
   useEffect(() => {
     if (robotState.audioData?.url && robotState.audioData?.blob) {
-      // Development mode guard to prevent double execution
-      if (isDevelopmentMode && audioProcessingGuardRef.current) {
-        console.log('🛡️ Development mode: Preventing duplicate audio processing');
-        return;
-      }
+      console.log('🎵 New audio received, adding to queue');
 
-      audioProcessingGuardRef.current = true;
-
-      // Reset guard after a short delay to allow next chunk
-      setTimeout(() => {
-        audioProcessingGuardRef.current = false;
-      }, 50);
-
-      // Use fallback hash for immediate processing, crypto hash for detailed logging
-      const audioHash = createFallbackHash(robotState.audioData.blob);
-      const audioSize = robotState.audioData.blob.size;
-
-      // Additional guard: check if this is the same audio as last processed
-      if (lastProcessedAudioRef.current === audioHash) {
-        console.log(`🛡️ Same audio hash as last processed (${audioHash}), skipping`);
-        audioProcessingGuardRef.current = false;
-        return;
-      }
-
-      lastProcessedAudioRef.current = audioHash;
-
-      // Check if this audio is already in queue (additional safety)
-      const isDuplicateInQueue = audioQueueRef.current.some(item => item.hash === audioHash);
-      if (isDuplicateInQueue) {
-        console.log(`🚫 Audio already in queue (hash: ${audioHash}), skipping`);
-        URL.revokeObjectURL(robotState.audioData.url); // Clean up unused URL
-        return;
-      }
-
-      // Validate audio size (skip empty or too small audio)
-      if (audioSize < 1000) { // Less than 1KB is likely invalid
-        console.log(`🚫 Skipping tiny audio chunk (${audioSize} bytes)`);
-        URL.revokeObjectURL(robotState.audioData.url);
-        return;
-      }
-
-      // Add to queue with metadata
+      // Simply add to queue without complex validation
       const audioItem = {
         url: robotState.audioData.url,
         blob: robotState.audioData.blob,
         mimeType: robotState.audioData.mimeType,
-        hash: audioHash,
-        size: audioSize
+        hash: `audio-${Date.now()}`,
+        size: robotState.audioData.blob.size
       };
 
       audioQueueRef.current.push(audioItem);
-      audioSequenceRef.current++;
+      console.log(`🎵 Audio queue length: ${audioQueueRef.current.length}`);
 
-      console.log(`🎵 Audio added to queue:`);
-      console.log(`   Sequence: ${audioSequenceRef.current}`);
-      console.log(`   Hash: ${audioHash}`);
-      console.log(`   Size: ${audioSize} bytes`);
-      console.log(`   Current queue: ${audioQueueRef.current.map(a => a.hash).join(', ')}`);
-      console.log(`   Is currently playing: ${isPlayingRef.current}`);
-
-      // Process queue - only if not already playing
+      // Process queue if not already playing
       if (!isPlayingRef.current) {
-        console.log('🚀 Starting queue processing (not currently playing)');
         processAudioQueue();
-      } else {
-        console.log('⏸️ Audio already playing, will process after current finishes');
       }
-
-      // Guard is already reset above after 50ms
     }
-  }, [robotState.audioData]); // Removed processAudioQueue from deps to prevent re-renders
+  }, [robotState.audioData]);
 
   // Manual audio play function
   const playPendingAudio = () => {
@@ -454,18 +388,9 @@ export default function EnterpriseIQPage() {
         try {
           sseReaderRef.current.cancel();
         } catch (e) {
-          console.warn('Error canceling SSE reader on unmount:', e);
+          console.warn('Error canceling SSE on unmount:', e);
         }
       }
-
-      // Clear processed chunks and visualizations
-      processedChunksRef.current.clear();
-      processedVisualizationsRef.current.clear();
-      processedAudioHashesRef.current.clear();
-      audioSequenceRef.current = 0;
-      textAudioCorrelationRef.current.clear();
-      sseStatsRef.current = { totalChunks: 0, audioChunks: 0, textChunks: 0, duplicates: 0 };
-      console.log('🧹 Cleared all processed data on component unmount');
     };
   }, [pendingAudio]);
 
@@ -473,10 +398,9 @@ export default function EnterpriseIQPage() {
   const cancelOngoingRequests = useCallback(() => {
     if (sseReaderRef.current) {
       try {
-        console.log('🚫 Canceling ongoing SSE request');
         sseReaderRef.current.cancel();
       } catch (e) {
-        console.warn('Error canceling ongoing SSE request:', e);
+        console.warn('Error canceling SSE:', e);
       }
       sseReaderRef.current = null;
     }
@@ -484,7 +408,6 @@ export default function EnterpriseIQPage() {
     // Stop current audio
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
-      currentAudioRef.current.currentTime = 0;
       isPlayingRef.current = false;
     }
 
@@ -493,14 +416,6 @@ export default function EnterpriseIQPage() {
       URL.revokeObjectURL(audio.url);
     });
     audioQueueRef.current = [];
-
-    // Clear processed data for new query
-    processedChunksRef.current.clear();
-    processedAudioHashesRef.current.clear();
-    audioSequenceRef.current = 0;
-    textAudioCorrelationRef.current.clear();
-    sseStatsRef.current = { totalChunks: 0, audioChunks: 0, textChunks: 0, duplicates: 0 };
-    console.log('🧹 Cleared all processed data for new query');
   }, []);
 
   // Helper function to check if component is visible (not minimized and exists)
@@ -516,55 +431,44 @@ export default function EnterpriseIQPage() {
     setComponentSpawning(true);
     setSpawnProgress(prev => ({ ...prev, currentComponent: componentType }));
 
-    // DATA VALIDATION: Check if props has valid data for visualization
+    // DATA VALIDATION: Minimal validation - allow components to handle their own data
     console.log(`🔍 [spawnComponent] Component: ${componentType}`);
     console.log(`🔍 [spawnComponent] Props received:`, JSON.stringify(props, null, 2));
 
-    if (!props || Object.keys(props).length === 0) {
-      console.warn(`⚠️ No data provided for ${componentType}, skipping spawn`);
-      setComponentSpawning(false);
-      return null;
+    // Allow null/undefined props - components may fetch their own data
+    // This matches the web folder implementation which has minimal validation
+    if (props === null) {
+      console.log(`⚠️ Null props for ${componentType}, passing empty object`);
+      props = {};
     }
 
-    // Check for common data fields that indicate actual content
-    const hasValidData =
-      props.data ||
-      props.chart_data ||
-      props.values ||
-      props.series ||
-      props.datasets ||
-      props.labels ||
-      props.categories ||
-      props.metrics ||
-      (Array.isArray(props) && props.length > 0);
-
-    if (!hasValidData) {
-      console.warn(`⚠️ No valid visualization data found in props for ${componentType}:`, props);
-      setComponentSpawning(false);
-      return null;
+    // Log data structure for debugging but don't block spawning
+    if (props && typeof props === 'object') {
+      if (props.data !== undefined) {
+        console.log(`📊 Component ${componentType} has data property:`, {
+          isArray: Array.isArray(props.data),
+          length: Array.isArray(props.data) ? props.data.length : 'N/A',
+          type: typeof props.data
+        });
+      }
+      console.log(`✅ Proceeding with spawn for ${componentType}`);
     }
 
-    // STRICT SINGLETON CHECK: Only ONE of each type allowed globally
-    if (activeVisualizationTypesRef.current.has(componentType)) {
-      console.log(`🔒 SINGLETON: ${componentType} already active, blocking duplicate`);
+    // CHECK 1: Is this a duplicate within the SAME query session?
+    if (currentQuerySessionRef.current.has(componentType)) {
+      console.log(`🚫 Ignoring duplicate ${componentType} in same query session`);
       setComponentSpawning(false);
-      return null;
+      return null; // Skip duplicates in the same query
     }
 
-    // Check if this type already exists in current components
+    // CHECK 2: Does this component exist from a PREVIOUS query?
     const existingOfType = Object.values(components).find(
       comp => `${comp.toolId}.${comp.type}` === componentType
     );
 
-    if (existingOfType) {
-      console.log(`🚫 Component ${componentType} already exists (id: ${existingOfType.id}), blocking duplicate`);
-      setComponentSpawning(false);
-      return null;
-    }
-
-    // Mark this type as active IMMEDIATELY
-    activeVisualizationTypesRef.current.add(componentType);
-    console.log(`✅ Marked ${componentType} as active singleton`);
+    // Mark this type as spawned in current session
+    currentQuerySessionRef.current.add(componentType);
+    console.log(`✅ Marked ${componentType} as spawned in current query session`);
 
     const id = `component-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const [toolName, componentName] = componentType.split('.');
@@ -588,6 +492,7 @@ export default function EnterpriseIQPage() {
       setComponentSpawning(false);
       // Remove from active types since it failed
       activeVisualizationTypesRef.current.delete(componentType);
+      currentQuerySessionRef.current.delete(componentType); // Also remove from current session
       return null;
     }
 
@@ -699,111 +604,70 @@ export default function EnterpriseIQPage() {
     console.log(`   Position: (${positionData.x}, ${positionData.y})`);
     console.log(`   Z-Index: ${positionData.zIndex}`);
     console.log(`   Size: ${componentSize.width}x${componentSize.height}`);
-    console.log(`   Total components in canvas: ${Object.keys(components).length + 1}`);
+    console.log(`   Total components in canvas: ${Object.keys(components).length + (existingOfType ? 0 : 1)}`);
 
-    dispatch(addComponent(componentData));
+    // REPLACEMENT LOGIC: If component exists from previous query, replace it
+    if (existingOfType) {
+      console.log(`🔄 Replacing existing ${componentType} (id: ${existingOfType.id}) with new instance`);
+      dispatch(replaceComponentByType({
+        oldId: existingOfType.id,
+        newComponent: componentData
+      }));
+    } else {
+      console.log(`➕ Adding new component ${componentType}`);
+      dispatch(addComponent(componentData));
+    }
+
+    // Mark this type as active
+    activeVisualizationTypesRef.current.add(componentType);
 
     setComponentSpawning(false);
     setSpawnProgress(prev => ({ ...prev, current: prev.current + 1 }));
 
-    console.log(`✅ Component ${componentType} spawned successfully with ID: ${id}`);
+    console.log(`✅ Component ${componentType} ${existingOfType ? 'replaced' : 'spawned'} successfully with ID: ${id}`);
     console.log(`   Active singletons: ${Array.from(activeVisualizationTypesRef.current).join(', ')}`);
+    console.log(`   Current query session components: ${Array.from(currentQuerySessionRef.current).join(', ')}`);
     return id;
   };
 
-  // Queue visualization to prevent duplicates
+  // Queue visualization - simplified like web folder
   const queueVisualization = (visualization: any) => {
-    // Extract only the content for hashing, ignore metadata/timestamps
-    const contentForHash = Array.isArray(visualization)
-      ? visualization.map(v => ({
-          toolname: v.toolname,
-          componentName: v.componentName,
-          body: v.body
-        }))
-      : visualization;
+    // Simply process the visualization without complex deduplication
+    // This matches the web folder's simpler approach
+    console.log(`📦 Processing visualization:`, visualization);
 
-    const key = JSON.stringify(contentForHash);
-    const keyHash = createFallbackHash(key);
-
-    // SYNCHRONOUS LOCK: Check if this exact visualization is already being processed
-    if (visualizationProcessingLock.current.has(keyHash)) {
-      console.log(`🔒 LOCKED: Visualization already being processed (hash: ${keyHash})`);
-      return;
-    }
-
-    // Lock it immediately
-    visualizationProcessingLock.current.add(keyHash);
-
-    // Check if already processed in global registry
-    if (Array.isArray(visualization)) {
-      for (const vis of visualization) {
-        const componentType = `${vis.toolname}.${vis.componentName}`;
-        const vizKey = `${componentType}-${JSON.stringify(vis.body || {})}`;
-        const vizHash = createFallbackHash(vizKey);
-
-        if (globalVisualizationRegistryRef.current.has(vizHash)) {
-          console.log(`🚫 Visualization ${componentType} already processed globally, skipping entire batch`);
-          visualizationProcessingLock.current.delete(keyHash); // Unlock
-          return;
-        }
-      }
-    }
-
-    if (!visualizationQueueRef.current.has(keyHash)) {
-      console.log(`📦 Adding visualization to queue (hash: ${keyHash})`);
-      visualizationQueueRef.current.set(keyHash, visualization);
-      processVisualizationQueue();
-    } else {
-      console.log(`🚫 Visualization already in queue (hash: ${keyHash}), skipping`);
-      visualizationProcessingLock.current.delete(keyHash); // Unlock if not queued
-    }
+    // Process immediately without queueing
+    setVisualisation(visualization);
   };
 
-  // Process visualization queue one at a time
-  const processVisualizationQueue = async () => {
-    if (processingVisualizationRef.current || visualizationQueueRef.current.size === 0) {
-      return;
-    }
+  // Removed processVisualizationQueue - no longer needed with direct processing
 
-    processingVisualizationRef.current = true;
-
-    // Get first item from queue
-    const [keyHash, visualization] = visualizationQueueRef.current.entries().next().value;
-    visualizationQueueRef.current.delete(keyHash);
-
-    console.log(`🎭 Processing visualization from queue (hash: ${keyHash})`);
-    await setVisualisation(visualization);
-
-    // Unlock after processing
-    visualizationProcessingLock.current.delete(keyHash);
-    processingVisualizationRef.current = false;
-
-    // Process next item if any
-    if (visualizationQueueRef.current.size > 0) {
-      setTimeout(() => processVisualizationQueue(), 100);
-    }
-  };
-
-  // Set visualization with global deduplication
+  // Set visualization - NEW implementation using summary APIs
   const setVisualisation = async (visualisation: any) => {
     if (!visualisation) {
       console.warn('No visualization data received');
       return;
     }
 
+    // Handle both array and single visualization
     if (!Array.isArray(visualisation)) {
-      console.warn('Visualization data is not an array:', visualisation);
-      return;
+      // Try to parse if it's a string
+      if (typeof visualisation === 'string') {
+        try {
+          visualisation = JSON.parse(visualisation);
+        } catch (e) {
+          console.warn('Failed to parse visualization string:', e);
+          return;
+        }
+      }
+      // If still not array, make it an array
+      if (!Array.isArray(visualisation)) {
+        visualisation = [visualisation];
+      }
     }
 
-    console.log(`📊 Processing NEW visualization data (session: ${currentSessionRef.current}):`, visualisation);
-
-    // Clear any previous errors before spawning new components
-    setErrorWithAutoClear(null);
-    setComponentSpawning(true);
-    setSpawnProgress({ current: 0, total: visualisation.length, currentComponent: '' });
-
-    const spawnPromises = [];
+    console.log(`📊 Processing visualization metadata:`, visualisation);
+    let spawnedComponents = [];
 
     for (const componentSpec of visualisation) {
       const { toolname, componentName, body } = componentSpec;
@@ -813,119 +677,90 @@ export default function EnterpriseIQPage() {
         continue;
       }
 
-      // Validate that body has actual data
-      if (!body || (typeof body === 'object' && Object.keys(body).length === 0)) {
-        console.warn(`⚠️ Empty or missing body data for ${toolname}.${componentName}, skipping`);
-        continue;
-      }
-
       const componentType = `${toolname}.${componentName}`;
+      console.log(`[setVisualisation] Processing component: ${componentType} with metadata:`, body);
 
-      // Validate and transform body data for visualization components
-      let processedBody = body;
+      try {
+        // NEW: Use the summary API flow
+        // Step 1: Get API configuration for the tool
+        const apiConfig = getToolApiConfig(toolname);
 
-      // Special handling for churn-prediction components that expect data array
-      if (toolname === 'churn-prediction' && ['riskPyramid', 'featureImportance', 'segmentMatrix', 'probabilityHistogram'].includes(componentName)) {
-        // If body is a direct array, wrap it in { data: [...] }
-        if (Array.isArray(body)) {
-          processedBody = { data: body };
-          console.log(`📦 Wrapped ${componentType} array in data property`);
-        }
-        // If body is an object without 'data' property and looks like array data
-        else if (body && typeof body === 'object' && !('data' in body)) {
-          // Check if it's parameter data (has start_date, etc.) or actual visualization data
-          const paramKeys = ['start_date', 'end_date', 'riskThreshold', 'modelType', 'customerSegment', 'count'];
-          const hasParamKeys = paramKeys.some(key => key in body);
-
-          if (!hasParamKeys) {
-            console.warn(`⚠️ ${componentType} body missing 'data' property and doesn't look like parameters:`, body);
-            // If it has array-like values, try to extract them
-            const values = Object.values(body);
-            if (values.length > 0 && values.every(v => typeof v === 'object')) {
-              processedBody = { data: values };
-              console.log(`📦 Extracted array values from ${componentType} body`);
-            }
+        if (!apiConfig) {
+          console.warn(`No API configuration found for tool: ${toolname}`);
+          // Fallback: spawn with metadata directly (legacy behavior)
+          const componentId = await spawnComponent(componentType, body || {});
+          if (componentId) {
+            spawnedComponents.push(componentName);
           }
+          continue;
         }
-        // Body already has correct structure
-        else if (body && body.data) {
-          console.log(`✅ ${componentType} already has correct data structure`);
+
+        // Step 2: Normalize the metadata
+        const normalizedMetadata = normalizeMetadata(body || {});
+        console.log(`📋 Normalized metadata for ${toolname}:`, normalizedMetadata);
+
+        // Step 3: Fetch data from summary API
+        console.log(`🔄 Fetching summary data from ${apiConfig.endpoint}`);
+        const summaryResponse = await summaryClient(
+          apiConfig.endpoint,
+          normalizedMetadata,
+          apiConfig.method
+        );
+
+        if (summaryResponse.error) {
+          console.error(`Failed to fetch summary for ${toolname}:`, summaryResponse.error);
+          // Fallback: try spawning with metadata
+          const componentId = await spawnComponent(componentType, body || {});
+          if (componentId) {
+            spawnedComponents.push(componentName);
+          }
+          continue;
+        }
+
+        // Step 4: Map summary data to component props
+        const componentProps = mapSummaryToProps(
+          toolname,
+          componentName,
+          summaryResponse.data
+        );
+        console.log(`🎨 Mapped props for ${componentType}:`, componentProps);
+
+        // Step 5: Merge with any UI overrides from metadata (but not data)
+        const finalProps = {
+          ...componentProps,
+          // Include any UI-specific overrides from metadata
+          ...(body?.title && { title: body.title }),
+          ...(body?.description && { description: body.description }),
+          ...(body?.height && { height: body.height }),
+          ...(body?.width && { width: body.width })
+        };
+
+        // Step 6: Spawn the component with the final props
+        const componentId = await spawnComponent(componentType, finalProps);
+        if (componentId) {
+          spawnedComponents.push(componentName);
+          console.log(`✅ Successfully spawned: ${componentType} with data from API`);
+        }
+      } catch (error) {
+        console.error(`Failed to spawn component ${componentType}:`, error);
+        // Fallback: try spawning with original body
+        try {
+          const componentId = await spawnComponent(componentType, body || {});
+          if (componentId) {
+            spawnedComponents.push(componentName);
+            console.log(`✅ Spawned ${componentType} using fallback`);
+          }
+        } catch (fallbackError) {
+          console.error(`Fallback also failed for ${componentType}:`, fallbackError);
         }
       }
-
-      // Create unique hash for this specific visualization
-      const visualizationKey = `${componentType}-${JSON.stringify(processedBody || {})}`;
-      const vizHash = createFallbackHash(visualizationKey);
-
-      // Check global registry to prevent duplicates
-      if (globalVisualizationRegistryRef.current.has(vizHash)) {
-        const existing = globalVisualizationRegistryRef.current.get(vizHash);
-        console.log(`🚫 Skipping duplicate visualization ${componentType} (already spawned as ${existing?.id})`);
-        continue;
-      }
-
-      // IMMEDIATELY register to prevent duplicates (with pending status)
-      globalVisualizationRegistryRef.current.set(vizHash, {
-        id: 'pending',
-        timestamp: Date.now()
-      });
-
-      console.log(`🔄 Queuing new component: ${componentType}`, processedBody);
-
-      // Pass the processed body - the components should handle the data structure
-      // The processedBody has been validated and transformed as needed
-      console.log(`📊 Component props (processed):`, processedBody);
-      console.log(`📊 Body structure for ${componentType}:`, {
-        isObject: typeof processedBody === 'object' && processedBody !== null,
-        hasDataProperty: processedBody && typeof processedBody === 'object' && 'data' in processedBody,
-        dataValue: processedBody && processedBody.data ? processedBody.data : 'N/A',
-        dataIsArray: processedBody && processedBody.data && Array.isArray(processedBody.data),
-        dataLength: processedBody && processedBody.data && Array.isArray(processedBody.data) ? processedBody.data.length : 'N/A'
-      });
-
-      const spawnPromise = spawnComponent(componentType, processedBody || {})
-        .then(result => {
-          if (result) {
-            console.log(`✅ Successfully spawned: ${componentType}`);
-            // Update registry with actual ID
-            globalVisualizationRegistryRef.current.set(vizHash, {
-              id: result,
-              timestamp: Date.now()
-            });
-          } else {
-            console.warn(`❌ Failed to spawn: ${componentType}`);
-            // Remove from registry if failed
-            globalVisualizationRegistryRef.current.delete(vizHash);
-          }
-          return result;
-        })
-        .catch(error => {
-          console.error(`💥 Error spawning ${componentType}:`, error);
-          return null;
-        });
-
-      spawnPromises.push(spawnPromise);
     }
 
-    // Wait for all components to attempt spawning
-    try {
-      const results = await Promise.allSettled(spawnPromises);
-      const successful = results.filter(r => r.status === 'fulfilled' && r.value).length;
-      const failed = results.length - successful;
-
-      console.log(`📈 Visualization spawning complete: ${successful} successful, ${failed} failed`);
-
-      if (failed > 0 && successful === 0) {
-        // Don't show error to user - visualizations may still load
-        console.log(`Failed to load visualizations initially, but they may still render.`);
-      }
-    } catch (error) {
-      console.error('Error during visualization spawning:', error);
-      // Don't show error to user - visualizations may still load
-    } finally {
-      setComponentSpawning(false);
-      setSpawnProgress({ current: 0, total: 0, currentComponent: '' });
+    if (spawnedComponents.length > 0) {
+      console.log(`Successfully spawned ${spawnedComponents.length} component(s): ${spawnedComponents.join(', ')}`);
     }
+
+    setComponentSpawning(false);
   };
 
   const toggleMute = () => {
@@ -964,19 +799,16 @@ export default function EnterpriseIQPage() {
     // Cancel any ongoing requests first
     cancelOngoingRequests();
 
-    // Clear previous selections and spawned components for new query
+    // Clear previous state for new query
     setUserSelectedChartPoints([]);
     setSpawnedComponents(new Set());
-    occupiedPositionsRef.current.clear(); // Clear grid positions
-    visualizationQueueRef.current.clear(); // Clear any pending visualizations
-    visualizationProcessingLock.current.clear(); // Clear processing locks
-    activeVisualizationTypesRef.current.clear(); // Clear active singletons
+    occupiedPositionsRef.current.clear();
+    activeVisualizationTypesRef.current.clear();
+    currentQuerySessionRef.current.clear(); // Reset query session tracker
 
-    // Create new session ID and clear processed visualizations
-    const sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    currentSessionRef.current = sessionId;
-    processedVisualizationsRef.current.clear();
+    const sessionId = `session-${Date.now()}`;
     console.log(`🎆 Starting new query session: ${sessionId}`);
+    console.log(`🔄 Cleared currentQuerySessionRef for new query`);
 
     // Set robot to thinking state
     setRobotState(prev => ({
@@ -1037,141 +869,58 @@ export default function EnterpriseIQPage() {
             try {
               const jsonData = JSON.parse(data);
 
-              // Update SSE statistics
-              sseStatsRef.current.totalChunks++;
-              if (jsonData.text) sseStatsRef.current.textChunks++;
-              if (jsonData.audio) sseStatsRef.current.audioChunks++;
+              // Log SSE chunk
+              console.log(`🎯 Processing SSE chunk:`, {
+                hasText: !!jsonData.text,
+                hasAudio: !!jsonData.audio,
+                hasViz: !!(jsonData.visualisation || jsonData.visualization_output)
+              });
 
-              // Create content-based chunk identifier for deduplication
-              const textHash = jsonData.text ? createFallbackHash(jsonData.text) : '';
-              const audioHash = jsonData.audio ? createFallbackHash(jsonData.audio.data) : '';
-              const vizHash = (jsonData.visualisation || jsonData.visualization_output) ?
-                createFallbackHash(jsonData.visualisation || jsonData.visualization_output) : '';
-
-              const chunkId = `${sessionId}-text:${textHash}-audio:${audioHash}-viz:${vizHash}`;
-
-              // Skip if chunk was already processed
-              if (processedChunksRef.current.has(chunkId)) {
-                sseStatsRef.current.duplicates++;
-                console.log(`🚫 Skipping duplicate SSE chunk (${chunkId.substring(0, 50)}...)`);
-                console.log(`   SSE Stats: Total=${sseStatsRef.current.totalChunks} Audio=${sseStatsRef.current.audioChunks} Text=${sseStatsRef.current.textChunks} Duplicates=${sseStatsRef.current.duplicates}`);
-                continue;
-              }
-
-              processedChunksRef.current.add(chunkId);
-              console.log(`🎯 Processing NEW chunk #${sseStatsRef.current.totalChunks} (${currentSessionRef.current})`);
-              console.log(`   Content: Text:${!!jsonData.text} Audio:${!!jsonData.audio} Viz:${!!(jsonData.visualisation || jsonData.visualization_output)}`);
-              console.log(`   Hashes: Text:${textHash} Audio:${audioHash}`);
-              console.log(`   SSE Stats: Total=${sseStatsRef.current.totalChunks} Audio=${sseStatsRef.current.audioChunks} Text=${sseStatsRef.current.textChunks} Duplicates=${sseStatsRef.current.duplicates}`);
-
-              // Handle text updates with correlation tracking
+              // Handle text updates
               if (jsonData.text) {
                 currentTextResponse += jsonData.text;
-
-                // Track text-audio correlation
-                if (!textAudioCorrelationRef.current.has(textHash)) {
-                  textAudioCorrelationRef.current.set(textHash, {
-                    text: jsonData.text,
-                    audioHashes: []
-                  });
-                }
-
-                console.log(`📝 Text chunk: "${jsonData.text.substring(0, 100)}${jsonData.text.length > 100 ? '...' : ''}"`);
+                console.log(`📝 Text chunk received`);
 
                 setRobotState(prev => ({
                   ...prev,
                   state: 'speaking',
-                  message: jsonData.text // Show current chunk, not accumulated
+                  message: jsonData.text
                 }));
               }
 
-              // Handle audio directly without buffering - use existing queue
+              // Handle audio - simplified like web folder
               if (jsonData.audio) {
-                const audioDataHash = createFallbackHash(jsonData.audio.data);
-                const audioSize = jsonData.audio.data.length;
-
-                // Check if this exact audio was already processed
-                if (processedAudioHashesRef.current.has(audioDataHash)) {
-                  console.log(`🚫 Skipping duplicate audio (hash: ${audioDataHash})`);
-                } else {
-                  console.log(`🎵 Processing NEW audio chunk (hash: ${audioDataHash}, size: ${audioSize})`);
-                  processedAudioHashesRef.current.add(audioDataHash);
-
-                  try {
-                    // Convert base64 to blob immediately
-                    const binaryString = window.atob(jsonData.audio.data);
-                    const bytes = new Uint8Array(binaryString.length);
-                    for (let i = 0; i < binaryString.length; i++) {
-                      bytes[i] = binaryString.charCodeAt(i);
-                    }
-
-                    const blob = new Blob([bytes], { type: jsonData.audio.mime_type });
-                    const url = URL.createObjectURL(blob);
-
-                    console.log(`🎵 Audio blob created: ${blob.size} bytes, type: ${blob.type}`);
-
-                    // Add directly to audio queue instead of replacing via state
-                    audioQueueRef.current.push({
-                      url,
-                      blob,
-                      mimeType: jsonData.audio.mime_type,
-                      hash: audioDataHash,
-                      size: jsonData.audio.data.length
-                    });
-
-                    // Process the queue with interrupt to play immediately
-                    processAudioQueue(true);
-
-                    // Update robot state without audio data
-                    setRobotState(prev => ({
-                      ...prev,
-                      state: 'speaking'
-                    }));
-
-                    // Track audio-text correlation
-                    if (textHash) {
-                      const correlation = textAudioCorrelationRef.current.get(textHash);
-                      if (correlation) {
-                        correlation.audioHashes.push(audioDataHash);
-                        console.log(`🔗 Linked audio ${audioDataHash} to text ${textHash}`);
-                      }
-                    }
-                  } catch (error) {
-                    console.error('Error processing audio:', error);
+                try {
+                  // Convert base64 to blob
+                  const binaryString = window.atob(jsonData.audio.data);
+                  const bytes = new Uint8Array(binaryString.length);
+                  for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
                   }
+
+                  const blob = new Blob([bytes], { type: jsonData.audio.mime_type });
+                  const url = URL.createObjectURL(blob);
+
+                  console.log(`🎵 Audio received: ${blob.size} bytes`);
+
+                  // Update robot state with audio
+                  setRobotState(prev => ({
+                    ...prev,
+                    state: 'speaking',
+                    audioData: { url, blob, mimeType: jsonData.audio.mime_type }
+                  }));
+                } catch (error) {
+                  console.error('Error processing audio:', error);
                 }
               }
 
-              // Normalize visualization key and queue for processing
-              if (jsonData.visualization_output && !jsonData.visualisation) {
-                jsonData.visualisation = jsonData.visualization_output;
-              }
+              // Handle visualization - simplified like web folder
+              if (jsonData.visualisation || jsonData.visualization_output) {
+                const vizData = jsonData.visualisation || jsonData.visualization_output;
+                console.log('📊 Visualization data received:', vizData);
 
-              if (jsonData.visualisation) {
-                console.log('📊 Raw visualization data:', jsonData.visualisation);
-                console.log('📊 Visualization data type:', typeof jsonData.visualisation);
-
-                // Parse if it's a JSON string
-                let vizData = jsonData.visualisation;
-                if (typeof vizData === 'string') {
-                  try {
-                    vizData = JSON.parse(vizData);
-                    console.log('📊 Parsed visualization data:', vizData);
-                  } catch (parseError) {
-                    console.error('Failed to parse visualization JSON:', parseError);
-                    console.error('Raw string:', vizData);
-                    return;
-                  }
-                }
-
-                console.log('📊 Queueing visualization:', vizData);
-                console.log('📊 Visualization structure:', {
-                  isArray: Array.isArray(vizData),
-                  length: Array.isArray(vizData) ? vizData.length : 'N/A',
-                  firstItem: Array.isArray(vizData) && vizData.length > 0 ? vizData[0] : 'N/A',
-                  firstItemBody: Array.isArray(vizData) && vizData.length > 0 && vizData[0].body ? vizData[0].body : 'N/A'
-                });
-                queueVisualization(vizData);
+                // Process visualization immediately
+                setVisualisation(vizData);
               }
 
             } catch (e) {

@@ -268,6 +268,15 @@ async def run_agent(req: Union[SimpleQueryRequest, AgentRunRequest]) -> Streamin
                                                     if visualisation:
                                                         print(f"✅ Visualization generated successfully")
                                                         print(f"Visualization type: {type(visualisation)}")
+
+                                                        # Ensure visualization is a list/array for frontend
+                                                        if isinstance(visualisation, str):
+                                                            try:
+                                                                visualisation = json.loads(visualisation)
+                                                                print("📊 Parsed visualization string to object")
+                                                            except:
+                                                                print("⚠️ Failed to parse visualization string")
+
                                                         print(f"Visualization data: {json.dumps(visualisation, indent=2) if isinstance(visualisation, (dict, list)) else str(visualisation)}")
                                                         print(f"📊 SENDING VISUALIZATION TO FRONTEND")
                                                         # Send visualization as a separate message
@@ -344,6 +353,14 @@ async def run_agent(req: Union[SimpleQueryRequest, AgentRunRequest]) -> Streamin
                                 visualisation = await get_visualisation(query_text, accumulated_text)
 
                                 if visualisation:
+                                    # Ensure visualization is a list/array for frontend
+                                    if isinstance(visualisation, str):
+                                        try:
+                                            visualisation = json.loads(visualisation)
+                                            print("📊 [Fallback] Parsed visualization string to object")
+                                        except:
+                                            print("⚠️ [Fallback] Failed to parse visualization string")
+
                                     viz_response = {
                                         "text": "",
                                         "content": "",

@@ -1,7 +1,7 @@
 """Churn prediction tool for orchestration agent using shared ML predictor"""
 
 import json
-from typing import Optional
+from typing import Optional, Dict
 from datetime import datetime, timedelta
 import sys
 import os
@@ -10,7 +10,6 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from domains.churn_prediction.sync_processing_service import SyncChurnProcessingService
-from domains.churn_prediction.ml_predictor import ChurnMLPredictor
 
 
 def predict_churn_risk(
@@ -48,30 +47,97 @@ def _predict_churn_risk_sync(time_period: str, segment_id: Optional[str]) -> str
     # Build filters based on parameters
     filters = {}
 
-    # Determine date range based on time period (using 2021 data)
-    # Since our data is from 2017-2021, we use 2021 as the reference year
-    reference_date = datetime(2021, 12, 31)  # End of our data
+    # Check if we have data for the requested period
+    # Our data is from 2017-2021
+    DATA_START = datetime(2017, 1, 1)
+    DATA_END = datetime(2021, 12, 31)
+
+    # For relative time periods, calculate from actual current date
+    current_date = datetime.now()
 
     if time_period == "last_30_days":
-        filters['dateFrom'] = (reference_date - timedelta(days=30)).strftime('%Y-%m-%d')
-        filters['dateTo'] = reference_date.strftime('%Y-%m-%d')
+        # Calculate from actual current date
+        filters['dateTo'] = current_date.strftime('%Y-%m-%d')
+        filters['dateFrom'] = (current_date - timedelta(days=30)).strftime('%Y-%m-%d')
         filters['timeRange'] = '30d'
+
+        # Check if this is beyond our data range
+        if current_date > DATA_END:
+            return f"""# Churn Risk Analysis Report
+
+## No Data Available for Last 30 Days
+
+The requested time period (last 30 days from {current_date.strftime('%Y-%m-%d')}) is beyond our available data range.
+
+**Available Data Range**: 2017-01-01 to 2021-12-31
+
+To view churn risk data, please:
+- Specify a date range within 2017-2021
+- Use the default view (full year 2021)
+- Query specific historical periods
+
+Example valid queries:
+- "Show churn risk" (defaults to full 2021)
+- "Churn risk for June 2021"
+- "Churn risk from 2021-01-01 to 2021-03-31"
+"""
     elif time_period == "last_90_days":
-        filters['dateFrom'] = (reference_date - timedelta(days=90)).strftime('%Y-%m-%d')
-        filters['dateTo'] = reference_date.strftime('%Y-%m-%d')
+        # Calculate from actual current date
+        filters['dateTo'] = current_date.strftime('%Y-%m-%d')
+        filters['dateFrom'] = (current_date - timedelta(days=90)).strftime('%Y-%m-%d')
         filters['timeRange'] = '90d'
+
+        # Check if this is beyond our data range
+        if current_date > DATA_END:
+            return f"""# Churn Risk Analysis Report
+
+## No Data Available for Last 90 Days
+
+The requested time period (last 90 days from {current_date.strftime('%Y-%m-%d')}) is beyond our available data range.
+
+**Available Data Range**: 2017-01-01 to 2021-12-31
+
+Please specify a date range within the available data or use the default view.
+"""
     elif time_period == "last_180_days":
-        filters['dateFrom'] = (reference_date - timedelta(days=180)).strftime('%Y-%m-%d')
-        filters['dateTo'] = reference_date.strftime('%Y-%m-%d')
+        # Calculate from actual current date
+        filters['dateTo'] = current_date.strftime('%Y-%m-%d')
+        filters['dateFrom'] = (current_date - timedelta(days=180)).strftime('%Y-%m-%d')
+
+        # Check if this is beyond our data range
+        if current_date > DATA_END:
+            return f"""# Churn Risk Analysis Report
+
+## No Data Available for Last 180 Days
+
+The requested time period (last 180 days from {current_date.strftime('%Y-%m-%d')}) is beyond our available data range.
+
+**Available Data Range**: 2017-01-01 to 2021-12-31
+
+Please specify a date range within the available data or use the default view.
+"""
     elif time_period == "last_year":
-        # Match frontend behavior - use Q4 2021 for "last year"
-        filters['dateFrom'] = '2021-10-01'
-        filters['dateTo'] = '2021-12-31'
+        # Calculate last year from current date
+        filters['dateTo'] = current_date.strftime('%Y-%m-%d')
+        filters['dateFrom'] = (current_date - timedelta(days=365)).strftime('%Y-%m-%d')
+
+        # Check if this is beyond our data range
+        if current_date > DATA_END:
+            return f"""# Churn Risk Analysis Report
+
+## No Data Available for Last Year
+
+The requested time period (last year from {current_date.strftime('%Y-%m-%d')}) is beyond our available data range.
+
+**Available Data Range**: 2017-01-01 to 2021-12-31
+
+Please specify a date range within the available data or use the default view.
+"""
     else:
-        # Default to last 90 days of 2021
-        filters['dateFrom'] = '2021-10-01'
+        # Default to full year 2021 (changed from Q4)
+        filters['dateFrom'] = '2021-01-01'
         filters['dateTo'] = '2021-12-31'
-        filters['timeRange'] = '90d'
+        filters['timeRange'] = 'full_year'
 
     # Add segment filter if specified
     if segment_id:
@@ -99,17 +165,68 @@ def _predict_churn_risk_sync(time_period: str, segment_id: Optional[str]) -> str
         # Calculate risk statistics
         total_customers = len(customer_stats)
 
-        # Handle empty customer stats
+        # Handle empty customer stats by adjusting filters to get real data
         if total_customers == 0:
-            return """# Churn Risk Analysis Report
+            print(f"[churn_prediction] No customer data found with filters: {filters}")
 
-No customer data available for the specified time period.
+            # Try with broader date range to get actual data from the database
+            # The dataset has data from 2017-2021, so use the full range
+            print(f"[churn_prediction] Retrying with broader date range...")
 
-Please check:
-1. Date range is valid and contains data
-2. Filters are correctly applied
-3. Database connection is working
+            # Override filters to get all available data
+            broader_filters = {
+                'dateFrom': '2017-01-01',
+                'dateTo': '2021-12-31'
+            }
+
+            # Add segment filter if specified
+            if segment_id:
+                broader_filters['segment'] = segment_id
+
+            # Retry fetching data with broader filters
+            summary_data = service.get_dashboard_summary(broader_filters)
+            customer_stats = summary_data.get('customerStats', [])
+            total_customers = len(customer_stats)
+
+            # If still no data, return a proper message without hardcoded values
+            if total_customers == 0:
+                return """# Churn Risk Analysis Report
+
+## No Data Available
+
+The system could not retrieve customer data for analysis. This may be due to:
+
+1. **Database Connection Issues**: Please verify the database is accessible
+2. **Data Loading**: Ensure the customer data has been properly loaded into the system
+3. **Date Range**: The available dataset contains data from 2017-2021
+4. **Filters**: Check that the segment or other filters are valid
+
+## Recommended Actions:
+
+- Verify database connectivity
+- Run data import/setup scripts if needed
+- Check logs for any data loading errors
+- Ensure the ML model has been trained with available data
+
+## Visualization Data (Machine-Readable)
+```json
+{
+  "riskPyramid": [],
+  "featureImportance": [],
+  "segmentMatrix": [],
+  "overallMetrics": {
+    "totalCustomers": 0,
+    "overallRiskPercentage": 0,
+    "atRiskCount": 0,
+    "averageChurnProbability": 0
+  }
+}
+```
 """
+
+            # Update feature importance and segment risk with new data
+            feature_importance = summary_data.get('featureImportance', [])
+            segment_risk = summary_data.get('segmentRisk', [])
 
         risk_counts = {'Low': 0, 'Medium': 0, 'High': 0, 'Very High': 0}
 

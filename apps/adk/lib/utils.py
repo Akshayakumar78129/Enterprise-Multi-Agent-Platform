@@ -203,18 +203,34 @@ COMPONENT_SCHEMA = {
 
 
 VIS_SCHEMA_PROMPT = """
-You are an intelligent data extractor and visualization mapper. Your PRIMARY task is to EXTRACT ACTUAL DATA from ADK responses and format it for visualization components.
+You are an intelligent metadata extractor and visualization mapper. Your PRIMARY task is to EXTRACT METADATA PARAMETERS (especially dates) from ADK responses, NOT data values.
 
 ## Your Critical Role
 You must:
-1. EXTRACT all numerical data, percentages, counts, and values from the ADK response text
-2. Parse and identify actual numbers mentioned in the analysis
-3. Convert extracted data into chart-ready data structures
+1. **EXTRACT THE EXACT DATES FROM ADK RESPONSE TEXT** - Look for phrases like "from 2021-01-01 to 2021-12-31" or "analyzed data from 2021"
+2. **USE ONLY THE DATES THE ADK AGENT USED** - Do NOT generate new dates, use exactly what's in the ADK text
+3. **DO NOT extract data values** - only metadata parameters (dates, filters, segments)
 4. Map the analysis to appropriate visualization components
-5. Return properly formatted data for immediate visualization
+5. Return properly formatted metadata for visualization components
 
-## Data Extraction Rules
-**MOST IMPORTANT**: Extract REAL NUMBERS from the ADK response, not parameters!
+## CRITICAL DATE EXTRACTION RULES
+**MOST IMPORTANT**: FIND AND USE THE EXACT DATES FROM ADK RESPONSE!
+
+Look for these patterns in ADK response:
+- "from 2021-01-01 to 2021-12-31" → dateFrom: "2021-01-01", dateTo: "2021-12-31"
+- "analyzed full year 2021" → dateFrom: "2021-01-01", dateTo: "2021-12-31"
+- "for the period 2021-01-01 through 2021-12-31" → use those exact dates
+- "2021 data" → dateFrom: "2021-01-01", dateTo: "2021-12-31"
+
+**DO NOT**:
+- Make up dates like "2023-01-01" or "2024-01-01"
+- Use current year unless ADK specifically mentions it
+- Generate random date ranges
+
+**ALWAYS**:
+- Search the ADK response for the actual date range used
+- Use dateFrom and dateTo (not start_date/end_date)
+- If ADK says "2021-10-01 to 2021-12-31", use EXACTLY those dates
 
 Examples of data extraction:
 - "150 high-risk customers (15%)" → {count: 150, percentage: 15, level: "High Risk"}
@@ -223,67 +239,72 @@ Examples of data extraction:
 - "500 transactions on Monday, 650 on Tuesday" → {Monday: 500, Tuesday: 650}
 - "Product A: 1200 units, Product B: 890 units" → {labels: ["Product A", "Product B"], data: [1200, 890]}
 
-## CRITICAL REQUIREMENTS FOR CHURN-PREDICTION COMPONENTS:
+## CRITICAL REQUIREMENTS FOR METADATA-ONLY RESPONSES:
 
-### For riskPyramid:
-**MUST include ALL 4 risk levels** with complete data:
+### NEW APPROACH - Return metadata ONLY, no data arrays:
+As per the new architecture, visualization components should:
+1. Return METADATA parameters only (dates, filters, thresholds)
+2. NOT include large data arrays or actual chart data
+3. Let the frontend fetch data from summary APIs
+
+### For riskPyramid (METADATA ONLY):
 ```json
 {
   "toolname": "churn-prediction",
   "componentName": "riskPyramid",
   "body": {
-    "data": [
-      {"level": "Very High", "count": NUMBER, "percentage": NUMBER, "color": "#ef4444"},
-      {"level": "High", "count": NUMBER, "percentage": NUMBER, "color": "#f59e0b"},
-      {"level": "Medium", "count": NUMBER, "percentage": NUMBER, "color": "#eab308"},
-      {"level": "Low", "count": NUMBER, "percentage": NUMBER, "color": "#10b981"}
-    ]
+    "dateFrom": "2024-01-01",
+    "dateTo": "2024-12-31",
+    "risk_level": "High",
+    "risk_threshold": 0.7,
+    "customer_segment": "Enterprise"
   }
 }
 ```
-- Extract counts from text like "Low Risk: 500 customers"
-- Calculate percentages if not provided
-- ALWAYS include all 4 levels, even if count is 0
+- Extract parameters from query, NOT data
+- Include filters and date ranges
+- NO counts, percentages, or actual data
 
-### For featureImportance:
-**MUST include feature names and importance values**:
+### For featureImportance (METADATA ONLY):
 ```json
 {
   "toolname": "churn-prediction",
   "componentName": "featureImportance",
   "body": {
-    "data": [
-      {"name": "Recency", "importance": 90, "impact": 90},
-      {"name": "Frequency", "importance": 75, "impact": 75},
-      {"name": "Monetary", "importance": 60, "impact": 60}
-    ]
+    "dateFrom": "2024-01-01",
+    "dateTo": "2024-12-31",
+    "modelType": "gradient_boosting",
+    "top_features": 10
   }
 }
 ```
-- Extract feature names exactly as mentioned (e.g., "Recency", not "Feature 1")
-- Convert percentages properly (90%, not 905)
-- Use importance value for impact if impact not specified
+- Return metadata parameters only
+- NO actual feature data or importance values
+- Frontend will fetch from /api/churn/summary
 
-### For segmentMatrix:
-**MUST include segment and risk level breakdown**:
+### For segmentMatrix (METADATA ONLY):
 ```json
 {
   "toolname": "churn-prediction",
   "componentName": "segmentMatrix",
   "body": {
-    "data": [
-      {"segment": "Enterprise", "Low": 20, "Medium": 30, "High": 35, "Very High": 15},
-      {"segment": "Mid-Market", "Low": 40, "Medium": 25, "High": 20, "Very High": 15}
-    ]
+    "dateFrom": "2024-01-01",
+    "dateTo": "2024-12-31",
+    "segments": ["Enterprise", "Mid-Market", "SMB"],
+    "include_risk_levels": true
   }
 }
 ```
+- Return metadata only
+- NO actual segment data or counts
+- Frontend fetches real data from API
 
-## Special Parsing Rules for Churn Data:
-1. If ADK mentions "Visualization Data (Machine-Readable)" section, PRIORITIZE extracting from that JSON
-2. Look for structured data sections in the ADK response first
-3. Risk levels MUST be: "Very High", "High", "Medium", "Low" (exact casing)
-4. Feature names should be meaningful (Recency, Frequency, etc.), not generic (Feature 1, Feature 2)
+## Special Rules for METADATA-ONLY Responses:
+1. NEVER include actual data arrays in the body
+2. Extract PARAMETERS from the user query (dates, filters, thresholds)
+3. The body should contain metadata that the frontend will use to fetch data
+4. Focus on configuration, not data extraction
+5. If ADK provides data, IGNORE it - only extract metadata parameters
 
 ## Available Components Schema
 """ + json.dumps(COMPONENT_SCHEMA, indent=2) + """
@@ -307,22 +328,21 @@ You will receive:
 - **Context**: Any additional context about the analysis
 
 ## Output Requirements
-Return a JSON array with EXTRACTED DATA from the ADK response:
+Return a JSON array with METADATA ONLY from the user query:
 
-**CRITICAL: Extract actual numbers from the ADK response text and put them in the body field!**
+**CRITICAL: Return metadata parameters ONLY, no data arrays!**
 
-**For chart components - EXTRACT numbers from text:**
+**For all components - METADATA ONLY:**
 ```json
 {
   "toolname": "sales-performance",
-  "componentName": "barchart",
+  "componentName": "timeSeries",
   "body": {
-    "labels": ["Jan", "Feb", "Mar"],  // Extract month names from ADK text
-    "datasets": [{
-      "label": "Revenue",
-      "data": [45000, 52000, 61000],  // EXTRACT these numbers from ADK response!
-      "backgroundColor": "rgba(0, 224, 255, 0.8)"
-    }]
+    "dateFrom": "2024-01-01",
+    "dateTo": "2024-03-31",
+    "dimension": "region",
+    "metric": "revenue",
+    "time_granularity": "monthly"
   }
 }
 ```
@@ -393,19 +413,42 @@ Return a JSON array with EXTRACTED DATA from the ADK response:
 
 ## Critical Rules
 
-### Data EXTRACTION Rules (NOT Generation!)
-1. **PARSE the ADK response text to find ALL numbers, percentages, and values**
-2. **EXTRACT actual data mentioned in the ADK response** - don't make up numbers
-3. **If ADK says "150 customers"** → extract 150, don't generate random data
-4. **If ADK says "$45,000 revenue"** → extract 45000 for the chart
-5. **If ADK mentions percentages like "15% high-risk"** → extract 15
-6. **Create data arrays from the extracted numbers** for chart visualization
+### METADATA Extraction Rules (NO Data Arrays!):
+1. **EXTRACT dates from ADK response FIRST** - Look for date ranges mentioned in the ADK analysis
+2. **If no dates in ADK response, then extract from user query** - fallback to user query dates
+3. **DO NOT extract data values from ADK response** - only metadata parameters
+4. **Focus on configuration metadata** - what the analysis used
+5. **Include filter criteria** - risk levels, time periods, thresholds
+6. **Let frontend fetch actual data** from summary APIs
 
-### What to Extract:
-- Numbers with units: "1200 units", "$45K", "150 customers" → extract the numbers
-- Percentages: "increased 25%", "15% of total" → extract the percentages
-- Time series: "Jan: 100, Feb: 150, Mar: 200" → extract as array [100, 150, 200]
-- Categories: "High: 150, Medium: 350, Low: 500" → extract as structured data
+### What to Extract as Metadata:
+- Date ranges FROM ADK RESPONSE: Look for phrases like "from 2021-10-01 to 2021-12-31" or "October to December 2021" in the ADK analysis text
+- Date ranges FROM USER QUERY (fallback): "last 30 days", "Q1 2024" → dateFrom, dateTo
+- Filters: "high-risk customers" → risk_level: "High"
+- Segments: "Enterprise segment" → customer_segment: "Enterprise"
+- Metrics: "revenue by region" → metric: "revenue", dimension: "region"
+- Time granularity: "monthly trends" → time_granularity: "monthly"
+
+### CRITICAL Date Extraction Priority:
+1. **MANDATORY FIRST STEP**: Search ADK response for EXACT dates like:
+   - "2021-01-01", "2021-12-31"
+   - "from 2021-01-01 to 2021-12-31"
+   - "Date Range: 2021-01-01 to 2021-12-31"
+   - "January 2021 to December 2021"
+   - "Full year 2021"
+   - ANY mention of specific dates in the ADK analysis
+
+2. **USE EXACTLY WHAT ADK SAYS**:
+   - If ADK says "analyzing data from 2021-10-01 to 2021-12-31", use dateFrom: "2021-10-01", dateTo: "2021-12-31"
+   - DO NOT change these dates to 2023 or 2024
+   - DO NOT use current year unless ADK specifically says current year
+
+3. **IF NO DATES FOUND IN ADK**:
+   - Look at the user query for time references like "30 days", "last month", "Q1 2024"
+   - Convert these to appropriate date ranges based on the context
+   - Only as LAST RESORT, if absolutely no dates anywhere: Look for context clues about what period was analyzed
+
+4. **FORMAT**: Always use dateFrom and dateTo (not start_date/end_date)
 
 ### Parameter Extraction Rules
 1. **Date parameters**: Extract dates mentioned in user query (e.g., "2023 sales" → start_date: "2023-01-01", end_date: "2023-12-31")
@@ -424,10 +467,11 @@ Return a JSON array with EXTRACTED DATA from the ADK response:
 7. ALL THE FIELDS GIVEN IN THE BODY OF THE VISUALIZATION SCHEMA MUST BE INCLUDED IN YOUR RESPONSE
 
 ### Parameter Mapping Guidelines
-- **Date Ranges**: 
-  - "2023" → start_date: "2023-01-01", end_date: "2023-12-31"
-  - "last quarter" → calculate based on current context
-  - "January to March" → start_date: "2024-01-01", end_date: "2024-03-31"
+- **Date Ranges FROM ADK RESPONSE**:
+  - If ADK says "from 2021-10-01 to 2021-12-31" → dateFrom: "2021-10-01", dateTo: "2021-12-31"
+  - If ADK says "October 2021 through December 2021" → dateFrom: "2021-10-01", dateTo: "2021-12-31"
+  - If ADK says "Q4 2021" → dateFrom: "2021-10-01", dateTo: "2021-12-31"
+  - USE EXACTLY THESE DATES, DO NOT CHANGE THE YEAR
   
 - **Metrics**: Map natural language to schema metrics
   - "revenue" → "revenue" or "sales"
@@ -439,14 +483,40 @@ Return a JSON array with EXTRACTED DATA from the ADK response:
   - "product-wise" → category_level: "product"
   - "customer segments" → dimension: "customer_segment"
 
+## CRITICAL: Date Extraction Example
+
+### EXAMPLE OF CORRECT DATE EXTRACTION:
+**User Query**: "Show me churn risk analysis"
+**ADK Response**: "I'll analyze customer churn risk for the period from 2021-10-01 to 2021-12-31. Looking at the data..."
+**CORRECT EXTRACTION**:
+```json
+{
+  "toolname": "churn-prediction",
+  "componentName": "riskPyramid",
+  "body": {
+    "dateFrom": "2021-10-01",  // EXTRACTED FROM ADK TEXT: "from 2021-10-01"
+    "dateTo": "2021-12-31"      // EXTRACTED FROM ADK TEXT: "to 2021-12-31"
+  }
+}
+```
+**WRONG** (DO NOT DO THIS):
+```json
+{
+  "body": {
+    "dateFrom": "2023-01-01",  // WRONG! ADK said 2021, not 2023
+    "dateTo": "2023-12-31"      // WRONG! Making up dates
+  }
+}
+```
+
 ## Example Decision Process
 
 ### Example 1: Single Tool Called in ADK
-**User Query**: "Show me sales performance by region for 2023"
-**ADK Response**: "Called sales_analysis_tool... Results: Regional sales data for 2023..."
-**Step 1**: Identify tools in ADK → sales_analysis_tool was called
+**User Query**: "Show me sales performance by region"
+**ADK Response**: "Analyzing regional sales data from 2023-01-01 to 2023-12-31..."
+**Step 1**: Extract dates from ADK → "from 2023-01-01 to 2023-12-31"
 **Step 2**: Map to schema tool → "sales-performance"
-**Step 3**: Select components → "timeSeries" for time-based analysis, "distribution" for regional breakdown
+**Step 3**: Select components → "timeSeries" for time-based analysis
 **Result**:
 ```json
 [
@@ -454,8 +524,8 @@ Return a JSON array with EXTRACTED DATA from the ADK response:
     "toolname": "sales-performance",
     "componentName": "timeSeries",
     "body": {
-      "start_date": "2023-01-01",
-      "end_date": "2023-12-31",
+      "dateFrom": "2023-01-01",  // EXACT dates from ADK: "from 2023-01-01"
+      "dateTo": "2023-12-31",    // EXACT dates from ADK: "to 2023-12-31"
       "dimension": "region",
       "metric": "revenue",
       "time_granularity": "monthly"
@@ -747,66 +817,9 @@ async def get_visualisation(user_query: str, adk_response: str) -> dict:
     print(f"Query: {user_query[:100]}")
     print(f"ADK Response length: {len(adk_response)} chars")
 
-    # First try to extract JSON directly from the "Visualization Data (Machine-Readable)" section
-    if "Visualization Data (Machine-Readable)" in adk_response:
-        try:
-            print("Found Visualization Data section, extracting JSON directly...")
-
-            # Find the JSON block after "Visualization Data (Machine-Readable)"
-            viz_section_start = adk_response.find("Visualization Data (Machine-Readable)")
-            if viz_section_start != -1:
-                # Look for ```json after this section
-                json_start = adk_response.find("```json", viz_section_start)
-                if json_start != -1:
-                    json_end = adk_response.find("```", json_start + 7)
-                    if json_end != -1:
-                        json_str = adk_response[json_start + 7:json_end].strip()
-                        print(f"Extracted JSON string: {json_str[:200]}...")
-
-                        viz_data = json.loads(json_str)
-                        print(f"Parsed visualization data: {json.dumps(viz_data, indent=2)[:500]}")
-                        print(f"[DEBUG] riskPyramid data: {viz_data.get('riskPyramid', 'NOT FOUND')}")
-                        print(f"[DEBUG] featureImportance data: {viz_data.get('featureImportance', 'NOT FOUND')}")
-
-                        # Transform to expected format for frontend
-                        result = []
-
-                        # Check if this is churn prediction data
-                        if "riskPyramid" in viz_data and viz_data["riskPyramid"]:
-                            print(f"Adding riskPyramid with {len(viz_data['riskPyramid'])} levels")
-                            # Wrap array in 'data' property as expected by RiskPyramid component
-                            result.append({
-                                "toolname": "churn-prediction",
-                                "componentName": "riskPyramid",
-                                "body": {"data": viz_data["riskPyramid"]}  # Wrap in data property
-                            })
-
-                        if "featureImportance" in viz_data and viz_data["featureImportance"]:
-                            print(f"Adding featureImportance with {len(viz_data['featureImportance'])} features")
-                            # Wrap array in 'data' property as expected by AIFeatureImportance component
-                            result.append({
-                                "toolname": "churn-prediction",
-                                "componentName": "featureImportance",
-                                "body": {"data": viz_data["featureImportance"]}  # Wrap in data property
-                            })
-
-                        if "segmentMatrix" in viz_data and viz_data["segmentMatrix"]:
-                            print(f"Adding segmentMatrix with {len(viz_data['segmentMatrix'])} segments")
-                            # Wrap array in 'data' property for consistency
-                            result.append({
-                                "toolname": "churn-prediction",
-                                "componentName": "segmentMatrix",
-                                "body": {"data": viz_data["segmentMatrix"]}  # Wrap in data property
-                            })
-
-                        if len(result) > 0:
-                            print(f"Successfully extracted {len(result)} visualizations from JSON")
-                            print(f"Final visualization response: {json.dumps(result, indent=2)[:500]}")
-                            return json.dumps(result)  # Return JSON string for consistency
-
-        except Exception as e:
-            print(f"Failed to extract JSON directly: {e}")
-            print("Falling back to AI extraction...")
+    # NEW: Skip direct JSON extraction since we want metadata only
+    # The AI will extract metadata parameters from the query, not data from ADK response
+    print("Using AI to extract metadata parameters from user query...")
 
     # Fall back to AI extraction if direct extraction failed
     gemini_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY", ""))
@@ -816,6 +829,16 @@ async def get_visualisation(user_query: str, adk_response: str) -> dict:
     ## Input Data
     **User Query**: {user_query}
     **ADK Response**: {adk_response}
+
+    CRITICAL INSTRUCTION:
+    1. SEARCH THE ADK RESPONSE for dates like "2021-10-01 to 2021-12-31" or "Date Range: 2021-10-01"
+    2. USE EXACTLY THOSE DATES in your response - DO NOT change the year to 2023 or 2024
+    3. If ADK says "2021-10-01", use dateFrom: "2021-10-01", NOT "2023-10-01" or "2024-10-01"
+    4. IF NO DATES FOUND IN ADK: Parse user query for time references:
+       - "last 30 days" → Calculate 30-day range ending at data boundary
+       - "Q1", "Q2", etc → Map to appropriate quarter
+       - "last month" → Previous month range
+       - If still no dates: Omit date fields to let backend use its own defaults
 
     Please analyze the above input and return the appropriate visualization components as a JSON array.
     """
@@ -838,25 +861,29 @@ async def get_visualisation(user_query: str, adk_response: str) -> dict:
         response_json = json.loads(response_text)
         print("\n\nParsed visualization JSON:\n", json.dumps(response_json, indent=2)[:500])
 
-        # Post-process to ensure consistent data structure for visualization components
+        # Post-process to ensure metadata-only structure
         if isinstance(response_json, list):
             for item in response_json:
-                if item.get("toolname") == "churn-prediction" and item.get("body"):
-                    # Check if body contains raw array data (from AI response)
+                if item.get("body"):
                     body = item["body"]
 
-                    # If body is a list, wrap it in { data: [...] }
-                    if isinstance(body, list):
-                        item["body"] = {"data": body}
-                        print(f"Wrapped {item['componentName']} body in data property")
+                    # Check if body contains data arrays (old format) and remove them
+                    if isinstance(body, dict):
+                        # Remove any 'data' property if it contains arrays
+                        if "data" in body and isinstance(body["data"], (list, dict)):
+                            print(f"Warning: Removing data array from {item.get('componentName', 'unknown')} - should be metadata only")
+                            del body["data"]
 
-                    # If body is an object but doesn't have 'data' property and isn't parameters
-                    elif isinstance(body, dict) and "data" not in body:
-                        # Check if it looks like parameter data (has start_date, end_date, etc)
-                        param_keys = {"start_date", "end_date", "riskThreshold", "modelType", "customerSegment", "count"}
-                        if not any(key in body for key in param_keys):
-                            # This might be misformatted data, log it
-                            print(f"Warning: {item['componentName']} body doesn't have 'data' property: {body}")
+                        # Remove any dataset properties
+                        if "datasets" in body:
+                            print(f"Warning: Removing datasets from {item.get('componentName', 'unknown')} - should be metadata only")
+                            del body["datasets"]
+
+                        # Remove any direct data arrays
+                        for key in list(body.keys()):
+                            if isinstance(body[key], list) and key not in ["segments", "metrics", "dimensions", "filters"]:
+                                print(f"Warning: Removing {key} array from body - should be metadata only")
+                                del body[key]
 
         return response_json
     except json.JSONDecodeError as e:

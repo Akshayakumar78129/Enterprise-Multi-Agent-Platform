@@ -234,19 +234,43 @@ export default function CanvasComponent({
                   if (component.data && typeof component.data === 'object' && 'data' in component.data) {
                     propsToPass = component.data;
                     console.log(`[CanvasComponent] ${component.type} - Using data as-is (already has data property)`);
+
+                    // Validate the data array exists and is properly formatted
+                    if (Array.isArray(propsToPass.data)) {
+                      console.log(`[CanvasComponent] ${component.type} - Data array has ${propsToPass.data.length} items`);
+                    } else if (propsToPass.data === null || propsToPass.data === undefined) {
+                      console.warn(`[CanvasComponent] ${component.type} - Data property is null/undefined, using empty array`);
+                      propsToPass = { ...propsToPass, data: [] };
+                    }
                   }
                   // If component.data is a direct array, wrap it in { data: [...] }
                   else if (Array.isArray(component.data)) {
                     propsToPass = { data: component.data };
-                    console.log(`[CanvasComponent] ${component.type} - Wrapping array in data property`);
+                    console.log(`[CanvasComponent] ${component.type} - Wrapping array in data property with ${component.data.length} items`);
                   }
                   // Otherwise, assume it's already properly formatted or has other props
                   else {
                     propsToPass = component.data || {};
                     console.log(`[CanvasComponent] ${component.type} - Using data as-is (other format)`);
+
+                    // If no data at all, provide empty structure
+                    if (!propsToPass || Object.keys(propsToPass).length === 0) {
+                      console.warn(`[CanvasComponent] ${component.type} - No data provided, using default empty structure`);
+                      propsToPass = { data: [] };
+                    }
                   }
 
                   console.log(`[CanvasComponent] ${component.type} - Final props:`, propsToPass);
+
+                  // Additional validation for specific component types
+                  if (component.type === 'riskPyramid' || component.type === 'featureImportance' || component.type === 'segmentMatrix') {
+                    if (!propsToPass.data || !Array.isArray(propsToPass.data)) {
+                      console.error(`[CanvasComponent] ${component.type} requires data array, but got:`, propsToPass);
+                      // Provide fallback empty array
+                      propsToPass = { ...propsToPass, data: [] };
+                    }
+                  }
+
                   return <Component {...propsToPass} />;
                 })()}
               </div>

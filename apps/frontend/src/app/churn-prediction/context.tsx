@@ -58,12 +58,9 @@ export function ChurnProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [filters, setFilters] = React.useState<ChurnFilters>(() => {
-    // Calculate default date range (last 30 days from 2021-12-31 since our data is from 2017-2021)
+    // Default to full year 2021 (complete data for comprehensive analysis)
+    const defaultStartDate = "2021-01-01";
     const defaultEndDate = "2021-12-31";
-    const endDate = new Date(defaultEndDate);
-    const startDate = new Date(endDate);
-    startDate.setDate(startDate.getDate() - 30);
-    const defaultStartDate = startDate.toISOString().split('T')[0];
 
     const defaultFilters = {
       dateRange: { startDate: defaultStartDate, endDate: defaultEndDate },

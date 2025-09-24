@@ -18,8 +18,8 @@ function HeaderFilters() {
       onReset={() =>
         setFilters({
           dateRange: {
-            // Use last 90 days of 2021 data (Oct 1 - Dec 31, 2021)
-            startDate: "2021-10-01",
+            // Use full year 2021 data (Jan 1 - Dec 31, 2021)
+            startDate: "2021-01-01",
             endDate: "2021-12-31",
           },
           riskLevels: [],

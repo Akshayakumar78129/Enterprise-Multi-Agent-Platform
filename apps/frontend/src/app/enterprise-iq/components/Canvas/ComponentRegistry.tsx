@@ -28,16 +28,12 @@ const componentRegistry: Record<string, Record<string, () => Promise<any>>> = {
     analysis: () => import('../Visualizations/IntervalHeatmap')
   },
   'churn-prediction': {
-    risk: () => import('../Visualizations/IntervalHeatmap'),
     riskPyramid: () => import('components/index').then(mod => ({ default: mod.RiskPyramid })),
     featureImportance: () => import('components/index').then(mod => ({ default: mod.AIFeatureImportance })),
     probabilityHistogram: () => import('components/index').then(mod => ({ default: mod.ProbabilityHistogram })),
-    temporalRisk: () => import('components/index').then(mod => ({ default: mod.RiskPyramid })), // Using RiskPyramid as placeholder
+    temporalRisk: () => import('components/index').then(mod => ({ default: mod.LineChart })),
     segmentMatrix: () => import('components/index').then(mod => ({ default: mod.SegmentComparisonMatrix })),
     kpiTiles: () => import('components/index').then(mod => ({ default: mod.KPITiles })),
-    factors: () => import('../Visualizations/FrequencyHistogram'),
-    timeline: () => import('../Visualizations/FrequencyHistogram'),
-    heatmap: () => import('../Visualizations/IntervalHeatmap'),
     churnAnalysis: () => import('../../../churn-prediction/components/ChurnRiskAnalysis').then(mod => ({
       default: mod.ChurnRiskAnalysis
     }))

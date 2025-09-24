@@ -56,6 +56,25 @@ const canvasSlice = createSlice({
       state.components = {};
       state.selectedComponents = [];
     },
+    replaceComponentByType: (state, action: PayloadAction<{
+      oldId: string;
+      newComponent: CanvasComponentData;
+    }>) => {
+      const { oldId, newComponent } = action.payload;
+      // Preserve position from old component if it exists
+      if (state.components[oldId]) {
+        const oldPosition = state.components[oldId].position;
+        newComponent.position = oldPosition;
+        // Remove old component
+        delete state.components[oldId];
+        // Remove from selected if it was selected
+        state.selectedComponents = state.selectedComponents.filter(
+          id => id !== oldId
+        );
+      }
+      // Add new component
+      state.components[newComponent.id] = newComponent;
+    },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
     }
@@ -69,6 +88,7 @@ export const {
   setCanvasTransform,
   setSelectedComponents,
   clearCanvas,
+  replaceComponentByType,
   setLoading
 } = canvasSlice.actions;
 

@@ -125,8 +125,8 @@ export function useChurnData(filters: ChurnFilters) {
           filterParams.dateFrom = filters.dateRange.startDate;
           filterParams.dateTo = filters.dateRange.endDate;
         } else {
-          // If no dates are set (shouldn't happen with new defaults), use last 30 days of 2021
-          filterParams.dateFrom = "2021-12-01";
+          // If no dates are set (shouldn't happen with new defaults), use full year 2021
+          filterParams.dateFrom = "2021-01-01";
           filterParams.dateTo = "2021-12-31";
         }
 

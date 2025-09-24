@@ -49,10 +49,15 @@ class FilterEngine:
                 }
                 days = days_map.get(filters['timeRange'])
                 if days:
-                    # Use end of 2021 data as reference instead of current date
-                    # Since our data ends at 2021-12-31, calculate from there
-                    where_clauses.append(f"{schema.TRANSACTION.refs['date']} >= date('2021-12-31', '-{days} days')")
-                    where_clauses.append(f"{schema.TRANSACTION.refs['date']} <= '2021-12-31'")
+                    # Use actual current date for relative time periods
+                    from datetime import datetime, timedelta
+                    current_date = datetime.now()
+                    start_date = current_date - timedelta(days=days)
+
+                    # Format dates for SQL
+                    where_clauses.append(f"{schema.TRANSACTION.refs['date']} >= ?")
+                    where_clauses.append(f"{schema.TRANSACTION.refs['date']} <= ?")
+                    params.extend([start_date.strftime('%Y-%m-%d'), current_date.strftime('%Y-%m-%d')])
 
         # Segment filter - handle single value or array
         if filters.get('segment'):
