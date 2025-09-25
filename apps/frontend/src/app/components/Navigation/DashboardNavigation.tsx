@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  ChevronDown, 
-  ChevronRight, 
+import {
+  ChevronDown,
+  ChevronRight,
   X,
   BarChart3,
   Users,
@@ -35,7 +35,9 @@ import {
   FileBarChart,
   Monitor,
   Puzzle,
-  Package
+  Package,
+  Activity,
+  GitBranch
 } from 'lucide-react';
 
 interface NavigationItem {
@@ -104,6 +106,13 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({ isOpen, onClo
           href: '/anomaly-detection',
           icon: ShieldAlert,
           description: 'Detect unusual patterns',
+          isNew: true,
+        },
+        {
+          name: 'Performance Deviation',
+          href: '/performance-deviation',
+          icon: Activity,
+          description: 'Analyze performance variations',
           isNew: true,
         },
       ],

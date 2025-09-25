@@ -115,24 +115,24 @@ export const toolApiRegistry: Record<string, ToolApiConfig> = {
 
   // Performance Deviation Dashboard
   'performance-deviation': {
-    endpoint: '/api/performance/deviation/summary',
+    endpoint: '/api/performance/summary',
     method: 'POST',
     description: 'Performance deviation analysis'
   },
 
-  // Retention Planner Dashboard
-  'retention-planner': {
-    endpoint: '/api/retention/planner/summary',
-    method: 'POST',
-    description: 'Customer retention planning and strategies'
-  },
+  // Retention Planner Dashboard (Not yet implemented)
+  // 'retention-planner': {
+  //   endpoint: '/api/retention/summary',
+  //   method: 'POST',
+  //   description: 'Customer retention planning and strategies'
+  // },
 
-  // Anomaly Detection Dashboard
-  'anomaly-detection': {
-    endpoint: '/api/anomaly/detection/summary',
-    method: 'POST',
-    description: 'Anomaly detection and analysis'
-  },
+  // Anomaly Detection Dashboard (Not yet implemented)
+  // 'anomaly-detection': {
+  //   endpoint: '/api/anomaly/summary',
+  //   method: 'POST',
+  //   description: 'Anomaly detection and analysis'
+  // },
 
   // Add more dashboard endpoints as they are implemented
   // Template:

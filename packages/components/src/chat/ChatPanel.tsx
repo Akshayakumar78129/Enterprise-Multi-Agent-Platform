@@ -32,10 +32,19 @@ export function ChatPanel({
   dashboardContext = "general",
   additionalContext = {}
 }: ChatPanelProps) {
+  const getInitialMessage = () => {
+    const contextMessages: Record<string, string> = {
+      churn_prediction: "Hello! I'm your AI assistant. How can I help you analyze your churn prediction data today?",
+      performance_deviation: "Hello! I'm your AI assistant. How can I help you analyze your performance deviation data today?",
+      general: "Hello! I'm your AI assistant. How can I help you today?"
+    };
+    return contextMessages[dashboardContext] || contextMessages.general;
+  };
+
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Hello! I'm your AI assistant. How can I help you analyze your churn prediction data today?"
+      content: getInitialMessage()
     }
   ]);
   const [input, setInput] = useState("");

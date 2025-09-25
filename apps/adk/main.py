@@ -22,8 +22,9 @@ from orchestration_agent import root_agent
 from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.genai.types import Content
 
-# Import ChurnProcessingService for ML model
+# Import Processing Services for ML models
 from domains.churn_prediction.processing_service import ChurnProcessingService
+from domains.performance_deviation.processing_service import PerformanceProcessingService
 
 from customer.agent import root_agent as customer_agent
 from finance.agent import root_agent as finance_agent
@@ -32,6 +33,7 @@ from sales.agent import root_agent as sales_agent
 
 # Import dashboard API routers
 from api.routers.churn_router import router as churn_router
+from api.routers.performance_router import router as performance_router
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +67,7 @@ app = FastAPI(
 
 # Global service instances
 churn_service = ChurnProcessingService()
+performance_service = PerformanceProcessingService()
 
 app.add_middleware(
     CORSMiddleware,
@@ -78,6 +81,7 @@ memory_session_service = InMemorySessionService()
 
 # Include dashboard API routers
 app.include_router(churn_router)
+app.include_router(performance_router)
 
 # Simple in-memory session storage for fallback
 simple_sessions: Dict[str, Dict[str, Any]] = {}
@@ -99,8 +103,9 @@ async def startup_event():
     await churn_service._train_ml_model()
     print("[Main Server] ML model training complete")
 
-    # Store the service instance for use in routers
+    # Store the service instances for use in routers
     app.state.churn_service = churn_service
+    app.state.performance_service = performance_service
 
 @app.get("/")
 def read_root():
@@ -119,7 +124,11 @@ def read_root():
                 "/api/churn/segment-comparison",
                 "/api/churn/risk-trends",
                 "/api/churn/customers",
-                "/api/churn/export"
+                "/api/churn/export",
+                "/api/performance/summary",
+                "/api/performance/feature-importance",
+                "/api/performance/variance-decomposition",
+                "/api/performance/deviation-patterns"
             ]
         }
     }

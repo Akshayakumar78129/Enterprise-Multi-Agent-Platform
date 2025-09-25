@@ -78,13 +78,18 @@ export async function summaryClient<T = any>(
     retryDelay = 1000
   } = options;
 
+  // Construct full URL if needed
+  // Use NEXT_PUBLIC_BACKEND_AI_URL or fallback to localhost:8000
+  const apiUrl = process.env.NEXT_PUBLIC_BACKEND_AI_URL || 'http://localhost:8000';
+  const fullEndpoint = endpoint.startsWith('http') ? endpoint : `${apiUrl}${endpoint}`;
+
   // Check cache first
   if (cache) {
-    const cacheKey = getCacheKey(endpoint, metadata);
+    const cacheKey = getCacheKey(fullEndpoint, metadata);
     const cached = summaryCache.get(cacheKey);
 
     if (cached && isCacheValid(cached.timestamp)) {
-      console.log(`[SummaryClient] Cache hit for ${endpoint}`);
+      console.log(`[SummaryClient] Cache hit for ${fullEndpoint}`);
       return {
         data: cached.data,
         cache: { hit: true, key: cacheKey }
@@ -107,7 +112,7 @@ export async function summaryClient<T = any>(
   // Retry logic
   while (attempt <= retries) {
     try {
-      console.log(`[SummaryClient] Fetching ${endpoint} (attempt ${attempt + 1}/${retries + 1})`);
+      console.log(`[SummaryClient] Fetching ${fullEndpoint} (attempt ${attempt + 1}/${retries + 1})`);
 
       const requestOptions: RequestInit = {
         method,
@@ -118,14 +123,15 @@ export async function summaryClient<T = any>(
       };
 
       // Add body for POST, query params for GET
+      let requestUrl = fullEndpoint;
       if (method === 'POST') {
         requestOptions.body = JSON.stringify(metadata);
       } else {
         const params = metadataToQueryParams(metadata);
-        endpoint = `${endpoint}?${params.toString()}`;
+        requestUrl = `${fullEndpoint}?${params.toString()}`;
       }
 
-      const response = await fetch(endpoint, requestOptions);
+      const response = await fetch(requestUrl, requestOptions);
       clearTimeout(timeoutId);
 
       if (!response.ok) {
@@ -136,12 +142,12 @@ export async function summaryClient<T = any>(
 
       // Cache successful response
       if (cache) {
-        const cacheKey = getCacheKey(endpoint, metadata);
+        const cacheKey = getCacheKey(fullEndpoint, metadata);
         summaryCache.set(cacheKey, {
           data,
           timestamp: Date.now()
         });
-        console.log(`[SummaryClient] Cached response for ${endpoint}`);
+        console.log(`[SummaryClient] Cached response for ${fullEndpoint}`);
       }
 
       return {
@@ -164,7 +170,7 @@ export async function summaryClient<T = any>(
   clearTimeout(timeoutId);
 
   // All retries failed
-  console.error(`[SummaryClient] All attempts failed for ${endpoint}`);
+  console.error(`[SummaryClient] All attempts failed for ${fullEndpoint}`);
   return {
     data: null as any,
     error: lastError?.message || 'Failed to fetch summary data'
