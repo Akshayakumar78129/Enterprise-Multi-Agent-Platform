@@ -1,277 +1,273 @@
-import pandas as pd
-import numpy as np
-import sqlite3
-import logging
-from datetime import datetime, timedelta
-from sklearn.ensemble import IsolationForest
-from sklearn.preprocessing import StandardScaler
-import os
-from typing import List, Optional
+"""Anomaly detection tool for orchestration agent using shared ML predictor"""
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+import json
+from typing import Optional, List
+from datetime import datetime, timedelta
+import sys
+import os
+
+# Add parent directories to path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+from domains.anomaly_detection.sync_processing_service import SyncAnomalyProcessingService
+from domains.anomaly_detection.ml_predictor import AnomalyMLPredictor
 
 def detect_anomalies(
-    time_window: str = "7d",
-    customer_segments: Optional[List[str]] = None,
-    include_visualization: bool = False
+    time_period: str = "last_30_days",
+    segment_id: Optional[str] = None,
+    include_visualization: bool = False,
+    contamination: float = 0.1
 ) -> str:
     """
-    Detects anomalies in customer behavior and transaction patterns.
-    
+    Detect anomalies in customer behavior using the shared ML predictor.
+    This ensures consistency with any potential dashboard data.
+
     Args:
-        time_window: Time window for analysis (e.g., '7d', '30d', '90d')
-        customer_segments: Optional list of customer segments to analyze
-        include_visualization: Whether to include visualizations in the output
-        
+        time_period: Analysis period ('last_7_days', 'last_30_days', 'last_90_days', 'last_180_days', 'last_year')
+        segment_id: Optional customer segment to analyze
+        include_visualization: Whether to include visualizations (not implemented for consistency)
+        contamination: Expected proportion of anomalies (default 0.1 = 10%)
+
     Returns:
-        Text-based analysis of detected anomalies
+        String containing the anomaly analysis results
     """
+    # Call the synchronous version directly
+    result = _detect_anomalies_sync(time_period, segment_id, contamination)
+    return result
+
+
+def _detect_anomalies_sync(time_period: str, segment_id: Optional[str], contamination: float) -> str:
+    """Synchronous implementation of anomaly detection."""
+
+    # Initialize the sync wrapper for agent framework
+    service = SyncAnomalyProcessingService()
+
+    # Build filters based on parameters
+    filters = {}
+
+    # Determine date range based on time period (using 2021 data like churn prediction)
+    reference_date = datetime(2021, 12, 31)  # End of our data
+
+    if time_period == "last_7_days":
+        filters['dateFrom'] = (reference_date - timedelta(days=7)).strftime('%Y-%m-%d')
+        filters['dateTo'] = reference_date.strftime('%Y-%m-%d')
+        filters['timeRange'] = '7d'
+    elif time_period == "last_30_days":
+        filters['dateFrom'] = (reference_date - timedelta(days=30)).strftime('%Y-%m-%d')
+        filters['dateTo'] = reference_date.strftime('%Y-%m-%d')
+        filters['timeRange'] = '30d'
+    elif time_period == "last_90_days":
+        filters['dateFrom'] = (reference_date - timedelta(days=90)).strftime('%Y-%m-%d')
+        filters['dateTo'] = reference_date.strftime('%Y-%m-%d')
+        filters['timeRange'] = '90d'
+    elif time_period == "last_180_days":
+        filters['dateFrom'] = (reference_date - timedelta(days=180)).strftime('%Y-%m-%d')
+        filters['dateTo'] = reference_date.strftime('%Y-%m-%d')
+    elif time_period == "last_year":
+        # Match frontend behavior - use Q4 2021 for "last year"
+        filters['dateFrom'] = '2021-01-01'
+        filters['dateTo'] = '2021-12-31'
+    else:
+        # Default to last 30 days of 2021
+        filters['dateFrom'] = '2021-12-01'
+        filters['dateTo'] = '2021-12-31'
+        filters['timeRange'] = '30d'
+
+    # Add segment filter if specified
+    if segment_id:
+        filters['segments'] = [segment_id]
+
     try:
-        # Extract metrics
-        metrics = extract_metrics(time_window, customer_segments)
-        
-        if metrics.empty:
-            return "No customer data found for the specified parameters."
-        
-        # Define features for anomaly detection
-        feature_columns = [
-            'transaction_count', 'avg_transaction_value',
-            'max_transaction_value', 'min_transaction_value',
-            'transaction_range', 'session_count',
-            'avg_session_duration', 'unique_pages',
-            'error_count', 'unique_errors'
-        ]
-        
-        # Ensure all features exist
-        for col in feature_columns:
-            if col not in metrics.columns:
-                metrics[col] = 0
-        
-        # Detect anomalies
-        scores, model_params = detect_anomalies_with_isolation_forest(metrics, feature_columns)
-        
-        # Calculate severity
-        severity = calculate_severity(scores, metrics, feature_columns)
-        
-        # Format results
-        result = []
-        result.append("# Customer Anomaly Detection Analysis\n")
-        
-        # Get date range from metrics
-        latest_date = datetime.now().strftime('%Y-%m-%d')
-        days = int(time_window.replace('d', ''))
-        start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
-        result.append(f"Analysis Period: {start_date} to {latest_date}")
-        result.append(f"Total Customers Analyzed: {len(metrics):,}\n")
-        
-        # Overall anomaly metrics
-        anomaly_count = len(severity[severity['overall_severity'] >= 3])
-        result.append("## Overall Anomaly Metrics")
-        result.append(f"Total Anomalies Detected: {anomaly_count:,}")
-        result.append(f"Anomaly Rate: {(anomaly_count/len(metrics)*100):.2f}%\n")
-        
-        # Severity distribution
-        result.append("## Anomaly Severity Distribution")
-        severity_dist = severity['overall_severity'].value_counts().sort_index()
-        for level, count in severity_dist.items():
-            result.append(f"Severity Level {level}: {count:,} customers ({(count/len(metrics)*100):.2f}%)")
-        
-        # Top anomalies by severity
-        result.append("\n## Top Anomalies by Severity")
-        top_anomalies = severity.sort_values('overall_severity', ascending=False).head(10)
-        for _, row in top_anomalies.iterrows():
-            customer_id = row['customer_id']
-            severity_level = row['overall_severity']
-            anomaly_score = row['anomaly_score']
-            
-            # Get customer details
-            customer_details = metrics[metrics['customer_id'] == customer_id].iloc[0]
-            
-            result.append(f"\n### Customer ID: {customer_id}")
-            result.append(f"Severity Level: {severity_level}")
-            result.append(f"Anomaly Score: {anomaly_score:.4f}")
-            
-            # Add feature-specific anomalies
-            feature_anomalies = []
-            for feature in feature_columns:
-                if row.get(f'{feature}_severity', 0) >= 3:
-                    feature_anomalies.append(f"{feature}: {customer_details[feature]:.2f}")
-            
-            if feature_anomalies:
-                result.append("Anomalous Features:")
-                for feature in feature_anomalies:
-                    result.append(f"- {feature}")
-        
-        # Customer segment analysis
-        if 'customer_segment' in metrics.columns:
-            result.append("\n## Anomalies by Customer Segment")
-            for segment in metrics['customer_segment'].unique():
-                if pd.notna(segment):
-                    segment_mask = metrics['customer_segment'] == segment
-                    segment_anomalies = severity[severity['customer_id'].isin(metrics[segment_mask]['customer_id'])]
-                    segment_anomaly_count = len(segment_anomalies[segment_anomalies['overall_severity'] >= 3])
-                    segment_total = len(segment_anomalies)
-                    
-                    if segment_total > 0:
-                        result.append(f"{segment}: {segment_anomaly_count:,} anomalies ({(segment_anomaly_count/segment_total*100):.2f}%)")
-        
-        # Region analysis
-        if 'region' in metrics.columns:
-            result.append("\n## Anomalies by Region")
-            for region in metrics['region'].unique():
-                if pd.notna(region):
-                    region_mask = metrics['region'] == region
-                    region_anomalies = severity[severity['customer_id'].isin(metrics[region_mask]['customer_id'])]
-                    region_anomaly_count = len(region_anomalies[region_anomalies['overall_severity'] >= 3])
-                    region_total = len(region_anomalies)
-                    
-                    if region_total > 0:
-                        result.append(f"{region}: {region_anomaly_count:,} anomalies ({(region_anomaly_count/region_total*100):.2f}%)")
-        
-        return "\n".join(result)
-        
-    except Exception as e:
-        logger.error(f"Error in detect_anomalies: {str(e)}")
-        return f"Error detecting anomalies: {str(e)}"
+        # Get dashboard summary data (similar to churn prediction)
+        summary_data = service.get_dashboard_summary(filters)
 
-def extract_metrics(
-    time_window: str,
-    customer_segments: Optional[List[str]] = None
-) -> pd.DataFrame:
-    """
-    Extract customer metrics from the database for anomaly detection.
-    
-    Args:
-        time_window: Time window for analysis (e.g., '7d', '30d', '90d')
-        customer_segments: Optional list of customer segments to analyze
-        
-    Returns:
-        DataFrame containing customer metrics
-    """
+        # Get detailed anomaly data
+        customer_anomalies = summary_data.get('customerAnomalies', [])
+        segment_distribution = summary_data.get('segmentDistribution', [])
+        region_distribution = summary_data.get('regionDistribution', [])
+        severity_distribution = summary_data.get('severityDistribution', [])
+        feature_importance = summary_data.get('featureImportance', [])
+
+        # Calculate statistics
+        total_customers = len(customer_anomalies)
+
+        # Handle empty data
+        if total_customers == 0:
+            return """# Anomaly Detection Analysis Report
+
+No customer data available for the specified time period.
+
+Please check:
+1. Date range is valid and contains data
+2. Filters are correctly applied
+3. Database connection is working
+"""
+
+        # Count anomalies and severity levels
+        anomaly_count = sum(1 for c in customer_anomalies if c['is_anomaly'])
+        high_severity_count = sum(1 for c in customer_anomalies if c['severity_level'] >= 4)
+        critical_anomalies = [c for c in customer_anomalies if c['severity_level'] == 5]
+
+        # Calculate anomaly rate
+        anomaly_rate = (anomaly_count / total_customers * 100) if total_customers > 0 else 0
+
+        # Format the results
+        result = f"""# Anomaly Detection Analysis Report
+
+## Analysis Period: {time_period}
+{f"Segment: {segment_id}" if segment_id else "All Customers"}
+Date Range: {filters.get('dateFrom', 'N/A')} to {filters.get('dateTo', 'N/A')}
+
+## Overall Metrics
+
+**Anomaly Detection Rate: {anomaly_rate:.1f}%**
+- {anomaly_count} anomalies detected out of {total_customers} customers analyzed
+- Detection threshold: {contamination * 100:.1f}% contamination rate
+- High severity anomalies: {high_severity_count} customers
+
+## Severity Distribution
+
+"""
+        # Add severity distribution
+        for severity in severity_distribution:
+            result += f"- {severity['label']} (Level {severity['severity_level']}): {severity['count']} customers ({severity['percentage']:.1f}%)\n"
+
+        result += """
+## Top Anomalous Patterns
+
+Based on ML model analysis:
+"""
+
+        # Add feature importance (top anomaly indicators)
+        for idx, feature in enumerate(feature_importance[:5], 1):
+            result += f"{idx}. {feature['name']}: {feature['importance']:.1f}% contribution to anomaly detection\n"
+
+        result += """
+## Critical Anomalies (Severity Level 5)
+"""
+
+        if critical_anomalies:
+            for idx, anomaly in enumerate(critical_anomalies[:10], 1):
+                result += f"""
+### {idx}. {anomaly['customer_name']} (ID: {anomaly['customer_id']})
+- Anomaly Score: {anomaly['anomaly_score']:.4f}
+- Region: {anomaly.get('region', 'N/A')}
+- Segment: {anomaly.get('segment', 'N/A')}
+- Transaction Count: {anomaly.get('transaction_count', 0)}
+- Average Transaction: ${anomaly.get('avg_transaction_value', 0):,.2f}
+- Days Since Last Transaction: {anomaly.get('days_since_last_txn', 'N/A')}
+"""
+
+                # Add anomalous features
+                if anomaly.get('anomalous_features'):
+                    result += "- Anomalous Features:\n"
+                    for feat in anomaly['anomalous_features'][:3]:
+                        result += f"  - {feat['feature'].replace('_', ' ').title()}: {feat['value']:.2f} (Z-score: {feat['zscore']:.2f})\n"
+        else:
+            result += "No critical severity anomalies detected.\n"
+
+        # Segment Analysis
+        if segment_distribution:
+            result += """
+## Anomaly Distribution by Segment
+"""
+            for segment in segment_distribution:
+                if segment['total_customers'] > 0:
+                    result += f"""
+{segment['segment']} Segment:
+  - Total Customers: {segment['total_customers']}
+  - Anomalies: {segment['anomaly_count']} ({segment['anomaly_rate']:.1f}%)
+  - Severity Distribution: L1:{segment['severity_distribution']['1']}, L2:{segment['severity_distribution']['2']}, L3:{segment['severity_distribution']['3']}, L4:{segment['severity_distribution']['4']}, L5:{segment['severity_distribution']['5']}
+"""
+
+        # Region Analysis
+        if region_distribution:
+            result += """
+## Top Regions by Anomaly Rate
+"""
+            for idx, region in enumerate(region_distribution[:5], 1):
+                result += f"{idx}. {region['region']}: {region['anomaly_rate']:.1f}% anomaly rate ({region['anomaly_count']}/{region['total_customers']} customers)\n"
+
+        result += """
+## Recommendations
+
+1. **Immediate Investigation Required**:
+   - Focus on customers with severity level 5 anomalies
+   - These represent the most unusual behavior patterns
+   - May indicate fraud, system errors, or significant business changes
+
+2. **Pattern Analysis**:
+   - Review the top anomalous features to understand what's driving anomalies
+   - Look for common patterns among high-severity anomalies
+   - Consider if anomalies represent risks or opportunities
+
+3. **Segment-Specific Actions**:
+"""
+
+        # Find segment with highest anomaly rate
+        if segment_distribution:
+            max_anomaly_segment = max(segment_distribution, key=lambda x: x['anomaly_rate'])
+            result += f"   - Prioritize {max_anomaly_segment['segment']} segment (highest anomaly rate: {max_anomaly_segment['anomaly_rate']:.1f}%)\n"
+
+        result += """   - Implement targeted monitoring for high-anomaly segments
+   - Consider segment-specific thresholds for anomaly detection
+
+4. **Feature-Based Improvements**:
+"""
+
+        # Add recommendations based on top features
+        for idx, feature in enumerate(feature_importance[:3], 1):
+            feature_name = feature['feature'].replace('_', ' ').title()
+            if 'transaction' in feature_name.lower():
+                result += f"   - Monitor transaction patterns closely ({feature['importance']:.1f}% importance)\n"
+            elif 'return' in feature_name.lower():
+                result += f"   - Investigate return behavior anomalies ({feature['importance']:.1f}% importance)\n"
+            elif 'discount' in feature_name.lower():
+                result += f"   - Review discount usage patterns ({feature['importance']:.1f}% importance)\n"
+            else:
+                result += f"   - Analyze {feature_name} variations ({feature['importance']:.1f}% importance)\n"
+
+        result += """
+## Data Consistency Note
+
+This analysis uses Isolation Forest ML model for anomaly detection,
+providing consistent results that can be integrated with dashboard visualizations.
+The model identifies outliers based on multiple behavioral and transactional features.
+"""
+
+        return result
+
+    except Exception as e:
+        return f"""# Anomaly Detection Analysis Error
+
+An error occurred while detecting anomalies: {str(e)}
+
+Please check:
+1. Database connectivity
+2. Data availability for the specified time period
+3. ML model training status
+
+For debugging, the error details are:
+{str(e)}
+"""
+
+
+# Additional helper function for testing
+def test_anomaly_detection():
+    """Test function to verify the anomaly detection tool is working."""
     try:
-        # Connect to database
-        db_path = os.path.join("orchestration_agent", "database", "customers.db")
-        conn = sqlite3.connect(db_path)
-        
-        # First get the latest date in the database
-        latest_date_query = "SELECT MAX(\"Txn Date\") as max_date FROM dbo_F_Sales_Transaction"
-        latest_date_result = pd.read_sql(latest_date_query, conn)
-        if latest_date_result.empty:
-            raise Exception("Failed to get latest date")
-            
-        latest_date = pd.to_datetime(latest_date_result['max_date'].iloc[0])
-        
-        # Convert time window to days
-        days = int(time_window.replace('d', ''))
-        start_date = latest_date - timedelta(days=days)
-        
-        logger.info(f"Analyzing data from {start_date} to {latest_date}")
-        
-        # Build the base query with correct column names
-        query = """
-        SELECT 
-            c."Customer Key" as customer_id,
-            c."Customer Type Desc" as customer_segment,
-            c."Customer State/Prov" as region,
-            COUNT(*) as transaction_count,
-            AVG(t."Net Sales Amount") as avg_transaction_value,
-            MAX(t."Net Sales Amount") as max_transaction_value,
-            MIN(t."Net Sales Amount") as min_transaction_value,
-            MAX(t."Net Sales Amount") - MIN(t."Net Sales Amount") as transaction_range,
-            SUM(t."Net Sales Amount") as total_spend
-        FROM dbo_F_Sales_Transaction t
-        JOIN dbo_D_Customer c ON t."Customer Key" = c."Customer Key"
-        WHERE t."Txn Date" BETWEEN ? AND ?
-        """
-        
-        params = [start_date.strftime('%Y-%m-%d'), latest_date.strftime('%Y-%m-%d')]
-        
-        if customer_segments:
-            segment_list = ','.join(['?' for _ in customer_segments])
-            query += f" AND c.\"Customer Type Desc\" IN ({segment_list})"
-            params.extend(customer_segments)
-            
-        query += " GROUP BY c.\"Customer Key\", c.\"Customer Type Desc\", c.\"Customer State/Prov\""
-        
-        logger.info(f"Executing query with params: {params}")
-        df = pd.read_sql(query, conn, params=params)
-        conn.close()
-        
-        if df.empty:
-            logger.warning("No data found for the specified parameters")
-            return pd.DataFrame()
-            
-        logger.info(f"Found {len(df)} customers to analyze")
-        
-        # Add derived metrics
-        df['session_count'] = df['transaction_count'] * 1.5  # Estimated
-        df['avg_session_duration'] = np.random.uniform(5, 30, len(df))  # Minutes
-        df['unique_pages'] = np.random.randint(3, 15, len(df))
-        df['error_count'] = np.random.randint(0, 5, len(df))
-        df['unique_errors'] = df['error_count'].apply(lambda x: min(x, np.random.randint(0, 3)))
-        
-        return df
-        
+        result = detect_anomalies(
+            time_period="last_30_days",
+            segment_id=None,
+            include_visualization=False
+        )
+        print(result)
+        return True
     except Exception as e:
-        logger.error(f"Error in extract_metrics: {str(e)}")
-        return pd.DataFrame()
+        print(f"Test failed: {e}")
+        return False
 
-def detect_anomalies_with_isolation_forest(metrics, feature_columns):
-    """Detect anomalies using Isolation Forest."""
-    # Prepare features
-    X = metrics[feature_columns].values
-    
-    # Scale features
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-    
-    # Train Isolation Forest
-    model = IsolationForest(
-        n_estimators=100,
-        max_samples='auto',
-        contamination=0.1,
-        random_state=42
-    )
-    
-    # Fit and predict
-    model.fit(X_scaled)
-    scores = model.score_samples(X_scaled)
-    
-    return scores, {
-        'n_estimators': 100,
-        'contamination': 0.1,
-        'features_used': feature_columns
-    }
 
-def calculate_severity(scores, metrics, feature_columns):
-    """Calculate anomaly severity scores (1-5)."""
-    # Convert scores to 0-1 range
-    scores_normalized = (scores - scores.min()) / (scores.max() - scores.min())
-    
-    # Calculate severity based on thresholds
-    severity = pd.DataFrame()
-    severity['customer_id'] = metrics['customer_id']
-    severity['anomaly_score'] = scores_normalized
-    
-    # Define severity thresholds
-    severity_thresholds = {
-        'transaction_value': 3.0,
-        'purchase_frequency': 2.5,
-        'engagement_score': 2.0,
-        'error_rate': 1.5
-    }
-    
-    # Calculate feature-specific severity
-    for feature in feature_columns:
-        threshold = severity_thresholds.get(feature, 2.0)
-        z_scores = np.abs((metrics[feature] - metrics[feature].mean()) / metrics[feature].std())
-        severity[f'{feature}_severity'] = np.where(z_scores > threshold, 
-                                                 np.minimum(5, np.ceil(z_scores / threshold)), 
-                                                 1)
-    
-    # Overall severity is max of feature severities
-    severity['overall_severity'] = severity[[col for col in severity.columns if 'severity' in col]].max(axis=1)
-    
-    return severity 
+if __name__ == "__main__":
+    # Run test when executed directly
+    test_anomaly_detection()

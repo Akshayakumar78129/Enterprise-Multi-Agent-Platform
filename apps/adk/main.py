@@ -24,6 +24,10 @@ from google.genai.types import Content
 
 # Import ChurnProcessingService for ML model
 from domains.churn_prediction.processing_service import ChurnProcessingService
+# Import AnomalyProcessingService for ML model
+from domains.anomaly_detection.processing_service import AnomalyProcessingService
+# Import CustomerBehaviorProcessingService for behavior analysis
+from domains.customer_behavior.processing_service import CustomerBehaviorProcessingService
 
 from customer.agent import root_agent as customer_agent
 from finance.agent import root_agent as finance_agent
@@ -32,6 +36,8 @@ from sales.agent import root_agent as sales_agent
 
 # Import dashboard API routers
 from api.routers.churn_router import router as churn_router
+from api.routers.anomaly_router import router as anomaly_router
+from api.routers.customer_behavior_router import router as customer_behavior_router
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +71,8 @@ app = FastAPI(
 
 # Global service instances
 churn_service = ChurnProcessingService()
+anomaly_service = AnomalyProcessingService()
+customer_behavior_service = CustomerBehaviorProcessingService()
 
 app.add_middleware(
     CORSMiddleware,
@@ -78,6 +86,8 @@ memory_session_service = InMemorySessionService()
 
 # Include dashboard API routers
 app.include_router(churn_router)
+app.include_router(anomaly_router)
+app.include_router(customer_behavior_router)
 
 # Simple in-memory session storage for fallback
 simple_sessions: Dict[str, Dict[str, Any]] = {}
@@ -88,19 +98,29 @@ agents_list = ["orchestration_agent", "inventory_agent", "sales_agent", "custome
 
 @app.on_event("startup")
 async def startup_event():
-    """Train ML model on startup and initialize caching"""
+    """Train ML models on startup and initialize caching"""
     # Initialize caching
     from domains.common.simple_cache import dashboard_cache_manager
     dashboard_cache_manager.enable()
     print("[Main Server] Dashboard caching enabled")
 
-    # Train ML model on startup to avoid retraining on every request
-    print("[Main Server] Training ML model on startup...")
-    await churn_service._train_ml_model()
-    print("[Main Server] ML model training complete")
+    # Train ML models on startup to avoid retraining on every request
+    print("[Main Server] Training ML models on startup...")
 
-    # Store the service instance for use in routers
+    # Train churn prediction model
+    await churn_service._train_ml_model()
+    print("[Main Server] Churn ML model training complete")
+
+    # Train anomaly detection model
+    await anomaly_service._train_ml_model()
+    print("[Main Server] Anomaly ML model training complete")
+
+    # Store the service instances for use in routers
     app.state.churn_service = churn_service
+    app.state.anomaly_service = anomaly_service
+    app.state.customer_behavior_service = customer_behavior_service
+
+    print("[Main Server] Customer behavior service initialized")
 
 @app.get("/")
 def read_root():
@@ -119,7 +139,28 @@ def read_root():
                 "/api/churn/segment-comparison",
                 "/api/churn/risk-trends",
                 "/api/churn/customers",
-                "/api/churn/export"
+                "/api/churn/export",
+                "/api/anomaly/summary",
+                "/api/anomaly/customer-anomalies",
+                "/api/anomaly/feature-importance",
+                "/api/anomaly/segment-distribution",
+                "/api/anomaly/region-distribution",
+                "/api/anomaly/severity-distribution",
+                "/api/anomaly/time-series",
+                "/api/anomaly/customers",
+                "/api/anomaly/export",
+                "/api/anomaly/retrain",
+                "/api/customer-behavior/summary",
+                "/api/customer-behavior/purchase-patterns",
+                "/api/customer-behavior/product-preferences",
+                "/api/customer-behavior/channel-usage",
+                "/api/customer-behavior/engagement-metrics",
+                "/api/customer-behavior/customer-segments",
+                "/api/customer-behavior/top-customers",
+                "/api/customer-behavior/behavior-trends",
+                "/api/customer-behavior/rfm-analysis",
+                "/api/customer-behavior/clv-analysis",
+                "/api/customer-behavior/export"
             ]
         }
     }
