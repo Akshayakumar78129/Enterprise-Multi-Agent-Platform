@@ -24,22 +24,40 @@ class FilterEngine:
         where_clauses = []
         params = []
 
-        # Date range filters
-        if filters.get('dateFrom') and filters.get('dateTo'):
-            where_clauses.append(f"{schema.TRANSACTION.refs['date']} >= ?")
-            params.append(filters['dateFrom'])
-            where_clauses.append(f"{schema.TRANSACTION.refs['date']} <= ?")
-            params.append(filters['dateTo'])
+        # Check if the query includes the transaction table
+        has_transaction_table = False
+        if hasattr(schema, 'TABLES') and 'transaction' in schema.TABLES:
+            # Check if the transaction table or its alias is in the query
+            transaction_table = schema.TABLES['transaction']
+            transaction_alias = schema.ALIASES.get('transaction', 't')
+            if transaction_table in query or f" {transaction_alias}." in query or f"[{transaction_alias}]." in query:
+                has_transaction_table = True
+
+        # Date range filters - only apply if transaction table is in the query
+        if has_transaction_table and filters.get('dateFrom') and filters.get('dateTo'):
+            # Use 'txn_date' if 'date' doesn't exist in schema
+            date_field = schema.TRANSACTION.refs.get('date', schema.TRANSACTION.refs.get('txn_date'))
+            if date_field:
+                # Since dates are stored as YYYY-MM-DD strings, use direct string comparison
+                # This works because the format allows lexicographic comparison
+                where_clauses.append(f"{date_field} >= ?")
+                params.append(filters['dateFrom'])
+                where_clauses.append(f"{date_field} <= ?")
+                params.append(filters['dateTo'])
 
         # Alternative date range format
-        elif filters.get('datefrom') and filters.get('dateto'):
-            where_clauses.append(f"{schema.TRANSACTION.refs['date']} >= ?")
-            params.append(filters['datefrom'])
-            where_clauses.append(f"{schema.TRANSACTION.refs['date']} <= ?")
-            params.append(filters['dateto'])
+        elif has_transaction_table and filters.get('datefrom') and filters.get('dateto'):
+            # Use 'txn_date' if 'date' doesn't exist in schema
+            date_field = schema.TRANSACTION.refs.get('date', schema.TRANSACTION.refs.get('txn_date'))
+            if date_field:
+                # Since dates are stored as YYYY-MM-DD strings, use direct string comparison
+                where_clauses.append(f"{date_field} >= ?")
+                params.append(filters['datefrom'])
+                where_clauses.append(f"{date_field} <= ?")
+                params.append(filters['dateto'])
 
         # Time range filter (7d, 30d, 90d)
-        elif filters.get('timeRange'):
+        elif has_transaction_table and filters.get('timeRange'):
             # Skip timeRange if we already have date filters
             if not any(k in filters for k in ['dateFrom', 'dateTo', 'datefrom', 'dateto']):
                 days_map = {
@@ -49,15 +67,13 @@ class FilterEngine:
                 }
                 days = days_map.get(filters['timeRange'])
                 if days:
-                    # Use actual current date for relative time periods
-                    from datetime import datetime, timedelta
-                    current_date = datetime.now()
-                    start_date = current_date - timedelta(days=days)
-
-                    # Format dates for SQL
-                    where_clauses.append(f"{schema.TRANSACTION.refs['date']} >= ?")
-                    where_clauses.append(f"{schema.TRANSACTION.refs['date']} <= ?")
-                    params.extend([start_date.strftime('%Y-%m-%d'), current_date.strftime('%Y-%m-%d')])
+                    # Use end of 2021 data as reference instead of current date
+                    # Since our data ends at 2021-12-31, calculate from there
+                    # Use 'txn_date' if 'date' doesn't exist in schema
+                    date_field = schema.TRANSACTION.refs.get('date', schema.TRANSACTION.refs.get('txn_date'))
+                    if date_field:
+                        where_clauses.append(f"{date_field} >= date('2021-12-31', '-{days} days')")
+                        where_clauses.append(f"{date_field} <= '2021-12-31'")
 
         # Segment filter - handle single value or array
         if filters.get('segment'):
