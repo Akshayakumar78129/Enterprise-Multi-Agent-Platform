@@ -86,14 +86,14 @@ export const AIInsightBlock: React.FC<AIInsightBlockProps> = ({
               )}
 
               {revenue && (
-                <Badge variant="default">
-                  Revenue Impact: ${revenue.toLocaleString()}
+                <Badge variant="default" suppressHydrationWarning>
+                  Revenue Impact: ${revenue.toLocaleString('en-US')}
                 </Badge>
               )}
 
               {timestamp && (
-                <span className="text-xs text-muted-foreground">
-                  {new Date(timestamp).toLocaleString()}
+                <span className="text-xs text-muted-foreground" suppressHydrationWarning>
+                  {new Date(timestamp).toLocaleString('en-US')}
                 </span>
               )}
             </div>

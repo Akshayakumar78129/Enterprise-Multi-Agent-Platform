@@ -1,183 +1,102 @@
-import pandas as pd
-import numpy as np
+"""Transaction patterns analysis tool using shared processing service"""
+
+import json
+from typing import Optional, Dict, List
 from datetime import datetime, timedelta
-import sqlite3
-import logging
-from typing import Dict, List, Optional
-from mlxtend.frequent_patterns import apriori, association_rules
-from sklearn.ensemble import IsolationForest
+import sys
+import os
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Add parent directories to path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-class TransactionPatternAnalyzer:
-    """Analyzes transaction patterns and identifies anomalies."""
-    
-    def __init__(self, db_path: str):
-        self.db_path = db_path
-        self.anomaly_detector = IsolationForest(
-            contamination=0.1,
-            random_state=42
-        )
-        
-    def _fetch_transaction_data(self, start_date: Optional[str] = None, end_date: Optional[str] = None) -> pd.DataFrame:
-        try:
-            conn = sqlite3.connect(self.db_path)
-            date_filter = ""
-            if start_date and end_date:
-                date_filter = f"WHERE t.\"Txn Date\" BETWEEN '{start_date}' AND '{end_date}'"
-            
-            query = f"""
-            WITH TransactionDetails AS (
-                SELECT 
-                    t."Sales Txn Key" as transaction_id,
-                    t."Customer Key" as customer_id,
-                    t."Txn Date" as timestamp,
-                    t."Net Sales Amount" as total_value,
-                    t."Unit of Measure" as payment_method,
-                    GROUP_CONCAT(i."Item Category Hrchy Key", ';') as product_categories,
-                    t."Location Code" as location,
-                    t."Discount Reason" as promotion_applied
-                FROM 
-                    dbo_F_Sales_Transaction t
-                LEFT JOIN 
-                    dbo_F_Sales_Transaction i ON t."Item Category Hrchy Key" = i."Item Category Hrchy Key"
-                {date_filter}
-                GROUP BY 
-                    t."Sales Txn Key"
-            )
-            SELECT * FROM TransactionDetails
-            """
-            
-            data = pd.read_sql_query(query, conn)
-            
-            if data.empty:
-                logger.warning("No transaction data found")
-                return pd.DataFrame()
-            
-            data['timestamp'] = pd.to_datetime(data['timestamp'])
-            data['product_categories'] = data['product_categories'].fillna('').str.split(';')
-            
-            return data
-            
-        except Exception as e:
-            logger.error(f"Error fetching transaction data: {str(e)}")
-            return pd.DataFrame()
+from domains.transaction_patterns.sync_processing_service import SyncTransactionPatternsService
 
-    def _create_basket_matrix(self, transactions: pd.DataFrame) -> pd.DataFrame:
-        basket_data = transactions.explode('product_categories')
-        basket_matrix = pd.crosstab(
-            basket_data['transaction_id'],
-            basket_data['product_categories']
-        ).astype(bool)
-        return basket_matrix
 
-    def _detect_anomalies(self, transactions: pd.DataFrame) -> np.ndarray:
-        features = pd.DataFrame({
-            'total_value': transactions['total_value'],
-            'hour': transactions['timestamp'].dt.hour,
-            'day_of_week': transactions['timestamp'].dt.dayofweek,
-            'products_count': transactions['product_categories'].str.len()
-        })
-        
-        self.anomaly_detector.fit(features)
-        return self.anomaly_detector.predict(features)
-
-    def analyze_patterns(self, start_date: Optional[str] = None, end_date: Optional[str] = None) -> str:
-        """Analyze transaction patterns and return insights in markdown format."""
-        data = self._fetch_transaction_data(start_date, end_date)
-        if data.empty:
-            return "No transaction data available for analysis."
-        
-        basket_matrix = self._create_basket_matrix(data)
-        
-        try:
-            frequent_itemsets = apriori(
-                basket_matrix,
-                min_support=0.01,
-                use_colnames=True
-            )
-            
-            if len(frequent_itemsets) > 0:
-                rules = association_rules(
-                    frequent_itemsets,
-                    metric="lift",
-                    min_threshold=1.0
-                )
-                rules['antecedents'] = rules['antecedents'].apply(list)
-                rules['consequents'] = rules['consequents'].apply(list)
-            else:
-                rules = pd.DataFrame()
-        except Exception as e:
-            logger.error(f"Error in association rule mining: {str(e)}")
-            rules = pd.DataFrame()
-        
-        anomaly_labels = self._detect_anomalies(data)
-        anomaly_rate = float((anomaly_labels == -1).mean())
-        
-        # Generate text-based insights
-        insights = []
-        
-        # Transaction Overview
-        insights.append("# Transaction Pattern Analysis\n")
-        insights.append(f"Total Transactions Analyzed: {len(data):,}")
-        insights.append(f"Analysis Period: {data['timestamp'].min().date()} to {data['timestamp'].max().date()}\n")
-        
-        # Temporal Patterns
-        insights.append("## Temporal Patterns")
-        
-        # Hourly patterns
-        hourly_dist = data['timestamp'].dt.hour.value_counts(normalize=True)
-        peak_hours = hourly_dist.nlargest(3)
-        insights.append("\n### Peak Transaction Hours")
-        for hour, pct in peak_hours.items():
-            insights.append(f"- {hour:02d}:00: {pct:.1%} of transactions")
-        
-        # Daily patterns
-        daily_dist = data['timestamp'].dt.day_name().value_counts(normalize=True)
-        insights.append("\n### Daily Distribution")
-        for day, pct in daily_dist.items():
-            insights.append(f"- {day}: {pct:.1%}")
-        
-        # Payment Methods
-        insights.append("\n## Payment Method Distribution")
-        payment_dist = data['payment_method'].value_counts(normalize=True)
-        for method, pct in payment_dist.items():
-            insights.append(f"- {method}: {pct:.1%}")
-        
-        # Product Combinations
-        if not rules.empty:
-            insights.append("\n## Top Product Combinations")
-            top_rules = rules.nlargest(5, 'lift')
-            for _, rule in top_rules.iterrows():
-                antecedents = ' + '.join(rule['antecedents'])
-                consequents = ' + '.join(rule['consequents'])
-                insights.append(f"- When customers buy {antecedents}, they are {rule['lift']:.1f}x more likely to also buy {consequents}")
-        
-        # Anomaly Detection
-        insights.append(f"\n## Anomaly Detection")
-        insights.append(f"- {anomaly_rate:.1%} of transactions flagged as potentially anomalous")
-        insights.append(f"- Based on patterns in transaction value, timing, and basket size")
-        
-        return "\n".join(insights)
-
-def analyze_transaction_patterns(start_date: Optional[str] = None, end_date: Optional[str] = None) -> str:
+def analyze_transaction_patterns(
+    time_period: str = "default",
+    pattern_type: str = "all",
+    anomaly_threshold: float = 0.95,
+    include_anomalies: bool = True
+) -> str:
     """
-    Analyze transaction patterns and return insights in markdown format.
-    
+    Analyze transaction patterns and detect anomalies using ML models.
+
     Args:
-        start_date (str, optional): Start date for analysis (YYYY-MM-DD). Defaults to 30 days ago.
-        end_date (str, optional): End date for analysis (YYYY-MM-DD). Defaults to today.
-    
+        time_period: Analysis period
+        pattern_type: Type of patterns to analyze (all, seasonal, behavioral)
+        anomaly_threshold: Threshold for anomaly detection (0-1)
+        include_anomalies: Whether to include anomaly detection
+
     Returns:
-        str: Markdown formatted analysis results
+        Formatted transaction pattern analysis as a string.
     """
-    # Set default date range to last 30 days if no dates provided
-    if not start_date or not end_date:
-        end_date = datetime.now().strftime('%Y-%m-%d')
-        start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
-    
-    db_path = "orchestration_agent/database/customers.db"
-    analyzer = TransactionPatternAnalyzer(db_path)
-    return analyzer.analyze_patterns(start_date, end_date) 
+
+    # Initialize the sync service
+    service = SyncTransactionPatternsService()
+
+    # Build filters
+    filters = {}
+
+    # Parse time period
+    if time_period == "default":
+        filters['date_from'] = '2021-01-01'
+        filters['date_to'] = '2021-12-31'
+    elif ':' in time_period:
+        dates = time_period.split(':')
+        filters['date_from'] = dates[0]
+        filters['date_to'] = dates[1]
+
+    filters['pattern_type'] = pattern_type
+    filters['anomaly_threshold'] = anomaly_threshold
+
+    # Get results from processing service
+    try:
+        result = service.get_dashboard_summary(filters)
+
+        # Format the response
+        output = []
+        output.append("# Transaction Pattern Analysis")
+        output.append(f"\nAnalysis Period: {filters.get('date_from')} to {filters.get('date_to')}")
+        output.append(f"Pattern Type: {pattern_type}")
+
+        # Add KPI metrics
+        if result.get('kpiMetrics'):
+            output.append("\n## Key Metrics")
+            kpis = result['kpiMetrics']
+            output.append(f"- Unique Patterns Identified: {kpis.get('uniquePatterns', 0):,}")
+            output.append(f"- Anomaly Rate: {kpis.get('anomalyRate', 0):.2f}%")
+            output.append(f"- Pattern Stability: {kpis.get('patternStability', 0):.1f}%")
+            output.append(f"- Average Transaction Value: ${kpis.get('avgTransactionValue', 0):,.2f}")
+
+        # Add pattern clusters
+        if result.get('mlResults', {}).get('segments'):
+            output.append("\n## Pattern Clusters")
+            for cluster in result['mlResults']['segments'][:5]:
+                output.append(f"\n### Pattern {cluster.get('segment_id', 'Unknown')}")
+                output.append(f"- Size: {cluster.get('size', 0):,} transactions")
+                output.append(f"- Average Value: ${cluster.get('avg_revenue', 0):,.2f}")
+                if cluster.get('characteristics'):
+                    output.append("- Characteristics:")
+                    for key, value in list(cluster['characteristics'].items())[:3]:
+                        output.append(f"  - {key}: {value:.2f}")
+
+        # Add anomalies if requested
+        if include_anomalies and result.get('mainData', {}).get('anomalyscatterData'):
+            output.append("\n## Detected Anomalies")
+            anomalies = result['mainData']['anomalyscatterData']
+            if anomalies:
+                output.append(f"Found {len(anomalies)} anomalous transactions")
+                output.append("Top anomalies:")
+                for anomaly in anomalies[:5]:
+                    output.append(f"- Transaction {anomaly.get('id', 'N/A')}: ${anomaly.get('value', 0):,.2f} (Score: {anomaly.get('score', 0):.2f})")
+
+        # Add insights
+        if result.get('insights'):
+            output.append("\n## Insights")
+            for insight in result['insights']:
+                output.append(f"- {insight}")
+
+        return "\n".join(output)
+
+    except Exception as e:
+        return f"Error analyzing transaction patterns: {str(e)}"

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { MessageSquare, BarChart3 } from "lucide-react";
 import { cn } from "../lib/utils";
 
@@ -23,12 +23,24 @@ export function FloatingActionButtons({
   highRiskCount = 0,
   mainContentWidth = 100
 }: FloatingActionButtonsProps) {
+  // Prevent hydration mismatch by only rendering on client
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // Calculate the right position based on main content width
   // When panels are open, keep buttons within the main content area
   const isPanelOpen = isChatOpen || isBIOpen;
   const rightPosition = isPanelOpen
     ? `calc(${100 - mainContentWidth}% + 1.5rem)` // Panel width + gap
     : '1.5rem'; // Normal right margin when no panels
+
+  // Don't render on server to avoid hydration mismatch
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <div

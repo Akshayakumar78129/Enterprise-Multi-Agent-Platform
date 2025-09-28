@@ -207,7 +207,7 @@ export function DataTable<T extends { id?: string | number }>({
             ) : (
               paginatedData.map((row, index) => (
                 <tr
-                  key={row.id || index}
+                  key={`row-${row.id || ''}-${index}`}
                   className={`border-b border-border/50 hover:bg-background/50 transition-colors ${
                     onRowClick ? "cursor-pointer" : ""
                   }`}

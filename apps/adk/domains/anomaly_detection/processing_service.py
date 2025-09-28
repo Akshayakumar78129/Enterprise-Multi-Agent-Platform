@@ -10,6 +10,7 @@ from collections import defaultdict
 from .data_service import AnomalyDataService
 from database.filter_engine import FilterEngine
 from .ml_predictor import AnomalyMLPredictor
+from domains.common.simple_cache import cache_dashboard_endpoint
 
 
 class AnomalyProcessingService:
@@ -48,6 +49,7 @@ class AnomalyProcessingService:
         except Exception as e:
             print(f"[AnomalyProcessingService] Failed to train ML model: {e}")
 
+    @cache_dashboard_endpoint(dashboard_type='anomaly', ttl=300)
     async def get_dashboard_summary(self, filters: Dict) -> Dict:
         """Main dashboard endpoint for anomaly detection
 
@@ -91,6 +93,7 @@ class AnomalyProcessingService:
                 "timeSeriesAnomalies": []
             }
 
+    @cache_dashboard_endpoint(dashboard_type='anomaly', ttl=300)
     async def get_customer_anomalies(self, filters: Dict) -> List[Dict]:
         """Get customer-level anomaly detection results"""
         try:
@@ -162,6 +165,7 @@ class AnomalyProcessingService:
             print(f"[AnomalyProcessingService] Error in getCustomerAnomalies: {e}")
             return []
 
+    @cache_dashboard_endpoint(dashboard_type='anomaly', ttl=300)
     async def get_segment_distribution(self, filters: Dict) -> List[Dict]:
         """Get anomaly distribution by customer segment"""
         try:
@@ -213,6 +217,7 @@ class AnomalyProcessingService:
             print(f"[AnomalyProcessingService] Error in getSegmentDistribution: {e}")
             return []
 
+    @cache_dashboard_endpoint(dashboard_type='anomaly', ttl=300)
     async def get_region_distribution(self, filters: Dict) -> List[Dict]:
         """Get anomaly distribution by region"""
         try:
@@ -257,6 +262,7 @@ class AnomalyProcessingService:
             print(f"[AnomalyProcessingService] Error in getRegionDistribution: {e}")
             return []
 
+    @cache_dashboard_endpoint(dashboard_type='anomaly', ttl=300)
     async def get_severity_distribution(self, filters: Dict) -> List[Dict]:
         """Get overall severity distribution"""
         try:
@@ -300,6 +306,7 @@ class AnomalyProcessingService:
             print(f"[AnomalyProcessingService] Error in getSeverityDistribution: {e}")
             return []
 
+    @cache_dashboard_endpoint(dashboard_type='anomaly', ttl=300)
     async def get_feature_importance(self, filters: Dict) -> List[Dict]:
         """Get feature importance from the ML model"""
         try:
@@ -315,6 +322,7 @@ class AnomalyProcessingService:
             print(f"[AnomalyProcessingService] Error in getFeatureImportance: {e}")
             return []
 
+    @cache_dashboard_endpoint(dashboard_type='anomaly', ttl=300)
     async def get_time_series_anomalies(self, filters: Dict) -> List[Dict]:
         """Get time series of anomaly counts (placeholder for future enhancement)"""
         try:

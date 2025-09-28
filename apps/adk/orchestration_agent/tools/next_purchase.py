@@ -1,62 +1,108 @@
-"""Tool for predicting next customer purchases."""
+"""Next purchase prediction tool using shared processing service"""
 
-import os
+import json
+from typing import Optional, Dict, List
 from datetime import datetime, timedelta
-from typing import Dict, Optional, List
-from .next_purchase_predictor import NextPurchasePredictor
+import sys
+import os
 
-def predict_next_purchases(
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-    customer_segments: Optional[List[str]] = None,
-    top_k: int = 5
-) -> Dict:
+# Add parent directories to path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+from domains.next_purchase.sync_processing_service import SyncNextPurchaseService
+
+
+def predict_next_purchase(
+    time_period: str = "default",
+    customer_id: Optional[str] = None,
+    include_product_recommendations: bool = True,
+    confidence_threshold: float = 0.7
+) -> str:
     """
-    Predict next likely purchases for customers based on their purchase history.
-    
+    Predict next purchase timing and products using ML models.
+
     Args:
-        start_date: Start date for analysis (YYYY-MM-DD)
-        end_date: End date for analysis (YYYY-MM-DD)
-        customer_segments: List of customer segments to analyze
-        top_k: Number of top predictions per customer
-        
+        time_period: Analysis period for historical data
+        customer_id: Specific customer to predict for (optional)
+        include_product_recommendations: Whether to include product recommendations
+        confidence_threshold: Minimum confidence for predictions (0-1)
+
     Returns:
-        Dict containing analysis results and file paths
+        Formatted next purchase predictions as a string.
     """
+
+    # Initialize the sync service
+    service = SyncNextPurchaseService()
+
+    # Build filters
+    filters = {}
+
+    # Parse time period
+    if time_period == "default":
+        filters['date_from'] = '2021-01-01'
+        filters['date_to'] = '2021-12-31'
+    elif ':' in time_period:
+        dates = time_period.split(':')
+        filters['date_from'] = dates[0]
+        filters['date_to'] = dates[1]
+
+    if customer_id:
+        filters['customer_ids'] = [customer_id]
+
+    filters['confidence_threshold'] = confidence_threshold
+
+    # Get results from processing service
     try:
-        # Initialize predictor
-        predictor = NextPurchasePredictor(db_path=os.path.join(os.path.dirname(__file__), '..', 'database', 'customers.db'))
-        
-        # Extract features
-        data = predictor.extract_features()
-        
-        # Filter by date if provided
-        if start_date:
-            data = data[data['purchase_date'] >= start_date]
-        if end_date:
-            data = data[data['purchase_date'] <= end_date]
-            
-        # Filter by customer segments if provided
-        if customer_segments:
-            data = data[data['segment'].isin(customer_segments)]
-            
-        # Prepare features and train model
-        X, y = predictor.prepare_features(data)
-        metrics = predictor.train_model(X, y)
-        
-        # Get predictions
-        predictions = predictor.predict_next_purchases(data, top_k=top_k)
-        
-        # Store results
-        output_dir = os.path.join('output', 'next_purchase_predictions')
-        report_path = predictor.store_predictions(predictions, output_dir)
-        
-        return {
-            'result': f"Successfully generated next purchase predictions. Report saved to {report_path}",
-            'predictions': predictions.to_dict('records'),
-            'metrics': metrics,
-            'report_path': report_path
-        }
-        
+        result = service.get_dashboard_summary(filters)
+
+        # Format the response
+        output = []
+        output.append("# Next Purchase Predictions")
+        output.append(f"\nAnalysis Period: {filters.get('date_from')} to {filters.get('date_to')}")
+        if customer_id:
+            output.append(f"Customer: {customer_id}")
+
+        # Add KPI metrics
+        if result.get('kpiMetrics'):
+            output.append("\n## Key Metrics")
+            kpis = result['kpiMetrics']
+            output.append(f"- Average Days to Next Purchase: {kpis.get('avgDaysToNext', 0):.1f}")
+            output.append(f"- Prediction Accuracy Rate: {kpis.get('accuracyRate', 0):.1f}%")
+            output.append(f"- Conversion Probability: {kpis.get('conversionProbability', 0):.1f}%")
+            output.append(f"- Recommendation Score: {kpis.get('recommendationScore', 0):.1f}/10")
+
+        # Add predictions
+        if result.get('mlResults', {}).get('predictions'):
+            predictions = result['mlResults']['predictions']
+
+            output.append("\n## Purchase Predictions (Top 10)")
+            for i, pred in enumerate(predictions[:10], 1):
+                output.append(f"{i}. {pred.get('customer_name', 'Unknown')}")
+                output.append(f"   - Predicted Date: {pred.get('predicted_purchase_date', 'N/A')}")
+                output.append(f"   - Days Until Purchase: {pred.get('predicted_days_to_purchase', 0):.0f}")
+
+        # Add product recommendations if requested
+        if include_product_recommendations and result.get('mlResults', {}).get('product_recommendations'):
+            output.append("\n## Product Recommendations")
+            for customer_id, products in list(result['mlResults']['product_recommendations'].items())[:5]:
+                output.append(f"\nCustomer {customer_id}:")
+                for product in products[:3]:
+                    output.append(f"  - {product.get('product_name', 'Unknown')} (Confidence: {product.get('confidence', 0):.1f}%)")
+
+        # Add purchase patterns
+        if result.get('mlResults', {}).get('purchase_patterns'):
+            output.append("\n## Identified Purchase Patterns")
+            patterns = result['mlResults']['purchase_patterns']
+            for customer_id, pattern in list(patterns.items())[:5]:
+                output.append(f"- Customer {customer_id}: Avg {pattern.get('avg_days_between_purchases', 0):.1f} days between purchases")
+
+        # Add insights
+        if result.get('insights'):
+            output.append("\n## Insights")
+            for insight in result['insights']:
+                output.append(f"- {insight}")
+
+        return "\n".join(output)
+
     except Exception as e:
-        return {'result': f"Error predicting next purchases: {str(e)}"} 
+        return f"Error predicting next purchase: {str(e)}"

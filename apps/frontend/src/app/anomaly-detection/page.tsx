@@ -1,336 +1,314 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
-  DashboardLayout,
   DashboardGrid,
   DashboardSection,
-  KPIRow,
-  AnimatedKPITile,
-  Card,
-  FilterBar,
-  BarChart,
-  LineChart,
-  AIInsightBlock,
-  DataTable
-} from 'components';
-import { AlertTriangle, Shield, Activity, TrendingUp } from 'lucide-react';
+  Card
+} from 'components/index';
+import { Bar } from 'react-chartjs-2';
+import {
+  AnomalyKPIs,
+  CustomerAnomaliesTable,
+  SeverityDistribution,
+  TimeSeriesChart,
+  FeatureContributionPlot
+} from './components';
+import { useAnomalyContext } from './context';
+import { useAnomalyData } from './hooks/useAnomalyData';
 
-// Mock data generator
-const generateAnomalyData = () => {
-  const hours = Array.from({length: 24}, (_, i) => `${i}:00`);
-  return {
-    labels: hours,
+export default function AnomalyDetectionPage() {
+  const { filters, setAnomalyCustomers } = useAnomalyContext();
+  const [selectedCustomer, setSelectedCustomer] = React.useState<any>(null);
+
+  const {
+    loading,
+    error,
+    customerAnomalies,
+    segmentDistribution,
+    regionDistribution,
+    severityDistribution,
+    featureImportance,
+    featureContribution,
+    timeSeriesAnomalies,
+    kpiMetrics,
+    hasNoData
+  } = useAnomalyData(filters);
+
+  // Update context with customer data for BI panel
+  React.useEffect(() => {
+    setAnomalyCustomers(customerAnomalies);
+  }, [customerAnomalies, setAnomalyCustomers]);
+
+  // Handle customer selection
+  const handleCustomerSelect = (customer: any) => {
+    setSelectedCustomer(customer);
+    console.log('Selected customer:', customer);
+  };
+
+  const handleFeatureSelect = (features: { x: string; y: string }) => {
+    console.log('Selected features:', features);
+  };
+
+  if (error && !loading && hasNoData) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <p className="text-lg text-muted-foreground mb-2">Unable to load data</p>
+          <p className="text-sm text-muted-foreground">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Prepare segment distribution data for bar chart
+  const segmentChartData = {
+    labels: segmentDistribution.map(s => s.segment),
     datasets: [
       {
-        label: 'Normal Range',
-        data: hours.map(() => Math.floor(Math.random() * 50) + 100),
-        borderColor: 'rgba(34, 197, 94, 0.5)',
-        backgroundColor: 'rgba(34, 197, 94, 0.1)',
-        fill: true
-      },
-      {
-        label: 'Actual Values',
-        data: hours.map((_, i) => {
-          const base = Math.floor(Math.random() * 50) + 100;
-          // Inject anomalies at specific hours
-          if (i === 8 || i === 14 || i === 20) {
-            return base + Math.floor(Math.random() * 100) + 50;
-          }
-          return base;
-        }),
-        borderColor: 'rgba(0, 224, 255, 1)',
-        backgroundColor: 'rgba(0, 224, 255, 0.1)',
-        fill: false
+        label: 'Anomaly Count',
+        data: segmentDistribution.map(s => s.anomaly_count),
+        backgroundColor: 'rgba(233, 48, 255, 0.8)',
+        borderColor: '#e930ff',
+        borderWidth: 1
       }
     ]
   };
-};
 
-const generateAnomalyTypes = () => {
-  const types = ['Transaction Spike', 'Login Anomaly', 'Price Deviation', 'Inventory Alert', 'Payment Failure', 'Traffic Surge'];
-  return {
-    labels: types,
-    datasets: [{
-      label: 'Anomaly Count',
-      data: types.map(() => Math.floor(Math.random() * 20) + 5),
-      backgroundColor: [
-        'rgba(239, 68, 68, 0.8)',
-        'rgba(249, 115, 22, 0.8)',
-        'rgba(234, 179, 8, 0.8)',
-        'rgba(59, 130, 246, 0.8)',
-        'rgba(168, 85, 247, 0.8)',
-        'rgba(236, 72, 153, 0.8)'
-      ]
-    }]
+  // Prepare region distribution data for pie chart
+  const regionChartData = {
+    labels: regionDistribution.map(r => r.region),
+    datasets: [
+      {
+        data: regionDistribution.map(r => r.anomaly_count),
+        backgroundColor: [
+          '#00e0ff',
+          '#5fd4d6',
+          '#5891cb',
+          '#aa45dd',
+          '#e930ff',
+          '#f59e0b'
+        ]
+      }
+    ]
   };
-};
-
-export default function AnomalyDetectionPage() {
-  const [loading, setLoading] = useState(true);
-  const [anomalyData, setAnomalyData] = useState(generateAnomalyData());
-  const [anomalyTypes, setAnomalyTypes] = useState(generateAnomalyTypes());
-
-  useEffect(() => {
-    // Simulate data loading
-    setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-  }, []);
-
-  const kpiData = [
-    {
-      title: 'Active Anomalies',
-      value: '24',
-      change: 33.3,
-      icon: <AlertTriangle className="w-5 h-5" />,
-      trend: 'up' as const
-    },
-    {
-      title: 'Detection Rate',
-      value: '98.5%',
-      change: 2.1,
-      icon: <Shield className="w-5 h-5" />,
-      trend: 'up' as const
-    },
-    {
-      title: 'False Positive Rate',
-      value: '2.3%',
-      change: -15.4,
-      icon: <Activity className="w-5 h-5" />,
-      trend: 'down' as const
-    },
-    {
-      title: 'Avg Resolution Time',
-      value: '4.2h',
-      change: -8.7,
-      icon: <TrendingUp className="w-5 h-5" />,
-      trend: 'down' as const
-    }
-  ];
-
-  const recentAnomalies = [
-    {
-      id: 'ANM-001',
-      timestamp: '2024-01-15 14:23:00',
-      type: 'Transaction Spike',
-      severity: 'Critical',
-      status: 'Active',
-      impact: '$45,000'
-    },
-    {
-      id: 'ANM-002',
-      timestamp: '2024-01-15 13:45:00',
-      type: 'Login Anomaly',
-      severity: 'High',
-      status: 'Investigating',
-      impact: '234 accounts'
-    },
-    {
-      id: 'ANM-003',
-      timestamp: '2024-01-15 12:30:00',
-      type: 'Price Deviation',
-      severity: 'Medium',
-      status: 'Resolved',
-      impact: '$12,300'
-    },
-    {
-      id: 'ANM-004',
-      timestamp: '2024-01-15 11:15:00',
-      type: 'Inventory Alert',
-      severity: 'Low',
-      status: 'Monitoring',
-      impact: '45 SKUs'
-    },
-    {
-      id: 'ANM-005',
-      timestamp: '2024-01-15 10:00:00',
-      type: 'Payment Failure',
-      severity: 'High',
-      status: 'Active',
-      impact: '$23,000'
-    }
-  ];
 
   return (
-    <DashboardLayout
-      title="Anomaly Detection"
-      currentPath="/anomaly-detection">
-      {/* KPIs */}
-      <DashboardSection title="Detection Metrics">
-        <KPIRow>
-          {kpiData.map((kpi, index) => (
-            <AnimatedKPITile
-              key={index}
-              title={kpi.title}
-              value={kpi.value}
-              change={kpi.change}
-              icon={kpi.icon}
-              trend={kpi.trend}
-              delay={index * 100}
-            />
-          ))}
-        </KPIRow>
+    <>
+      {/* KPI Section */}
+      <DashboardSection title="Key Metrics">
+        <AnomalyKPIs kpiMetrics={kpiMetrics} loading={loading} />
       </DashboardSection>
 
-      {/* Filters */}
-      <DashboardSection>
-        <FilterBar
-          filters={[
-            {
-              id: 'dateRange',
-              label: 'Date Range',
-              type: 'date',
-              value: { from: new Date(), to: new Date() }
-            },
-            {
-              id: 'severity',
-              label: 'Severity',
-              type: 'select',
-              value: 'all',
-              options: [
-                { value: 'all', label: 'All Severities' },
-                { value: 'critical', label: 'Critical' },
-                { value: 'high', label: 'High' },
-                { value: 'medium', label: 'Medium' },
-                { value: 'low', label: 'Low' }
-              ]
-            },
-            {
-              id: 'type',
-              label: 'Anomaly Type',
-              type: 'select',
-              value: 'all',
-              options: [
-                { value: 'all', label: 'All Types' },
-                { value: 'transaction', label: 'Transaction' },
-                { value: 'login', label: 'Login' },
-                { value: 'price', label: 'Price' },
-                { value: 'inventory', label: 'Inventory' }
-              ]
-            }
-          ]}
-          onFilterChange={(filters) => console.log('Filters changed:', filters)}
+      {/* Time Series and Severity Analysis */}
+      <DashboardSection title="Anomaly Trends">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+          <TimeSeriesChart
+            data={timeSeriesAnomalies}
+            loading={loading}
+          />
+          <SeverityDistribution
+            data={severityDistribution}
+            loading={loading}
+          />
+        </div>
+      </DashboardSection>
+
+      {/* Feature Analysis Section */}
+      <DashboardSection title="Feature Analysis">
+        <FeatureContributionPlot
+          anomalies={customerAnomalies}
+          featureContributions={featureContribution || []}
+          loading={loading}
+          onPointClick={handleCustomerSelect}
+          onFeatureSelect={handleFeatureSelect}
         />
       </DashboardSection>
 
-      {/* Main Charts */}
-      <DashboardGrid cols={2}>
-        <DashboardSection title="Anomaly Detection Timeline (24h)">
-          <LineChart
-            data={anomalyData}
-            height={350}
-            showLegend={true}
-          />
-        </DashboardSection>
+      {/* Distribution Analysis */}
+      <DashboardSection title="Distribution Analysis">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+          {/* Segment Distribution */}
+          <Card
+            title="Segment Distribution"
+            description="Anomalies by customer segment"
+          >
+            <div className="h-80 p-4">
+              <Bar
+                data={segmentChartData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      backgroundColor: 'rgba(139, 92, 246, 0.95)',
+                      titleColor: '#fff',
+                      bodyColor: '#fff',
+                      borderColor: '#e8d4e6',
+                      borderWidth: 1
+                    }
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      grid: {
+                        color: 'rgba(232, 212, 230, 0.1)'
+                      },
+                      ticks: { color: '#8b5cf6' }
+                    },
+                    x: {
+                      grid: { display: false },
+                      ticks: { color: '#8b5cf6' }
+                    }
+                  }
+                }}
+              />
+            </div>
+          </Card>
 
-        <DashboardSection title="Anomalies by Type">
-          <BarChart
-            data={anomalyTypes}
-            height={350}
-            showLegend={false}
-          />
-        </DashboardSection>
-      </DashboardGrid>
+          {/* Region Distribution */}
+          <Card
+            title="Regional Distribution"
+            description="Geographic anomaly distribution"
+          >
+            <div className="h-80 p-4">
+              <Bar
+                data={regionChartData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  indexAxis: 'y',
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      backgroundColor: 'rgba(139, 92, 246, 0.95)',
+                      titleColor: '#fff',
+                      bodyColor: '#fff',
+                      borderColor: '#e8d4e6',
+                      borderWidth: 1
+                    }
+                  },
+                  scales: {
+                    x: {
+                      beginAtZero: true,
+                      grid: { color: 'rgba(232, 212, 230, 0.1)' },
+                      ticks: { color: '#8b5cf6' }
+                    },
+                    y: {
+                      grid: { display: false },
+                      ticks: {
+                        color: '#8b5cf6',
+                        autoSkip: false
+                      }
+                    }
+                  }
+                }}
+              />
+            </div>
+          </Card>
+        </div>
+      </DashboardSection>
 
-      {/* AI Insights */}
-      <DashboardSection title="AI-Powered Anomaly Analysis">
-        <AIInsightBlock
-          title="Critical: Unusual Transaction Pattern Detected"
-          riskLevel="critical"
-          revenue={125000}
-          trend="increasing"
-          breakdown="ML models have detected an unusual spike in high-value transactions from new accounts, suggesting potential fraudulent activity. Pattern matches known fraud signatures with 94% confidence."
-          insights={[
-            "24 transactions totaling $125,000 from accounts created within last 48 hours",
-            "Transaction velocity 5x higher than normal baseline for new accounts",
-            "Geographic dispersion pattern indicates coordinated activity across 12 regions",
-            "Payment methods: 67% prepaid cards, 33% virtual credit cards"
-          ]}
-          actionPlan={[
-            "Immediately flag and review all transactions from affected accounts",
-            "Implement enhanced verification for new account transactions over $1,000",
-            "Deploy real-time velocity checks for transaction patterns",
-            "Contact payment processors for additional fraud screening",
-            "Prepare incident response team for potential escalation"
-          ]}
-          timestamp={new Date().toISOString()}
+      {/* Customer Details Table */}
+      <DashboardSection title="Anomaly Details">
+        <CustomerAnomaliesTable
+          data={customerAnomalies}
+          loading={loading}
+          onCustomerSelect={handleCustomerSelect}
         />
       </DashboardSection>
 
-      {/* Recent Anomalies Table */}
-      <DashboardSection title="Recent Anomalies">
-        <Card className="p-4">
-          <DataTable
-            columns={[
-              { id: 'id', header: 'Anomaly ID', accessor: 'id' },
-              { id: 'timestamp', header: 'Timestamp', accessor: 'timestamp' },
-              { id: 'type', header: 'Type', accessor: 'type' },
-              {
-                id: 'severity',
-                header: 'Severity',
-                accessor: 'severity',
-                render: (value) => (
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    value === 'Critical' ? 'bg-red-500/20 text-red-500' :
-                    value === 'High' ? 'bg-orange-500/20 text-orange-500' :
-                    value === 'Medium' ? 'bg-yellow-500/20 text-yellow-500' :
-                    'bg-green-500/20 text-green-500'
-                  }`}>
-                    {value}
-                  </span>
-                )
-              },
-              { id: 'status', header: 'Status', accessor: 'status' },
-              { id: 'impact', header: 'Impact', accessor: 'impact' }
-            ]}
-            data={recentAnomalies}
-            showPagination={false}
-            searchable={false}
-          />
-        </Card>
-      </DashboardSection>
+      {/* Selected Customer Details Panel */}
+      {selectedCustomer && (
+        <DashboardSection title="Selected Customer Details">
+          <Card>
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                  <span className="text-2xl">🔍</span>
+                  {selectedCustomer.customer_name || selectedCustomer.customerName || `Customer ${selectedCustomer.customer_id || selectedCustomer.customerId}`}
+                </h3>
+                <button
+                  onClick={() => setSelectedCustomer(null)}
+                  className="px-3 py-1 text-sm bg-background hover:bg-muted border border-border rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+              </div>
 
-      {/* Additional Insights */}
-      <DashboardGrid cols={2}>
-        <DashboardSection>
-          <AIInsightBlock
-            title="Login Pattern Anomaly Cluster"
-            riskLevel="high"
-            revenue={0}
-            trend="stable"
-            insights={[
-              "234 accounts showing unusual login patterns",
-              "Multiple failed attempts followed by successful login from different IP",
-              "Time-based pattern suggests automated attack"
-            ]}
-            actionPlan={[
-              "Enable 2FA for affected accounts",
-              "Implement IP-based rate limiting",
-              "Send security alerts to account owners"
-            ]}
-          />
-        </DashboardSection>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <div className="text-sm text-muted-foreground">Customer ID</div>
+                  <div className="text-base font-medium">
+                    {selectedCustomer.customer_id || selectedCustomer.customerId}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Anomaly Score</div>
+                  <div className="text-base font-medium text-primary">
+                    {(selectedCustomer.anomaly_score || selectedCustomer.anomalyScore || 0).toFixed(3)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Severity Level</div>
+                  <div className="text-base font-medium">
+                    Level {selectedCustomer.severity_level || selectedCustomer.severity || 0}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Region</div>
+                  <div className="text-base font-medium">
+                    {selectedCustomer.region || 'N/A'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Segment</div>
+                  <div className="text-base font-medium">
+                    {selectedCustomer.segment || 'N/A'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Transactions</div>
+                  <div className="text-base font-medium">
+                    {selectedCustomer.transaction_count || selectedCustomer.transactionCount || 0}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Total Spend</div>
+                  <div className="text-base font-medium">
+                    ${(selectedCustomer.total_spend || selectedCustomer.totalSpend || 0).toLocaleString()}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Days Since Last</div>
+                  <div className="text-base font-medium">
+                    {selectedCustomer.days_since_last_txn || selectedCustomer.daysSinceLastTxn || 0} days
+                  </div>
+                </div>
+              </div>
 
-        <DashboardSection>
-          <AIInsightBlock
-            title="Inventory Discrepancy Detection"
-            riskLevel="medium"
-            revenue={23000}
-            trend="decreasing"
-            insights={[
-              "45 SKUs showing unexpected inventory changes",
-              "Discrepancy between POS and warehouse systems",
-              "Pattern suggests data sync issues"
-            ]}
-            actionPlan={[
-              "Initiate physical inventory count",
-              "Review recent system updates",
-              "Implement real-time inventory reconciliation"
-            ]}
-          />
+              {/* Anomalous Features */}
+              {selectedCustomer.anomalous_features && selectedCustomer.anomalous_features.length > 0 && (
+                <div className="mt-6">
+                  <h4 className="text-sm font-semibold text-muted-foreground mb-3">Anomalous Features</h4>
+                  <div className="space-y-2">
+                    {selectedCustomer.anomalous_features.slice(0, 5).map((feature: any, idx: number) => (
+                      <div key={idx} className="flex items-center justify-between p-2 bg-background/50 rounded">
+                        <span className="text-sm">{feature.feature}</span>
+                        <div className="flex gap-4">
+                          <span className="text-sm text-muted-foreground">Value: {feature.value?.toFixed(2)}</span>
+                          <span className="text-sm font-medium text-primary">Z-Score: {feature.zscore?.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
         </DashboardSection>
-      </DashboardGrid>
-    </DashboardLayout>
+      )}
+    </>
   );
 }

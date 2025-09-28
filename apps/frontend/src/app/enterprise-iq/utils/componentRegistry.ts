@@ -121,7 +121,7 @@ export const componentRegistry = {
     dashboard: dynamic(() => import('../cash-flow/page').catch(() => null), { ssr: false }),
     waterfall: dynamic(() => import('components').then(mod => mod.CashFlowWaterfall).catch(() => null), { ssr: false }),
     projections: dynamic(() => import('components').then(mod => mod.CashFlowProjections).catch(() => null), { ssr: false }),
-    working Capital: dynamic(() => import('components').then(mod => mod.WorkingCapitalAnalysis).catch(() => null), { ssr: false }),
+    workingCapital: dynamic(() => import('components').then(mod => mod.WorkingCapitalAnalysis).catch(() => null), { ssr: false }),
   },
 
   'revenue-forecast': {

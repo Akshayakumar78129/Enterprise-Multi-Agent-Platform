@@ -1,192 +1,177 @@
-"""Tool for predicting next customer purchases."""
+"""Next purchase prediction tool using shared processing service"""
 
-import pandas as pd
-import numpy as np
-from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import GradientBoostingRegressor
-import sqlite3
+import json
+from typing import Optional, Dict, List
 from datetime import datetime, timedelta
+import sys
 import os
-from typing import Dict, Optional, List
 
+# Add parent directories to path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+from domains.next_purchase.sync_processing_service import SyncNextPurchaseService
+
+
+def predict_next_purchase(
+    time_period: str = "default",
+    customer_id: Optional[str] = None,
+    include_product_recommendations: bool = True,
+    confidence_threshold: float = 0.7
+) -> str:
+    """
+    Predict next purchase timing and products using ML models.
+    Now uses the shared processing service for consistency with dashboards.
+
+    Args:
+        time_period: Analysis period for historical data
+        customer_id: Specific customer to predict for (optional)
+        include_product_recommendations: Whether to include product recommendations
+        confidence_threshold: Minimum confidence for predictions (0-1)
+
+    Returns:
+        Formatted next purchase predictions as a string.
+    """
+
+    # Initialize the sync service
+    service = SyncNextPurchaseService()
+
+    # Build filters
+    filters = {}
+
+    # Parse time period
+    if time_period == "default":
+        filters['date_from'] = '2021-01-01'
+        filters['date_to'] = '2021-12-31'
+    elif ':' in time_period:
+        dates = time_period.split(':')
+        filters['date_from'] = dates[0]
+        filters['date_to'] = dates[1]
+    elif time_period.isdigit() and len(time_period) == 4:
+        # Year format
+        filters['date_from'] = f'{time_period}-01-01'
+        filters['date_to'] = f'{time_period}-12-31'
+    elif time_period.startswith('Q') and len(time_period) > 2:
+        # Quarter format (e.g., Q1 2021)
+        parts = time_period.split()
+        if len(parts) == 2:
+            quarter = int(parts[0][1])
+            year = parts[1]
+            if quarter == 1:
+                filters['date_from'] = f'{year}-01-01'
+                filters['date_to'] = f'{year}-03-31'
+            elif quarter == 2:
+                filters['date_from'] = f'{year}-04-01'
+                filters['date_to'] = f'{year}-06-30'
+            elif quarter == 3:
+                filters['date_from'] = f'{year}-07-01'
+                filters['date_to'] = f'{year}-09-30'
+            elif quarter == 4:
+                filters['date_from'] = f'{year}-10-01'
+                filters['date_to'] = f'{year}-12-31'
+
+    if customer_id:
+        filters['customer_ids'] = [customer_id]
+
+    filters['confidence_threshold'] = confidence_threshold
+
+    # Get results from processing service
+    try:
+        result = service.get_dashboard_summary(filters)
+
+        # Format the response
+        output = []
+        output.append("# Next Purchase Predictions")
+        output.append(f"\nAnalysis Period: {filters.get('date_from')} to {filters.get('date_to')}")
+        if customer_id:
+            output.append(f"Customer: {customer_id}")
+
+        # Add KPI metrics
+        if result.get('kpiMetrics'):
+            output.append("\n## Key Metrics")
+            kpis = result['kpiMetrics']
+            output.append(f"- Average Days to Next Purchase: {kpis.get('avgDaysToNext', 0):.1f}")
+            output.append(f"- Prediction Accuracy Rate: {kpis.get('accuracyRate', 0):.1f}%")
+            output.append(f"- Conversion Probability: {kpis.get('conversionProbability', 0):.1f}%")
+            output.append(f"- Recommendation Score: {kpis.get('recommendationScore', 0):.1f}/10")
+
+        # Add predictions
+        if result.get('mlResults', {}).get('predictions'):
+            predictions = result['mlResults']['predictions']
+
+            output.append("\n## Purchase Predictions (Top 10)")
+            for i, pred in enumerate(predictions[:10], 1):
+                output.append(f"{i}. {pred.get('customer_name', 'Unknown')}")
+                output.append(f"   - Predicted Date: {pred.get('predicted_purchase_date', 'N/A')}")
+                output.append(f"   - Days Until Purchase: {pred.get('predicted_days_to_purchase', 0):.0f}")
+
+        # Add product recommendations if requested
+        if include_product_recommendations and result.get('mlResults', {}).get('product_recommendations'):
+            output.append("\n## Product Recommendations")
+            recommendations = result['mlResults']['product_recommendations']
+
+            if isinstance(recommendations, dict):
+                for cust_id, products in list(recommendations.items())[:5]:
+                    output.append(f"\nCustomer {cust_id}:")
+                    if isinstance(products, list):
+                        for product in products[:3]:
+                            if isinstance(product, dict):
+                                output.append(f"  - {product.get('product_name', 'Unknown')} (Confidence: {product.get('confidence', 0):.1f}%)")
+                            else:
+                                output.append(f"  - {product}")
+            elif isinstance(recommendations, list):
+                for rec in recommendations[:10]:
+                    if isinstance(rec, dict):
+                        output.append(f"- Customer {rec.get('customer_id', 'Unknown')}: {rec.get('product', 'Unknown')}")
+
+        # Add purchase patterns
+        if result.get('mlResults', {}).get('purchase_patterns'):
+            output.append("\n## Identified Purchase Patterns")
+            patterns = result['mlResults']['purchase_patterns']
+
+            if isinstance(patterns, dict):
+                for cust_id, pattern in list(patterns.items())[:5]:
+                    if isinstance(pattern, dict):
+                        output.append(f"- Customer {cust_id}: Avg {pattern.get('avg_days_between_purchases', 0):.1f} days between purchases")
+                    else:
+                        output.append(f"- Customer {cust_id}: {pattern}")
+            elif isinstance(patterns, list):
+                for pattern in patterns[:5]:
+                    output.append(f"- {pattern}")
+
+        # Add insights
+        if result.get('insights'):
+            output.append("\n## Insights")
+            for insight in result['insights']:
+                output.append(f"- {insight}")
+
+        # Add recommendations
+        output.append("\n## Recommendations")
+        output.append("- Target customers with predicted purchase dates in the next 7 days")
+        output.append("- Send personalized product recommendations based on purchase history")
+        output.append("- Offer incentives to customers with lower conversion probability")
+        output.append("- Monitor customers with irregular purchase patterns for churn risk")
+
+        return "\n".join(output)
+
+    except Exception as e:
+        return f"Error predicting next purchase: {str(e)}"
+
+
+# Backward compatibility - keep the old class for any legacy code
 class NextPurchasePredictor:
-    """Predicts next likely purchases for customers."""
-    
-    def __init__(self, db_path: str):
+    """Legacy predictor class - now uses the new processing service"""
+
+    def __init__(self, db_path: str = None):
         """Initialize the predictor."""
-        self.db_path = db_path
-        self.scaler = StandardScaler()
-        self.model = GradientBoostingRegressor()
-        
-    def extract_features(self) -> pd.DataFrame:
-        """Extract customer purchase features from database."""
-        query = """
-            SELECT 
-                c."Customer Key" as customer_id,
-                c."Customer Type Desc" as segment,
-                s."Item Key" as product_id,
-                s."Item Category Hrchy Key" as category_id,
-                s."Net Sales Amount" as amount,
-                s."Txn Date" as purchase_date,
-                COUNT(*) OVER (
-                    PARTITION BY c."Customer Key", s."Item Key"
-                    ORDER BY s."Txn Date"
-                ) as purchase_number,
-                JULIANDAY(s."Txn Date") - JULIANDAY(LAG(s."Txn Date", 1) OVER (
-                    PARTITION BY c."Customer Key", s."Item Key"
-                    ORDER BY s."Txn Date"
-                )) as days_since_last
-            FROM 
-                "dbo_D_Customer" c
-            JOIN 
-                "dbo_F_Sales_Transaction" s ON c."Customer Key" = s."Customer Key"
-            WHERE 
-                s."Net Sales Amount" > 0
-                AND s."Deleted Flag" = 0
-                AND s."Excluded Flag" = 0
-            ORDER BY 
-                c."Customer Key", s."Item Key", s."Txn Date"
-        """
-        
-        with sqlite3.connect(self.db_path) as conn:
-            df = pd.read_sql_query(query, conn)
-            df['purchase_date'] = pd.to_datetime(df['purchase_date'])
-            
-        return df
-    
-    def prepare_features(self, df: pd.DataFrame) -> tuple:
-        """Prepare features for model training."""
-        features = []
-        labels = []
-        
-        for (customer_id, product_id), group in df.groupby(['customer_id', 'product_id']):
-            if len(group) >= 2:  # Need at least 2 purchases to predict next
-                # Calculate features
-                avg_amount = group['amount'].mean()
-                avg_interval = group['days_since_last'].mean()
-                purchase_count = len(group)
-                last_amount = group['amount'].iloc[-1]
-                days_since_last = group['days_since_last'].iloc[-1]
-                
-                features.append([
-                    avg_amount,
-                    avg_interval,
-                    purchase_count,
-                    last_amount,
-                    days_since_last
-                ])
-                
-                # Label: days until next purchase (for last purchase in sequence)
-                days_to_next = 7 if purchase_count > 5 else 14  # Simple heuristic
-                labels.append(days_to_next)
-        
-        X = np.array(features)
-        y = np.array(labels)
-        
-        # Scale features
-        X_scaled = self.scaler.fit_transform(X)
-        
-        return X_scaled, y
-    
-    def train_model(self, X: np.ndarray, y: np.ndarray) -> Dict:
-        """Train the prediction model."""
-        # Split data
-        split_idx = int(len(X) * 0.8)
-        X_train, X_test = X[:split_idx], X[split_idx:]
-        y_train, y_test = y[:split_idx], y[split_idx:]
-        
-        # Train model
-        self.model.fit(X_train, y_train)
-        
-        # Evaluate
-        train_score = self.model.score(X_train, y_train)
-        test_score = self.model.score(X_test, y_test)
-        
-        return {
-            'train_score': train_score,
-            'test_score': test_score
-        }
-    
-    def predict_next_purchases(self, customer_data: pd.DataFrame, top_k: int = 5) -> pd.DataFrame:
-        """Predict next likely purchases for customers."""
-        features = []
-        customer_products = []
-        
-        for (customer_id, product_id), group in customer_data.groupby(['customer_id', 'product_id']):
-            if len(group) >= 2:
-                avg_amount = group['amount'].mean()
-                avg_interval = group['days_since_last'].mean()
-                purchase_count = len(group)
-                last_amount = group['amount'].iloc[-1]
-                days_since_last = group['days_since_last'].iloc[-1]
-                
-                features.append([
-                    avg_amount,
-                    avg_interval,
-                    purchase_count,
-                    last_amount,
-                    days_since_last
-                ])
-                customer_products.append((customer_id, product_id))
-        
-        if not features:
-            return pd.DataFrame()
-        
-        # Scale and predict
-        X = np.array(features)
-        X_scaled = self.scaler.transform(X)
-        predictions = self.model.predict(X_scaled)
-        
-        # Create results DataFrame
-        results = pd.DataFrame(
-            customer_products,
-            columns=['customer_id', 'product_id']
+        self.service = SyncNextPurchaseService()
+
+    def predict_next_purchase_date(self, customer_id: str = None) -> str:
+        """Predict next purchase date for customer(s)"""
+        return predict_next_purchase(customer_id=customer_id)
+
+    def recommend_products(self, customer_id: str = None) -> str:
+        """Get product recommendations for customer(s)"""
+        return predict_next_purchase(
+            customer_id=customer_id,
+            include_product_recommendations=True
         )
-        results['days_to_next'] = predictions
-        results['purchase_probability'] = 1 / (1 + np.exp(predictions/7))  # Convert to probability
-        
-        # Get top K predictions per customer
-        top_predictions = (
-            results.sort_values('purchase_probability', ascending=False)
-            .groupby('customer_id')
-            .head(top_k)
-            .reset_index(drop=True)
-        )
-        
-        return top_predictions
-    
-    def store_predictions(self, predictions: pd.DataFrame, output_path: str) -> str:
-        """Store predictions in markdown format."""
-        os.makedirs(output_path, exist_ok=True)
-        
-        # Format predictions
-        predictions_str = "| Customer ID | Product ID | Probability | Days to Next |\n"
-        predictions_str += "|------------|------------|-------------|-------------|\n"
-        
-        for _, row in predictions.iterrows():
-            predictions_str += (
-                f"| {row['customer_id']} | {row['product_id']} | "
-                f"{row['purchase_probability']:.2f} | {row['days_to_next']:.1f} |\n"
-            )
-        
-        report = f"""# Next Purchase Predictions
-
-## Summary
-- Total Predictions: {len(predictions)}
-- Average Purchase Probability: {predictions['purchase_probability'].mean():.2f}
-- Average Days to Next Purchase: {predictions['days_to_next'].mean():.1f}
-
-## Top Predictions by Customer
-{predictions_str}
-
-## Recommendations
-1. Focus on high probability purchases (>0.7)
-2. Consider promotions for medium probability purchases (0.3-0.7)
-3. Monitor actual purchase timing vs predictions
-"""
-        
-        report_path = os.path.join(output_path, 'next_purchase_predictions.md')
-        with open(report_path, 'w') as f:
-            f.write(report)
-        
-        return report_path 

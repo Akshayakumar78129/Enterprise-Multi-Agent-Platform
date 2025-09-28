@@ -148,7 +148,10 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
           value={selectedPreset}
           onChange={(e) => handlePresetChange(e.target.value)}
           options={[
-            ...presets.map((p) => ({ value: p.value, label: p.label })),
+            ...presets.map((p, index) => ({
+              value: p.value,
+              label: p.label
+            })),
             ...(showCustomRange ? [{ value: "custom", label: "Custom Range" }] : []),
           ]}
         />

@@ -20,12 +20,12 @@ from orchestration_agent.tools.customer_segmentation import identify_customer_se
 from orchestration_agent.tools.customer_lifetime_value import predict_customer_ltv
 from orchestration_agent.tools.churn_prediction import predict_churn_risk
 from orchestration_agent.tools.performance_deviation import analyze_performance_deviations
-from orchestration_agent.tools.next_purchase import predict_next_purchases
+from orchestration_agent.tools.next_purchase import predict_next_purchase
 from orchestration_agent.tools.transaction_patterns import analyze_transaction_patterns
 from orchestration_agent.tools.anomaly_detection import detect_anomalies
 from orchestration_agent.tools.purchase_frequency import analyze_purchase_frequency
-from orchestration_agent.tools.engagement_classifier import analyze_customer_engagement
-from orchestration_agent.tools.retention_planner import plan_retention_actions
+from orchestration_agent.tools.engagement_classifier import classify_customer_engagement
+from orchestration_agent.tools.retention_planner import plan_retention_strategy
 from orchestration_agent.tools.sales_analyst import register_tools as register_sales_analyst_tools
 from orchestration_agent.tools.sales_analyst.tools.RegionalSalesAnalyzer import analyze_regional_sales
 from orchestration_agent.tools.inventory_manager.InventoryHoldingCostAnalyzer import analyze_holding_costs
@@ -113,7 +113,7 @@ customer_agent = Agent(
         output_key="agent_output",
         # Crucial for delegation: Clear description of capability
         description="Handles customer analytics and insights including segmentation, behavior analysis, lifetime value prediction, churn risk prediction, performance deviations, next likely purchases, transaction patterns, anomaly detection, purchase frequency analysis, engagement classification, and retention action planning",
-        tools=[analyze_customer_behavior, identify_customer_segments, predict_customer_ltv, predict_churn_risk, analyze_performance_deviations, predict_next_purchases, analyze_transaction_patterns, detect_anomalies, analyze_purchase_frequency, analyze_customer_engagement, plan_retention_actions]
+        tools=[analyze_customer_behavior, identify_customer_segments, predict_customer_ltv, predict_churn_risk, analyze_performance_deviations, predict_next_purchase, analyze_transaction_patterns, detect_anomalies, analyze_purchase_frequency, classify_customer_engagement, plan_retention_strategy]
  )
 
 # customer_output_agent = SequentialAgent(

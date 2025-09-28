@@ -1,125 +1,95 @@
-"""Purchase frequency analysis tool for customer insights."""
+"""Purchase frequency analysis tool using shared processing service"""
 
-import pandas as pd
-import numpy as np
+import json
+from typing import Optional, Dict, List
 from datetime import datetime, timedelta
-import sqlite3
-import logging
+import sys
 import os
-from typing import Dict, Any, Optional, List
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Add parent directories to path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+from domains.purchase_frequency.sync_processing_service import SyncPurchaseFrequencyService
+
 
 def analyze_purchase_frequency(
-    start_date: Optional[str] = None, 
-    end_date: Optional[str] = None, 
-    customer_segments: Optional[List[str]] = None
-) -> Dict[str, Any]:
-    """Analyze customer purchase frequencies and patterns.
-    
-    Args:
-        start_date (Optional[str]): Start date for analysis (YYYY-MM-DD)
-        end_date (Optional[str]): End date for analysis (YYYY-MM-DD)
-        customer_segments (Optional[List[str]]): List of customer segments to analyze
-        
-    Returns:
-        Dict containing text-based analysis of purchase frequency patterns
+    time_period: str = "default",
+    customer_segment: Optional[str] = None,
+    frequency_threshold: Optional[int] = None,
+    include_patterns: bool = True
+) -> str:
     """
+    Analyze customer purchase frequency patterns using ML models.
+
+    Args:
+        time_period: Analysis period
+        customer_segment: Optional segment to analyze
+        frequency_threshold: Minimum purchase frequency to include
+        include_patterns: Whether to include seasonal patterns
+
+    Returns:
+        Formatted purchase frequency analysis as a string.
+    """
+
+    # Initialize the sync service
+    service = SyncPurchaseFrequencyService()
+
+    # Build filters
+    filters = {}
+
+    # Parse time period
+    if time_period == "default":
+        filters['date_from'] = '2021-01-01'
+        filters['date_to'] = '2021-12-31'
+    elif ':' in time_period:
+        dates = time_period.split(':')
+        filters['date_from'] = dates[0]
+        filters['date_to'] = dates[1]
+
+    if customer_segment:
+        filters['segments'] = [customer_segment]
+
+    if frequency_threshold:
+        filters['min_frequency'] = frequency_threshold
+
+    # Get results from processing service
     try:
-        # Connect to database
-        db_path = os.path.join("orchestration_agent", "database", "customers.db")
-        conn = sqlite3.connect(db_path)
-        
-        # Build the query
-        query = """
-        SELECT 
-            s."Customer Key" as customer_id,
-            s."Txn Date" as transaction_date,
-            CAST(s."Net Sales Amount" as FLOAT) as transaction_amount
-        FROM "dbo_F_Sales_Transaction" s
-        WHERE 1=1
-        """
-        
-        if start_date:
-            query += f" AND s.\"Txn Date\" >= '{start_date}'"
-        if end_date:
-            query += f" AND s.\"Txn Date\" <= '{end_date}'"
-            
-        # Execute query and load into DataFrame
-        df = pd.read_sql(query, conn)
-        conn.close()
-        
-        # Convert transaction_date to datetime
-        df['transaction_date'] = pd.to_datetime(df['transaction_date'])
-        
-        # Calculate key metrics
-        customer_metrics = {}
-        insights = []
-        
-        for customer_id, group in df.groupby('customer_id'):
-            dates = group['transaction_date'].sort_values()
-            intervals = dates.diff().dropna()
-            
-            metrics = {
-                'total_purchases': len(dates),
-                'avg_interval_days': intervals.dt.total_seconds().mean() / (24 * 3600) if len(intervals) > 0 else 0,
-                'first_purchase': dates.min(),
-                'last_purchase': dates.max(),
-                'total_spent': group['transaction_amount'].sum(),
-                'avg_transaction': group['transaction_amount'].mean()
-            }
-            
-            customer_metrics[customer_id] = metrics
-        
-        # Convert to DataFrame for analysis
-        metrics_df = pd.DataFrame(customer_metrics).T
-        
-        # Generate insights
-        total_customers = len(metrics_df)
-        if total_customers == 0:
-            return {
-                'status': 'success',
-                'report': 'No transactions found for the specified date range.'
-            }
-            
-        avg_purchase_frequency = metrics_df['total_purchases'].mean()
-        avg_interval = metrics_df['avg_interval_days'].mean()
-        
-        insights.append(f"Analysis Period: {start_date or 'All time'} to {end_date or 'Present'}")
-        insights.append(f"Total Customers Analyzed: {total_customers}")
-        insights.append(f"Average Purchases per Customer: {avg_purchase_frequency:.2f}")
-        insights.append(f"Average Days Between Purchases: {avg_interval:.1f}")
-        
-        # Frequency segments
-        high_frequency = metrics_df[metrics_df['total_purchases'] > avg_purchase_frequency * 1.5]
-        low_frequency = metrics_df[metrics_df['total_purchases'] < avg_purchase_frequency * 0.5]
-        
-        insights.append(f"\nCustomer Purchase Frequency Breakdown:")
-        insights.append(f"- High Frequency Customers (>{avg_purchase_frequency * 1.5:.1f} purchases): {len(high_frequency)} ({len(high_frequency)/total_customers*100:.1f}%)")
-        insights.append(f"- Low Frequency Customers (<{avg_purchase_frequency * 0.5:.1f} purchases): {len(low_frequency)} ({len(low_frequency)/total_customers*100:.1f}%)")
-        
-        # Recent purchase patterns
-        recent_cutoff = pd.Timestamp.now() - pd.Timedelta(days=90)
-        recent_customers = metrics_df[metrics_df['last_purchase'] >= recent_cutoff]
-        insights.append(f"\nRecent Purchase Patterns (Last 90 Days):")
-        insights.append(f"- Active Customers: {len(recent_customers)} ({len(recent_customers)/total_customers*100:.1f}%)")
-        
-        # Value analysis
-        avg_transaction_mean = metrics_df['avg_transaction'].mean()
-        high_value = metrics_df[metrics_df['avg_transaction'] > avg_transaction_mean * 1.5]
-        insights.append(f"\nTransaction Value Patterns:")
-        insights.append(f"- High Value Customers (Avg transaction > ${avg_transaction_mean * 1.5:.2f}): {len(high_value)} ({len(high_value)/total_customers*100:.1f}%)")
-        
-        return {
-            'status': 'success',
-            'report': '\n'.join(insights)
-        }
-        
+        result = service.get_dashboard_summary(filters)
+
+        # Format the response
+        output = []
+        output.append("# Purchase Frequency Analysis")
+        output.append(f"\nAnalysis Period: {filters.get('date_from')} to {filters.get('date_to')}")
+
+        # Add KPI metrics
+        if result.get('kpiMetrics'):
+            output.append("\n## Key Metrics")
+            kpis = result['kpiMetrics']
+            output.append(f"- Average Purchase Frequency: {kpis.get('avgFrequency', 0):.2f} purchases/month")
+            output.append(f"- High Frequency Customers: {kpis.get('highFrequencyCustomers', 0):,}")
+            output.append(f"- Frequency Trend: {kpis.get('frequencyTrend', 0):.1f}%")
+            output.append(f"- Retention Rate: {kpis.get('retentionRate', 0):.1f}%")
+
+        # Add frequency distribution
+        if result.get('mainData', {}).get('frequencydistributionData'):
+            output.append("\n## Frequency Distribution")
+            for segment in result['mainData']['frequencydistributionData'][:5]:
+                output.append(f"- {segment.get('range', 'N/A')}: {segment.get('count', 0):,} customers")
+
+        # Add seasonal patterns if requested
+        if include_patterns and result.get('mainData', {}).get('seasonalpatternsData'):
+            output.append("\n## Seasonal Patterns")
+            output.append("Peak purchase periods identified:")
+            for pattern in result['mainData']['seasonalpatternsData'][:3]:
+                output.append(f"- {pattern.get('period', 'N/A')}: {pattern.get('frequency', 0):.1f}x normal")
+
+        # Add insights
+        if result.get('insights'):
+            output.append("\n## Insights")
+            for insight in result['insights']:
+                output.append(f"- {insight}")
+
+        return "\n".join(output)
+
     except Exception as e:
-        logger.error(f"Error in purchase frequency analysis: {str(e)}")
-        return {
-            'status': 'error',
-            'report': f"Failed to analyze purchase frequency: {str(e)}"
-        } 
+        return f"Error analyzing purchase frequency: {str(e)}"

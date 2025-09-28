@@ -29,6 +29,24 @@ from domains.performance_deviation.processing_service import PerformanceProcessi
 from domains.anomaly_detection.processing_service import AnomalyProcessingService
 # Import CustomerBehaviorProcessingService for behavior analysis
 from domains.customer_behavior.processing_service import CustomerBehaviorProcessingService
+# Import CustomerSegmentationService for segmentation analysis
+from domains.customer_segmentation.processing_service import CustomerSegmentationService
+# Import additional customer dashboard services
+from domains.customer_ltv.processing_service import CustomerLtvService
+from domains.purchase_frequency.processing_service import PurchaseFrequencyService
+from domains.transaction_patterns.processing_service import TransactionPatternsService
+from domains.engagement_classifier.processing_service import EngagementClassifierService
+from domains.next_purchase.processing_service import NextPurchaseService
+from domains.retention_planner.processing_service import RetentionPlannerService
+from domains.customer_insights.processing_service import CustomerInsightsService
+
+# Import sales domain services
+from domains.sales_performance.processing_service import SalesPerformanceProcessingService
+from domains.sales_forecast.processing_service import SalesForecastProcessingService
+from domains.revenue_analysis.processing_service import RevenueAnalysisProcessingService
+
+# Import inventory domain services
+from domains.inventory_level.processing_service import InventoryLevelProcessingService
 
 from customer.agent import root_agent as customer_agent
 from finance.agent import root_agent as finance_agent
@@ -40,6 +58,20 @@ from api.routers.churn_router import router as churn_router
 from api.routers.performance_router import router as performance_router
 from api.routers.anomaly_router import router as anomaly_router
 from api.routers.customer_behavior_router import router as customer_behavior_router
+from api.routers.segmentation_router import router as segmentation_router
+from api.routers.customer_ltv_router import router as customer_ltv_router
+from api.routers.purchase_frequency_router import router as purchase_frequency_router
+from api.routers.transaction_patterns_router import router as transaction_patterns_router
+from api.routers.engagement_classifier_router import router as engagement_classifier_router
+from api.routers.next_purchase_router import router as next_purchase_router
+from api.routers.retention_planner_router import router as retention_planner_router
+from api.routers.customer_insights_router import router as customer_insights_router
+
+# Import sales API router
+from api.routers.sales_performance_router import router as sales_performance_router
+
+# Import inventory API router
+from api.routers.inventory_level_router import router as inventory_level_router
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +108,18 @@ churn_service = ChurnProcessingService()
 performance_service = PerformanceProcessingService()
 anomaly_service = AnomalyProcessingService()
 customer_behavior_service = CustomerBehaviorProcessingService()
+segmentation_service = CustomerSegmentationService()
+customer_ltv_service = CustomerLtvService()
+purchase_frequency_service = PurchaseFrequencyService()
+transaction_patterns_service = TransactionPatternsService()
+engagement_classifier_service = EngagementClassifierService()
+next_purchase_service = NextPurchaseService()
+retention_planner_service = RetentionPlannerService()
+customer_insights_service = CustomerInsightsService()
+sales_performance_service = SalesPerformanceProcessingService()
+sales_forecast_service = SalesForecastProcessingService()
+revenue_analysis_service = RevenueAnalysisProcessingService()
+inventory_level_service = InventoryLevelProcessingService()
 
 app.add_middleware(
     CORSMiddleware,
@@ -92,6 +136,16 @@ app.include_router(churn_router)
 app.include_router(performance_router)
 app.include_router(anomaly_router)
 app.include_router(customer_behavior_router)
+app.include_router(segmentation_router)
+app.include_router(customer_ltv_router)
+app.include_router(purchase_frequency_router)
+app.include_router(transaction_patterns_router)
+app.include_router(engagement_classifier_router)
+app.include_router(next_purchase_router)
+app.include_router(retention_planner_router)
+app.include_router(customer_insights_router)
+app.include_router(sales_performance_router)
+app.include_router(inventory_level_router)
 
 # Simple in-memory session storage for fallback
 simple_sessions: Dict[str, Dict[str, Any]] = {}
@@ -124,8 +178,19 @@ async def startup_event():
     app.state.performance_service = performance_service
     app.state.anomaly_service = anomaly_service
     app.state.customer_behavior_service = customer_behavior_service
+    app.state.segmentation_service = segmentation_service
+    app.state.customer_ltv_service = customer_ltv_service
+    app.state.purchase_frequency_service = purchase_frequency_service
+    app.state.transaction_patterns_service = transaction_patterns_service
+    app.state.engagement_classifier_service = engagement_classifier_service
+    app.state.next_purchase_service = next_purchase_service
+    app.state.retention_planner_service = retention_planner_service
+    app.state.customer_insights_service = customer_insights_service
+    app.state.sales_performance_service = sales_performance_service
+    app.state.sales_forecast_service = sales_forecast_service
+    app.state.revenue_analysis_service = revenue_analysis_service
 
-    print("[Main Server] Customer behavior service initialized")
+    print("[Main Server] All services initialized")
 
 @app.get("/")
 def read_root():
@@ -148,7 +213,28 @@ def read_root():
                 "/api/performance/summary",
                 "/api/performance/feature-importance",
                 "/api/performance/variance-decomposition",
-                "/api/performance/deviation-patterns"
+                "/api/performance/deviation-patterns",
+                "/api/anomaly/summary",
+                "/api/anomaly/customer-anomalies",
+                "/api/anomaly/feature-importance",
+                "/api/anomaly/segment-distribution",
+                "/api/anomaly/region-distribution",
+                "/api/anomaly/severity-distribution",
+                "/api/anomaly/time-series",
+                "/api/anomaly/customers",
+                "/api/anomaly/export",
+                "/api/anomaly/retrain",
+                "/api/customer-behavior/summary",
+                "/api/customer-behavior/purchase-patterns",
+                "/api/customer-behavior/product-preferences",
+                "/api/customer-behavior/channel-usage",
+                "/api/customer-behavior/engagement-metrics",
+                "/api/customer-behavior/customer-segments",
+                "/api/customer-behavior/top-customers",
+                "/api/customer-behavior/behavior-trends",
+                "/api/customer-behavior/rfm-analysis",
+                "/api/customer-behavior/clv-analysis",
+                "/api/customer-behavior/export"
             ]
         }
     }

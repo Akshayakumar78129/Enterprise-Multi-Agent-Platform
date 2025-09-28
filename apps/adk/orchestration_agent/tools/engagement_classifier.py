@@ -1,112 +1,101 @@
-"""Customer engagement classification tool."""
+"""Customer engagement classification tool using shared processing service"""
 
-import pandas as pd
-import numpy as np
+import json
+from typing import Optional, Dict, List
 from datetime import datetime, timedelta
-import sqlite3
-import logging
+import sys
 import os
-from typing import Dict, Any, Optional
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import StandardScaler
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Add parent directories to path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-def analyze_customer_engagement(start_date: Optional[str] = None, end_date: Optional[str] = None) -> Dict:
+from domains.engagement_classifier.sync_processing_service import SyncEngagementClassifierService
+
+
+def classify_customer_engagement(
+    time_period: str = "default",
+    engagement_threshold: str = "medium",
+    include_recommendations: bool = True,
+    customer_segment: Optional[str] = None
+) -> str:
     """
-    Analyze customer engagement metrics using actual data from the customers.db database.
-    
+    Classify customer engagement levels using ML models.
+
     Args:
-        start_date (str, optional): Start date for analysis (YYYY-MM-DD)
-        end_date (str, optional): End date for analysis (YYYY-MM-DD)
-        
+        time_period: Analysis period
+        engagement_threshold: Minimum engagement level (low, medium, high)
+        include_recommendations: Whether to include action recommendations
+        customer_segment: Optional segment to analyze
+
     Returns:
-        Dict containing engagement analysis report
+        Formatted engagement classification as a string.
     """
+
+    # Initialize the sync service
+    service = SyncEngagementClassifierService()
+
+    # Build filters
+    filters = {}
+
+    # Parse time period
+    if time_period == "default":
+        filters['date_from'] = '2021-01-01'
+        filters['date_to'] = '2021-12-31'
+    elif ':' in time_period:
+        dates = time_period.split(':')
+        filters['date_from'] = dates[0]
+        filters['date_to'] = dates[1]
+
+    filters['engagement_threshold'] = engagement_threshold
+
+    if customer_segment:
+        filters['segments'] = [customer_segment]
+
+    # Get results from processing service
     try:
-        # Get path to customers.db
-        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "database", "customers.db")
-        
-        # Connect to database
-        conn = sqlite3.connect(db_path)
-        logger.info("Database connected successfully.")
-        
-        # Build date filter if dates provided
-        date_filter = ""
-        if start_date and end_date:
-            date_filter = f"WHERE cl.\"Last Activity Date\" BETWEEN '{start_date}' AND '{end_date}'"
-        
-        # Query to get engagement metrics
-        query = f"""
-        WITH CustomerEngagement AS (
-            SELECT 
-                c."Customer Key",
-                c."Customer Number",
-                c."Customer Name",
-                cl."Loyalty Status",
-                cl."RFM Score",
-                cl."Recency Band",
-                cl."Frequency Band",
-                cl."Monetary Band",
-                cl."Days Since Last Activity",
-                cl."Number Sales Txns",
-                cl."Avg Sales Amount",
-                cl."Last Activity Date",
-                CASE 
-                    WHEN cl."Days Since Last Activity" <= 30 THEN 'High'
-                    WHEN cl."Days Since Last Activity" <= 90 THEN 'Medium'
-                    ELSE 'Low'
-                END as engagement_level
-            FROM 
-                dbo_D_Customer c
-            LEFT JOIN 
-                dbo_F_Customer_Loyalty cl ON c."Customer Key" = cl."Entity Key"
-            {date_filter}
-        )
-        SELECT 
-            engagement_level,
-            COUNT(*) as customer_count,
-            AVG("Number Sales Txns") as avg_transactions,
-            AVG("Avg Sales Amount") as avg_purchase_value,
-            AVG("Days Since Last Activity") as avg_days_since_activity
-        FROM CustomerEngagement
-        GROUP BY engagement_level
-        ORDER BY 
-            CASE engagement_level
-                WHEN 'High' THEN 1
-                WHEN 'Medium' THEN 2
-                WHEN 'Low' THEN 3
-            END;
-        """
-        
-        cursor = conn.cursor()
-        results = cursor.execute(query).fetchall()
-        
-        # Generate report
-        report = "Customer Engagement Analysis Report\n"
-        report += "================================\n\n"
-        
-        for row in results:
-            level, count, avg_txns, avg_value, avg_days = row
-            report += f"{level} Engagement Customers:\n"
-            report += f"- Count: {count}\n"
-            report += f"- Average Transactions: {avg_txns:.1f}\n"
-            report += f"- Average Purchase Value: ${avg_value:.2f}\n"
-            report += f"- Average Days Since Activity: {avg_days:.1f}\n\n"
-            
-        return {
-            "report": report,
-            "success": True
-        }
-        
+        result = service.get_dashboard_summary(filters)
+
+        # Format the response
+        output = []
+        output.append("# Customer Engagement Classification")
+        output.append(f"\nAnalysis Period: {filters.get('date_from')} to {filters.get('date_to')}")
+
+        # Add KPI metrics
+        if result.get('kpiMetrics'):
+            output.append("\n## Key Metrics")
+            kpis = result['kpiMetrics']
+            output.append(f"- Highly Engaged Customers: {kpis.get('highlyEngaged', 0):,}")
+            output.append(f"- At Risk Customers: {kpis.get('atRiskCount', 0):,}")
+            output.append(f"- Average Engagement Score: {kpis.get('avgEngagementScore', 0):.1f}/100")
+            output.append(f"- Engagement Trend: {'+' if kpis.get('engagementTrend', 0) > 0 else ''}{kpis.get('engagementTrend', 0):.1f}%")
+
+        # Add engagement distribution
+        if result.get('mlResults', {}).get('engagement_distribution'):
+            output.append("\n## Engagement Distribution")
+            for level, count in result['mlResults']['engagement_distribution'].items():
+                output.append(f"- {level}: {count:,} customers")
+
+        # Add at-risk customers
+        if result.get('mlResults', {}).get('at_risk_customers'):
+            output.append("\n## At-Risk Customers (Top 10)")
+            for i, customer in enumerate(result['mlResults']['at_risk_customers'][:10], 1):
+                output.append(f"{i}. {customer.get('customer_name', 'Unknown')} - Score: {customer.get('engagement_score', 0):.1f}")
+
+        # Add recommendations if requested
+        if include_recommendations:
+            output.append("\n## Recommended Actions")
+            output.append("- **For Highly Engaged**: Implement loyalty programs and exclusive offers")
+            output.append("- **For Medium Engaged**: Increase touchpoints through personalized communications")
+            output.append("- **For Low Engaged**: Re-engagement campaigns with incentives")
+            output.append("- **For At-Risk**: Immediate intervention with retention offers")
+
+        # Add insights
+        if result.get('insights'):
+            output.append("\n## Insights")
+            for insight in result['insights']:
+                output.append(f"- {insight}")
+
+        return "\n".join(output)
+
     except Exception as e:
-        logger.error(f"Error in engagement analysis: {str(e)}")
-        return {
-            "report": f"Failed to analyze customer engagement: {str(e)}",
-            "success": False
-        }
-    finally:
-        if 'conn' in locals():
-            conn.close() 
+        return f"Error classifying customer engagement: {str(e)}"

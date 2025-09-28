@@ -5,12 +5,12 @@ from orchestration_agent.tools.customer_segmentation import identify_customer_se
 from orchestration_agent.tools.customer_lifetime_value import predict_customer_ltv
 from orchestration_agent.tools.churn_prediction import predict_churn_risk
 from orchestration_agent.tools.performance_deviation import analyze_performance_deviations
-from orchestration_agent.tools.next_purchase import predict_next_purchases
+from orchestration_agent.tools.next_purchase import predict_next_purchase
 from orchestration_agent.tools.transaction_patterns import analyze_transaction_patterns
 from orchestration_agent.tools.anomaly_detection import detect_anomalies
 from orchestration_agent.tools.purchase_frequency import analyze_purchase_frequency
-from orchestration_agent.tools.engagement_classifier import analyze_customer_engagement
-from orchestration_agent.tools.retention_planner import plan_retention_actions
+from orchestration_agent.tools.engagement_classifier import classify_customer_engagement
+from orchestration_agent.tools.retention_planner import plan_retention_strategy
 
 from customer.prompt import PROMPT
 
@@ -21,5 +21,5 @@ root_agent = Agent(
     model=model,
     instruction=PROMPT,
     description="Handles any customer insights and analysis",
-    tools=[analyze_customer_behavior, identify_customer_segments, predict_customer_ltv, predict_churn_risk, analyze_performance_deviations, predict_next_purchases, analyze_transaction_patterns, detect_anomalies, analyze_purchase_frequency, analyze_customer_engagement, plan_retention_actions]
+    tools=[analyze_customer_behavior, identify_customer_segments, predict_customer_ltv, predict_churn_risk, analyze_performance_deviations, predict_next_purchase, analyze_transaction_patterns, detect_anomalies, analyze_purchase_frequency, classify_customer_engagement, plan_retention_strategy]
 )

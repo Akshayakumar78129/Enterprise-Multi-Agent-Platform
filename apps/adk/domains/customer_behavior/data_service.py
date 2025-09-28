@@ -115,3 +115,84 @@ class CustomerBehaviorDataService:
         # Apply filters using filter engine
         query, params = self.filter_engine.apply_filters(sql, filters, self.schema)
         return await self.db.query(query, params)
+
+    async def get_behavior_analysis_data(self, filters: Dict[str, Any] = {}) -> Dict:
+        """Get comprehensive customer behavior data - matches web folder logic"""
+
+        sql = f"""
+        WITH CustomerBehavior AS (
+            SELECT DISTINCT
+                c.[Customer Key] as customer_id,
+                c.[Customer Name] as customer_name,
+                c.[Customer Type Desc] as customer_type,
+                c.[Customer Category Hrchy Code] as customer_category,
+                c.[Customer Status] as customer_status,
+                cl.[Loyalty Status] as loyalty_status,
+                cl.[First Activity Date] as customer_since,
+                cl.[Last Activity Date] as last_activity_date,
+                COUNT(DISTINCT t.[Sales Txn Key]) as transaction_count,
+                SUM(t.[Net Sales Amount]) as total_sales,
+                AVG(t.[Net Sales Amount]) as avg_order_value,
+                AVG(t.[Net Sales Quantity]) as avg_items_per_order,
+                COUNT(DISTINCT t.[Item Category Hrchy Key]) as category_diversity,
+                COUNT(DISTINCT t.[Line Type]) as channel_diversity,
+                MIN(t.[Txn Date]) as first_purchase_date,
+                MAX(t.[Txn Date]) as last_purchase_date,
+                JULIANDAY('now') - JULIANDAY(MAX(t.[Txn Date])) as days_since_last_purchase
+            FROM
+                {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
+            LEFT JOIN
+                {self.schema.TABLES['loyalty']} {self.schema.ALIASES['loyalty']}
+                ON c.[Customer Key] = cl.[Entity Key]
+            LEFT JOIN
+                {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
+                ON c.[Customer Key] = t.[Customer Key]
+                AND t.[Deleted Flag] = 0
+                AND t.[Excluded Flag] = 0
+                AND t.[Net Sales Amount] IS NOT NULL
+            WHERE
+                c.[Customer Key] > 0
+            GROUP BY
+                c.[Customer Key],
+                c.[Customer Name],
+                c.[Customer Type Desc],
+                c.[Customer Category Hrchy Code],
+                c.[Customer Status],
+                cl.[Loyalty Status],
+                cl.[First Activity Date],
+                cl.[Last Activity Date]
+            HAVING
+                COUNT(DISTINCT t.[Sales Txn Key]) >= 2
+        )
+        SELECT * FROM CustomerBehavior
+        """
+
+        # Apply filters using filter engine
+        query, params = self.filter_engine.apply_filters(sql, filters, self.schema)
+        return await self.db.query(query, params)
+
+    async def get_transaction_details(self, filters: Dict[str, Any] = {}) -> Dict:
+        """Get detailed transaction data for behavior analysis - matches web folder logic"""
+
+        sql = f"""
+        SELECT
+            t.[Customer Key] as customer_id,
+            t.[Txn Date] as transaction_date,
+            t.[Net Sales Amount] as sales_amount,
+            t.[Net Sales Quantity] as quantity,
+            t.[Item Key] as item_id,
+            t.[Line Type] as sales_channel,
+            t.[Item Category Hrchy Key] as product_category
+        FROM
+            {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
+        WHERE
+            t.[Deleted Flag] = 0
+            AND t.[Excluded Flag] = 0
+            AND t.[Customer Key] > 0
+            AND t.[Net Sales Amount] IS NOT NULL
+            AND t.[Net Sales Quantity] IS NOT NULL
+        """
+
+        # Apply filters using filter engine
+        query, params = self.filter_engine.apply_filters(sql, filters, self.schema)
+        return await self.db.query(query, params)

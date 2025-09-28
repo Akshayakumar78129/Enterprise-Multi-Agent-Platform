@@ -8,6 +8,7 @@ class CustomerBehaviorFilters(BaseModel):
     """Filter model for customer behavior analysis"""
     time_period: Optional[str] = Field("quarterly", description="Time period (monthly, quarterly, annual, or YYYY-MM-DD:YYYY-MM-DD)")
     segment_id: Optional[int] = Field(None, description="Customer segment ID")
+    segment_ids: Optional[List[str]] = Field(default_factory=list, description="Multiple customer segment IDs")
     behavior_types: Optional[List[str]] = Field(
         default_factory=lambda: ["purchase_patterns", "product_preferences", "channel_usage", "engagement_metrics"],
         description="Types of behavior to analyze"

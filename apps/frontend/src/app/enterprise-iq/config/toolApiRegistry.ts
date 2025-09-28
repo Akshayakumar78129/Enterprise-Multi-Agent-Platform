@@ -31,7 +31,7 @@ export const toolApiRegistry: Record<string, ToolApiConfig> = {
 
   // Customer Segmentation Dashboard
   'customer-segmentation': {
-    endpoint: '/api/customer/segmentation/summary',
+    endpoint: '/api/segmentation/summary',
     method: 'POST',
     description: 'Customer segmentation and analysis'
   },
@@ -66,35 +66,41 @@ export const toolApiRegistry: Record<string, ToolApiConfig> = {
 
   // Purchase Frequency Dashboard
   'purchase-frequency': {
-    endpoint: '/api/customer/frequency/summary',
+    endpoint: '/api/purchase-frequency/summary',
     method: 'POST',
-    description: 'Customer purchase frequency patterns'
+    description: 'Customer purchase frequency patterns and analysis'
   },
 
   // Transaction Patterns Dashboard
   'transaction-patterns': {
-    endpoint: '/api/transactions/patterns/summary',
+    endpoint: '/api/transaction-patterns/summary',
     method: 'POST',
-    description: 'Transaction pattern analysis and anomalies'
+    description: 'Transaction pattern analysis and anomaly detection'
   },
 
   // Customer Lifetime Value Dashboard
   'customer-lifetime-value': {
-    endpoint: '/api/customer/ltv/summary',
+    endpoint: '/api/customer-ltv/summary',
     method: 'POST',
-    description: 'Customer lifetime value predictions'
+    description: 'Customer lifetime value analysis and predictions'
+  },
+
+  'customer-ltv': {
+    endpoint: '/api/customer-ltv/summary',
+    method: 'POST',
+    description: 'Customer lifetime value analysis and predictions'
   },
 
   // Engagement Classifier Dashboard
   'engagement-classifier': {
-    endpoint: '/api/customer/engagement/summary',
+    endpoint: '/api/engagement-classifier/summary',
     method: 'POST',
-    description: 'Customer engagement classification'
+    description: 'Customer engagement classification and scoring'
   },
 
   // Next Purchase Predictor
   'next-purchase': {
-    endpoint: '/api/customer/next-purchase/summary',
+    endpoint: '/api/next-purchase/summary',
     method: 'POST',
     description: 'Next purchase predictions and recommendations'
   },
@@ -120,19 +126,26 @@ export const toolApiRegistry: Record<string, ToolApiConfig> = {
     description: 'Performance deviation analysis'
   },
 
-  // Retention Planner Dashboard (Not yet implemented)
-  // 'retention-planner': {
-  //   endpoint: '/api/retention/summary',
-  //   method: 'POST',
-  //   description: 'Customer retention planning and strategies'
-  // },
+  // Retention Planner Dashboard
+  'retention-planner': {
+    endpoint: '/api/retention-planner/summary',
+    method: 'POST',
+    description: 'Customer retention strategies and planning'
+  },
 
-  // Anomaly Detection Dashboard (Not yet implemented)
-  // 'anomaly-detection': {
-  //   endpoint: '/api/anomaly/summary',
-  //   method: 'POST',
-  //   description: 'Anomaly detection and analysis'
-  // },
+  // Anomaly Detection Dashboard
+  'anomaly-detection': {
+    endpoint: '/api/anomaly/summary',
+    method: 'POST',
+    description: 'Anomaly detection and analysis'
+  },
+
+  // Customer Behavior Dashboard
+  'customer-behavior': {
+    endpoint: '/api/customer-behavior/summary',
+    method: 'POST',
+    description: 'Customer behavior analysis and insights'
+  },
 
   // Add more dashboard endpoints as they are implemented
   // Template:

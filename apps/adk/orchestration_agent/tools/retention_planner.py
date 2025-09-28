@@ -1,269 +1,120 @@
-"""Customer retention action planner tool."""
+"""Customer retention planning tool using shared processing service"""
 
-import os
-import sqlite3
-import logging
-import pandas as pd
-import numpy as np
+import json
+from typing import Optional, Dict, List
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.preprocessing import StandardScaler
+import sys
+import os
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Add parent directories to path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-def plan_retention_actions(
-    customer_segments: Optional[List[str]] = None,
-    churn_risk_threshold: float = 0.5,
-    include_visualization: bool = False
-) -> Dict:
+from domains.retention_planner.sync_processing_service import SyncRetentionPlannerService
+
+
+def plan_retention_strategy(
+    time_period: str = "default",
+    risk_threshold: str = "medium",
+    budget_limit: Optional[float] = None,
+    include_roi_analysis: bool = True
+) -> str:
     """
-    Plan retention actions for customers based on their value, churn risk, and historical data.
-    
+    Plan customer retention strategies using ML optimization.
+
     Args:
-        customer_segments (List[str], optional): List of customer segments to analyze
-        churn_risk_threshold (float, optional): Threshold for high churn risk (0.0-1.0)
-        include_visualization (bool, optional): Whether to include visualizations
-        
+        time_period: Analysis period
+        risk_threshold: Risk level to target (low, medium, high)
+        budget_limit: Optional budget constraint for retention efforts
+        include_roi_analysis: Whether to include ROI analysis
+
     Returns:
-        Dict containing retention action plan and recommendations
+        Formatted retention strategy plan as a string.
     """
+
+    # Initialize the sync service
+    service = SyncRetentionPlannerService()
+
+    # Build filters
+    filters = {}
+
+    # Parse time period
+    if time_period == "default":
+        filters['date_from'] = '2021-01-01'
+        filters['date_to'] = '2021-12-31'
+    elif ':' in time_period:
+        dates = time_period.split(':')
+        filters['date_from'] = dates[0]
+        filters['date_to'] = dates[1]
+
+    filters['risk_threshold'] = risk_threshold
+
+    if budget_limit:
+        filters['budget_limit'] = budget_limit
+
+    # Get results from processing service
     try:
-        # Get path to customers.db
-        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "database", "customers.db")
-        
-        # Connect to database
-        conn = sqlite3.connect(db_path)
-        logger.info("Database connected successfully.")
-        
-        # Build segment filter if segments provided
-        segment_filter = ""
-        if customer_segments:
-            segments_str = ", ".join([f"'{segment}'" for segment in customer_segments])
-            segment_filter = f"AND cl.\"Loyalty Status\" IN ({segments_str})"
-        
-        # Query to get customer data for retention planning
-        query = f"""
-        WITH CustomerData AS (
-            SELECT 
-                c."Customer Key",
-                c."Customer Number",
-                c."Customer Name",
-                cl."Loyalty Status",
-                cl."RFM Score",
-                cl."Recency Band",
-                cl."Frequency Band",
-                cl."Monetary Band",
-                cl."Days Since Last Activity",
-                cl."Number Sales Txns",
-                cl."Avg Sales Amount",
-                cl."Last Activity Date",
-                CASE 
-                    WHEN cl."Days Since Last Activity" > 90 THEN 1
-                    ELSE 0
-                END as churn_indicator,
-                CASE 
-                    WHEN cl."RFM Score" >= 8 THEN 'High'
-                    WHEN cl."RFM Score" >= 5 THEN 'Medium'
-                    ELSE 'Low'
-                END as customer_value
-            FROM 
-                dbo_D_Customer c
-            LEFT JOIN 
-                dbo_F_Customer_Loyalty cl ON c."Customer Key" = cl."Entity Key"
-            WHERE 1=1
-            {segment_filter}
-        )
-        SELECT * FROM CustomerData
-        """
-        
-        # Execute query and load data
-        df = pd.read_sql_query(query, conn)
-        
-        if df.empty:
-            return {
-                "report": "No customer data found for the specified segments.",
-                "success": False
-            }
-        
-        # Prepare features for churn risk prediction
-        feature_cols = [
-            "RFM Score", "Days Since Last Activity", 
-            "Number Sales Txns", "Avg Sales Amount"
-        ]
-        
-        X = df[feature_cols].copy()
-        
-        # Scale features
-        scaler = StandardScaler()
-        X_scaled = scaler.fit_transform(X)
-        
-        # Train a simple decision tree for churn risk prediction
-        model = DecisionTreeClassifier(max_depth=3, random_state=42)
-        model.fit(X_scaled, df["churn_indicator"])
-        
-        # Predict churn risk
-        df["churn_risk"] = model.predict_proba(X_scaled)[:, 1]
-        
-        # Define retention actions based on customer value and churn risk
-        def get_retention_actions(row):
-            if row["churn_risk"] < churn_risk_threshold:
-                return "No action needed"
-            
-            if row["customer_value"] == "High":
-                if row["Days Since Last Activity"] > 90:
-                    return "Premium retention package + Personal outreach"
-                else:
-                    return "Loyalty program upgrade + Exclusive offer"
-            elif row["customer_value"] == "Medium":
-                if row["Days Since Last Activity"] > 90:
-                    return "Standard retention package + Follow-up call"
-                else:
-                    return "Targeted discount + Engagement campaign"
-            else:  # Low value
-                if row["churn_risk"] > 0.8:
-                    return "Basic retention offer"
-                else:
-                    return "Standard communication"
-        
-        # Apply retention actions
-        df["recommended_action"] = df.apply(get_retention_actions, axis=1)
-        
-        # Calculate expected effectiveness based on historical patterns
-        def estimate_effectiveness(action, value, risk):
-            base_effectiveness = {
-                "Premium retention package + Personal outreach": 0.85,
-                "Loyalty program upgrade + Exclusive offer": 0.75,
-                "Standard retention package + Follow-up call": 0.65,
-                "Targeted discount + Engagement campaign": 0.60,
-                "Basic retention offer": 0.45,
-                "Standard communication": 0.30,
-                "No action needed": 1.00
-            }
-            
-            # Adjust based on customer value
-            value_multiplier = {
-                "High": 1.2,
-                "Medium": 1.0,
-                "Low": 0.8
-            }
-            
-            # Adjust based on churn risk
-            risk_factor = 1.0 - (risk * 0.3)  # Higher risk reduces effectiveness
-            
-            return base_effectiveness[action] * value_multiplier[value] * risk_factor
-        
-        df["expected_effectiveness"] = df.apply(
-            lambda row: estimate_effectiveness(
-                row["recommended_action"], 
-                row["customer_value"], 
-                row["churn_risk"]
-            ), 
-            axis=1
-        )
-        
-        # Generate retention playbooks by segment and churn cause
-        playbooks = {}
-        for segment in df["Loyalty Status"].unique():
-            segment_data = df[df["Loyalty Status"] == segment]
-            
-            # Group by churn cause (simplified as days since last activity)
-            churn_causes = {
-                "Inactive": segment_data[segment_data["Days Since Last Activity"] > 90],
-                "At Risk": segment_data[(segment_data["Days Since Last Activity"] <= 90) & (segment_data["churn_risk"] > churn_risk_threshold)],
-                "Engaged": segment_data[(segment_data["Days Since Last Activity"] <= 90) & (segment_data["churn_risk"] <= churn_risk_threshold)]
-            }
-            
-            playbook = {}
-            for cause, data in churn_causes.items():
-                if not data.empty:
-                    # Get top recommended actions for this cause
-                    top_actions = data["recommended_action"].value_counts().head(3)
-                    
-                    playbook[cause] = {
-                        "customer_count": len(data),
-                        "avg_churn_risk": data["churn_risk"].mean(),
-                        "recommended_actions": [
-                            {
-                                "action": action,
-                                "count": count,
-                                "avg_effectiveness": data[data["recommended_action"] == action]["expected_effectiveness"].mean()
-                            }
-                            for action, count in top_actions.items()
-                        ]
-                    }
-            
-            playbooks[segment] = playbook
-        
-        # Generate report
-        report = "Customer Retention Action Plan\n"
-        report += "============================\n\n"
-        
-        # Overall statistics
-        report += f"Total Customers Analyzed: {len(df)}\n"
-        report += f"High Churn Risk Customers: {len(df[df['churn_risk'] > churn_risk_threshold])}\n"
-        report += f"Average Churn Risk: {df['churn_risk'].mean():.2f}\n\n"
-        
-        # Action distribution
-        report += "Recommended Actions Distribution:\n"
-        action_dist = df["recommended_action"].value_counts()
-        for action, count in action_dist.items():
-            percentage = (count/len(df))*100
-            report += f"- {action}: {count} customers ({percentage:.1f}%)\n"
-        
-        report += "\nRetention Playbooks by Segment:\n"
-        for segment, playbook in playbooks.items():
-            report += f"\n{segment} Segment:\n"
-            for cause, details in playbook.items():
-                report += f"  {cause} Customers ({details['customer_count']}):\n"
-                report += f"  - Average Churn Risk: {details['avg_churn_risk']:.2f}\n"
-                report += "  - Recommended Actions:\n"
-                for action in details["recommended_actions"]:
-                    report += f"    * {action['action']}: {action['count']} customers, {action['avg_effectiveness']*100:.1f}% expected effectiveness\n"
-        
-        # Cost-benefit analysis
-        report += "\nCost-Benefit Analysis:\n"
-        cost_benefit = {
-            "Premium retention package + Personal outreach": {"cost": 500, "benefit": 5000},
-            "Loyalty program upgrade + Exclusive offer": {"cost": 200, "benefit": 3000},
-            "Standard retention package + Follow-up call": {"cost": 100, "benefit": 1500},
-            "Targeted discount + Engagement campaign": {"cost": 50, "benefit": 800},
-            "Basic retention offer": {"cost": 25, "benefit": 400},
-            "Standard communication": {"cost": 10, "benefit": 100},
-            "No action needed": {"cost": 0, "benefit": 0}
-        }
-        
-        for action, metrics in cost_benefit.items():
-            if action in action_dist:
-                count = action_dist[action]
-                total_cost = count * metrics["cost"]
-                total_benefit = count * metrics["benefit"] * df[df["recommended_action"] == action]["expected_effectiveness"].mean()
-                roi = (total_benefit - total_cost) / total_cost if total_cost > 0 else 0
-                report += f"- {action}:\n"
-                report += f"  * Cost: ${total_cost:,.2f}\n"
-                report += f"  * Expected Benefit: ${total_benefit:,.2f}\n"
-                report += f"  * ROI: {roi*100:.1f}%\n"
-        
-        return {
-            "report": report,
-            "success": True,
-            "data": {
-                "customer_count": len(df),
-                "high_risk_count": len(df[df["churn_risk"] > churn_risk_threshold]),
-                "action_distribution": action_dist.to_dict(),
-                "playbooks": playbooks,
-                "cost_benefit": cost_benefit
-            }
-        }
-        
+        result = service.get_dashboard_summary(filters)
+
+        # Format the response
+        output = []
+        output.append("# Customer Retention Strategy Plan")
+        output.append(f"\nAnalysis Period: {filters.get('date_from')} to {filters.get('date_to')}")
+        output.append(f"Risk Threshold: {risk_threshold}")
+        if budget_limit:
+            output.append(f"Budget Limit: ${budget_limit:,.2f}")
+
+        # Add KPI metrics
+        if result.get('kpiMetrics'):
+            output.append("\n## Key Metrics")
+            kpis = result['kpiMetrics']
+            output.append(f"- Current Retention Rate: {kpis.get('retentionRate', 0):.1f}%")
+            output.append(f"- At-Risk Customer Value: ${kpis.get('atRiskValue', 0):,.2f}")
+            output.append(f"- Intervention Success Rate: {kpis.get('interventionSuccess', 0):.1f}%")
+            output.append(f"- Projected Cost Savings: ${kpis.get('costSavings', 0):,.2f}")
+
+        # Add retention strategies
+        output.append("\n## Recommended Retention Strategies")
+
+        output.append("\n### High-Risk Customers")
+        output.append("- **Strategy**: Immediate personal outreach with retention specialist")
+        output.append("- **Offer**: 20-30% discount on next purchase or service upgrade")
+        output.append("- **Expected Success Rate**: 65%")
+
+        output.append("\n### Medium-Risk Customers")
+        output.append("- **Strategy**: Automated email campaign with personalized offers")
+        output.append("- **Offer**: 10-15% loyalty discount")
+        output.append("- **Expected Success Rate**: 45%")
+
+        output.append("\n### Low-Risk Customers")
+        output.append("- **Strategy**: Engagement through content and community")
+        output.append("- **Offer**: Early access to new products/features")
+        output.append("- **Expected Success Rate**: 80%")
+
+        # Add ROI analysis if requested
+        if include_roi_analysis and result.get('mainData', {}).get('interventionroiData'):
+            output.append("\n## ROI Analysis")
+            roi_data = result['mainData']['interventionroiData']
+            if roi_data:
+                for intervention in roi_data[:5]:
+                    output.append(f"- {intervention.get('strategy', 'Unknown')}: {intervention.get('roi', 0):.1f}x return")
+
+        # Add customer segments to target
+        if result.get('mlResults', {}).get('segments'):
+            output.append("\n## Priority Customer Segments")
+            for segment in result['mlResults']['segments'][:5]:
+                output.append(f"\n### Segment {segment.get('segment_id', 'Unknown')}")
+                output.append(f"- Size: {segment.get('size', 0):,} customers")
+                output.append(f"- Risk Level: {segment.get('risk_level', 'Unknown')}")
+                output.append(f"- Total Value: ${segment.get('total_value', 0):,.2f}")
+                output.append(f"- Recommended Action: {segment.get('recommended_action', 'Monitor')}")
+
+        # Add insights
+        if result.get('insights'):
+            output.append("\n## Strategic Insights")
+            for insight in result['insights']:
+                output.append(f"- {insight}")
+
+        return "\n".join(output)
+
     except Exception as e:
-        logger.error(f"Error in retention planning: {str(e)}")
-        return {
-            "report": f"Failed to plan retention actions: {str(e)}",
-            "success": False
-        }
-    finally:
-        if 'conn' in locals():
-            conn.close() 
+        return f"Error planning retention strategy: {str(e)}"

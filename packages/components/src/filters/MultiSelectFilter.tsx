@@ -79,33 +79,36 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
       >
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-            {value.length === 0 ? (
-              <span className="text-muted" suppressHydrationWarning>{placeholder}</span>
-            ) : (
-              <>
-                {value.slice(0, maxDisplay).map((v) => {
-                  const option = options.find((o) => o.value === v);
-                  return (
-                    <Badge
-                      key={v}
-                      variant="info"
-                      size="sm"
-                      removable
-                      onRemove={() => handleToggleOption(v)}
-                      className="shrink-0"
-                      suppressHydrationWarning
-                    >
-                      <span suppressHydrationWarning>{option?.label || v}</span>
+            {/* Always render the same structure */}
+            <div className="flex items-center gap-2 flex-1" suppressHydrationWarning>
+              {(!value || value.length === 0) ? (
+                <span className="text-muted" suppressHydrationWarning>{placeholder}</span>
+              ) : (
+                <>
+                  {value.slice(0, maxDisplay).map((v) => {
+                    const option = options.find((o) => o.value === v);
+                    return (
+                      <Badge
+                        key={v}
+                        variant="info"
+                        size="sm"
+                        removable
+                        onRemove={() => handleToggleOption(v)}
+                        className="shrink-0"
+                        suppressHydrationWarning
+                      >
+                        <span suppressHydrationWarning>{option?.label || v}</span>
+                      </Badge>
+                    );
+                  })}
+                  {value.length > maxDisplay && (
+                    <Badge variant="secondary" size="sm" className="shrink-0">
+                      +{value.length - maxDisplay} more
                     </Badge>
-                  );
-                })}
-                {value.length > maxDisplay && (
-                  <Badge variant="secondary" size="sm" className="shrink-0">
-                    +{value.length - maxDisplay} more
-                  </Badge>
-                )}
-              </>
-            )}
+                  )}
+                </>
+              )}
+            </div>
           </div>
           <svg
             className={`w-5 h-5 text-muted transition-transform shrink-0 ${
