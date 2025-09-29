@@ -41,11 +41,11 @@ class CustomerLtvService:
             loyalty = await self.data_service.get_loyalty(date_filters)
             aggregated = await self.data_service.get_aggregated_metrics(date_filters)
 
-            # Convert to DataFrames
-            customers_df = pd.DataFrame(customers.get('data', []))
-            transactions_df = pd.DataFrame(transactions.get('data', []))
-            loyalty_df = pd.DataFrame(loyalty.get('data', []))
-            aggregated_df = pd.DataFrame(aggregated.get('data', []))
+            # Convert to DataFrames - using 'rows' key as per database response
+            customers_df = pd.DataFrame(customers.get('rows', []))
+            transactions_df = pd.DataFrame(transactions.get('rows', []))
+            loyalty_df = pd.DataFrame(loyalty.get('rows', []))
+            aggregated_df = pd.DataFrame(aggregated.get('rows', []))
 
             # Perform ML analysis based on dashboard type
             ml_results = self._perform_ml_analysis(
@@ -119,17 +119,29 @@ class CustomerLtvService:
             if predictions:
                 ltv_values = [p.get('predicted_ltv', 0) for p in predictions]
                 kpis = {
-                    'avgLTV': np.mean(ltv_values) if ltv_values else 0,
-                    'totalLTV': np.sum(ltv_values) if ltv_values else 0,
-                    'highValueCount': len([v for v in ltv_values if v > np.percentile(ltv_values, 75)]) if ltv_values else 0,
-                    'ltvGrowth': 5.2  # Mock growth percentage
+                    'avgLtv': int(np.mean(ltv_values)) if ltv_values else 0,
+                    'medianLtv': int(np.median(ltv_values)) if ltv_values else 0,
+                    'totalValue': int(np.sum(ltv_values)) if ltv_values else 0,
+                    'highValueCount': len([v for v in ltv_values if v > 100000]) if ltv_values else 0,
+                    'ltvGrowth': ml_results.get('growth_percentage', 0),
+                    'predictionAccuracy': ml_results.get('accuracy_score', 0)
+                }
+            else:
+                # Return empty KPIs if no predictions
+                kpis = {
+                    'avgLtv': 0,
+                    'medianLtv': 0,
+                    'totalValue': 0,
+                    'highValueCount': 0,
+                    'ltvGrowth': 0,
+                    'predictionAccuracy': 0
                 }
         elif 'customer_ltv' == 'purchase_frequency':
             kpis = {
                 'avgPurchaseFrequency': transactions_df.groupby('customer_id').size().mean() if not transactions_df.empty else 0,
                 'highFrequencyCustomers': len(transactions_df.groupby('customer_id').filter(lambda x: len(x) > 5)) if not transactions_df.empty else 0,
-                'frequencyTrend': 3.8,  # Mock trend
-                'retentionRate': 68.5  # Mock retention rate
+                'frequencyTrend': ml_results.get('frequency_trend', 0),
+                'retentionRate': ml_results.get('retention_rate', 0)
             }
         elif 'customer_ltv' == 'engagement_classifier':
             classifications = ml_results.get('classifications', [])
@@ -139,7 +151,7 @@ class CustomerLtvService:
                     'highlyEngaged': engagement_levels.count('High') + engagement_levels.count('Champion'),
                     'atRiskCount': engagement_levels.count('Low') + engagement_levels.count('Inactive'),
                     'avgEngagementScore': np.mean([c.get('engagement_score', 0) for c in classifications]),
-                    'engagementTrend': 2.1  # Mock trend
+                    'engagementTrend': ml_results.get('engagement_trend', 0)
                 }
         else:
             # Default KPIs
@@ -169,7 +181,11 @@ class CustomerLtvService:
         elif 'customer_ltv' == 'customer_ltv':
             visualizations = {
                 'ltvDistribution': self._create_ltv_distribution_chart(ml_results),
-                'ltvTrend': self._create_ltv_trend_chart(transactions_df),
+                'ltvTrends': self._create_ltv_trends_data(transactions_df, customers_df),
+                'segmentAnalysis': self._create_segment_analysis_data(customers_df, transactions_df, ml_results),
+                'topCustomers': self._create_top_customers_data(customers_df, transactions_df, ml_results),
+                'predictionData': self._create_prediction_accuracy_data(ml_results),
+                'valueContribution': self._create_value_contribution_data(customers_df, transactions_df, ml_results),
                 'customerValueMatrix': self._create_value_matrix(ml_results),
                 'ltvBySegment': self._create_ltv_by_segment_chart(ml_results)
             }
@@ -265,15 +281,8 @@ class CustomerLtvService:
         """Create LTV trend over time chart"""
 
         if transactions_df.empty or 'txn_date' not in transactions_df.columns:
-            # Return mock data
-            dates = pd.date_range(end=datetime.now(), periods=12, freq='M')
-            return [
-                {
-                    'date': date.isoformat(),
-                    'ltv': np.random.uniform(1000, 5000)
-                }
-                for date in dates
-            ]
+            # Return empty data instead of mock
+            return []
 
         transactions_df['txn_date'] = pd.to_datetime(transactions_df['txn_date'])
         monthly_ltv = transactions_df.groupby(pd.Grouper(key='txn_date', freq='M'))['net_sales_amount'].sum()
@@ -320,27 +329,39 @@ class CustomerLtvService:
     def _create_ltv_by_segment_chart(self, ml_results: Dict) -> List[Dict]:
         """Create LTV by customer segment chart"""
 
-        # Mock data for demonstration
-        return [
-            {'segment': 'Enterprise', 'ltv': 15000},
-            {'segment': 'SMB', 'ltv': 5000},
-            {'segment': 'Retail', 'ltv': 2000},
-            {'segment': 'Individual', 'ltv': 500}
-        ]
+        predictions = ml_results.get('predictions', [])
+        if not predictions:
+            return []
+
+        # Group predictions by segment
+        segment_ltv = {}
+        for pred in predictions:
+            segment = pred.get('segment', 'Unknown')
+            ltv = pred.get('predicted_ltv', 0)
+
+            if segment not in segment_ltv:
+                segment_ltv[segment] = []
+            segment_ltv[segment].append(ltv)
+
+        # Calculate average LTV per segment
+        result = []
+        for segment, ltv_values in segment_ltv.items():
+            if ltv_values:
+                result.append({
+                    'segment': segment,
+                    'ltv': int(np.mean(ltv_values))
+                })
+
+        # Sort by LTV descending
+        result.sort(key=lambda x: x['ltv'], reverse=True)
+        return result[:10]  # Return top 10 segments
 
     def _create_time_series_chart(self, transactions_df: pd.DataFrame) -> List[Dict]:
         """Create generic time series chart"""
 
         if transactions_df.empty or 'txn_date' not in transactions_df.columns:
-            # Return mock data
-            dates = pd.date_range(end=datetime.now(), periods=30, freq='D')
-            return [
-                {
-                    'date': date.isoformat(),
-                    'value': np.random.uniform(100, 1000)
-                }
-                for date in dates
-            ]
+            # Return empty data instead of mock
+            return []
 
         transactions_df['txn_date'] = pd.to_datetime(transactions_df['txn_date'])
         daily_data = transactions_df.groupby(pd.Grouper(key='txn_date', freq='D')).size()
@@ -360,15 +381,8 @@ class CustomerLtvService:
         distribution = ml_results.get('distribution', {})
 
         if not distribution:
-            # Return mock data
-            categories = ['Category A', 'Category B', 'Category C', 'Category D']
-            return [
-                {
-                    'category': cat,
-                    'value': np.random.randint(10, 100)
-                }
-                for cat in categories
-            ]
+            # Return empty data instead of mock
+            return []
 
         return [
             {'category': k, 'value': v}
@@ -447,20 +461,20 @@ class CustomerLtvService:
             try:
                 parsed['date_from'] = pd.to_datetime(parsed['date_from']).strftime('%Y-%m-%d')
             except:
-                parsed['date_from'] = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+                parsed['date_from'] = '2021-01-01'  # Default to 2021 start
 
         if 'date_to' in parsed:
             try:
                 parsed['date_to'] = pd.to_datetime(parsed['date_to']).strftime('%Y-%m-%d')
             except:
-                parsed['date_to'] = datetime.now().strftime('%Y-%m-%d')
+                parsed['date_to'] = '2021-12-31'  # Default to 2021 end
 
         # Handle time_period format (for compatibility)
         if 'time_period' in parsed:
             if ':' in parsed['time_period']:
                 dates = parsed['time_period'].split(':')
                 parsed['date_from'] = dates[0]
-                parsed['date_to'] = dates[1] if len(dates) > 1 else datetime.now().strftime('%Y-%m-%d')
+                parsed['date_to'] = dates[1] if len(dates) > 1 else '2021-12-31'  # Default to 2021 end
 
         return parsed
 
@@ -509,3 +523,213 @@ class CustomerLtvService:
                 'errorMessage': error_message
             }
         }
+
+    def _create_ltv_trends_data(self, transactions_df: pd.DataFrame, customers_df: pd.DataFrame) -> Dict:
+        """Create LTV trends data for multi-line chart"""
+
+        # Generate monthly data
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+        if transactions_df.empty:
+            return {
+                'labels': months,
+                'avgLtv': [0] * 12,
+                'newCustomerLtv': [0] * 12,
+                'existingCustomerLtv': [0] * 12
+            }
+
+        # Process real transaction data
+        if 'txn_date' in transactions_df.columns:
+            # Convert to string first if needed, then to datetime
+            transactions_df['txn_date'] = transactions_df['txn_date'].astype(str)
+            transactions_df['txn_date'] = pd.to_datetime(transactions_df['txn_date'], errors='coerce')
+        else:
+            return {
+                'labels': months,
+                'avgLtv': [0] * 12,
+                'newCustomerLtv': [0] * 12,
+                'existingCustomerLtv': [0] * 12
+            }
+        transactions_df['month'] = transactions_df['txn_date'].dt.month
+
+        # Calculate monthly LTV for all, new and existing customers
+        monthly_stats = {}
+        for month_num in range(1, 13):
+            month_data = transactions_df[transactions_df['month'] == month_num]
+            if not month_data.empty:
+                # Calculate average LTV per customer for this month
+                customer_monthly_ltv = month_data.groupby('customer_id')['net_sales_amount'].sum()
+                monthly_stats[month_num] = {
+                    'avg': float(customer_monthly_ltv.mean()) if len(customer_monthly_ltv) > 0 else 0,
+                    'new': float(customer_monthly_ltv.head(10).mean()) if len(customer_monthly_ltv) > 0 else 0,  # Simplified: first 10 as new
+                    'existing': float(customer_monthly_ltv.tail(-10).mean()) if len(customer_monthly_ltv) > 10 else float(customer_monthly_ltv.mean()) if len(customer_monthly_ltv) > 0 else 0
+                }
+            else:
+                monthly_stats[month_num] = {'avg': 0, 'new': 0, 'existing': 0}
+
+        return {
+            'labels': months,
+            'avgLtv': [monthly_stats.get(i+1, {}).get('avg', 0) for i in range(12)],
+            'newCustomerLtv': [monthly_stats.get(i+1, {}).get('new', 0) for i in range(12)],
+            'existingCustomerLtv': [monthly_stats.get(i+1, {}).get('existing', 0) for i in range(12)]
+        }
+
+    def _create_segment_analysis_data(self, customers_df: pd.DataFrame, transactions_df: pd.DataFrame, ml_results: Dict) -> List[Dict]:
+        """Create segment analysis data for doughnut chart"""
+
+        if customers_df.empty or transactions_df.empty:
+            return []
+
+        # Merge customer and transaction data
+        if 'customer_type' in customers_df.columns:
+            merged = transactions_df.merge(
+                customers_df[['customer_id', 'customer_type']],
+                on='customer_id',
+                how='left'
+            )
+
+            # Group by customer type and calculate LTV metrics
+            segment_stats = merged.groupby('customer_type').agg({
+                'net_sales_amount': ['sum', 'mean'],
+                'customer_id': 'nunique'
+            }).reset_index()
+
+            segments = []
+            for _, row in segment_stats.iterrows():
+                segment_name = row[('customer_type', '')]
+                total_ltv = float(row[('net_sales_amount', 'sum')])
+                customer_count = int(row[('customer_id', 'nunique')])
+                avg_ltv = total_ltv / customer_count if customer_count > 0 else 0
+
+                segments.append({
+                    'segment': segment_name if segment_name else 'Unknown',
+                    'totalLtv': total_ltv,
+                    'avgLtv': avg_ltv,
+                    'count': customer_count
+                })
+
+            return segments
+
+        # If no customer type, create segments based on LTV quantiles
+        customer_ltv = transactions_df.groupby('customer_id')['net_sales_amount'].sum().reset_index()
+        customer_ltv.columns = ['customer_id', 'ltv']
+
+        # Create quartile-based segments
+        quartiles = customer_ltv['ltv'].quantile([0.25, 0.5, 0.75, 1.0])
+        segments = []
+
+        segment_ranges = [
+            ('Low Value', 0, quartiles[0.25]),
+            ('Medium Value', quartiles[0.25], quartiles[0.5]),
+            ('High Value', quartiles[0.5], quartiles[0.75]),
+            ('Premium', quartiles[0.75], quartiles[1.0])
+        ]
+
+        for segment_name, min_val, max_val in segment_ranges:
+            segment_customers = customer_ltv[(customer_ltv['ltv'] >= min_val) & (customer_ltv['ltv'] <= max_val)]
+            if not segment_customers.empty:
+                segments.append({
+                    'segment': segment_name,
+                    'totalLtv': float(segment_customers['ltv'].sum()),
+                    'avgLtv': float(segment_customers['ltv'].mean()),
+                    'count': len(segment_customers)
+                })
+
+        return segments
+
+    def _create_top_customers_data(self, customers_df: pd.DataFrame, transactions_df: pd.DataFrame, ml_results: Dict) -> List[Dict]:
+        """Create top customers data for table"""
+
+        if customers_df.empty or transactions_df.empty:
+            return []
+
+        # Aggregate real data by customer
+        if 'net_sales_amount' not in transactions_df.columns:
+            return []
+
+        customer_stats = transactions_df.groupby('customer_id').agg({
+            'net_sales_amount': ['sum', 'mean', 'count']
+        }).reset_index()
+
+        customer_stats.columns = ['customer_id', 'ltv', 'avgOrder', 'transactions']
+
+        # Merge with customer info - check if columns exist
+        merge_cols = ['customer_id']
+        if 'customer_name' in customers_df.columns:
+            merge_cols.append('customer_name')
+        if 'customer_type' in customers_df.columns:
+            merge_cols.append('customer_type')
+
+        result = customer_stats.merge(customers_df[merge_cols],
+                                     on='customer_id', how='left') if len(merge_cols) > 1 else customer_stats
+
+        # Sort by LTV and get top 10
+        result = result.nlargest(10, 'ltv')
+
+        top_customers = []
+        for _, row in result.iterrows():
+            top_customers.append({
+                'id': row['customer_id'],
+                'name': row.get('customer_name', 'Unknown'),
+                'ltv': float(row['ltv']),
+                'transactions': int(row['transactions']),
+                'avgOrder': float(row['avgOrder']),
+                'trend': 0,  # Would need historical data to calculate
+                'segment': row.get('customer_type', 'Unknown')
+            })
+
+        return top_customers
+
+    def _create_prediction_accuracy_data(self, ml_results: Dict) -> List[Dict]:
+        """Create prediction accuracy scatter plot data"""
+
+        predictions = ml_results.get('predictions', [])
+
+        if not predictions:
+            return []
+
+        # Process real predictions only
+        accuracy_data = []
+        for pred in predictions[:100]:  # Limit to 100 points
+            actual = pred.get('actual_ltv', 0)
+            predicted = pred.get('predicted_ltv', 0)
+            error_pct = ((predicted - actual) / actual * 100) if actual > 0 else 0
+
+            accuracy_data.append({
+                'customer_id': pred.get('customer_id'),
+                'customer_name': pred.get('customer_name', 'Unknown'),
+                'actual_value': actual,
+                'predicted_ltv': predicted,
+                'percentage_error': error_pct,
+                'error_amount': abs(predicted - actual),
+                'error_category': 'Low' if abs(error_pct) < 5 else 'Medium' if abs(error_pct) < 15 else 'High',
+                'transaction_count': pred.get('transaction_count', 0)
+            })
+
+        return accuracy_data
+
+    def _create_value_contribution_data(self, customers_df: pd.DataFrame, transactions_df: pd.DataFrame, ml_results: Dict) -> List[Dict]:
+        """Create value contribution analysis data"""
+
+        if customers_df.empty or transactions_df.empty:
+            return []
+
+        # Same logic as segment analysis but with different structure
+        if 'customer_type' in customers_df.columns:
+            merged = transactions_df.merge(customers_df[['customer_id', 'customer_type']], on='customer_id', how='left')
+            segment_data = merged.groupby('customer_type').agg({
+                'net_sales_amount': ['sum', 'mean'],
+                'customer_id': 'nunique'
+            })
+
+            segments = []
+            for segment, row in segment_data.iterrows():
+                segments.append({
+                    'segment': segment,
+                    'totalValue': float(row[('net_sales_amount', 'sum')]),
+                    'customerCount': int(row[('customer_id', 'nunique')]),
+                    'avgValue': float(row[('net_sales_amount', 'mean')])
+                })
+            return segments
+
+        return []

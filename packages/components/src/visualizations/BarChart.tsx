@@ -13,6 +13,7 @@ import {
   ChartOptions
 } from 'chart.js';
 import { Card } from '../ui/Card';
+import { getShiftClickManager } from '../selection/ShiftClickSelectionManager';
 
 ChartJS.register(
   CategoryScale,
@@ -40,6 +41,7 @@ interface BarChartProps {
   horizontal?: boolean;
   stacked?: boolean;
   className?: string;
+  onBarClick?: (datasetLabel: string, label: string, value: number, event: any) => void;
 }
 
 export const BarChart: React.FC<BarChartProps> = ({
@@ -49,14 +51,40 @@ export const BarChart: React.FC<BarChartProps> = ({
   showLegend = true,
   horizontal = false,
   stacked = false,
-  className = ""
+  className = "",
+  onBarClick
 }) => {
+  const shiftClickManager = getShiftClickManager();
   // Provide fallback data if none is provided
   const defaultData = {
     labels: [],
     datasets: []
   };
   const options: ChartOptions<'bar'> = {
+    onClick: (event, elements) => {
+      if (elements.length > 0 && data) {
+        const element = elements[0];
+        const datasetIndex = element.datasetIndex;
+        const index = element.index;
+        const dataset = data.datasets?.[datasetIndex];
+        const label = data.labels?.[index];
+        const value = dataset?.data?.[index];
+
+        if (dataset && label && value !== undefined) {
+          // Check for shift key
+          const nativeEvent = (event as any).native;
+          if (nativeEvent?.shiftKey) {
+            shiftClickManager.addPoint({
+              label: `${dataset.label || 'Value'}: ${label}`,
+              value: value.toString(),
+              source: title || 'Bar Chart'
+            }, nativeEvent);
+          } else if (onBarClick) {
+            onBarClick(dataset.label || '', label, value, event);
+          }
+        }
+      }
+    },
     responsive: true,
     maintainAspectRatio: false,
     indexAxis: horizontal ? 'y' as const : 'x' as const,

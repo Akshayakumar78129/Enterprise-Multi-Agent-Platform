@@ -27,23 +27,23 @@ export function TimeSeriesChart({ data, loading }: TimeSeriesChartProps) {
     );
   }
 
-  // Generate mock time series data if API returns empty
-  const mockData = !data || data.length === 0;
-  const displayData = mockData ?
-    Array.from({ length: 30 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (29 - i));
-      const normalCount = Math.floor(Math.random() * 800 + 200);
-      const anomalyCount = Math.floor(Math.random() * 50 + 10);
-      return {
-        date: date.toISOString().split('T')[0],
-        normal_count: normalCount,
-        anomaly_count: anomalyCount,
-        total_count: normalCount + anomalyCount,
-        anomaly_rate: anomalyCount / (normalCount + anomalyCount),
-        avg_severity: Math.random() * 3 + 1
-      };
-    }) : data;
+  // Check if we have data
+  const hasData = data && data.length > 0;
+  const displayData = hasData ? data : [];
+
+  // Show no data message if empty
+  if (!hasData) {
+    return (
+      <Card title="Anomaly Trend" className="h-96">
+        <div className="h-full flex items-center justify-center text-muted-foreground">
+          <div className="text-center">
+            <p className="text-lg">No data available</p>
+            <p className="text-sm mt-2">Try adjusting your filters or check back later</p>
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   const chartData = {
     labels: displayData.map(d => d.date),

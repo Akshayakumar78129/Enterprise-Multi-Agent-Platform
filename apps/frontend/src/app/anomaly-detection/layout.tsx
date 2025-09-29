@@ -99,24 +99,26 @@ function AnomalyLayoutContent({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <AppLayout
-      title="Anomaly Detection"
-      mainContent={mainContent}
-      chatPanel={isChatOpen ? chatPanelContent : undefined}
-      biPanel={isBIModalOpen ? biPanelContent : undefined}
-      isChatOpen={isChatOpen}
-      isBIOpen={isBIModalOpen}
-      onChatToggle={() => setIsChatOpen(!isChatOpen)}
-      onBIToggle={() => setIsBIModalOpen(!isBIModalOpen)}
-      onChatExpandToggle={(expanded) => {
-        if (!expanded) setIsChatOpen(false);
-      }}
-      onBIExpandToggle={(expanded) => {
-        if (!expanded) setIsBIModalOpen(false);
-      }}
-      hasSelectedPoints={selectedPoints.length > 0}
-      highRiskCount={highSeverityCount}
-    />
+    <>
+      <AppLayout
+        title="Anomaly Detection"
+        mainContent={mainContent}
+        chatPanel={isChatOpen ? chatPanelContent : undefined}
+        biPanel={isBIModalOpen ? biPanelContent : undefined}
+        isChatOpen={isChatOpen}
+        isBIOpen={isBIModalOpen}
+        onChatToggle={() => setIsChatOpen(!isChatOpen)}
+        onBIToggle={() => setIsBIModalOpen(!isBIModalOpen)}
+        onChatExpandToggle={(expanded) => {
+          if (!expanded) setIsChatOpen(false);
+        }}
+        onBIExpandToggle={(expanded) => {
+          if (!expanded) setIsBIModalOpen(false);
+        }}
+        hasSelectedPoints={selectedPoints.length > 0}
+        highRiskCount={highSeverityCount}
+      />
+    </>
   );
 }
 

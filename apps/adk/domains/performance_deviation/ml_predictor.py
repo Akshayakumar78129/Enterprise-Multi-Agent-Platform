@@ -6,8 +6,10 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
+from sklearn.metrics import mean_squared_error, r2_score
 from typing import Dict, List, Tuple, Optional, Any
 from datetime import datetime
+from domains.common.ml_model_cache import ml_model_cache, hash_training_data
 
 
 class PerformanceMLPredictor:
@@ -110,8 +112,8 @@ class PerformanceMLPredictor:
 
         return result_df, external_factors
 
-    def train_model(self, kpi_data: pd.DataFrame, target_column: str) -> Dict[str, float]:
-        """Train the model on KPI data"""
+    def train_model(self, kpi_data: pd.DataFrame, target_column: str, filters: Dict[str, Any] = None) -> Dict[str, float]:
+        """Train the model on KPI data with caching support"""
         if kpi_data.empty or target_column not in kpi_data.columns:
             return {'error': f'No data or target column {target_column} not found'}
 
@@ -149,14 +151,51 @@ class PerformanceMLPredictor:
         if len(X) < 10:  # Need minimum samples
             return {'error': 'Insufficient data for training'}
 
+        # Generate data hash for cache validation
+        data_hash = hash_training_data((X.values, y.values, target_column))
+
+        # Try to get cached model if filters provided
+        if filters:
+            cache_key_filters = {**filters, 'target_column': target_column}
+            cached = ml_model_cache.get_model('deviation', cache_key_filters, data_hash)
+            if cached:
+                self.model, self.preprocessor, metadata = cached
+                self.is_trained = True
+                print(f"[PerformanceMLPredictor] Using cached model for {target_column} (r2: {metadata.get('r2_score', 0):.3f})")
+                return metadata.get('metrics', {'r2_score': 0, 'samples': len(X)})
+
+        print(f"[PerformanceMLPredictor] Training new model for {target_column}...")
+
         # Train model
         self.model.fit(X, y)
         self.is_trained = True
 
         # Calculate metrics
+        y_pred = self.model.predict(X)
         train_score = self.model.score(X, y)
+        mse = mean_squared_error(y, y_pred)
 
-        return {'r2_score': train_score, 'samples': len(X)}
+        metrics = {
+            'r2_score': train_score,
+            'mse': float(mse),
+            'samples': len(X),
+            'target_column': target_column
+        }
+
+        # Cache the trained model if filters provided
+        if filters:
+            cache_key_filters = {**filters, 'target_column': target_column}
+            metadata = {
+                'metrics': metrics,
+                'r2_score': train_score,
+                'training_samples': len(X),
+                'target_column': target_column,
+                'trained_at': datetime.now().isoformat()
+            }
+            ml_model_cache.set_model('deviation', cache_key_filters, self.model, self.preprocessor, metadata, data_hash)
+            print(f"[PerformanceMLPredictor] Model cached for {target_column}")
+
+        return metrics
 
     def predict_deviations(self, kpi_data: pd.DataFrame, kpi_columns: List[str]) -> Dict[str, Any]:
         """Predict deviations for multiple KPIs"""

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Card } from 'components';
+import { Card, getShiftClickManager } from 'components';
 import { Users, TrendingUp, DollarSign, Activity, ChevronRight, Award, AlertTriangle, ArrowUp, ArrowDown, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface SegmentProfileCardsProps {
@@ -118,6 +118,7 @@ export function SegmentProfileCards({
   loading = false
 }: SegmentProfileCardsProps) {
   const [expandedSegment, setExpandedSegment] = useState<string | null>(null);
+  const shiftClickManager = getShiftClickManager();
 
   // Define vibrant colors for each segment
   const segmentColors: Record<string, string> = {
@@ -203,7 +204,18 @@ export function SegmentProfileCards({
             className={`p-6 cursor-pointer transition-all duration-200 hover:shadow-lg ${
               isSelected ? 'ring-2 ring-blue-500' : ''
             } ${isExpanded ? 'md:col-span-2 lg:col-span-2' : ''}`}
-            onClick={() => onSegmentSelect?.(segment.segment_name)}
+            onClick={(e) => {
+              if (e.shiftKey) {
+                // Shift+click: Add to global shift+click selection
+                shiftClickManager.addPoint({
+                  label: `Segment: ${segment.segment_name}`,
+                  value: `${segment.customer_count} customers, Avg LTV: $${(segment.avg_lifetime_value || 0).toLocaleString()}`,
+                  source: 'Segment Profiles'
+                }, e.nativeEvent);
+              } else if (onSegmentSelect) {
+                onSegmentSelect(segment.segment_name);
+              }
+            }}
             style={{ borderColor: segment.color || '#e5e7eb' }}
           >
             {/* Header */}

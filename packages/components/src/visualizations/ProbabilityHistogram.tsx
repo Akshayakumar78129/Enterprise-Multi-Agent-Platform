@@ -37,22 +37,7 @@ export const ProbabilityHistogram: React.FC<ProbabilityHistogramProps> = ({
   // Ensure data is an array
   const safeData = Array.isArray(data) ? data : [];
 
-  // Handle empty data case
-  if (safeData.length === 0) {
-    return (
-      <div className={`flex items-center justify-center ${className}`} style={{ height }}>
-        <div className="text-center text-muted-foreground">
-          <svg className="w-16 h-16 mx-auto mb-2 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-          </svg>
-          <p className="text-sm">No probability distribution data available</p>
-          <p className="text-xs mt-1">Try adjusting your filters or time range</p>
-        </div>
-      </div>
-    );
-  }
-
+  // Calculate histogram - MUST be called before any returns
   const histogram = useMemo(() => {
     const values = safeData.filter(v => Number.isFinite(v));
     if (values.length === 0) return [];
@@ -89,8 +74,8 @@ export const ProbabilityHistogram: React.FC<ProbabilityHistogramProps> = ({
   const safeBins = Math.max(1, Math.floor(bins));
   const barWidth = 100 / safeBins;
 
-  // Handle case where histogram is empty after processing
-  if (histogram.length === 0) {
+  // Handle empty data case - AFTER all hooks have been called
+  if (safeData.length === 0 || histogram.length === 0) {
     return (
       <div className={`flex items-center justify-center ${className}`} style={{ height }}>
         <div className="text-center text-muted-foreground">

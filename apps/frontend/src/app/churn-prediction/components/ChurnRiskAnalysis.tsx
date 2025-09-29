@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { RiskPyramid, ProbabilityHistogram, Skeleton, ChartCard } from "components/index";
+import { RiskPyramid, ProbabilityHistogram, Skeleton, ChartCard, getShiftClickManager } from "components/index";
 import { useChurnContext } from "../context";
 
 interface ChurnRiskAnalysisProps {
@@ -22,6 +22,7 @@ export function ChurnRiskAnalysis({
   onRiskLevelClick,
 }: ChurnRiskAnalysisProps) {
   const { selectionManager } = useChurnContext();
+  const shiftClickManager = getShiftClickManager();
   if (loading) {
     return (
       <>
@@ -39,18 +40,13 @@ export function ChurnRiskAnalysis({
       >
         <RiskPyramid
           data={riskPyramidData}
-          onSegmentClick={(level, event) => {
-            if (event?.shiftKey) {
-              // Shift+click: Add to selection
-              selectionManager.addPoint({
-                label: `${level.level} Risk`,
-                value: `${level.count}`,
-                source: "Risk Pyramid"
-              }, true);
-            } else {
-              // Regular click: Filter
-              onRiskLevelClick(level.level);
-            }
+          onShiftClick={(level, event) => {
+            // Shift+click: Add to global shift+click selection
+            shiftClickManager.addPoint({
+              label: `Risk: ${level.level}`,
+              value: `${level.count} customers (${level.percentage.toFixed(1)}%)`,
+              source: 'Churn Risk Pyramid'
+            }, event.nativeEvent);
           }}
         />
       </ChartCard>
@@ -64,12 +60,12 @@ export function ChurnRiskAnalysis({
           color="#8ba6ff"
           onBarClick={(bin, event) => {
             if (event?.shiftKey && bin) {
-              // Shift+click: Add to selection
-              selectionManager.addPoint({
-                label: bin.label || `${bin.range[0]}-${bin.range[1]}%`,
+              // Shift+click: Add to global shift+click selection
+              shiftClickManager.addPoint({
+                label: `Probability: ${bin.label || `${bin.range[0]}-${bin.range[1]}%`}`,
                 value: `${bin.count} customers`,
-                source: "Probability Histogram"
-              }, true);
+                source: "Churn Probability Histogram"
+              }, event.nativeEvent);
             }
           }}
         />

@@ -13,6 +13,7 @@ export interface RiskLevel {
 export interface RiskPyramidProps {
   data: RiskLevel[];
   onSegmentClick?: (level: RiskLevel, event: React.MouseEvent) => void;
+  onShiftClick?: (level: RiskLevel, event: React.MouseEvent) => void; // New optional prop
   height?: number;
   showLabels?: boolean;
   showPercentages?: boolean;
@@ -22,6 +23,7 @@ export interface RiskPyramidProps {
 export const RiskPyramid: React.FC<RiskPyramidProps> = ({
   data,
   onSegmentClick,
+  onShiftClick,
   height = 300,
   showLabels = true,
   showPercentages = true,
@@ -88,7 +90,15 @@ export const RiskPyramid: React.FC<RiskPyramidProps> = ({
             return (
               <g
                 key={level.level}
-                onClick={(e) => onSegmentClick?.(level, e)}
+                onClick={(e) => {
+                  // Check for shift+click first
+                  if (e.shiftKey && onShiftClick) {
+                    onShiftClick(level, e);
+                  } else if (onSegmentClick) {
+                    // Regular click
+                    onSegmentClick(level, e);
+                  }
+                }}
                 onMouseEnter={(e) => {
                   setHoveredSegment(level.level);
                 }}

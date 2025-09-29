@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { DataTable, Badge } from 'components/index';
+import { DataTable, Badge, getShiftClickManager } from 'components/index';
 import { AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface CustomerAnomaliesTableProps {
@@ -15,6 +15,7 @@ export function CustomerAnomaliesTable({
   loading,
   onCustomerSelect
 }: CustomerAnomaliesTableProps) {
+  const shiftClickManager = getShiftClickManager();
   const columns = useMemo(() => [
     {
       id: 'customer_name',
@@ -140,7 +141,20 @@ export function CustomerAnomaliesTable({
       sortable
       paginated
       pageSize={10}
-      onRowClick={onCustomerSelect}
+      onRowClick={(row, event) => {
+        if (event?.shiftKey) {
+          // Shift+click: Add to global shift+click selection
+          const severityLabels = { 5: 'Critical', 4: 'High', 3: 'Medium', 2: 'Low', 1: 'Minimal' };
+          shiftClickManager.addPoint({
+            label: `Customer: ${row.customer_name || `Customer ${row.customer_id}`}`,
+            value: `Severity: ${severityLabels[row.severity_level as keyof typeof severityLabels]} (Score: ${row.anomaly_score.toFixed(3)})`,
+            source: 'Anomaly Table'
+          }, event.nativeEvent);
+        } else if (onCustomerSelect) {
+          // Regular click: Execute provided handler
+          onCustomerSelect(row);
+        }
+      }}
       emptyMessage="No anomalies detected"
     />
   );

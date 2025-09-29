@@ -31,9 +31,9 @@ class SyncChurnProcessingService:
             # No event loop exists, create one
             return asyncio.run(coro)
 
-    def _train_ml_model(self):
-        """Sync wrapper for training ML model"""
-        return self._run_async(self.async_service._train_ml_model())
+    def _train_ml_model(self, filters: Dict = None):
+        """Sync wrapper for training ML model with filters"""
+        return self._run_async(self.async_service._train_ml_model(filters))
 
     def get_dashboard_summary(self, filters: Dict) -> Dict:
         """Sync wrapper for dashboard summary"""

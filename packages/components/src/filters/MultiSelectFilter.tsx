@@ -22,12 +22,14 @@ export interface MultiSelectFilterProps {
 export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
   label,
   options,
-  value = [],
+  value,
   onChange,
   placeholder = "Select options",
   maxDisplay = 2, // Reduced default to show more "+X more" behavior
   className = "",
 }) => {
+  // Ensure value is always an array to prevent hydration mismatches
+  const safeValue = Array.isArray(value) ? value : [];
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -43,9 +45,9 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
   }, []);
 
   const handleToggleOption = (optionValue: string) => {
-    const newValue = value.includes(optionValue)
-      ? value.filter((v) => v !== optionValue)
-      : [...value, optionValue];
+    const newValue = safeValue.includes(optionValue)
+      ? safeValue.filter((v) => v !== optionValue)
+      : [...safeValue, optionValue];
     onChange(newValue);
   };
 
@@ -59,7 +61,7 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
   };
 
   const getDisplayText = () => {
-    if (value.length === 0) return placeholder;
+    if (safeValue.length === 0) return placeholder;
     return ""; // We'll show tokens inside instead
   };
 
@@ -79,13 +81,11 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
       >
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-            {/* Always render the same structure */}
-            <div className="flex items-center gap-2 flex-1" suppressHydrationWarning>
-              {(!value || value.length === 0) ? (
-                <span className="text-muted" suppressHydrationWarning>{placeholder}</span>
-              ) : (
+            {/* Ensure consistent structure for hydration */}
+            <div className="flex items-center gap-2 flex-1">
+              {safeValue.length > 0 ? (
                 <>
-                  {value.slice(0, maxDisplay).map((v) => {
+                  {safeValue.slice(0, maxDisplay).map((v) => {
                     const option = options.find((o) => o.value === v);
                     return (
                       <Badge
@@ -95,18 +95,19 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
                         removable
                         onRemove={() => handleToggleOption(v)}
                         className="shrink-0"
-                        suppressHydrationWarning
                       >
-                        <span suppressHydrationWarning>{option?.label || v}</span>
+                        {option?.label || v}
                       </Badge>
                     );
                   })}
-                  {value.length > maxDisplay && (
+                  {safeValue.length > maxDisplay && (
                     <Badge variant="secondary" size="sm" className="shrink-0">
-                      +{value.length - maxDisplay} more
+                      +{safeValue.length - maxDisplay} more
                     </Badge>
                   )}
                 </>
+              ) : (
+                <span className="text-muted">{placeholder}</span>
               )}
             </div>
           </div>
@@ -159,7 +160,7 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
               >
                 <input
                   type="checkbox"
-                  checked={value.includes(option.value)}
+                  checked={safeValue.includes(option.value)}
                   onChange={() => !option.disabled && handleToggleOption(option.value)}
                   disabled={option.disabled}
                   className="w-4 h-4 text-accent bg-surface border-border rounded focus:ring-accent focus:ring-2"

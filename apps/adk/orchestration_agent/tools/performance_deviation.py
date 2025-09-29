@@ -32,7 +32,7 @@ def analyze_performance_deviations(
             - "last_90_days" - Last 90 days from current date
             - "last_180_days" - Last 180 days from current date
             - "last_year" - Last 365 days from current date
-            - "YYYY" - Full year (e.g., "2017", "2018", "2019", "2020", "2021")
+            - "YYYY" - Full year (e.g., "2018", "2019", "2020", "2021")
             - "YYYY-MM-DD:YYYY-MM-DD" - Custom date range (e.g., "2021-01-01:2021-12-31")
             - "QX YYYY" - Quarter (e.g., "Q1 2021", "Q4 2020")
             - "YYYY-MM" - Specific month (e.g., "2021-06" for June 2021)
@@ -53,7 +53,7 @@ def analyze_performance_deviations(
     Returns:
         String containing the analysis results in markdown format
 
-    Note: Data is available from 2017-01-20 to 2021-12-31.
+    Note: Data is available from 2018-01-01 to 2021-12-31.
     """
     try:
         # Initialize the sync wrapper for agent framework
@@ -62,8 +62,8 @@ def analyze_performance_deviations(
         # Build filters based on parameters
         filters = {}
 
-        # Define data availability range
-        DATA_START = datetime(2017, 1, 20)
+        # Define data availability range (2018-2021)
+        DATA_START = datetime(2018, 1, 1)
         DATA_END = datetime(2021, 12, 31)
         current_date = datetime.now()
 
@@ -121,7 +121,7 @@ def analyze_performance_deviations(
         else:
             # Parse custom time period formats
 
-            # Check for year only (e.g., "2017", "2018", "2021")
+            # Check for year only (e.g., "2018", "2019", "2020", "2021")
             if time_period and time_period.isdigit() and len(time_period) == 4:
                 year = int(time_period)
                 filters['dateFrom'] = f'{year}-01-01'
@@ -265,7 +265,8 @@ def analyze_performance_deviations(
         # Check if we have data
         metadata = result.get('metadata', {})
         if metadata.get('totalDataPoints', 0) == 0:
-            return f"""# Performance Deviation Analysis
+            return f"""<output>
+# Performance Deviation Analysis
 
 **Analysis Period:** {filters['dateFrom']} to {filters['dateTo']}
 
@@ -273,18 +274,123 @@ def analyze_performance_deviations(
 
 No performance data is available for the specified period and filters.
 
-**Available Data Range:** 2017-01-20 to 2021-12-31
+**Available Data Range:** 2018-01-01 to 2021-12-31
 
 Please try:
 - Using a different date range within the available data
 - Checking if the business functions or product categories are correct
 - Using the default view (full year 2021)
-"""
+</output>
+<is_visualisation>false</is_visualisation>"""
 
         # Format the response for the agent using only the 3 core ML outputs
         formatted_response = service.format_agent_response(result)
 
-        return formatted_response
+        # Extract key metrics for visualization
+        kpi_data = {}
+        feature_importance = result.get('featureImportance', {}).get('aggregated', [])
+        variance_decomp = result.get('varianceDecomposition', {}).get('components', [])
+        performance_data = result.get('performanceExplorer', {})
+
+        # Extract KPI metrics
+        kpiMetrics = result.get('kpiMetrics', {})
+        if kpiMetrics:
+            kpi_data = {
+                'avgDeviation': kpiMetrics.get('avgDeviation', 0),
+                'maxDeviation': kpiMetrics.get('maxDeviation', 0),
+                'deviationCount': kpiMetrics.get('totalDeviations', 0),
+                'significantDeviations': kpiMetrics.get('significantDeviations', 0)
+            }
+
+        # Wrap response with output tags and add visualization metadata
+        output = []
+        output.append("<output>")
+        output.append(formatted_response)
+
+        # Add visualization metadata
+        output.append("\n## Visualization Data (Machine-Readable)")
+        output.append("```json")
+
+        # Build visualization data
+        viz_data = {
+            "kpiTiles": [
+                {
+                    "title": "Avg Deviation",
+                    "value": round(kpi_data.get('avgDeviation', 0), 2),
+                    "unit": "%",
+                    "color": "#f59e0b"
+                },
+                {
+                    "title": "Max Deviation",
+                    "value": round(kpi_data.get('maxDeviation', 0), 2),
+                    "unit": "%",
+                    "color": "#ef4444"
+                },
+                {
+                    "title": "Total Deviations",
+                    "value": kpi_data.get('deviationCount', 0),
+                    "unit": "count",
+                    "color": "#8b5cf6"
+                },
+                {
+                    "title": "Significant",
+                    "value": kpi_data.get('significantDeviations', 0),
+                    "unit": "count",
+                    "color": "#10b981"
+                }
+            ]
+        }
+
+        # Add feature importance data
+        if feature_importance:
+            viz_data["featureImportance"] = [
+                {
+                    "feature": feat['feature'],
+                    "importance": round(feat.get('avg_importance', 0) * 100, 1),
+                    "impact": round(feat.get('impact', feat.get('avg_importance', 0)) * 100, 1)
+                }
+                for feat in feature_importance[:8]  # Top 8 features
+            ]
+
+        # Add performance explorer data
+        if performance_data:
+            # Get the first KPI data for visualization
+            for kpi_name, data_points in performance_data.items():
+                if data_points:
+                    viz_data["performanceExplorer"] = {
+                        "kpiName": kpi_name,
+                        "dataPoints": [
+                            {
+                                "date": point.get('date', ''),
+                                "actual": round(point.get('actual', 0), 2),
+                                "expected": round(point.get('expected', 0), 2),
+                                "deviation": round(point.get('deviation', 0), 2)
+                            }
+                            for point in data_points[:30]  # Limit to 30 points for visualization
+                        ]
+                    }
+                    break  # Just use the first KPI for now
+
+        import json
+        output.append(json.dumps(viz_data, indent=2))
+        output.append("```")
+        output.append("</output>")
+        output.append("<is_visualisation>true</is_visualisation>")
+
+        return "\n".join(output)
 
     except Exception as e:
-        return f"Analysis Error: {str(e)}"
+        return f"""<output>
+# Performance Deviation Analysis Error
+
+An error occurred while analyzing performance deviations: {str(e)}
+
+Please check:
+1. Database connectivity
+2. Data availability for the specified time period
+3. ML model training status
+
+For debugging, the error details are:
+{str(e)}
+</output>
+<is_visualisation>false</is_visualisation>"""

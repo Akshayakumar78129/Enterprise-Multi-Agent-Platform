@@ -9,9 +9,11 @@ from sklearn.cluster import KMeans
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Any
 import logging
+from domains.common.ml_model_cache import ml_model_cache, hash_training_data
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,79 @@ class CustomerSegmentationMLPredictor:
             self.model = RandomForestRegressor(n_estimators=100, random_state=42)
         elif self.model_type == 'clustering':
             self.model = KMeans(n_clusters=8, random_state=42, n_init=10)
+
+    def train_model(self, features: np.ndarray, labels: np.ndarray = None, filters: Dict[str, Any] = None) -> Dict:
+        """Train the customer segmentation model with caching support.
+
+        Args:
+            features: Feature array (for clustering, labels are optional)
+            labels: Not used for clustering but kept for consistency
+            filters: Optional filters for cache key generation
+
+        Returns:
+            Dictionary with training metrics
+        """
+        if len(features) == 0:
+            return {'status': 'error', 'message': 'No features provided'}
+
+        # Generate data hash for cache validation
+        data_hash = hash_training_data((features,))
+
+        # Try to get cached model if filters provided
+        if filters:
+            cached = ml_model_cache.get_model('segmentation', filters, data_hash)
+            if cached:
+                self.model, self.scaler, metadata = cached
+                self.is_trained = True
+                logger.info(f"[CustomerSegmentationMLPredictor] Using cached model (silhouette: {metadata.get('silhouette_score', 0):.3f})")
+                return metadata.get('metrics', {'status': 'success'})
+
+        logger.info("[CustomerSegmentationMLPredictor] Training new model...")
+
+        try:
+            # Scale features
+            features_scaled = self.scaler.fit_transform(features)
+
+            # Determine optimal number of clusters if needed
+            n_clusters = self._determine_optimal_clusters(features_scaled)
+            self.model = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+
+            # Fit the clustering model
+            cluster_labels = self.model.fit_predict(features_scaled)
+            self.is_trained = True
+
+            # Calculate silhouette score for clustering quality
+            if len(set(cluster_labels)) > 1:
+                silhouette = silhouette_score(features_scaled, cluster_labels)
+            else:
+                silhouette = 0.0
+
+            metrics = {
+                'status': 'success',
+                'silhouette_score': float(silhouette),
+                'n_clusters': len(set(cluster_labels)),
+                'n_samples': len(features),
+                'n_features': features.shape[1]
+            }
+
+            # Cache the trained model if filters provided
+            if filters:
+                metadata = {
+                    'metrics': metrics,
+                    'silhouette_score': silhouette,
+                    'n_clusters': len(set(cluster_labels)),
+                    'training_samples': len(features),
+                    'trained_at': datetime.now().isoformat()
+                }
+                ml_model_cache.set_model('segmentation', filters, self.model, self.scaler, metadata, data_hash)
+                logger.info("[CustomerSegmentationMLPredictor] Model cached for future use")
+
+            logger.info(f"Segmentation model trained successfully (silhouette: {silhouette:.3f}, clusters: {len(set(cluster_labels))})")
+            return metrics
+
+        except Exception as e:
+            logger.error(f"Failed to train model: {e}")
+            return {'status': 'error', 'message': str(e)}
 
     
     def perform_segmentation(self, df: pd.DataFrame) -> Dict:

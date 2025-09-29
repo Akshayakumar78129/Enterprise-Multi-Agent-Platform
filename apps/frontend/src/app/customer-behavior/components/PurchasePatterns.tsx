@@ -118,8 +118,8 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
     );
   }
 
-  // Create mock time series data if not available
-  const timeSeriesData = data?.time_series_data ? {
+  // Only use real time series data
+  const timeSeriesData = data?.time_series_data && data.time_series_data.length > 0 ? {
     labels: data.time_series_data.map((d: any) => d.date),
     datasets: [
       {
@@ -138,26 +138,7 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
         yAxisID: 'y1'
       }
     ]
-  } : {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-    datasets: [
-      {
-        label: 'Purchase Count',
-        data: [120, 150, 180, 140, 200, 170],
-        borderColor: '#8b5cf6',
-        backgroundColor: 'rgba(139, 92, 246, 0.1)',
-        tension: 0.4
-      },
-      {
-        label: 'Avg Order Value',
-        data: [1500, 1800, 2100, 1900, 2300, 2000],
-        borderColor: '#e8d4e6',
-        backgroundColor: 'rgba(232, 212, 230, 0.1)',
-        tension: 0.4,
-        yAxisID: 'y1'
-      }
-    ]
-  };
+  } : null;
 
   const frequencyData = data.frequency_distribution ? {
     labels: Object.keys(data.frequency_distribution),
@@ -192,8 +173,16 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
     }
   };
 
-  // Prepare radar chart data based on purchase patterns
-  const radarData = data ? [
+  // Prepare radar chart data based on purchase patterns - only if real data exists
+  const hasRadarData = data && (
+    data.avgDaysBetweenPurchases ||
+    data.avgDaysSinceLastPurchase ||
+    data.avgOrderValue ||
+    data.repeatPurchaseRate ||
+    data.purchaseTrend
+  );
+
+  const radarData = hasRadarData ? [
     {
       label: 'Frequency',
       value: Math.min(100, ((30 / (data.avgDaysBetweenPurchases || 30)) * 100))
@@ -223,6 +212,7 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
           title="Purchase Timeline"
           description="Purchase trends over time">
           <div className="h-80 p-4">
+            {timeSeriesData ? (
             <Line
               data={timeSeriesData}
               options={{
@@ -285,6 +275,11 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
                 }
               }}
             />
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                No purchase timeline data available
+              </div>
+            )}
           </div>
         </Card>
 

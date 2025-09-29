@@ -69,23 +69,35 @@ def identify_customer_segments(
 
         # Format the response
         output = []
+        output.append("<output>")
         output.append("# Customer Segmentation Analysis")
         output.append(f"\nMethod: {segmentation_method.upper()}")
         output.append(f"Time Period: {time_period}")
+
+        # Track metrics for visualization
+        kpi_data = {}
+        segment_details = []
 
         # Add KPI metrics
         if result.get('kpiMetrics'):
             output.append("\n## Key Metrics")
             kpis = result['kpiMetrics']
-            output.append(f"- Total Segments: {kpis.get('totalSegments', 0)}")
-            output.append(f"- Largest Segment Size: {kpis.get('largestSegmentSize', 0):,}")
-            output.append(f"- Average Segment Value: ${kpis.get('avgSegmentValue', 0):,.2f}")
-            output.append(f"- Segmentation Quality: {kpis.get('segmentationQuality', 0):.1f}%")
+            kpi_data = {
+                'totalSegments': kpis.get('totalSegments', 0),
+                'largestSegmentSize': kpis.get('largestSegmentSize', 0),
+                'avgSegmentValue': kpis.get('avgSegmentValue', 0),
+                'segmentationQuality': kpis.get('segmentationQuality', 0)
+            }
+            output.append(f"- Total Segments: {kpi_data['totalSegments']}")
+            output.append(f"- Largest Segment Size: {kpi_data['largestSegmentSize']:,}")
+            output.append(f"- Average Segment Value: ${kpi_data['avgSegmentValue']:,.2f}")
+            output.append(f"- Segmentation Quality: {kpi_data['segmentationQuality']:.1f}%")
 
         # Add segment details
         if result.get('mlResults', {}).get('segments'):
+            segment_details = result['mlResults']['segments']
             output.append("\n## Segment Details")
-            for segment in result['mlResults']['segments']:
+            for segment in segment_details:
                 output.append(f"\n### Segment {segment.get('segment_id', 'Unknown')}")
                 output.append(f"- Size: {segment.get('size', 0):,} customers ({segment.get('percentage', 0):.1f}%)")
                 output.append(f"- Average Revenue: ${segment.get('avg_revenue', 0):,.2f}")
@@ -108,7 +120,105 @@ def identify_customer_segments(
             for feature in result['mlResults']['feature_importance'][:5]:
                 output.append(f"- {feature['feature']}: {feature['importance']*100:.1f}%")
 
+        # Add visualization metadata
+        output.append("\n## Visualization Data (Machine-Readable)")
+        output.append("```json")
+
+        # Build visualization data matching the expected components
+        viz_data = {}
+
+        # Add KPI tiles data if we have metrics
+        if kpi_data:
+            viz_data["kpiTiles"] = [
+                {
+                    "title": "Total Segments",
+                    "value": kpi_data.get('totalSegments', 0),
+                    "unit": "segments",
+                    "color": "#8b5cf6"
+                },
+                {
+                    "title": "Largest Segment",
+                    "value": kpi_data.get('largestSegmentSize', 0),
+                    "unit": "customers",
+                    "color": "#10b981"
+                },
+                {
+                    "title": "Avg Value",
+                    "value": round(kpi_data.get('avgSegmentValue', 0), 2),
+                    "unit": "$",
+                    "format": "currency",
+                    "color": "#f59e0b"
+                },
+                {
+                    "title": "Quality Score",
+                    "value": round(kpi_data.get('segmentationQuality', 0), 1),
+                    "unit": "%",
+                    "color": "#ef4444"
+                }
+            ]
+
+        # Add segment distribution map data
+        if segment_details:
+            viz_data["distributionMap"] = [
+                {
+                    "segment_id": segment.get('segment_id', 'Unknown'),
+                    "size": segment.get('size', 0),
+                    "percentage": round(segment.get('percentage', 0), 1),
+                    "avg_revenue": round(segment.get('avg_revenue', 0), 2),
+                    "color": segment.get('color', '#8b5cf6')
+                }
+                for segment in segment_details[:8]  # Limit to 8 segments for visualization
+            ]
+
+        # Add profile cards data
+        if segment_details:
+            viz_data["profileCards"] = [
+                {
+                    "id": segment.get('segment_id', 'Unknown'),
+                    "name": f"Segment {segment.get('segment_id', 'Unknown')}",
+                    "size": segment.get('size', 0),
+                    "percentage": round(segment.get('percentage', 0), 1),
+                    "metrics": {
+                        "revenue": round(segment.get('avg_revenue', 0), 2),
+                        "transactions": round(segment.get('avg_transactions', 0), 1),
+                        "value_score": round(segment.get('value_score', 0), 2) if 'value_score' in segment else 0
+                    },
+                    "characteristics": segment.get('characteristics', {})
+                }
+                for segment in segment_details[:4]  # Top 4 segments for profile cards
+            ]
+
+        # Add metric comparison data
+        if segment_details and len(segment_details) > 1:
+            viz_data["metricComparison"] = {
+                "segments": [segment.get('segment_id', 'Unknown') for segment in segment_details[:5]],
+                "metrics": {
+                    "revenue": [round(segment.get('avg_revenue', 0), 2) for segment in segment_details[:5]],
+                    "transactions": [round(segment.get('avg_transactions', 0), 1) for segment in segment_details[:5]],
+                    "size": [segment.get('size', 0) for segment in segment_details[:5]]
+                }
+            }
+
+        import json
+        output.append(json.dumps(viz_data, indent=2))
+        output.append("```")
+        output.append("</output>")
+        output.append("<is_visualisation>true</is_visualisation>")
+
         return "\n".join(output)
 
     except Exception as e:
-        return f"Error performing customer segmentation: {str(e)}"
+        return f"""<output>
+# Customer Segmentation Analysis Error
+
+An error occurred while performing customer segmentation: {str(e)}
+
+Please check:
+1. Database connectivity
+2. Data availability for the specified time period
+3. ML model training status
+
+For debugging, the error details are:
+{str(e)}
+</output>
+<is_visualisation>false</is_visualisation>"""

@@ -1,6 +1,6 @@
 """
 Engagement Classifier Processing Service
-Complete implementation following ChurnPredictionService pattern
+Complete implementation with all endpoints and caching
 """
 
 import logging
@@ -27,485 +27,273 @@ class EngagementClassifierService:
 
     @cache_dashboard_endpoint(dashboard_type='engagement-classifier', ttl=300)
     async def get_dashboard_summary(self, filters: Dict = {}) -> Dict:
-        """Get Engagement Classifier dashboard summary with ML predictions"""
+        """Get complete engagement classifier dashboard summary with all data"""
 
         try:
             logger.info(f"Getting Engagement Classifier summary with filters: {filters}")
 
-            # Parse date filters
-            date_filters = self._parse_date_filters(filters)
+            # Get all data in parallel
+            customers_data = await self.data_service.get_engagement_data(filters)
+            kpi_data = await self.data_service.get_kpi_metrics(filters)
+            distribution_data = await self.data_service.get_engagement_distribution(filters)
+            rfm_data = await self.data_service.get_rfm_analysis(filters)
+            opportunities_data = await self.data_service.get_reengagement_opportunities(filters)
+            timeline_data = await self.data_service.get_engagement_timeline(filters)
 
-            # Get data from data service
-            customers = await self.data_service.get_customers(date_filters)
-            transactions = await self.data_service.get_transactions(date_filters)
-            loyalty = await self.data_service.get_loyalty(date_filters)
-            aggregated = await self.data_service.get_aggregated_metrics(date_filters)
+            # Process customers for ML predictions if needed
+            customers_df = pd.DataFrame(customers_data.get('data', []))
 
-            # Convert to DataFrames
-            customers_df = pd.DataFrame(customers.get('data', []))
-            transactions_df = pd.DataFrame(transactions.get('data', []))
-            loyalty_df = pd.DataFrame(loyalty.get('data', []))
-            aggregated_df = pd.DataFrame(aggregated.get('data', []))
+            # Prepare ML results
+            ml_results = {}
+            if len(customers_df) > 0:
+                try:
+                    # Calculate engagement scores using ML
+                    if hasattr(self.ml_predictor, 'prepare_features'):
+                        features = self.ml_predictor.prepare_features(customers_df)
+                        if features is not None and hasattr(self.ml_predictor, 'predict_engagement_scores'):
+                            scores = self.ml_predictor.predict_engagement_scores(features)
+                            customers_df['ml_engagement_score'] = scores
 
-            # Perform ML analysis based on dashboard type
-            ml_results = self._perform_ml_analysis(
-                aggregated_df if not aggregated_df.empty else customers_df,
-                transactions_df
-            )
+                    # Get top at-risk customers (fallback logic)
+                    if 'engagement_level' in customers_df.columns:
+                        at_risk = customers_df[customers_df['engagement_level'] == 'Low'].nlargest(10, 'LTD Sales Amount')
+                        ml_results['at_risk_customers'] = at_risk[['Customer Name', 'Days Since Last Activity', 'LTD Sales Amount']].to_dict('records')
+                except Exception as e:
+                    logger.warning(f"ML predictor error: {e}, continuing without ML features")
+                    ml_results['at_risk_customers'] = []
 
-            # Calculate KPIs
-            kpis = self._calculate_kpis(customers_df, transactions_df, loyalty_df, ml_results)
+            # Structure response matching old API
+            response = {
+                "success": True,
+                "data": {
+                    # Raw customer data
+                    "customers": customers_data.get('data', []),
 
-            # Generate visualizations data
-            visualizations = self._generate_visualizations(
-                customers_df, transactions_df, loyalty_df, ml_results
-            )
+                    # KPI data for tiles
+                    "kpis": {
+                        "total_customers": kpi_data.get('total_customers', 0),
+                        "avg_engagement_score": kpi_data.get('avg_engagement_score', 0),
+                        "avg_days_since_activity": kpi_data.get('avg_days_since_activity', 0),
+                        "engagement_trend": kpi_data.get('engagement_trend', 'Stable'),
+                        "reengagement_opportunities": kpi_data.get('reengagement_opportunities', 0),
+                        "engagement_distribution": kpi_data.get('engagement_distribution', {})
+                    },
 
-            # Generate insights
-            insights = self._generate_insights(ml_results, kpis)
+                    # Engagement distribution for pyramid
+                    "distribution": distribution_data.get('data', []),
 
-            return {
-                'kpiMetrics': kpis,
-                'mainData': visualizations,
-                'mlResults': ml_results,
-                'insights': insights,
-                'metadata': {
-                    'analysisDate': datetime.now().isoformat(),
-                    'totalCustomers': len(customers_df),
-                    'totalTransactions': len(transactions_df),
-                    'filters': filters,
-                    'dataQuality': self._assess_data_quality(customers_df, transactions_df)
-                }
+                    # RFM analysis
+                    "rfm_analysis": rfm_data.get('data', []),
+
+                    # Re-engagement opportunities
+                    "opportunities": opportunities_data.get('data', []),
+
+                    # Timeline data
+                    "timeline": timeline_data.get('data', []),
+
+                    # Summary metrics
+                    "summary": {
+                        "total_customers": kpi_data.get('total_customers', 0),
+                        "high_engagement": kpi_data.get('engagement_distribution', {}).get('high', 0),
+                        "medium_engagement": kpi_data.get('engagement_distribution', {}).get('medium', 0),
+                        "low_engagement": kpi_data.get('engagement_distribution', {}).get('low', 0),
+                        "avg_purchase_value": kpi_data.get('avg_purchase_value', 0),
+                        "avg_transaction_frequency": kpi_data.get('avg_transaction_frequency', 0)
+                    }
+                },
+                "mlResults": ml_results,
+                "timestamp": datetime.now().isoformat(),
+                "filters_applied": filters
             }
+
+            # Also return compact format for compatibility
+            response.update({
+                "kpiMetrics": {
+                    "totalCustomers": kpi_data.get('total_customers', 0),
+                    "highlyEngaged": kpi_data.get('engagement_distribution', {}).get('high', 0),
+                    "atRiskCount": kpi_data.get('engagement_distribution', {}).get('low', 0),
+                    "avgEngagementScore": kpi_data.get('avg_engagement_score', 0),
+                    "engagementTrend": kpi_data.get('engagement_trend_value', 0)  # Use actual trend value from data
+                },
+                "engagementDistribution": distribution_data.get('data', []),
+                "customerClassification": rfm_data.get('data', []),
+                "engagementScore": {
+                    "current": kpi_data.get('avg_engagement_score', 0),
+                    "previous": kpi_data.get('prev_engagement_score', kpi_data.get('avg_engagement_score', 0)),  # Use actual previous value or current as fallback
+                    "trend": "up" if kpi_data.get('engagement_trend') == 'Improving' else "down"
+                },
+                "actionableInsights": self._generate_insights(kpi_data, distribution_data.get('data', []))
+            })
+
+            return response
 
         except Exception as e:
-            logger.error(f"Error in get_dashboard_summary: {str(e)}", exc_info=True)
-            return self._get_error_response(str(e))
-
-    def _perform_ml_analysis(self, df: pd.DataFrame, transaction_df: pd.DataFrame = None) -> Dict:
-        """Perform ML analysis specific to this dashboard"""
-
-        if df.empty:
-            return self._get_empty_ml_results()
-
-        # Call appropriate ML predictor method based on dashboard
-        if 'engagement_classifier' == 'customer_segmentation':
-            return self.ml_predictor.perform_segmentation(df)
-        elif 'engagement_classifier' == 'customer_ltv':
-            return self.ml_predictor.predict_ltv(df)
-        elif 'engagement_classifier' == 'engagement_classifier':
-            return self.ml_predictor.classify_engagement(df)
-        elif 'engagement_classifier' == 'next_purchase' and transaction_df is not None:
-            return self.ml_predictor.predict_next_purchase(df, transaction_df)
-        else:
-            return self.ml_predictor.analyze_data(df)
-
-    def _calculate_kpis(self, customers_df: pd.DataFrame, transactions_df: pd.DataFrame,
-                       loyalty_df: pd.DataFrame, ml_results: Dict) -> Dict:
-        """Calculate KPI metrics"""
-
-        kpis = {}
-
-        # Calculate based on dashboard type
-        if 'engagement_classifier' == 'customer_segmentation':
-            kpis = {
-                'totalSegments': len(ml_results.get('segments', [])),
-                'largestSegmentSize': max([s['size'] for s in ml_results.get('segments', [{}])], default=0),
-                'avgSegmentValue': np.mean([s['avg_revenue'] for s in ml_results.get('segments', [{}])], default=0),
-                'segmentationQuality': ml_results.get('quality_score', 0)
-            }
-        elif 'engagement_classifier' == 'customer_ltv':
-            predictions = ml_results.get('predictions', [])
-            if predictions:
-                ltv_values = [p.get('predicted_ltv', 0) for p in predictions]
-                kpis = {
-                    'avgLTV': np.mean(ltv_values) if ltv_values else 0,
-                    'totalLTV': np.sum(ltv_values) if ltv_values else 0,
-                    'highValueCount': len([v for v in ltv_values if v > np.percentile(ltv_values, 75)]) if ltv_values else 0,
-                    'ltvGrowth': 5.2  # Mock growth percentage
+            logger.error(f"Error in dashboard summary: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e),
+                "data": {
+                    "customers": [],
+                    "kpis": {},
+                    "distribution": [],
+                    "rfm_analysis": [],
+                    "opportunities": [],
+                    "timeline": [],
+                    "summary": {}
                 }
-        elif 'engagement_classifier' == 'purchase_frequency':
-            kpis = {
-                'avgPurchaseFrequency': transactions_df.groupby('customer_id').size().mean() if not transactions_df.empty else 0,
-                'highFrequencyCustomers': len(transactions_df.groupby('customer_id').filter(lambda x: len(x) > 5)) if not transactions_df.empty else 0,
-                'frequencyTrend': 3.8,  # Mock trend
-                'retentionRate': 68.5  # Mock retention rate
-            }
-        elif 'engagement_classifier' == 'engagement_classifier':
-            classifications = ml_results.get('classifications', [])
-            if classifications:
-                engagement_levels = [c.get('engagement_level', 'Unknown') for c in classifications]
-                kpis = {
-                    'highlyEngaged': engagement_levels.count('High') + engagement_levels.count('Champion'),
-                    'atRiskCount': engagement_levels.count('Low') + engagement_levels.count('Inactive'),
-                    'avgEngagementScore': np.mean([c.get('engagement_score', 0) for c in classifications]),
-                    'engagementTrend': 2.1  # Mock trend
-                }
-        else:
-            # Default KPIs
-            kpis = {
-                'totalCustomers': len(customers_df),
-                'activeCustomers': len(customers_df[customers_df.get('customer_status') == 'Active']) if 'customer_status' in customers_df else 0,
-                'totalRevenue': transactions_df['net_sales_amount'].sum() if not transactions_df.empty and 'net_sales_amount' in transactions_df else 0,
-                'avgCustomerValue': transactions_df.groupby('customer_id')['net_sales_amount'].sum().mean() if not transactions_df.empty and 'net_sales_amount' in transactions_df else 0
             }
 
-        return kpis
-
-    def _generate_visualizations(self, customers_df: pd.DataFrame, transactions_df: pd.DataFrame,
-                                loyalty_df: pd.DataFrame, ml_results: Dict) -> Dict:
-        """Generate data for dashboard visualizations"""
-
-        visualizations = {}
-
-        # Generate based on dashboard type
-        if 'engagement_classifier' == 'customer_segmentation':
-            visualizations = {
-                'segmentDistribution': self._create_segment_distribution_chart(ml_results),
-                'segmentCharacteristics': self._create_segment_characteristics_chart(ml_results),
-                'featureImportance': ml_results.get('feature_importance', []),
-                'segmentMatrix': self._create_segment_matrix(ml_results)
+    async def get_engagement_distribution(self, filters: Dict = {}) -> Dict:
+        """Get engagement level distribution for pyramid visualization"""
+        try:
+            result = await self.data_service.get_engagement_distribution(filters)
+            return {
+                "success": True,
+                "data": result.get('data', []),
+                "timestamp": datetime.now().isoformat()
             }
-        elif 'engagement_classifier' == 'customer_ltv':
-            visualizations = {
-                'ltvDistribution': self._create_ltv_distribution_chart(ml_results),
-                'ltvTrend': self._create_ltv_trend_chart(transactions_df),
-                'customerValueMatrix': self._create_value_matrix(ml_results),
-                'ltvBySegment': self._create_ltv_by_segment_chart(ml_results)
+        except Exception as e:
+            logger.error(f"Error in engagement distribution: {str(e)}")
+            return {"success": False, "error": str(e), "data": []}
+
+    async def get_rfm_analysis(self, filters: Dict = {}) -> Dict:
+        """Get RFM analysis data"""
+        try:
+            result = await self.data_service.get_rfm_analysis(filters)
+            return {
+                "success": True,
+                "data": result.get('data', []),
+                "timestamp": datetime.now().isoformat()
             }
-        else:
-            # Default visualizations
-            visualizations = {
-                'timeSeries': self._create_time_series_chart(transactions_df),
-                'distribution': self._create_distribution_chart(ml_results),
-                'topMetrics': self._create_top_metrics_chart(customers_df, transactions_df)
+        except Exception as e:
+            logger.error(f"Error in RFM analysis: {str(e)}")
+            return {"success": False, "error": str(e), "data": []}
+
+    async def get_reengagement_opportunities(self, filters: Dict = {}) -> Dict:
+        """Get reengagement opportunities"""
+        try:
+            result = await self.data_service.get_reengagement_opportunities(filters)
+            return {
+                "success": True,
+                "data": result.get('data', []),
+                "timestamp": datetime.now().isoformat()
             }
+        except Exception as e:
+            logger.error(f"Error in reengagement opportunities: {str(e)}")
+            return {"success": False, "error": str(e), "data": []}
 
-        return visualizations
-
-    def _create_segment_distribution_chart(self, ml_results: Dict) -> List[Dict]:
-        """Create segment distribution chart data"""
-
-        segments = ml_results.get('segments', [])
-        return [
-            {
-                'name': f"Segment {s['segment_id']}",
-                'value': s['size'],
-                'percentage': s['percentage']
+    async def get_engagement_timeline(self, filters: Dict = {}) -> Dict:
+        """Get engagement timeline data"""
+        try:
+            result = await self.data_service.get_engagement_timeline(filters)
+            return {
+                "success": True,
+                "data": result.get('data', []),
+                "timestamp": datetime.now().isoformat()
             }
-            for s in segments
-        ]
+        except Exception as e:
+            logger.error(f"Error in engagement timeline: {str(e)}")
+            return {"success": False, "error": str(e), "data": []}
 
-    def _create_segment_characteristics_chart(self, ml_results: Dict) -> Dict:
-        """Create segment characteristics radar chart data"""
-
-        segments = ml_results.get('segments', [])
-        if not segments:
-            return {}
-
-        # Get all characteristics
-        all_features = set()
-        for s in segments:
-            if 'characteristics' in s:
-                all_features.update(s['characteristics'].keys())
-
-        return {
-            'features': list(all_features),
-            'segments': [
-                {
-                    'name': f"Segment {s['segment_id']}",
-                    'values': [s.get('characteristics', {}).get(f, 0) for f in all_features]
-                }
-                for s in segments
-            ]
-        }
-
-    def _create_segment_matrix(self, ml_results: Dict) -> List[List[Any]]:
-        """Create segment comparison matrix"""
-
-        segments = ml_results.get('segments', [])
-        if not segments:
-            return []
-
-        matrix = []
-        headers = ['Segment', 'Size', 'Avg Revenue', 'Avg Transactions']
-        matrix.append(headers)
-
-        for s in segments:
-            matrix.append([
-                f"Segment {s['segment_id']}",
-                s['size'],
-                f"${s['avg_revenue']:.2f}",
-                f"{s['avg_transactions']:.1f}"
-            ])
-
-        return matrix
-
-    def _create_ltv_distribution_chart(self, ml_results: Dict) -> List[Dict]:
-        """Create LTV distribution chart data"""
-
-        predictions = ml_results.get('predictions', [])
-        if not predictions:
-            return []
-
-        ltv_values = [p.get('predicted_ltv', 0) for p in predictions]
-
-        # Create histogram bins
-        hist, bin_edges = np.histogram(ltv_values, bins=10)
-
-        return [
-            {
-                'range': f"${int(bin_edges[i])}-${int(bin_edges[i+1])}",
-                'count': int(hist[i])
+    async def search_customers(self, search_term: str) -> Dict:
+        """Search customers by name or number"""
+        try:
+            result = await self.data_service.search_customers(search_term)
+            return {
+                "success": True,
+                "data": result.get('data', []),
+                "timestamp": datetime.now().isoformat()
             }
-            for i in range(len(hist))
-        ]
+        except Exception as e:
+            logger.error(f"Error in customer search: {str(e)}")
+            return {"success": False, "error": str(e), "data": []}
 
-    def _create_ltv_trend_chart(self, transactions_df: pd.DataFrame) -> List[Dict]:
-        """Create LTV trend over time chart"""
-
-        if transactions_df.empty or 'txn_date' not in transactions_df.columns:
-            # Return mock data
-            dates = pd.date_range(end=datetime.now(), periods=12, freq='M')
-            return [
-                {
-                    'date': date.isoformat(),
-                    'ltv': np.random.uniform(1000, 5000)
-                }
-                for date in dates
-            ]
-
-        transactions_df['txn_date'] = pd.to_datetime(transactions_df['txn_date'])
-        monthly_ltv = transactions_df.groupby(pd.Grouper(key='txn_date', freq='M'))['net_sales_amount'].sum()
-
-        return [
-            {
-                'date': date.isoformat(),
-                'ltv': float(value)
+    async def get_customer_analytics(self, customer_key: str) -> Dict:
+        """Get detailed analytics for a specific customer"""
+        try:
+            result = await self.data_service.get_customer_analytics(customer_key)
+            return {
+                "success": True,
+                "data": result,
+                "timestamp": datetime.now().isoformat()
             }
-            for date, value in monthly_ltv.items()
-        ]
+        except Exception as e:
+            logger.error(f"Error in customer analytics: {str(e)}")
+            return {"success": False, "error": str(e), "data": {}}
 
-    def _create_value_matrix(self, ml_results: Dict) -> Dict:
-        """Create customer value matrix"""
-
-        predictions = ml_results.get('predictions', [])
-        if not predictions:
-            return {}
-
-        # Categorize customers by LTV
-        categories = {
-            'VIP': [],
-            'High': [],
-            'Medium': [],
-            'Low': []
-        }
-
-        for pred in predictions:
-            ltv = pred.get('predicted_ltv', 0)
-            percentile = pred.get('ltv_percentile', 'Medium')
-            categories[percentile].append(pred)
-
-        return {
-            'categories': [
-                {
-                    'name': cat,
-                    'count': len(customers),
-                    'avgLTV': np.mean([c.get('predicted_ltv', 0) for c in customers]) if customers else 0
-                }
-                for cat, customers in categories.items()
-            ]
-        }
-
-    def _create_ltv_by_segment_chart(self, ml_results: Dict) -> List[Dict]:
-        """Create LTV by customer segment chart"""
-
-        # Mock data for demonstration
-        return [
-            {'segment': 'Enterprise', 'ltv': 15000},
-            {'segment': 'SMB', 'ltv': 5000},
-            {'segment': 'Retail', 'ltv': 2000},
-            {'segment': 'Individual', 'ltv': 500}
-        ]
-
-    def _create_time_series_chart(self, transactions_df: pd.DataFrame) -> List[Dict]:
-        """Create generic time series chart"""
-
-        if transactions_df.empty or 'txn_date' not in transactions_df.columns:
-            # Return mock data
-            dates = pd.date_range(end=datetime.now(), periods=30, freq='D')
-            return [
-                {
-                    'date': date.isoformat(),
-                    'value': np.random.uniform(100, 1000)
-                }
-                for date in dates
-            ]
-
-        transactions_df['txn_date'] = pd.to_datetime(transactions_df['txn_date'])
-        daily_data = transactions_df.groupby(pd.Grouper(key='txn_date', freq='D')).size()
-
-        return [
-            {
-                'date': date.isoformat(),
-                'value': int(value)
-            }
-            for date, value in daily_data.items()
-        ]
-
-    def _create_distribution_chart(self, ml_results: Dict) -> List[Dict]:
-        """Create generic distribution chart"""
-
-        # Use any available distribution data from ML results
-        distribution = ml_results.get('distribution', {})
-
-        if not distribution:
-            # Return mock data
-            categories = ['Category A', 'Category B', 'Category C', 'Category D']
-            return [
-                {
-                    'category': cat,
-                    'value': np.random.randint(10, 100)
-                }
-                for cat in categories
-            ]
-
-        return [
-            {'category': k, 'value': v}
-            for k, v in distribution.items()
-        ]
-
-    def _create_top_metrics_chart(self, customers_df: pd.DataFrame, transactions_df: pd.DataFrame) -> List[Dict]:
-        """Create top metrics chart"""
-
-        metrics = []
-
-        if not customers_df.empty:
-            metrics.append({
-                'metric': 'Total Customers',
-                'value': len(customers_df)
-            })
-
-        if not transactions_df.empty:
-            metrics.append({
-                'metric': 'Total Transactions',
-                'value': len(transactions_df)
-            })
-
-            if 'net_sales_amount' in transactions_df.columns:
-                metrics.append({
-                    'metric': 'Total Revenue',
-                    'value': float(transactions_df['net_sales_amount'].sum())
-                })
-
-        return metrics
-
-    def _generate_insights(self, ml_results: Dict, kpis: Dict) -> List[str]:
-        """Generate insights based on ML results and KPIs"""
-
+    def _generate_insights(self, kpi_data: Dict, distribution_data: List) -> List[Dict]:
+        """Generate actionable insights based on data"""
         insights = []
 
-        # Generate insights based on dashboard type
-        if 'engagement_classifier' == 'customer_segmentation':
-            segments = ml_results.get('segments', [])
-            if segments:
-                largest_segment = max(segments, key=lambda x: x['size'])
-                insights.append(f"Largest customer segment contains {largest_segment['size']} customers ({largest_segment['percentage']:.1f}% of total)")
+        # Insight 1: Engagement trend
+        if kpi_data.get('engagement_trend') == 'Declining':
+            insights.append({
+                "type": "warning",
+                "title": "Declining Engagement",
+                "description": "Overall engagement is trending downward. Consider launching re-engagement campaigns.",
+                "action": "Launch targeted campaigns"
+            })
+        elif kpi_data.get('engagement_trend') == 'Improving':
+            insights.append({
+                "type": "success",
+                "title": "Improving Engagement",
+                "description": "Customer engagement is trending upward. Maintain current strategies.",
+                "action": "Continue current approach"
+            })
 
-                highest_value_segment = max(segments, key=lambda x: x['avg_revenue'])
-                insights.append(f"Segment {highest_value_segment['segment_id']} has the highest average revenue at ${highest_value_segment['avg_revenue']:.2f}")
+        # Insight 2: At-risk customers
+        low_engagement = kpi_data.get('engagement_distribution', {}).get('low', 0)
+        if low_engagement > kpi_data.get('total_customers', 1) * 0.3:
+            insights.append({
+                "type": "alert",
+                "title": "High Risk Segment",
+                "description": f"{low_engagement} customers are at risk of churning.",
+                "action": "Immediate intervention needed"
+            })
 
-        elif 'engagement_classifier' == 'customer_ltv':
-            if kpis.get('avgLTV', 0) > 0:
-                insights.append(f"Average customer lifetime value is ${kpis['avgLTV']:.2f}")
-            if kpis.get('highValueCount', 0) > 0:
-                insights.append(f"{kpis['highValueCount']} customers are classified as high-value (top 25%)")
+        # Insight 3: Re-engagement opportunities
+        reengagement_opps = kpi_data.get('reengagement_opportunities', 0)
+        if reengagement_opps > 0:
+            insights.append({
+                "type": "info",
+                "title": "Re-engagement Opportunities",
+                "description": f"{reengagement_opps} loyal customers can be re-engaged.",
+                "action": "Send personalized offers"
+            })
 
-        elif 'engagement_classifier' == 'engagement_classifier':
-            if kpis.get('highlyEngaged', 0) > 0:
-                insights.append(f"{kpis['highlyEngaged']} customers are highly engaged")
-            if kpis.get('atRiskCount', 0) > 0:
-                insights.append(f"{kpis['atRiskCount']} customers are at risk and need attention")
-
-        # Add general insights
-        if not insights:
-            insights = [
-                "Analysis completed successfully",
-                f"Processed data for {kpis.get('totalCustomers', 0)} customers",
-                "ML model predictions are available for decision making"
-            ]
+        # Insight 4: High performers
+        high_engagement = kpi_data.get('engagement_distribution', {}).get('high', 0)
+        if high_engagement > 0:
+            insights.append({
+                "type": "success",
+                "title": "Highly Engaged Segment",
+                "description": f"{high_engagement} customers are highly engaged.",
+                "action": "Leverage for advocacy"
+            })
 
         return insights
 
     def _parse_date_filters(self, filters: Dict) -> Dict:
-        """Parse and validate date filters"""
-
+        """Parse and standardize date filters"""
         parsed = filters.copy()
 
         # Handle date range
-        if 'date_from' in parsed:
-            try:
-                parsed['date_from'] = pd.to_datetime(parsed['date_from']).strftime('%Y-%m-%d')
-            except:
-                parsed['date_from'] = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+        if 'dateRange' in filters:
+            if isinstance(filters['dateRange'], dict):
+                parsed['startDate'] = filters['dateRange'].get('startDate')
+                parsed['endDate'] = filters['dateRange'].get('endDate')
 
-        if 'date_to' in parsed:
-            try:
-                parsed['date_to'] = pd.to_datetime(parsed['date_to']).strftime('%Y-%m-%d')
-            except:
-                parsed['date_to'] = datetime.now().strftime('%Y-%m-%d')
-
-        # Handle time_period format (for compatibility)
-        if 'time_period' in parsed:
-            if ':' in parsed['time_period']:
-                dates = parsed['time_period'].split(':')
-                parsed['date_from'] = dates[0]
-                parsed['date_to'] = dates[1] if len(dates) > 1 else datetime.now().strftime('%Y-%m-%d')
+        # Handle time range presets
+        if 'timeRange' in filters:
+            today = datetime.now()
+            if filters['timeRange'] == 'last30days':
+                parsed['startDate'] = (today - timedelta(days=30)).strftime('%Y-%m-%d')
+                parsed['endDate'] = today.strftime('%Y-%m-%d')
+            elif filters['timeRange'] == 'last90days':
+                parsed['startDate'] = (today - timedelta(days=90)).strftime('%Y-%m-%d')
+                parsed['endDate'] = today.strftime('%Y-%m-%d')
+            elif filters['timeRange'] == 'last12months':
+                parsed['startDate'] = (today - timedelta(days=365)).strftime('%Y-%m-%d')
+                parsed['endDate'] = today.strftime('%Y-%m-%d')
 
         return parsed
-
-    def _assess_data_quality(self, customers_df: pd.DataFrame, transactions_df: pd.DataFrame) -> Dict:
-        """Assess data quality metrics"""
-
-        quality = {
-            'completeness': 100.0,
-            'accuracy': 100.0,
-            'consistency': 100.0
-        }
-
-        # Check for missing values
-        if not customers_df.empty:
-            null_percentage = customers_df.isnull().sum().sum() / (len(customers_df) * len(customers_df.columns)) * 100
-            quality['completeness'] = 100 - null_percentage
-
-        if not transactions_df.empty:
-            # Check for data consistency
-            if 'net_sales_amount' in transactions_df.columns:
-                invalid_amounts = (transactions_df['net_sales_amount'] < 0).sum()
-                quality['consistency'] = 100 - (invalid_amounts / len(transactions_df) * 100)
-
-        return quality
-
-    def _get_empty_ml_results(self) -> Dict:
-        """Return empty ML results structure"""
-        return {
-            'predictions': [],
-            'segments': [],
-            'feature_importance': [],
-            'metrics': {},
-            'distribution': {}
-        }
-
-    def _get_error_response(self, error_message: str) -> Dict:
-        """Return error response structure"""
-        return {
-            'kpiMetrics': {},
-            'mainData': {},
-            'mlResults': {},
-            'insights': [f"Error: {error_message}"],
-            'metadata': {
-                'analysisDate': datetime.now().isoformat(),
-                'error': True,
-                'errorMessage': error_message
-            }
-        }

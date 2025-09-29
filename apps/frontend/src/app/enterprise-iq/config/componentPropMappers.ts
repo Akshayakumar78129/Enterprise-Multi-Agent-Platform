@@ -555,6 +555,34 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
     };
   },
 
+  'customer-segmentation.kpiTiles': (summary) => {
+    return {
+      tiles: summary.kpiMetrics || summary.kpiTiles || [
+        {
+          title: 'Total Segments',
+          value: summary.totalSegments || 0,
+          unit: 'segments'
+        },
+        {
+          title: 'Largest Segment',
+          value: summary.largestSegmentSize || 0,
+          unit: 'customers'
+        },
+        {
+          title: 'Avg Segment Value',
+          value: summary.avgSegmentValue || 0,
+          unit: '$',
+          format: 'currency'
+        },
+        {
+          title: 'Segmentation Quality',
+          value: summary.segmentationQuality || 0,
+          unit: '%'
+        }
+      ]
+    };
+  },
+
   // =============================
   // Customer Behaviour Components
   // =============================
@@ -569,6 +597,243 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
     return {
       data: summary.histogram_data || summary.distribution || [],
       bins: summary.bins
+    };
+  },
+
+  'customer-behaviour.treemap': (summary) => {
+    // Map product preferences or category data to treemap
+    return {
+      data: summary.product_preferences || summary.treemap_data || [],
+      categories: summary.categories
+    };
+  },
+
+  'customer-behaviour.donut': (summary) => {
+    // Map channel usage or segment distribution to donut
+    return {
+      data: summary.channel_usage || summary.donut_data || [],
+      labels: summary.labels
+    };
+  },
+
+  // =============================
+  // Customer Behavior Components (alternate name without hyphen)
+  // =============================
+  'customer-behavior.radar': (summary) => {
+    return {
+      data: summary.behavior_metrics || summary.radar_data || [],
+      categories: summary.categories
+    };
+  },
+
+  'customer-behavior.histogram': (summary) => {
+    return {
+      data: summary.histogram_data || summary.distribution || [],
+      bins: summary.bins
+    };
+  },
+
+  'customer-behavior.treemap': (summary) => {
+    // Map product preferences or category data to treemap
+    return {
+      data: summary.product_preferences || summary.treemap_data || [],
+      categories: summary.categories
+    };
+  },
+
+  'customer-behavior.donut': (summary) => {
+    // Map channel usage or segment distribution to donut
+    return {
+      data: summary.channel_usage || summary.donut_data || [],
+      labels: summary.labels
+    };
+  },
+
+  // =============================
+  // Engagement Classifier Components
+  // =============================
+  'engagement-classifier.kpiTiles': (summary) => {
+    return {
+      metrics: summary.kpi_metrics || summary.metrics || [],
+      summary: summary
+    };
+  },
+
+  'engagement-classifier.pyramid': (summary) => {
+    // Similar to risk pyramid but for engagement levels
+    return {
+      data: summary.engagement_distribution || summary.engagement_levels || [],
+      title: "Engagement Distribution"
+    };
+  },
+
+  'engagement-classifier.timeline': (summary) => {
+    return {
+      data: summary.engagement_timeline || summary.timeline_data || [],
+      labels: summary.time_labels
+    };
+  },
+
+  'engagement-classifier.opportunityFinder': (summary) => {
+    return {
+      opportunities: summary.opportunities || summary.engagement_opportunities || [],
+      segments: summary.segments
+    };
+  },
+
+  // =============================
+  // Performance Deviation Components
+  // =============================
+  'performance-deviation.kpiTiles': (summary) => {
+    return {
+      metrics: summary.kpi_metrics || summary.deviation_metrics || [],
+      summary: summary
+    };
+  },
+
+  'performance-deviation.performanceExplorer': (summary) => {
+    return {
+      data: summary.performance_data || summary.deviations || [],
+      dimensions: summary.dimensions
+    };
+  },
+
+  'performance-deviation.featureImportance': (summary) => {
+    return {
+      features: summary.deviation_drivers || summary.feature_importance || [],
+      data: summary.importance_data
+    };
+  },
+
+  'performance-deviation.varianceDecomposition': (summary) => {
+    return {
+      variance: summary.variance_decomposition || summary.variance_data || [],
+      categories: summary.categories
+    };
+  },
+
+  'performance-deviation.deviationPatterns': (summary) => {
+    return {
+      patterns: summary.deviation_patterns || summary.patterns || [],
+      timeline: summary.timeline
+    };
+  },
+
+  // =============================
+  // Customer Lifetime Value Components
+  // =============================
+  'customer-lifetime-value.kpiTiles': (summary) => {
+    return {
+      metrics: summary.kpi_metrics || summary.ltv_metrics || [],
+      summary: summary
+    };
+  },
+
+  'customer-lifetime-value.ltvDistribution': (summary) => {
+    return {
+      data: summary.ltv_distribution || summary.value_distribution || [],
+      segments: summary.segments
+    };
+  },
+
+  'customer-lifetime-value.predictionAccuracy': (summary) => {
+    return {
+      accuracy: summary.prediction_accuracy || summary.accuracy_metrics || {},
+      historical: summary.historical_accuracy
+    };
+  },
+
+  'customer-lifetime-value.geographicMap': (summary) => {
+    return {
+      data: summary.geographic_data || summary.ltv_by_region || [],
+      regions: summary.regions
+    };
+  },
+
+  'customer-lifetime-value.customerExplorer': (summary) => {
+    return {
+      customers: summary.top_customers || summary.customer_list || [],
+      metrics: summary.customer_metrics
+    };
+  },
+
+  'customer-lifetime-value.valueContribution': (summary) => {
+    return {
+      contributions: summary.value_contributions || summary.contribution_data || [],
+      categories: summary.categories
+    };
+  },
+
+  'customer-lifetime-value.timeProjection': (summary) => {
+    return {
+      projections: summary.ltv_projections || summary.projections || [],
+      timeline: summary.projection_timeline
+    };
+  },
+
+  'customer-lifetime-value.filterPanel': (summary) => {
+    return {
+      filters: summary.available_filters || {},
+      summary: summary
+    };
+  },
+
+  // =============================
+  // Customer LTV Components (alternate name)
+  // =============================
+  'customer-ltv.kpiTiles': (summary) => {
+    return {
+      metrics: summary.kpi_metrics || summary.ltv_metrics || [],
+      summary: summary
+    };
+  },
+
+  'customer-ltv.ltvDistribution': (summary) => {
+    return {
+      data: summary.ltv_distribution || summary.value_distribution || [],
+      segments: summary.segments
+    };
+  },
+
+  'customer-ltv.predictionAccuracy': (summary) => {
+    return {
+      accuracy: summary.prediction_accuracy || summary.accuracy_metrics || {},
+      historical: summary.historical_accuracy
+    };
+  },
+
+  'customer-ltv.geographicMap': (summary) => {
+    return {
+      data: summary.geographic_data || summary.ltv_by_region || [],
+      regions: summary.regions
+    };
+  },
+
+  'customer-ltv.customerExplorer': (summary) => {
+    return {
+      customers: summary.top_customers || summary.customer_list || [],
+      metrics: summary.customer_metrics
+    };
+  },
+
+  'customer-ltv.valueContribution': (summary) => {
+    return {
+      contributions: summary.value_contributions || summary.contribution_data || [],
+      categories: summary.categories
+    };
+  },
+
+  'customer-ltv.timeProjection': (summary) => {
+    return {
+      projections: summary.ltv_projections || summary.projections || [],
+      timeline: summary.projection_timeline
+    };
+  },
+
+  'customer-ltv.filterPanel': (summary) => {
+    return {
+      filters: summary.available_filters || {},
+      summary: summary
     };
   },
 

@@ -18,8 +18,9 @@ class FilterEngine:
         Returns:
             Tuple of (modified query, parameters list)
         """
-        if not filters or not any(filters.values()):
-            return query, []
+        # Initialize empty filters dict if None
+        if filters is None:
+            filters = {}
 
         where_clauses = []
         params = []
@@ -33,47 +34,43 @@ class FilterEngine:
             if transaction_table in query or f" {transaction_alias}." in query or f"[{transaction_alias}]." in query:
                 has_transaction_table = True
 
-        # Date range filters - only apply if transaction table is in the query
-        if has_transaction_table and filters.get('dateFrom') and filters.get('dateTo'):
-            # Use 'txn_date' if 'date' doesn't exist in schema
-            date_field = schema.TRANSACTION.refs.get('date', schema.TRANSACTION.refs.get('txn_date'))
-            if date_field:
-                # Since dates are stored as YYYY-MM-DD strings, use direct string comparison
-                # This works because the format allows lexicographic comparison
-                where_clauses.append(f"{date_field} >= ?")
-                params.append(filters['dateFrom'])
-                where_clauses.append(f"{date_field} <= ?")
-                params.append(filters['dateTo'])
+        # Check for date filters in various formats
+        date_from = filters.get('dateFrom') or filters.get('datefrom') or filters.get('date_from')
+        date_to = filters.get('dateTo') or filters.get('dateto') or filters.get('date_to')
 
-        # Alternative date range format
-        elif has_transaction_table and filters.get('datefrom') and filters.get('dateto'):
-            # Use 'txn_date' if 'date' doesn't exist in schema
+        # Date range filters - DEFAULT TO 2021 if no dates provided
+        if has_transaction_table:
             date_field = schema.TRANSACTION.refs.get('date', schema.TRANSACTION.refs.get('txn_date'))
             if date_field:
-                # Since dates are stored as YYYY-MM-DD strings, use direct string comparison
-                where_clauses.append(f"{date_field} >= ?")
-                params.append(filters['datefrom'])
-                where_clauses.append(f"{date_field} <= ?")
-                params.append(filters['dateto'])
+                # DEFAULT TO 2021 if no date filters provided
+                if not date_from and not date_to and not filters.get('timeRange'):
+                    date_from = '2021-01-01'
+                    date_to = '2021-12-31'
+
+                if date_from and date_to:
+                    # Since dates are stored as YYYY-MM-DD strings, use direct string comparison
+                    where_clauses.append(f"{date_field} >= ?")
+                    params.append(date_from)
+                    where_clauses.append(f"{date_field} <= ?")
+                    params.append(date_to)
 
         # Time range filter (7d, 30d, 90d)
-        elif has_transaction_table and filters.get('timeRange'):
-            # Skip timeRange if we already have date filters
-            if not any(k in filters for k in ['dateFrom', 'dateTo', 'datefrom', 'dateto']):
-                days_map = {
-                    '7d': 7,
-                    '30d': 30,
-                    '90d': 90
-                }
-                days = days_map.get(filters['timeRange'])
-                if days:
-                    # Use end of 2021 data as reference instead of current date
-                    # Since our data ends at 2021-12-31, calculate from there
-                    # Use 'txn_date' if 'date' doesn't exist in schema
-                    date_field = schema.TRANSACTION.refs.get('date', schema.TRANSACTION.refs.get('txn_date'))
-                    if date_field:
-                        where_clauses.append(f"{date_field} >= date('2021-12-31', '-{days} days')")
-                        where_clauses.append(f"{date_field} <= '2021-12-31'")
+        if has_transaction_table and filters.get('timeRange') and not (date_from and date_to):
+            # Only process timeRange if we don't already have explicit date filters
+            days_map = {
+                '7d': 7,
+                '30d': 30,
+                '90d': 90
+            }
+            days = days_map.get(filters['timeRange'])
+            if days:
+                # Use end of 2021 data as reference instead of current date
+                # Since our data ends at 2021-12-31, calculate from there
+                # Use 'txn_date' if 'date' doesn't exist in schema
+                date_field = schema.TRANSACTION.refs.get('date', schema.TRANSACTION.refs.get('txn_date'))
+                if date_field:
+                    where_clauses.append(f"{date_field} >= date('2021-12-31', '-{days} days')")
+                    where_clauses.append(f"{date_field} <= '2021-12-31'")
 
         # Segment filter - handle single value or array
         if filters.get('segment'):

@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Send, Bot, Loader2, X, Trash2, User } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Button } from "../ui/Button";
+import { ShiftClickSelectionManager, ShiftClickPoint } from "../selection/ShiftClickSelectionManager";
 
 export interface Message {
   role: "user" | "assistant";
@@ -49,9 +50,11 @@ export function ChatPanel({
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [shiftClickPoints, setShiftClickPoints] = useState<ShiftClickPoint[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sessionId] = useState(() => `session_${Date.now()}`);
   const [userId] = useState(() => `user_${Math.random().toString(36).substr(2, 9)}`);
+  const shiftClickManager = ShiftClickSelectionManager.getInstance();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -60,6 +63,15 @@ export function ChatPanel({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Subscribe to shift+click selections
+  useEffect(() => {
+    const unsubscribe = shiftClickManager.subscribe((points) => {
+      setShiftClickPoints(points);
+    });
+
+    return unsubscribe;
+  }, []);
 
   const handleSendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -78,11 +90,34 @@ export function ChatPanel({
     try {
       let queryWithContext = userMessage;
 
-      if (selectedPoints.length > 0) {
-        const pointsContext = selectedPoints
+      // Combine regular selections and shift+click selections
+      const allSelectedPoints = [...selectedPoints];
+
+      // Add shift+click points (avoid duplicates)
+      shiftClickPoints.forEach(scp => {
+        const exists = allSelectedPoints.some(p =>
+          p.label === scp.label && p.value === scp.value && p.source === scp.source
+        );
+        if (!exists) {
+          allSelectedPoints.push({
+            label: scp.label,
+            value: scp.value,
+            source: scp.source
+          });
+        }
+      });
+
+      if (allSelectedPoints.length > 0) {
+        // Check if any points are from shift+click
+        const hasShiftClick = shiftClickPoints.length > 0;
+        const contextPrefix = hasShiftClick
+          ? `[Shift+Click Context: ${shiftClickPoints.length} points via multi-selection]`
+          : "Context: User has selected these data points";
+
+        const pointsContext = allSelectedPoints
           .map(p => `${p.label}: ${p.value} (from ${p.source})`)
           .join(", ");
-        queryWithContext = `Context: User has selected these data points - ${pointsContext}. Query: ${userMessage}`;
+        queryWithContext = `${contextPrefix} - ${pointsContext}. Query: ${userMessage}`;
       }
 
       if (dashboardContext) {
@@ -180,16 +215,26 @@ export function ChatPanel({
         </Button>
       </div>
 
-      {/* Selected Points */}
-      {selectedPoints.length > 0 && (
+      {/* Selected Points (including shift+click) */}
+      {(selectedPoints.length > 0 || shiftClickPoints.length > 0) && (
         <div className="p-3 bg-primary/5 border-b">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium">Selected Data Points</span>
-            {onClearSelection && (
+            <span className="text-xs font-medium">
+              Selected Data Points
+              {shiftClickPoints.length > 0 && (
+                <span className="ml-2 text-xs bg-blue-500/20 text-blue-600 px-2 py-0.5 rounded">
+                  {shiftClickPoints.length} via Shift+Click
+                </span>
+              )}
+            </span>
+            {(onClearSelection || shiftClickPoints.length > 0) && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onClearSelection}
+                onClick={() => {
+                  onClearSelection?.();
+                  shiftClickManager.clearAll();
+                }}
                 className="h-6 px-2 text-xs"
               >
                 <Trash2 className="w-3 h-3 mr-1" />
@@ -206,6 +251,17 @@ export function ChatPanel({
                 <span className="font-medium">{point.label}:</span>
                 <span>{point.value}</span>
                 <span className="text-muted-foreground">({point.source})</span>
+              </div>
+            ))}
+            {shiftClickPoints.map((point) => (
+              <div
+                key={point.id}
+                className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 rounded-md border border-blue-200 text-xs"
+              >
+                <span className="text-blue-600">⇧</span>
+                <span className="font-medium">{point.label}:</span>
+                <span>{point.value}</span>
+                <span className="text-blue-600/70">({point.source})</span>
               </div>
             ))}
           </div>

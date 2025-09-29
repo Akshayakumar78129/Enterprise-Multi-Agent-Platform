@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Card, Skeleton, Badge } from "components/index";
+import { Card, Skeleton, Badge, getShiftClickManager } from "components/index";
 import { Search, User } from "lucide-react";
 import { useBehaviorContext } from "../context";
 
@@ -16,6 +16,7 @@ export function CustomerTable({ data, loading, onCustomerSelect }: CustomerTable
   const [sortColumn, setSortColumn] = React.useState<string | null>(null);
   const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('desc');
   const { selectionManager } = useBehaviorContext();
+  const shiftClickManager = getShiftClickManager();
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -165,13 +166,17 @@ export function CustomerTable({ data, loading, onCustomerSelect }: CustomerTable
                     key={`customer-${idx}-${customer.customer_id || customer.customerId || customer.id}`}
                     className="border-b border-border/50 hover:bg-background/50 transition-colors cursor-pointer"
                     onClick={(e) => {
-                      if (onCustomerSelect) onCustomerSelect(customer);
-                      selectionManager.addPoint({
-                        label: customer.customer_name || customer.customerName || customer.name || `Customer ${customer.customer_id || customer.customerId || customer.id}`,
-                        value: `CLV: $${customer.total_spend?.toFixed(2) || 'N/A'}`,
-                        source: 'Customer Table',
-                        metadata: customer
-                      }, e.shiftKey);
+                      if (e.shiftKey) {
+                        // Shift+click: Add to global shift+click selection
+                        const customerName = customer.customer_name || customer.customerName || customer.name || `Customer ${customer.customer_id || customer.customerId || customer.id}`;
+                        shiftClickManager.addPoint({
+                          label: `Customer: ${customerName}`,
+                          value: `Total Spend: $${(customer.total_spend || customer.totalSpend || 0).toFixed(2)}, ${riskBadge.text}`,
+                          source: 'Behavior Table'
+                        }, e.nativeEvent);
+                      } else if (onCustomerSelect) {
+                        onCustomerSelect(customer);
+                      }
                     }}
                   >
                     <td className="p-3">

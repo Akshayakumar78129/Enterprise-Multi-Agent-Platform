@@ -85,24 +85,26 @@ function ChurnLayoutContent({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <AppLayout
-      title="Churn Prediction"
-      mainContent={mainContent}
-      chatPanel={isChatOpen ? chatPanelContent : undefined}
-      biPanel={isBIModalOpen ? biPanelContent : undefined}
-      isChatOpen={isChatOpen}
-      isBIOpen={isBIModalOpen}
-      onChatToggle={() => setIsChatOpen(!isChatOpen)}
-      onBIToggle={() => setIsBIModalOpen(!isBIModalOpen)}
-      onChatExpandToggle={(expanded) => {
-        if (!expanded) setIsChatOpen(false);
-      }}
-      onBIExpandToggle={(expanded) => {
-        if (!expanded) setIsBIModalOpen(false);
-      }}
-      hasSelectedPoints={selectedPoints.length > 0}
-      highRiskCount={highRiskCount}
-    />
+    <>
+      <AppLayout
+        title="Churn Prediction"
+        mainContent={mainContent}
+        chatPanel={isChatOpen ? chatPanelContent : undefined}
+        biPanel={isBIModalOpen ? biPanelContent : undefined}
+        isChatOpen={isChatOpen}
+        isBIOpen={isBIModalOpen}
+        onChatToggle={() => setIsChatOpen(!isChatOpen)}
+        onBIToggle={() => setIsBIModalOpen(!isBIModalOpen)}
+        onChatExpandToggle={(expanded) => {
+          if (!expanded) setIsChatOpen(false);
+        }}
+        onBIExpandToggle={(expanded) => {
+          if (!expanded) setIsBIModalOpen(false);
+        }}
+        hasSelectedPoints={selectedPoints.length > 0}
+        highRiskCount={highRiskCount}
+      />
+    </>
   );
 }
 

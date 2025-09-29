@@ -69,19 +69,8 @@ export function FeatureContributionPlot({
 
   const prepareScatterData = () => {
     if (!anomalies || anomalies.length === 0) {
-      // Use mock data for visualization
-      const mockAnomalies = Array.from({ length: 50 }, (_, i) => ({
-        customer_id: `C${1000 + i}`,
-        customer_name: `Customer ${i + 1}`,
-        anomaly_score: Math.random(),
-        transaction_count: Math.floor(Math.random() * 100) + 1,
-        total_spend: Math.random() * 10000,
-        avg_transaction_value: Math.random() * 500,
-        severity_level: Math.floor(Math.random() * 5) + 1,
-        days_since_last_txn: Math.floor(Math.random() * 365),
-        region: ['North', 'South', 'East', 'West'][Math.floor(Math.random() * 4)]
-      }));
-      return prepareDataFromAnomalies(mockAnomalies);
+      // Return empty data when there's no real data
+      return [];
     }
     return prepareDataFromAnomalies(anomalies);
   };
@@ -203,6 +192,14 @@ export function FeatureContributionPlot({
 
       {/* Scatter Plot */}
       <div className="h-96 p-4">
+        {(!anomalies || anomalies.length === 0) ? (
+          <div className="h-full flex items-center justify-center text-muted-foreground">
+            <div className="text-center">
+              <p className="text-lg">No anomaly data available</p>
+              <p className="text-sm mt-2">Try adjusting your filters or check back later</p>
+            </div>
+          </div>
+        ) : (
         <Plot
           data={prepareScatterData()}
           layout={{
@@ -264,6 +261,7 @@ export function FeatureContributionPlot({
             }
           }}
         />
+        )}
       </div>
     </Card>
   );

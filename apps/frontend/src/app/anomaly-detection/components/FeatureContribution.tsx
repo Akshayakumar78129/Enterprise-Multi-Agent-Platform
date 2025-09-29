@@ -21,15 +21,19 @@ export function FeatureContribution({ data, loading }: FeatureContributionProps)
     );
   }
 
-  // Use mock data if no real data available
-  const contributionData = data && data.length > 0 ? data : [
-    { feature: 'Transaction Amount', positive: 35, negative: -15 },
-    { feature: 'Purchase Frequency', positive: 28, negative: -8 },
-    { feature: 'Time Since Last', positive: 22, negative: -12 },
-    { feature: 'Product Category', positive: 18, negative: -20 },
-    { feature: 'Location Change', positive: 15, negative: -10 },
-    { feature: 'Payment Method', positive: 12, negative: -5 }
-  ];
+  // Only use real data from API
+  const contributionData = data && data.length > 0 ? data : [];
+
+  // Show no data message if empty
+  if (contributionData.length === 0) {
+    return (
+      <Card>
+        <div className="flex items-center justify-center h-64 text-muted-foreground">
+          No feature contribution data available
+        </div>
+      </Card>
+    );
+  }
 
   const chartData = {
     labels: contributionData.map((d: any) => d.feature),

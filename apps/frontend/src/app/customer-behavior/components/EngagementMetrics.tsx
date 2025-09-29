@@ -33,30 +33,30 @@ export function EngagementMetrics({ data, loading }: EngagementMetricsProps) {
 
   const engagementScores = data?.engagement_scores || {};
 
-  // Use mock data if engagement scores are not available or all zeros
+  // Only use real engagement data
   const hasEngagementData = Object.values(engagementScores).some(v => v && v > 0);
 
-  const radarData = {
+  const radarData = hasEngagementData ? {
     labels: ['Email', 'Web', 'Mobile', 'Social', 'Support', 'Loyalty'],
     datasets: [
       {
         label: 'Engagement Level',
-        data: hasEngagementData ? [
+        data: [
           (engagementScores.email || 0) * 100,
           (engagementScores.web || 0) * 100,
           (engagementScores.mobile || 0) * 100,
           (engagementScores.social || 0) * 100,
           (engagementScores.support || 0) * 100,
           (engagementScores.loyalty || 0) * 100
-        ] : [75, 82, 65, 45, 55, 70],  // Mock data for better visualization
+        ],
         backgroundColor: 'rgba(139, 92, 246, 0.7)',
         borderColor: '#8b5cf6',
         borderWidth: 2
       }
     ]
-  };
+  } : null;
 
-  // Prepare engagement quadrant data for RiskPyramid
+  // Prepare engagement quadrant data for RiskPyramid - only real data, no mocks
   const engagementQuadrants = data?.engagement_segments && Object.keys(data.engagement_segments).length > 0 ?
     Object.entries(data.engagement_segments)
       .sort((a: any, b: any) => b[1].score - a[1].score)
@@ -67,12 +67,7 @@ export function EngagementMetrics({ data, loading }: EngagementMetricsProps) {
         percentage: ((details.customer_count || 0) / (data.totalCustomers || 1)) * 100,
         color: details.score > 0.7 ? '#10b981' :
                details.score > 0.4 ? '#f59e0b' : '#ef4444'
-      })) : [
-        { level: 'Highly Engaged', count: 850, percentage: 35, color: '#10b981' },
-        { level: 'Moderately Engaged', count: 620, percentage: 25, color: '#f59e0b' },
-        { level: 'Low Engagement', count: 480, percentage: 20, color: '#ef4444' },
-        { level: 'At Risk', count: 350, percentage: 15, color: '#dc2626' }
-      ];
+      })) : [];
 
   const trendData = data.engagement_trend ? {
     labels: data.engagement_trend.map((t: any) => t.period),
@@ -120,6 +115,7 @@ export function EngagementMetrics({ data, loading }: EngagementMetricsProps) {
           title="Engagement Channels"
           description="Multi-channel engagement levels">
           <div className="h-80 p-4">
+            {radarData ? (
               <Bar
               data={radarData}
               options={{
@@ -153,13 +149,19 @@ export function EngagementMetrics({ data, loading }: EngagementMetricsProps) {
                 }
               }}
             />
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                No engagement channel data available
+              </div>
+            )}
           </div>
-      </Card>
+        </Card>
 
         <Card
           title="Engagement Quadrants"
           description="Customer engagement distribution">
           <div className="h-80 p-4">
+            {engagementQuadrants.length > 0 ? (
             <div className="h-full flex flex-col gap-3">
               {engagementQuadrants.map((quadrant, index) => {
                 const heightPercentage = 100 / engagementQuadrants.length;
@@ -196,6 +198,11 @@ export function EngagementMetrics({ data, loading }: EngagementMetricsProps) {
                 );
               })}
             </div>
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                No engagement quadrant data available
+              </div>
+            )}
           </div>
       </Card>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { DataTable, Skeleton } from "components/index";
+import { DataTable, Skeleton, getShiftClickManager } from "components/index";
 
 // We accept raw customer objects from the churn/summary API and normalize below
 type RawCustomer = Record<string, any>;
@@ -12,6 +12,8 @@ interface ChurnCustomerTableProps {
 }
 
 export function ChurnCustomerTable({ data, loading, onRowClick }: ChurnCustomerTableProps) {
+  const shiftClickManager = getShiftClickManager();
+
   // Normalize raw API rows to the three fields we display
   const rows = (data || []).map((c: RawCustomer, index: number) => {
     const name = c.name ?? c.customer_name ?? `Customer ${index + 1}`;
@@ -80,7 +82,19 @@ export function ChurnCustomerTable({ data, loading, onRowClick }: ChurnCustomerT
         searchable
         selectable={false}
         pageSize={10}
-        onRowClick={onRowClick || ((row) => console.log("Row clicked:", row))}
+        onRowClick={(row, event) => {
+          if (event?.shiftKey) {
+            // Shift+click: Add to global shift+click selection
+            shiftClickManager.addPoint({
+              label: `Customer: ${row.name}`,
+              value: `Risk: ${row.riskLevel} (${row.riskPercentage}%)`,
+              source: 'Customer Table'
+            }, event.nativeEvent);
+          } else if (onRowClick) {
+            // Regular click: Execute provided handler
+            onRowClick(row);
+          }
+        }}
       />
     </div>
   );

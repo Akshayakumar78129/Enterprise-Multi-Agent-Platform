@@ -24,6 +24,11 @@ router = APIRouter(prefix="/api/customer-behavior", tags=["customer-behavior"])
 # Service will be initialized from app.state
 
 
+@router.get("/test")
+async def test_endpoint():
+    """Test endpoint to check if the router is working"""
+    return {"status": "ok", "message": "Customer behavior router is working"}
+
 @router.post("/summary")
 async def get_behavior_summary(filters: CustomerBehaviorFilters, request: Request):
     """Main dashboard endpoint - returns all customer behavior metrics
@@ -61,7 +66,7 @@ async def get_behavior_summary(filters: CustomerBehaviorFilters, request: Reques
         if filters.loyalty_status and len(filters.loyalty_status) > 0:
             filter_dict['loyalty_status'] = filters.loyalty_status
 
-        result = await service.get_behavior_summary(filter_dict)
+        result = await service.get_dashboard_summary(filter_dict)
         return result
     except Exception as e:
         print(f"[CustomerBehaviorRouter] Error in behavior_summary: {e}")

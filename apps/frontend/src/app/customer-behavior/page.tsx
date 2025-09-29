@@ -3,7 +3,8 @@
 import React from 'react';
 import {
   DashboardGrid,
-  DashboardSection
+  DashboardSection,
+  PageLoader
 } from 'components/index';
 import {
   BehaviorKPIs,
@@ -56,40 +57,47 @@ export default function CustomerBehaviorPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <PageLoader
+      isLoading={loading}
+      loaderProps={{
+        title: "Customer Behavior",
+      }}
+    >
+      <div className="space-y-6">
       {/* KPI Section */}
-      <BehaviorKPIs kpiMetrics={kpiMetrics} loading={loading} />
+      <BehaviorKPIs kpiMetrics={kpiMetrics} loading={false} />
 
       {/* Purchase Patterns Section */}
       <PurchasePatterns
         data={purchasePatterns}
-        loading={loading}
+        loading={false}
       />
 
       {/* Product Preferences Section */}
       <ProductPreferences
         data={productPreferences}
-        loading={loading}
+        loading={false}
       />
 
       {/* Channel Usage Section */}
       <ChannelUsage
         data={channelUsage}
-        loading={loading}
+        loading={false}
       />
 
       {/* Engagement Metrics Section */}
       <EngagementMetrics
         data={engagementMetrics}
-        loading={loading}
+        loading={false}
       />
 
       {/* Customer Details Table */}
       <CustomerTable
         data={topCustomers}
-        loading={loading}
+        loading={false}
         onCustomerSelect={handleCustomerSelect}
       />
-    </div>
+      </div>
+    </PageLoader>
   );
 }

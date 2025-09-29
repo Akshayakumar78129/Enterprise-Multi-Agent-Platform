@@ -6,6 +6,8 @@ from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 from typing import List, Dict, Tuple, Any
 import logging
+from domains.common.ml_model_cache import ml_model_cache, hash_training_data
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -128,12 +130,13 @@ class AnomalyMLPredictor:
             logger.error(f"Error preparing features: {str(e)}")
             return pd.DataFrame(), np.array([])
 
-    def train_model(self, features: np.ndarray, contamination: float = 0.1) -> Dict:
-        """Train Isolation Forest model for anomaly detection
+    def train_model(self, features: np.ndarray, contamination: float = 0.1, filters: Dict[str, Any] = None) -> Dict:
+        """Train Isolation Forest model for anomaly detection with caching support
 
         Args:
             features: Feature matrix
             contamination: Expected proportion of anomalies (default 0.1 = 10%)
+            filters: Optional filters for cache key generation
 
         Returns:
             Dictionary with training metrics
@@ -142,6 +145,20 @@ class AnomalyMLPredictor:
             if len(features) == 0:
                 logger.error("No features provided for training")
                 return {'status': 'error', 'message': 'No features provided'}
+
+            # Generate data hash for cache validation
+            data_hash = hash_training_data((features, contamination))
+
+            # Try to get cached model if filters provided
+            if filters:
+                cached = ml_model_cache.get_model('anomaly', filters, data_hash)
+                if cached:
+                    self.model, self.scaler, metadata = cached
+                    self.model_trained = True
+                    logger.info(f"[AnomalyMLPredictor] Using cached model (anomalies: {metadata.get('n_anomalies', 0)}/{metadata.get('n_samples', 0)})")
+                    return metadata.get('metrics', {'status': 'success'})
+
+            logger.info("[AnomalyMLPredictor] Training new model...")
 
             # Scale features
             features_scaled = self.scaler.fit_transform(features)
@@ -175,6 +192,18 @@ class AnomalyMLPredictor:
                 'avg_anomaly_score': float(np.mean(scores)),
                 'std_anomaly_score': float(np.std(scores))
             }
+
+            # Cache the trained model if filters provided
+            if filters:
+                metadata = {
+                    'metrics': metrics,
+                    'n_samples': len(features),
+                    'n_anomalies': int(n_anomalies),
+                    'training_samples': len(features),
+                    'trained_at': datetime.now().isoformat()
+                }
+                ml_model_cache.set_model('anomaly', filters, self.model, self.scaler, metadata, data_hash)
+                logger.info("[AnomalyMLPredictor] Model cached for future use")
 
             logger.info(f"Model trained successfully. Anomalies: {n_anomalies}/{len(features)}")
             return metrics

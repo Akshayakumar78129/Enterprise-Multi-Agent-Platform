@@ -12,6 +12,10 @@ export type { ChartTooltipProps, TooltipItem } from "./ui/ChartTooltip";
 export { ThemeSwitcher } from "./ui/ThemeSwitcher";
 export { FloatingActionButtons } from "./ui/FloatingActionButtons";
 
+// Loading Components
+export { DashboardLoader, SkeletonLoader, PageLoader } from "./loading/DashboardLoader";
+export type { DashboardLoaderProps, SkeletonLoaderProps, PageLoaderProps } from "./loading/DashboardLoader";
+
 // Form Components
 export { Input } from "./forms/Input";
 export { TextArea } from "./forms/TextArea";
@@ -59,6 +63,14 @@ export { BusinessIntelligencePanel } from "./bi/BusinessIntelligencePanel";
 export type { BusinessIntelligenceTriggerProps, BusinessIntelligenceModalProps, ChurnCustomer } from "./bi";
 export { InsightCard } from "./insights";
 export type { InsightCardProps, InsightData } from "./insights";
+
+// Selection Components (Shift+Click)
+export { ShiftClickSelectionManager, getShiftClickManager } from "./selection/ShiftClickSelectionManager";
+export type { ShiftClickPoint } from "./selection/ShiftClickSelectionManager";
+export { SelectionIndicator } from "./selection/SelectionIndicator";
+export type { SelectionIndicatorProps } from "./selection/SelectionIndicator";
+export { useShiftClickHandler, useSimpleShiftClick } from "./hooks/useShiftClickHandler";
+export type { UseShiftClickHandlerOptions } from "./hooks/useShiftClickHandler";
 
 // Filter Components
 export { DateRangeFilter } from "./filters/DateRangeFilter";

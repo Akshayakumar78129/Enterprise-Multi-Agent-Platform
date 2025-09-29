@@ -6,7 +6,8 @@ import {
   KPIRow,
   Skeleton,
   ChartCard,
-  InsightCard
+  InsightCard,
+  PageLoader
 } from "components";
 import { usePerformanceData } from "./hooks/usePerformanceData";
 import {
@@ -117,30 +118,26 @@ export default function PerformanceDeviationPage() {
 
   // Update performance data for BI panel
   useEffect(() => {
-    if (data) {
-      const performanceRecords = data.metadata?.totalDataPoints ?
-        Array(data.metadata.totalDataPoints).fill({}).map((_, i) => ({
-          id: i,
-          deviation: Math.random() * 4 - 2, // Random deviation for demo
-          kpi: selectedKPI,
-          date: new Date().toISOString()
-        })) : [];
-      setPerformanceData(performanceRecords);
+    if (data && data.data) {
+      // Use actual data instead of generating fake records
+      setPerformanceData(data.data || []);
+    } else {
+      setPerformanceData([]);
     }
   }, [data, selectedKPI, setPerformanceData]);
 
   return (
-    <>
+    <PageLoader
+      isLoading={loading}
+      loaderProps={{
+        title: "Performance Deviation",
+      }}
+    >
+      <>
 
       {/* KPI Tiles - SHOWN AFTER FILTERS */}
       <DashboardSection title="Key Metrics">
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, index) => (
-              <div key={index} className="h-24 bg-gray-200 animate-pulse rounded-lg"></div>
-            ))}
-          </div>
-        ) : kpiTiles.length > 0 ? (
+        {kpiTiles.length > 0 ? (
           <KPIRow kpis={kpiTiles} />
         ) : (
           <div className="text-center py-8 text-gray-500">
@@ -155,7 +152,7 @@ export default function PerformanceDeviationPage() {
           data={performanceExplorer}
           selectedKPI={selectedKPI}
           onKPISelect={setSelectedKPI}
-          loading={loading}
+          loading={false}
         />
       </DashboardSection>
 
@@ -165,11 +162,11 @@ export default function PerformanceDeviationPage() {
           <FeatureImportanceChart
             data={featureImportance}
             selectedKPI={selectedKPI}
-            loading={loading}
+            loading={false}
           />
           <VarianceDecomposition
             data={varianceDecomposition}
-            loading={loading}
+            loading={false}
           />
         </div>
       </DashboardSection>
@@ -178,7 +175,7 @@ export default function PerformanceDeviationPage() {
       <DashboardSection title="Deviation Patterns">
         <DeviationPatterns
           data={deviationPatterns}
-          loading={loading}
+          loading={false}
         />
       </DashboardSection>
 
@@ -186,7 +183,7 @@ export default function PerformanceDeviationPage() {
       <DashboardSection>
         <BusinessComparison
           data={businessComparison}
-          loading={loading}
+          loading={false}
         />
       </DashboardSection>
 
@@ -194,7 +191,7 @@ export default function PerformanceDeviationPage() {
       <DashboardSection>
         <ExternalFactorCorrelation
           data={factorCorrelations}
-          loading={loading}
+          loading={false}
         />
       </DashboardSection>
 
@@ -202,7 +199,7 @@ export default function PerformanceDeviationPage() {
       <DashboardSection>
         <DeviationPatternExplorer
           data={deviationPatterns}
-          loading={loading}
+          loading={false}
         />
       </DashboardSection>
 
@@ -214,9 +211,7 @@ export default function PerformanceDeviationPage() {
             title="AI Feature Importance"
             className="glass-card card-hover"
           >
-            {loading ? (
-              <Skeleton className="h-96" />
-            ) : featureImportance?.aggregated?.length > 0 ? (
+            {featureImportance?.aggregated?.length > 0 ? (
               <div className="space-y-3">
                 {featureImportance.aggregated.slice(0, 8).map((feature: any, index: number) => (
                   <div key={index} className="flex items-center justify-between">
@@ -245,9 +240,7 @@ export default function PerformanceDeviationPage() {
             title="AI-Generated Analysis"
             className="glass-card card-hover"
           >
-            {loading ? (
-              <Skeleton className="h-96" />
-            ) : (
+            {
               <div className="space-y-4">
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
                   <h4 className="font-semibold text-red-900 dark:text-red-100 mb-2">
@@ -317,6 +310,6 @@ export default function PerformanceDeviationPage() {
           }}
         />
       )}
-    </>
+    </PageLoader>
   );
 }

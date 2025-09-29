@@ -138,6 +138,13 @@ app.include_router(anomaly_router)
 app.include_router(customer_behavior_router)
 app.include_router(segmentation_router)
 app.include_router(customer_ltv_router)
+
+# Add route for older frontend compatibility
+@app.post("/api/customer-lifetime-value/data")
+async def get_ltv_data_legacy(filters: dict = {}):
+    """Legacy endpoint for older frontend compatibility"""
+    from api.routers.customer_ltv_router import get_ltv_data
+    return await get_ltv_data(filters)
 app.include_router(purchase_frequency_router)
 app.include_router(transaction_patterns_router)
 app.include_router(engagement_classifier_router)

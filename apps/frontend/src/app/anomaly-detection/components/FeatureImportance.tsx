@@ -59,10 +59,9 @@ export function FeatureImportance({ data, loading }: FeatureImportanceProps) {
     datasets: [
       {
         label: 'Importance',
-        data: topFeatures.map((f, index) => {
-          // If all importance values are 0, use mock data for visualization
-          const importance = f.importance > 0 ? f.importance * 100 : (10 - index) * 8 + Math.random() * 20;
-          return importance;
+        data: topFeatures.map((f) => {
+          // Only use real importance values
+          return f.importance * 100;
         }),
         backgroundColor: topFeatures.map((_, index) =>
           index === 0 ? '#e930ff' :

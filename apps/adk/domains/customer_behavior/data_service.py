@@ -119,52 +119,32 @@ class CustomerBehaviorDataService:
     async def get_behavior_analysis_data(self, filters: Dict[str, Any] = {}) -> Dict:
         """Get comprehensive customer behavior data - matches web folder logic"""
 
+        # Simplified query for debugging
         sql = f"""
-        WITH CustomerBehavior AS (
-            SELECT DISTINCT
-                c.[Customer Key] as customer_id,
-                c.[Customer Name] as customer_name,
-                c.[Customer Type Desc] as customer_type,
-                c.[Customer Category Hrchy Code] as customer_category,
-                c.[Customer Status] as customer_status,
-                cl.[Loyalty Status] as loyalty_status,
-                cl.[First Activity Date] as customer_since,
-                cl.[Last Activity Date] as last_activity_date,
-                COUNT(DISTINCT t.[Sales Txn Key]) as transaction_count,
-                SUM(t.[Net Sales Amount]) as total_sales,
-                AVG(t.[Net Sales Amount]) as avg_order_value,
-                AVG(t.[Net Sales Quantity]) as avg_items_per_order,
-                COUNT(DISTINCT t.[Item Category Hrchy Key]) as category_diversity,
-                COUNT(DISTINCT t.[Line Type]) as channel_diversity,
-                MIN(t.[Txn Date]) as first_purchase_date,
-                MAX(t.[Txn Date]) as last_purchase_date,
-                JULIANDAY('now') - JULIANDAY(MAX(t.[Txn Date])) as days_since_last_purchase
-            FROM
-                {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
-            LEFT JOIN
-                {self.schema.TABLES['loyalty']} {self.schema.ALIASES['loyalty']}
-                ON c.[Customer Key] = cl.[Entity Key]
-            LEFT JOIN
-                {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
-                ON c.[Customer Key] = t.[Customer Key]
-                AND t.[Deleted Flag] = 0
-                AND t.[Excluded Flag] = 0
-                AND t.[Net Sales Amount] IS NOT NULL
-            WHERE
-                c.[Customer Key] > 0
-            GROUP BY
-                c.[Customer Key],
-                c.[Customer Name],
-                c.[Customer Type Desc],
-                c.[Customer Category Hrchy Code],
-                c.[Customer Status],
-                cl.[Loyalty Status],
-                cl.[First Activity Date],
-                cl.[Last Activity Date]
-            HAVING
-                COUNT(DISTINCT t.[Sales Txn Key]) >= 2
-        )
-        SELECT * FROM CustomerBehavior
+        SELECT
+            {self.schema.CUSTOMER.refs['id']} as customer_id,
+            {self.schema.CUSTOMER.refs['name']} as customer_name,
+            {self.schema.CUSTOMER.refs['type']} as customer_type,
+            {self.schema.CUSTOMER.refs['status']} as customer_status,
+            COUNT({self.schema.TRANSACTION.refs['txn_key']}) as transaction_count,
+            SUM({self.schema.TRANSACTION.refs['net_sales_amount']}) as total_sales,
+            AVG({self.schema.TRANSACTION.refs['net_sales_amount']}) as avg_order_value,
+            COUNT(DISTINCT {self.schema.TRANSACTION.refs['product_category']}) as category_diversity,
+            COUNT(DISTINCT {self.schema.TRANSACTION.refs['line_type']}) as channel_diversity,
+            MIN({self.schema.TRANSACTION.refs['txn_date']}) as first_purchase_date,
+            MAX({self.schema.TRANSACTION.refs['txn_date']}) as last_purchase_date
+        FROM
+            {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
+        LEFT JOIN
+            {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
+            ON {self.schema.CUSTOMER.refs['id']} = {self.schema.TRANSACTION.refs['customer_id']}
+        WHERE
+            {self.schema.CUSTOMER.refs['id']} > 0
+        GROUP BY
+            {self.schema.CUSTOMER.refs['id']},
+            {self.schema.CUSTOMER.refs['name']},
+            {self.schema.CUSTOMER.refs['type']},
+            {self.schema.CUSTOMER.refs['status']}
         """
 
         # Apply filters using filter engine
@@ -176,21 +156,21 @@ class CustomerBehaviorDataService:
 
         sql = f"""
         SELECT
-            t.[Customer Key] as customer_id,
-            t.[Txn Date] as transaction_date,
-            t.[Net Sales Amount] as sales_amount,
-            t.[Net Sales Quantity] as quantity,
-            t.[Item Key] as item_id,
-            t.[Line Type] as sales_channel,
-            t.[Item Category Hrchy Key] as product_category
+            {self.schema.TRANSACTION.refs['customer_id']} as customer_id,
+            {self.schema.TRANSACTION.refs['txn_date']} as transaction_date,
+            {self.schema.TRANSACTION.refs['net_sales_amount']} as sales_amount,
+            {self.schema.TRANSACTION.refs['net_sales_quantity']} as quantity,
+            {self.schema.TRANSACTION.refs['item_id']} as item_id,
+            {self.schema.TRANSACTION.refs['line_type']} as sales_channel,
+            {self.schema.TRANSACTION.refs['product_category']} as product_category
         FROM
             {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
         WHERE
-            t.[Deleted Flag] = 0
-            AND t.[Excluded Flag] = 0
-            AND t.[Customer Key] > 0
-            AND t.[Net Sales Amount] IS NOT NULL
-            AND t.[Net Sales Quantity] IS NOT NULL
+            {self.schema.TRANSACTION.refs['deleted_flag']} = 0
+            AND {self.schema.TRANSACTION.refs['excluded_flag']} = 0
+            AND {self.schema.TRANSACTION.refs['customer_id']} > 0
+            AND {self.schema.TRANSACTION.refs['net_sales_amount']} IS NOT NULL
+            AND {self.schema.TRANSACTION.refs['net_sales_quantity']} IS NOT NULL
         """
 
         # Apply filters using filter engine

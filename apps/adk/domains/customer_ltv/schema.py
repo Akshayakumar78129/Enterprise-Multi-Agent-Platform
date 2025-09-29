@@ -34,32 +34,26 @@ class CustomerLtvSchema(BaseSchema):
         columns={
             'id': '"Customer Key"',
             'name': '"Customer Name"',
-            'desc': '"Customer Desc"',
             'status': '"Customer Status"',
             'region': '"Customer State/Prov"',
             'type': '"Customer Type Desc"',
             'credit_limit': '"Credit Limit Amount"',
-            'parent_key': '"Customer Parent Key"',
         },
         refs={
             'id': 'c."Customer Key"',
             'name': 'c."Customer Name"',
-            'desc': 'c."Customer Desc"',
             'status': 'c."Customer Status"',
             'region': 'c."Customer State/Prov"',
             'type': 'c."Customer Type Desc"',
             'credit_limit': 'c."Credit Limit Amount"',
-            'parent_key': 'c."Customer Parent Key"',
         },
         output_aliases={
             'id': 'customer_id',
             'name': 'customer_name',
-            'desc': 'customer_desc',
             'status': 'customer_status',
             'region': 'region',
             'type': 'customer_type',
-            'credit_limit': 'credit_limit',
-            'parent_key': 'parent_customer_id',
+            'credit_limit': 'credit_limit'
         }
     )
 

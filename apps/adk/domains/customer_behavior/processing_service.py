@@ -325,12 +325,9 @@ class CustomerBehaviorProcessingService:
             channel_performance['conversion_rate'] = channel_performance['unique_customers'] / channel_stats['transaction_count'].sum()
             channel_performance['avg_order_value'] = channel_performance['avg_sales']
 
-            # Add cross-channel journey mock data
-            cross_channel_journey = [
-                {'path': 'Online → Store', 'customer_count': 150, 'avg_value': 250.50},
-                {'path': 'Store → Online', 'customer_count': 120, 'avg_value': 180.75},
-                {'path': 'Online Only', 'customer_count': 500, 'avg_value': 145.25}
-            ]
+            # Cross-channel journey data would come from actual analysis
+            # For now, return empty array if no real data
+            cross_channel_journey = []
 
             return {
                 'channel_distribution': dict(zip(

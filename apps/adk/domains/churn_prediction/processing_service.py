@@ -22,10 +22,10 @@ class ChurnProcessingService:
         self.ml_predictor = ChurnMLPredictor()
         self.model_trained = False
 
-    async def _ensure_model_trained(self):
+    async def _ensure_model_trained(self, filters: Dict = None):
         """Ensure ML model is trained before use"""
         if not self.model_trained and not self.ml_predictor.is_trained:
-            await self._train_ml_model()
+            await self._train_ml_model(filters)
 
     def _determine_customer_categories(self, customer_row: pd.Series) -> List[str]:
         """Determine customer's product categories based on purchase patterns.
@@ -70,13 +70,16 @@ class ChurnProcessingService:
 
         return categories
 
-    async def _train_ml_model(self):
-        """Train the ML model with current data from service"""
+    async def _train_ml_model(self, filters: Dict = None):
+        """Train the ML model with data filtered by date range"""
         try:
-            # Get data from service (no filters for training)
-            txns_res = await self.data_service.get_transactions({})
-            loyalty_res = await self.data_service.get_loyalty({})
-            customers_res = await self.data_service.get_customers({})
+            # Use filters for training data (important for date-specific models)
+            training_filters = filters or {}
+
+            # Get data from service with filters
+            txns_res = await self.data_service.get_transactions(training_filters)
+            loyalty_res = await self.data_service.get_loyalty(training_filters)
+            customers_res = await self.data_service.get_customers(training_filters)
 
             # Prepare features from service data
             customer_df, features = self.ml_predictor.prepare_features_from_service_data(
@@ -87,10 +90,13 @@ class ChurnProcessingService:
 
             if len(customer_df) > 0:
                 labels = self.ml_predictor.generate_labels(customer_df)
-                metrics = self.ml_predictor.train_model(features, labels)
+                # Pass filters for caching
+                metrics = self.ml_predictor.train_model(features, labels, training_filters)
                 self.model_trained = True
                 self.ml_predictor.is_trained = True
-                print(f"[ChurnProcessingService] ML model trained successfully. ROC AUC: {metrics.get('roc_auc', 0):.3f}")
+                print(f"[ChurnProcessingService] ML model trained/cached. ROC AUC: {metrics.get('roc_auc', 0):.3f}")
+            else:
+                print(f"[ChurnProcessingService] No data available for training with filters: {training_filters}")
         except Exception as e:
             print(f"[ChurnProcessingService] Failed to train ML model: {e}")
 
@@ -144,8 +150,8 @@ class ChurnProcessingService:
             # Log the incoming filters to debug
             print(f"[ChurnProcessingService] get_customer_stats filters: {filters}")
 
-            # Ensure model is trained
-            await self._ensure_model_trained()
+            # Ensure model is trained with current filters
+            await self._ensure_model_trained(filters)
 
             # Get segment and category filters if present
             segment_filter = filters.get('segments', [])
@@ -254,8 +260,8 @@ class ChurnProcessingService:
     async def get_segment_risk(self, filters: Dict) -> List[Dict]:
         """Port of Express getSegmentRisk - uses ML predictor with service data"""
         try:
-            # Ensure model is trained
-            await self._ensure_model_trained()
+            # Ensure model is trained with current filters
+            await self._ensure_model_trained(filters)
 
             # Get segment and category filters if present
             segment_filter = filters.get('segments', [])
@@ -404,8 +410,8 @@ class ChurnProcessingService:
     async def get_probability_distribution(self, filters: Dict) -> List[Dict]:
         """Get probability distribution using ML model predictions"""
         try:
-            # Ensure model is trained
-            await self._ensure_model_trained()
+            # Ensure model is trained with current filters
+            await self._ensure_model_trained(filters)
 
             # Get customer stats which has ML predictions
             customer_stats = await self.get_customer_stats(filters)
@@ -445,8 +451,8 @@ class ChurnProcessingService:
     async def get_feature_importance(self, filters: Dict) -> List[Dict]:
         """Get feature importance from ML model - no icons"""
         try:
-            # Ensure model is trained
-            await self._ensure_model_trained()
+            # Ensure model is trained with current filters
+            await self._ensure_model_trained(filters)
 
             # Get from ML model (already has no icons)
             return self.ml_predictor.get_feature_importance()

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { Card } from 'components';
+import { Card, getShiftClickManager } from 'components';
 import { BarChart2, TrendingUp, Users, DollarSign, ShoppingCart, Clock, Hash, Activity, Calendar } from 'lucide-react';
 
 interface SegmentMetricComparisonProps {
@@ -14,6 +14,7 @@ export function SegmentMetricComparison({ data = [], loading = false }: SegmentM
   const [showPercentage, setShowPercentage] = useState(false);
   const [sortBy, setSortBy] = useState('value');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const shiftClickManager = getShiftClickManager();
 
   // All 9 available metrics
   const availableMetrics = [
@@ -233,7 +234,20 @@ export function SegmentMetricComparison({ data = [], loading = false }: SegmentM
           </div>
         ) : (
           processedData.map((segment, index) => (
-            <div key={segment.segment_name || index} className="group">
+            <div
+              key={segment.segment_name || index}
+              className="group cursor-pointer"
+              onClick={(e) => {
+                if (e.shiftKey) {
+                  // Shift+click: Add to global shift+click selection
+                  shiftClickManager.addPoint({
+                    label: `Segment: ${segment.segment_name}`,
+                    value: `${currentMetric.label}: ${formatValue(segment.displayValue, currentMetric.format)}, ${segment.customer_count} customers`,
+                    source: 'Segment Metrics'
+                  }, e.nativeEvent);
+                }
+              }}
+            >
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{segment.segment_name}</span>
@@ -249,7 +263,7 @@ export function SegmentMetricComparison({ data = [], loading = false }: SegmentM
               {/* Progress Bar */}
               <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                 <div
-                  className="h-full transition-all duration-500 ease-out"
+                  className="h-full transition-all duration-500 ease-out hover:opacity-80"
                   style={{
                     width: maxValue > 0 ? `${(segment.displayValue / maxValue) * 100}%` : '0%',
                     backgroundColor: segment.color || '#00e0ff'

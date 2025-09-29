@@ -4,7 +4,8 @@ import React from 'react';
 import {
   DashboardGrid,
   DashboardSection,
-  Card
+  Card,
+  PageLoader
 } from 'components/index';
 import { Bar } from 'react-chartjs-2';
 import {
@@ -94,10 +95,15 @@ export default function AnomalyDetectionPage() {
   };
 
   return (
-    <>
+    <PageLoader
+      isLoading={loading}
+      loaderProps={{
+        title: "Anomaly Detection",
+      }}
+    >
       {/* KPI Section */}
       <DashboardSection title="Key Metrics">
-        <AnomalyKPIs kpiMetrics={kpiMetrics} loading={loading} />
+        <AnomalyKPIs kpiMetrics={kpiMetrics} loading={false} />
       </DashboardSection>
 
       {/* Time Series and Severity Analysis */}
@@ -105,11 +111,11 @@ export default function AnomalyDetectionPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
           <TimeSeriesChart
             data={timeSeriesAnomalies}
-            loading={loading}
+            loading={false}
           />
           <SeverityDistribution
             data={severityDistribution}
-            loading={loading}
+            loading={false}
           />
         </div>
       </DashboardSection>
@@ -119,7 +125,7 @@ export default function AnomalyDetectionPage() {
         <FeatureContributionPlot
           anomalies={customerAnomalies}
           featureContributions={featureContribution || []}
-          loading={loading}
+          loading={false}
           onPointClick={handleCustomerSelect}
           onFeatureSelect={handleFeatureSelect}
         />
@@ -214,7 +220,7 @@ export default function AnomalyDetectionPage() {
       <DashboardSection title="Anomaly Details">
         <CustomerAnomaliesTable
           data={customerAnomalies}
-          loading={loading}
+          loading={false}
           onCustomerSelect={handleCustomerSelect}
         />
       </DashboardSection>
@@ -309,6 +315,6 @@ export default function AnomalyDetectionPage() {
           </Card>
         </DashboardSection>
       )}
-    </>
+    </PageLoader>
   );
 }

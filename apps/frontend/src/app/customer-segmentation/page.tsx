@@ -9,7 +9,8 @@ import {
   Card,
   FilterBar,
   BarChart,
-  LineChart
+  LineChart,
+  PageLoader
 } from 'components';
 import { Users, TrendingUp, DollarSign, Activity, Layers, Target } from 'lucide-react';
 import { useSegmentationContext } from './context';
@@ -70,33 +71,7 @@ export default function CustomerSegmentationPage() {
         // Get segment distribution from backend
         let segmentDist = result.mainData?.segmentDistribution || [];
 
-        // If we have less than 8 segments, add placeholder segments
-        // This is temporary until backend can be restarted with 8 clusters
-        if (segmentDist.length < 8) {
-          const missingSegmentNames = [
-            "Can't Lose Them",
-            'Hibernating',
-            'Lost'
-          ];
-
-          // Add missing segments with minimal data
-          for (let i = segmentDist.length; i < 8 && i - 5 < missingSegmentNames.length; i++) {
-            segmentDist.push({
-              segment_name: missingSegmentNames[i - 5],
-              customer_count: 0,
-              percentage: 0,
-              avg_lifetime_value: 0,
-              avg_order_value: 0,
-              avg_frequency: 0,
-              avg_recency: 0,
-              transaction_count: 0,
-              rfm_rl_score: 0,
-              total_spend: 0,
-              days_since_last_activity: 0,
-              color: '#94a3b8'
-            });
-          }
-        }
+        // Only use real segment data from backend, no placeholders
 
         setData({
           kpiData: mappedKpiData,
@@ -233,7 +208,7 @@ export default function CustomerSegmentationPage() {
       labels: months,
       datasets: data.segmentDistribution.slice(0, 3).map((segment: any, index: number) => ({
         label: segment.segment_name,
-        data: months.map(() => Math.floor(Math.random() * 500) + 200),
+        data: segment.trend_data || [],  // Use real trend data from API or empty array
         borderColor: lineColors[index % lineColors.length].border,
         backgroundColor: lineColors[index % lineColors.length].bg,
         fill: true,
@@ -243,7 +218,13 @@ export default function CustomerSegmentationPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <PageLoader
+      isLoading={loading}
+      loaderProps={{
+        title: "Customer Segmentation",
+      }}
+    >
+      <div className="space-y-6">
       {/* Enhanced Filters Section */}
       <DashboardSection>
         <FilterBar
@@ -328,17 +309,7 @@ export default function CustomerSegmentationPage() {
 
       {/* KPIs */}
       <DashboardSection title="Key Metrics">
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="animate-pulse">
-                <div className="bg-gray-200 rounded-lg h-24"></div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <KPIRow kpis={kpiData} columns={4} animationDelay={100} />
-        )}
+        <KPIRow kpis={kpiData} columns={4} animationDelay={100} />
       </DashboardSection>
 
       {/* Main Charts */}
@@ -446,7 +417,7 @@ export default function CustomerSegmentationPage() {
         <SegmentProfileCards
           segmentDistribution={data.segmentDistribution}
           segmentComparison={data.segmentComparison}
-          loading={loading}
+          loading={false}
           onSegmentExport={(segmentName) => {
             // Export functionality
             const segmentData = data.segmentData.filter((c: any) => c.segment_name === segmentName);
@@ -477,6 +448,7 @@ export default function CustomerSegmentationPage() {
       </DashboardSection>
 
 
-    </div>
+      </div>
+    </PageLoader>
   );
 }

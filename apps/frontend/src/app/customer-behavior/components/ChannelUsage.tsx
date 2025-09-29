@@ -27,7 +27,7 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
   const channelKeys = hasData ? Object.keys(data.channel_distribution) : [];
   const isSingleChannel = channelKeys.length === 1 && channelKeys[0] === 'Item';
 
-  // Use mock data for better visualization if only single channel
+  // Only use real data, no mock data
   const channelData = hasData && !isSingleChannel ? {
     labels: Object.keys(data.channel_distribution),
     datasets: [
@@ -45,28 +45,11 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
         borderWidth: 3
       }
     ]
-  } : {
-    labels: ['Online Store', 'Mobile App', 'Physical Store', 'Social Media', 'Call Center'],
-    datasets: [
-      {
-        data: [35, 25, 20, 15, 5],
-        backgroundColor: [
-          '#8b5cf6',
-          '#d8b4fe',
-          '#c084fc',
-          '#e8d4e6',
-          '#a78bfa'
-        ],
-        borderColor: '#fff',
-        borderWidth: 3,
-        hoverOffset: 8
-      }
-    ]
-  };
+  } : null;
 
   // Render doughnut chart - must be called unconditionally
   useEffect(() => {
-    if (!doughnutChartRef.current || !data?.channel_distribution) return;
+    if (!doughnutChartRef.current || !data?.channel_distribution || !channelData) return;
 
     // Destroy existing chart if it exists
     if (chartInstanceRef.current) {
@@ -148,7 +131,7 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
     };
   }, [data, channelData, selectionManager]);
 
-  // Always provide channel performance data (mock if not available)
+  // Only use real channel performance data
   const channelPerformance = data?.channel_performance && data.channel_performance.length > 0 ? {
     labels: data.channel_performance.map((c: any) => c.channel),
     datasets: [
@@ -167,28 +150,10 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
         borderWidth: 1
       }
     ]
-  } : {
-    labels: ['Online Store', 'Mobile App', 'Physical Store', 'Social Media', 'Call Center'],
-    datasets: [
-      {
-        label: 'Conversion Rate',
-        data: [3.2, 4.5, 2.8, 1.9, 3.7],
-        backgroundColor: 'rgba(139, 92, 246, 0.8)',
-        borderColor: '#8b5cf6',
-        borderWidth: 1
-      },
-      {
-        label: 'Avg Order Value ($)',
-        data: [145, 125, 185, 95, 165],
-        backgroundColor: 'rgba(232, 212, 230, 0.8)',
-        borderColor: '#e8d4e6',
-        borderWidth: 1
-      }
-    ]
-  };
+  } : null;
 
   const handleChannelClick = (elements: any, event: any) => {
-    if (elements.length > 0) {
+    if (elements.length > 0 && channelData) {
       const element = elements[0];
       const label = channelData.labels[element.index];
       const value = channelData.datasets[0].data[element.index];
@@ -231,9 +196,15 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
           title="Channel Distribution"
           description="Customer channel preferences">
           <div className="h-80 flex items-center justify-center">
-            <div className="w-64 h-64">
-              <canvas ref={doughnutChartRef} />
-            </div>
+            {channelData ? (
+              <div className="w-64 h-64">
+                <canvas ref={doughnutChartRef} />
+              </div>
+            ) : (
+              <div className="text-muted-foreground">
+                No channel distribution data available
+              </div>
+            )}
           </div>
         </Card>
 
@@ -241,6 +212,7 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
           title="Channel Performance"
           description="Conversion and value metrics by channel">
           <div className="h-80 p-4">
+            {channelPerformance ? (
             <Bar
               data={channelPerformance}
               options={{
@@ -276,6 +248,11 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
                 }
               }}
             />
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                No channel performance data available
+              </div>
+            )}
           </div>
         </Card>
       </div>
@@ -284,12 +261,8 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
         title="Cross-Channel Journey"
         description="Customer journey across channels">
         <div className="space-y-4">
-          {(data?.cross_channel_journey || [
-            { path: 'Online → Store', customer_count: 450, avg_value: 285.50 },
-            { path: 'Store → Online', customer_count: 320, avg_value: 195.75 },
-            { path: 'Mobile → Store → Online', customer_count: 180, avg_value: 420.25 },
-            { path: 'Social → Online', customer_count: 250, avg_value: 125.00 }
-          ]).map((journey: any, idx: number) => (
+          {data?.cross_channel_journey && data.cross_channel_journey.length > 0 ? (
+            data.cross_channel_journey.map((journey: any, idx: number) => (
               <div
                 key={idx}
                 className="flex items-center space-x-4 p-3 bg-background/50 rounded-lg hover:bg-background/70 transition-colors cursor-pointer"
@@ -327,7 +300,12 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
                   <div className="text-xs text-muted-foreground">avg value</div>
                 </div>
               </div>
-          ))}
+          ))
+          ) : (
+            <div className="text-center text-muted-foreground py-8">
+              No cross-channel journey data available
+            </div>
+          )}
         </div>
       </Card>
     </div>

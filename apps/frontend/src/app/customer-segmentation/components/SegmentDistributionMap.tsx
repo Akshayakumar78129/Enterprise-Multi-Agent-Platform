@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import { getShiftClickManager } from 'components/index';
 
 // Dynamic import of Plotly to prevent SSR issues
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
@@ -41,6 +42,7 @@ export const SegmentDistributionMap: React.FC<SegmentDistributionMapProps> = ({
   viewMode = 'overview',
   performanceMode = false
 }) => {
+  const shiftClickManager = getShiftClickManager();
   const [segmentGroups, setSegmentGroups] = useState<Record<string, Customer[]>>({});
   const [selectedAxis, setSelectedAxis] = useState({
     x: 'rfm_rl_score',
@@ -195,7 +197,18 @@ export const SegmentDistributionMap: React.FC<SegmentDistributionMapProps> = ({
       const customerData = point.customdata;
 
       if (customerData && customerData.customer) {
-        onCustomerSelect(customerData.customer, event.event);
+        const customer = customerData.customer;
+
+        // Check for shift+click
+        if (event.event?.shiftKey) {
+          shiftClickManager.addPoint({
+            label: `Customer: ${customer.customer_name}`,
+            value: `Segment: ${customer.segment_name}, LTV: $${customer.lifetime_value?.toFixed(2) || 'N/A'}`,
+            source: 'Segmentation Map'
+          }, event.event);
+        } else {
+          onCustomerSelect(customer, event.event);
+        }
       }
     }
   }, [onCustomerSelect]);

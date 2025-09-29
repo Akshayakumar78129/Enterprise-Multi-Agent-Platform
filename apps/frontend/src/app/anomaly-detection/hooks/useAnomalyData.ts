@@ -168,11 +168,12 @@ export function useAnomalyData(filters: AnomalyFilters) {
         }
 
         // Only log actual errors, not abort/cleanup events
-        if (!err?.message?.includes("Cleanup")) {
-          console.error("Error fetching anomaly data:", err);
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        if (!errorMessage.includes("Cleanup") && !isAbortError) {
+          console.error("Error fetching anomaly data:", errorMessage);
         }
 
-        if (isMounted && !err?.message?.includes("Cleanup")) {
+        if (isMounted && !errorMessage.includes("Cleanup")) {
           setError(err instanceof Error ? err.message : "Failed to fetch data");
           if (lastGoodDataRef.current) {
             const stable = lastGoodDataRef.current;

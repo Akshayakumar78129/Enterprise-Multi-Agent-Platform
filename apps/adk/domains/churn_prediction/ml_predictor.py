@@ -8,6 +8,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Any
+from domains.common.ml_model_cache import ml_model_cache, hash_training_data
 
 
 class ChurnMLPredictor:
@@ -164,12 +165,13 @@ class ChurnMLPredictor:
 
         return np.array(labels)
 
-    def train_model(self, features: np.ndarray, labels: np.ndarray) -> Dict:
-        """Train the churn prediction model.
+    def train_model(self, features: np.ndarray, labels: np.ndarray, filters: Dict[str, Any] = None) -> Dict:
+        """Train the churn prediction model with caching support.
 
         Args:
             features: Feature array
             labels: Label array
+            filters: Optional filters for cache key generation
 
         Returns:
             Dictionary with training metrics
@@ -181,6 +183,20 @@ class ChurnMLPredictor:
         if len(np.unique(labels)) == 1:
             self.is_trained = False
             return {'roc_auc': 0.5, 'accuracy': 1.0}
+
+        # Generate data hash for cache validation
+        data_hash = hash_training_data((features, labels))
+
+        # Try to get cached model if filters provided
+        if filters:
+            cached = ml_model_cache.get_model('churn', filters, data_hash)
+            if cached:
+                self.model, self.scaler, metadata = cached
+                self.is_trained = True
+                print(f"[ChurnMLPredictor] Using cached model (accuracy: {metadata.get('accuracy', 0):.2f})")
+                return metadata.get('metrics', {'roc_auc': 0.5, 'accuracy': 0})
+
+        print("[ChurnMLPredictor] Training new model...")
 
         # Scale features
         features_scaled = self.scaler.fit_transform(features)
@@ -206,6 +222,18 @@ class ChurnMLPredictor:
             'roc_auc': roc_auc_score(y_test, y_proba) if len(np.unique(y_test)) > 1 else 0.5,
             'accuracy': (y_pred == y_test).mean()
         }
+
+        # Cache the trained model if filters provided
+        if filters:
+            metadata = {
+                'metrics': metrics,
+                'accuracy': metrics['accuracy'],
+                'roc_auc': metrics['roc_auc'],
+                'training_samples': len(features),
+                'trained_at': datetime.now().isoformat()
+            }
+            ml_model_cache.set_model('churn', filters, self.model, self.scaler, metadata, data_hash)
+            print(f"[ChurnMLPredictor] Model cached for future use")
 
         return metrics
 

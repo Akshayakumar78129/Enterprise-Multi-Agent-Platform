@@ -9,9 +9,11 @@ from sklearn.cluster import KMeans
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+from sklearn.metrics import accuracy_score, classification_report
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Any
 import logging
+from domains.common.ml_model_cache import ml_model_cache, hash_training_data
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,72 @@ class EngagementClassifierMLPredictor:
             self.model = RandomForestRegressor(n_estimators=100, random_state=42)
         elif self.model_type == 'clustering':
             self.model = KMeans(n_clusters=5, random_state=42, n_init=10)
+
+    def train_model(self, features: np.ndarray, labels: np.ndarray, filters: Dict[str, Any] = None) -> Dict:
+        """Train the engagement classification model with caching support.
+
+        Args:
+            features: Feature array
+            labels: Label array (engagement levels)
+            filters: Optional filters for cache key generation
+
+        Returns:
+            Dictionary with training metrics
+        """
+        if len(features) == 0:
+            return {'status': 'error', 'message': 'No features provided'}
+
+        # Generate data hash for cache validation
+        data_hash = hash_training_data((features, labels))
+
+        # Try to get cached model if filters provided
+        if filters:
+            cached = ml_model_cache.get_model('engagement', filters, data_hash)
+            if cached:
+                self.model, self.scaler, metadata = cached
+                self.is_trained = True
+                logger.info(f"[EngagementClassifierMLPredictor] Using cached model (accuracy: {metadata.get('accuracy', 0):.2f})")
+                return metadata.get('metrics', {'status': 'success'})
+
+        logger.info("[EngagementClassifierMLPredictor] Training new model...")
+
+        try:
+            # Scale features
+            features_scaled = self.scaler.fit_transform(features)
+
+            # Train model
+            self.model.fit(features_scaled, labels)
+            self.is_trained = True
+
+            # Evaluate model
+            predictions = self.model.predict(features_scaled)
+            accuracy = accuracy_score(labels, predictions)
+
+            metrics = {
+                'status': 'success',
+                'accuracy': float(accuracy),
+                'n_samples': len(features),
+                'n_features': features.shape[1],
+                'unique_labels': len(np.unique(labels))
+            }
+
+            # Cache the trained model if filters provided
+            if filters:
+                metadata = {
+                    'metrics': metrics,
+                    'accuracy': accuracy,
+                    'training_samples': len(features),
+                    'trained_at': datetime.now().isoformat()
+                }
+                ml_model_cache.set_model('engagement', filters, self.model, self.scaler, metadata, data_hash)
+                logger.info("[EngagementClassifierMLPredictor] Model cached for future use")
+
+            logger.info(f"Engagement model trained successfully (accuracy: {accuracy:.2f})")
+            return metrics
+
+        except Exception as e:
+            logger.error(f"Failed to train model: {e}")
+            return {'status': 'error', 'message': str(e)}
 
     
     def classify_engagement(self, df: pd.DataFrame) -> Dict:
@@ -214,3 +282,61 @@ class EngagementClassifierMLPredictor:
             'feature_importance': [],
             'at_risk': []
         }
+
+    def prepare_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Public method to prepare features for engagement scoring"""
+        if df.empty:
+            return None
+        return self._prepare_engagement_features(df)
+
+    def predict_engagement_scores(self, features: pd.DataFrame) -> np.ndarray:
+        """Predict engagement scores for customers"""
+        if features is None or features.empty:
+            return np.array([])
+
+        # Scale features
+        X_scaled = self.scaler.fit_transform(features)
+
+        # For now, return a simple score based on feature values
+        # In production, this would use a trained model
+        scores = X_scaled.mean(axis=1) * 10  # Scale to 0-10
+        return np.clip(scores, 0, 10)
+
+    def _create_engagement_labels(self, features_df: pd.DataFrame) -> np.ndarray:
+        """Create synthetic engagement labels based on business rules"""
+        labels = []
+        for _, row in features_df.iterrows():
+            if row['recency_score'] > 80 and row['frequency_score'] > 5:
+                labels.append(4)  # Champion
+            elif row['recency_score'] > 60 and row['frequency_score'] > 3:
+                labels.append(3)  # High
+            elif row['recency_score'] > 40:
+                labels.append(2)  # Medium
+            elif row['recency_score'] > 20:
+                labels.append(1)  # Low
+            else:
+                labels.append(0)  # Inactive
+        return np.array(labels)
+
+    def _train_classifier(self, X: np.ndarray, y: np.ndarray):
+        """Train the engagement classifier"""
+        if self.model_type == 'classification':
+            self.model.fit(X, y)
+            self.is_trained = True
+
+    def _get_engagement_distribution(self, df: pd.DataFrame) -> Dict:
+        """Get distribution of engagement levels"""
+        if 'engagement_level' not in df.columns:
+            return {}
+
+        distribution = df['engagement_level'].value_counts().to_dict()
+        total = len(df)
+        return {
+            level: {'count': count, 'percentage': (count/total)*100}
+            for level, count in distribution.items()
+        }
+
+    def _get_at_risk_customers(self, df: pd.DataFrame) -> List:
+        """Identify at-risk customers"""
+        at_risk = df[df['engagement_level'].isin(['Low', 'Inactive'])]
+        return at_risk[['customer_id', 'customer_name', 'engagement_level', 'engagement_score']].head(10).to_dict('records')

@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Card, Skeleton } from 'components/index';
+import { Card, Skeleton, getShiftClickManager } from 'components/index';
 
 interface SeverityDistributionProps {
   data: Array<{
@@ -15,6 +15,7 @@ interface SeverityDistributionProps {
 }
 
 export function SeverityDistribution({ data, loading }: SeverityDistributionProps) {
+  const shiftClickManager = getShiftClickManager();
   if (loading) {
     return (
       <Card title="Severity Distribution" className="h-96">
@@ -42,10 +43,20 @@ export function SeverityDistribution({ data, loading }: SeverityDistributionProp
             </div>
             <div className="relative h-8 bg-background rounded-lg overflow-hidden">
               <div
-                className="absolute inset-y-0 left-0 transition-all duration-500 ease-out rounded-lg opacity-80 hover:opacity-100"
+                className="absolute inset-y-0 left-0 transition-all duration-500 ease-out rounded-lg opacity-80 hover:opacity-100 cursor-pointer"
                 style={{
                   width: `${(item.count / maxCount) * 100}%`,
                   backgroundColor: item.color || '#00e0ff'
+                }}
+                onClick={(e) => {
+                  if (e.shiftKey) {
+                    // Shift+click: Add to global shift+click selection
+                    shiftClickManager.addPoint({
+                      label: `Severity Level ${item.severity_level}: ${item.label}`,
+                      value: `${item.count} anomalies (${item.percentage.toFixed(1)}%)`,
+                      source: 'Severity Distribution'
+                    }, e.nativeEvent);
+                  }
                 }}
               />
             </div>

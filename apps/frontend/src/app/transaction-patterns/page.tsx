@@ -3,7 +3,8 @@
 import React from 'react';
 import {
   DashboardGrid,
-  DashboardSection
+  DashboardSection,
+  PageLoader
 } from 'components/index';
 import {
   PatternKPIs,
@@ -50,32 +51,39 @@ export default function TransactionPatternsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <DashboardSection title="Transaction Pattern Overview">
-        <PatternKPIs metrics={kpiMetrics} loading={loading} />
-      </DashboardSection>
-
-      <DashboardGrid>
-        <DashboardSection title="Temporal Patterns" description="Transaction timing patterns">
-          <TemporalPatterns data={temporalPatterns} loading={loading} />
+    <PageLoader
+      isLoading={loading}
+      loaderProps={{
+        title: "Transaction Patterns",
+      }}
+    >
+      <div className="space-y-6">
+        <DashboardSection title="Transaction Pattern Overview">
+          <PatternKPIs metrics={kpiMetrics} loading={false} />
         </DashboardSection>
 
-        <DashboardSection title="Product Combinations" description="Frequently bought together">
-          <ProductCombinations data={productCombinations} loading={loading} />
-        </DashboardSection>
+        <DashboardGrid>
+          <DashboardSection title="Temporal Patterns" description="Transaction timing patterns">
+            <TemporalPatterns data={temporalPatterns} loading={false} />
+          </DashboardSection>
 
-        <DashboardSection title="Anomaly Detection" description="Unusual transaction patterns">
-          <AnomalyDetection data={anomalyDetection} loading={loading} />
-        </DashboardSection>
+          <DashboardSection title="Product Combinations" description="Frequently bought together">
+            <ProductCombinations data={productCombinations} loading={false} />
+          </DashboardSection>
 
-        <DashboardSection title="Payment Methods" description="Payment method distribution">
-          <PaymentMethods data={paymentMethods} loading={loading} />
-        </DashboardSection>
+          <DashboardSection title="Anomaly Detection" description="Unusual transaction patterns">
+            <AnomalyDetection data={anomalyDetection} loading={false} />
+          </DashboardSection>
 
-        <DashboardSection title="Pattern Trends" description="Transaction pattern trends over time" className="col-span-2">
-          <PatternTrends data={temporalPatterns} loading={loading} />
-        </DashboardSection>
-      </DashboardGrid>
-    </div>
+          <DashboardSection title="Payment Methods" description="Payment method distribution">
+            <PaymentMethods data={paymentMethods} loading={false} />
+          </DashboardSection>
+
+          <DashboardSection title="Pattern Trends" description="Transaction pattern trends over time" className="col-span-2">
+            <PatternTrends data={temporalPatterns} loading={false} />
+          </DashboardSection>
+        </DashboardGrid>
+      </div>
+    </PageLoader>
   );
 }

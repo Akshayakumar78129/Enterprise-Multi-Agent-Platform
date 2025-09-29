@@ -60,6 +60,7 @@ class CustomerBehaviorSchema:
         # Transaction table columns
         self.TRANSACTION = type('obj', (object,), {
             'refs': {
+                'txn_key': f"{self.ALIASES['transaction']}.[Sales Txn Key]",
                 'customer_id': f"{self.ALIASES['transaction']}.[Customer Key]",
                 'txn_date': f"{self.ALIASES['transaction']}.[Txn Date]",
                 'net_sales_amount': f"{self.ALIASES['transaction']}.[Net Sales Amount]",

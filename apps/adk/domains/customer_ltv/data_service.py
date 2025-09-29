@@ -21,20 +21,15 @@ class CustomerLtvDataService:
         """Get customer data with filters"""
 
         sql = f"""
-        SELECT DISTINCT
+        SELECT
             {self.schema.CUSTOMER.refs['id']} AS {self.schema.CUSTOMER.output_aliases['id']},
             {self.schema.CUSTOMER.refs['name']} AS {self.schema.CUSTOMER.output_aliases['name']},
-            {self.schema.CUSTOMER.refs['desc']} AS {self.schema.CUSTOMER.output_aliases['desc']},
             {self.schema.CUSTOMER.refs['status']} AS {self.schema.CUSTOMER.output_aliases['status']},
             {self.schema.CUSTOMER.refs['region']} AS {self.schema.CUSTOMER.output_aliases['region']},
             {self.schema.CUSTOMER.refs['type']} AS {self.schema.CUSTOMER.output_aliases['type']},
             {self.schema.CUSTOMER.refs['credit_limit']} AS {self.schema.CUSTOMER.output_aliases['credit_limit']}
         FROM {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
-        LEFT JOIN {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
-            ON {self.schema.TRANSACTION.refs['customer_id']} = {self.schema.CUSTOMER.refs['id']}
-        LEFT JOIN {self.schema.TABLES['loyalty']} {self.schema.ALIASES['loyalty']}
-            ON {self.schema.LOYALTY.refs['customer_id']} = {self.schema.CUSTOMER.refs['id']}
-        WHERE {self.schema.CUSTOMER.refs['id']} > 0
+        WHERE 1=1
         """
 
         # Apply filters using filter engine
@@ -57,7 +52,7 @@ class CustomerLtvDataService:
         FROM {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
         INNER JOIN {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
             ON {self.schema.CUSTOMER.refs['id']} = {self.schema.TRANSACTION.refs['customer_id']}
-        WHERE {self.schema.TRANSACTION.refs['net_amount']} IS NOT NULL
+        WHERE 1=1
         """
 
         # Apply filters using filter engine
@@ -79,7 +74,7 @@ class CustomerLtvDataService:
         FROM {self.schema.TABLES['loyalty']} {self.schema.ALIASES['loyalty']}
         INNER JOIN {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
             ON {self.schema.CUSTOMER.refs['id']} = {self.schema.LOYALTY.refs['customer_id']}
-        WHERE {self.schema.LOYALTY.refs['customer_id']} > 0
+        WHERE 1=1
         """
 
         # Apply filters using filter engine
@@ -107,7 +102,7 @@ class CustomerLtvDataService:
             ON {self.schema.TRANSACTION.refs['customer_id']} = {self.schema.CUSTOMER.refs['id']}
         LEFT JOIN {self.schema.TABLES['loyalty']} {self.schema.ALIASES['loyalty']}
             ON {self.schema.LOYALTY.refs['customer_id']} = {self.schema.CUSTOMER.refs['id']}
-        WHERE {self.schema.CUSTOMER.refs['id']} > 0
+        WHERE 1=1
         GROUP BY
             {self.schema.CUSTOMER.refs['id']},
             {self.schema.CUSTOMER.refs['name']},

@@ -2,22 +2,26 @@
 
 import React from 'react';
 import {
-  DashboardGrid,
-  DashboardSection
+  DashboardSection,
+  ChartCard,
+  PageLoader
 } from 'components/index';
 import {
   EngagementKPIs,
-  EngagementDistribution,
-  CustomerClassification,
-  EngagementScore,
-  ActionableInsights,
-  EngagementTrends
+  EngagementPyramid,
+  EngagementTimeline,
+  OpportunityFinder,
+  CustomerClassification
 } from './components';
 import { useEngagementClassifierContext } from './context';
 import { useEngagementClassifierData } from './hooks/useEngagementClassifierData';
 
 export default function EngagementClassifierPage() {
-  const { filters, setEngagementData } = useEngagementClassifierContext();
+  const {
+    filters,
+    selectionManager,
+    setEngagementData
+  } = useEngagementClassifierContext();
 
   const {
     loading,
@@ -26,13 +30,35 @@ export default function EngagementClassifierPage() {
     customerClassification,
     engagementScore,
     actionableInsights,
+    engagementTimeline,
     hasNoData,
     kpiMetrics
   } = useEngagementClassifierData(filters);
 
+  // Update context with data when available
   React.useEffect(() => {
-    setEngagementData({ engagementDistribution, customerClassification });
-  }, [engagementDistribution, customerClassification, setEngagementData]);
+    if (engagementDistribution && Array.isArray(engagementDistribution)) {
+      // Pass the actual distribution data instead of creating fake individual records
+      setEngagementData(engagementDistribution);
+    }
+  }, [JSON.stringify(engagementDistribution)]);
+
+  const handleLevelClick = (level: string) => {
+    selectionManager.addPoint({
+      id: `engagement-level-${level}`,
+      type: 'engagement_level',
+      level: level
+    });
+  };
+
+  const handlePeriodClick = (period: string) => {
+    selectionManager.addPoint({
+      id: `time-period-${period}`,
+      type: 'time_period',
+      period: period
+    });
+  };
+
 
   if (error && !loading && hasNoData) {
     return (
@@ -50,32 +76,65 @@ export default function EngagementClassifierPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <DashboardSection title="Customer Engagement Overview">
-        <EngagementKPIs metrics={kpiMetrics} loading={loading} />
+    <PageLoader
+      isLoading={loading}
+      loaderProps={{
+        title: "Engagement Classification",
+      }}
+    >
+      <>
+      <div id="key-metrics" />
+      <DashboardSection title="Key Metrics">
+        <EngagementKPIs metrics={kpiMetrics} loading={false} />
       </DashboardSection>
 
-      <DashboardGrid>
-        <DashboardSection title="Engagement Distribution" description="Customer engagement levels">
-          <EngagementDistribution data={engagementDistribution} loading={loading} />
-        </DashboardSection>
+      <div id="engagement-analysis" />
+      <DashboardSection title="Engagement Analysis">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
+          <ChartCard
+            title="Engagement Distribution Pyramid"
+            className="glass-card card-hover"
+          >
+            <EngagementPyramid
+              data={engagementDistribution}
+              loading={false}
+              onLevelClick={handleLevelClick}
+            />
+          </ChartCard>
 
-        <DashboardSection title="Customer Classification" description="Engagement-based customer segments">
-          <CustomerClassification data={customerClassification} loading={loading} />
-        </DashboardSection>
+          <ChartCard
+            title="Engagement Activity Timeline"
+            className="glass-card card-hover"
+          >
+            <EngagementTimeline
+              data={engagementTimeline}
+              loading={false}
+              onPeriodClick={handlePeriodClick}
+            />
+          </ChartCard>
+        </div>
+      </DashboardSection>
 
-        <DashboardSection title="Engagement Scoring" description="ML-based engagement scores">
-          <EngagementScore data={engagementScore} loading={loading} />
-        </DashboardSection>
+      <div id="customer-insights" />
+      <DashboardSection title="Customer Insights">
+        <ChartCard
+          title="RFM Classification"
+          className="glass-card card-hover"
+        >
+          <CustomerClassification data={customerClassification} loading={false} />
+        </ChartCard>
+      </DashboardSection>
 
-        <DashboardSection title="Actionable Insights" description="Recommendations for engagement improvement">
-          <ActionableInsights data={actionableInsights} loading={loading} />
-        </DashboardSection>
+      <div id="re-engagement" />
+      <DashboardSection title="Re-engagement Opportunities">
+        <ChartCard
+          className="glass-card card-hover"
+        >
+          <OpportunityFinder data={actionableInsights} loading={false} />
+        </ChartCard>
+      </DashboardSection>
 
-        <DashboardSection title="Engagement Trends" description="Engagement trends over time" className="col-span-2">
-          <EngagementTrends data={engagementDistribution} loading={loading} />
-        </DashboardSection>
-      </DashboardGrid>
-    </div>
+      </>
+    </PageLoader>
   );
 }

@@ -5,6 +5,7 @@ import {
   RiskTrendsOverTime,
   ChartCard,
   InsightCard,
+  PageLoader,
   type InsightData,
   type ChurnCustomer
 } from "components/index"
@@ -67,16 +68,15 @@ export default function ChurnPredictionPage() {
   }, [churnCustomers, setChurnCustomers]);
 
   return (
-    <>
+    <PageLoader
+      isLoading={loading}
+      loaderProps={{
+        title: "Churn Prediction",
+      }}
+    >
       <div id="key-metrics" />
       <DashboardSection title="Key Metrics">
-        {loading ? (
-          <div className="text-center py-8">
-            <div className="text-muted">Loading KPIs...</div>
-          </div>
-        ) : (
-          <ChurnKPIs data={data} loading={loading} />
-        )}
+        <ChurnKPIs data={data} loading={false} />
       </DashboardSection>
 
       <div id="risk-analysis" />
@@ -85,7 +85,7 @@ export default function ChurnPredictionPage() {
           <ChurnRiskAnalysis
             riskPyramidData={riskPyramidData}
             probabilityData={probabilityArray}
-            loading={loading}
+            loading={false}
             onRiskLevelClick={(level, event) => {
               if (event?.ctrlKey || event?.metaKey) {
                 // Ctrl/Cmd+click: Show insight
@@ -124,7 +124,7 @@ export default function ChurnPredictionPage() {
           <ChurnAIInsights
             featureImportance={featureImportance}
             segmentComparison={segmentComparison}
-            loading={loading}
+            loading={false}
           />
         </div>
       </DashboardSection>
@@ -185,6 +185,6 @@ export default function ChurnPredictionPage() {
           }}
         />
       )}
-    </>
+    </PageLoader>
   );
 }

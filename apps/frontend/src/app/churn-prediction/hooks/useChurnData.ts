@@ -195,7 +195,12 @@ export function useChurnData(filters: ChurnFilters) {
           console.log("[useChurnData] Request cancelled (expected behavior on unmount or filter change)");
           return;
         }
-        console.error("Error fetching churn data:", err);
+
+        // Only log real errors
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        if (!errorMessage.includes("Cleanup") && !errorMessage.includes("abort")) {
+          console.error("Error fetching churn data:", err);
+        }
 
         if (isMounted) {
           setError(err instanceof Error ? err.message : "Failed to fetch data");

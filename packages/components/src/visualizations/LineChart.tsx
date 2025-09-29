@@ -14,6 +14,7 @@ import {
   ChartOptions
 } from 'chart.js';
 import { Card } from '../ui/Card';
+import { getShiftClickManager } from '../selection/ShiftClickSelectionManager';
 
 ChartJS.register(
   CategoryScale,
@@ -41,6 +42,8 @@ interface LineChartProps {
   height?: number;
   showLegend?: boolean;
   className?: string;
+  onPointClick?: (datasetLabel: string, label: string, value: number, event: any) => void;
+  options?: ChartOptions<'line'>;
 }
 
 export const LineChart: React.FC<LineChartProps> = ({
@@ -48,9 +51,34 @@ export const LineChart: React.FC<LineChartProps> = ({
   title,
   height = 300,
   showLegend = true,
-  className = ""
+  className = "",
+  onPointClick,
+  options: externalOptions
 }) => {
-  const options: ChartOptions<'line'> = {
+  const shiftClickManager = getShiftClickManager();
+  const defaultOptions: ChartOptions<'line'> = {
+    onClick: (event, elements) => {
+      if (elements.length > 0) {
+        const element = elements[0];
+        const datasetIndex = element.datasetIndex;
+        const index = element.index;
+        const dataset = data.datasets[datasetIndex];
+        const label = data.labels[index];
+        const value = dataset.data[index];
+
+        // Check for shift key
+        const nativeEvent = (event as any).native;
+        if (nativeEvent?.shiftKey) {
+          shiftClickManager.addPoint({
+            label: `${dataset.label}: ${label}`,
+            value: value.toString(),
+            source: title || 'Line Chart'
+          }, nativeEvent);
+        } else if (onPointClick) {
+          onPointClick(dataset.label, label, value, event);
+        }
+      }
+    },
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -119,10 +147,16 @@ export const LineChart: React.FC<LineChartProps> = ({
     }))
   };
 
+  // Merge external options with default options, preserving onClick handler
+  const mergedOptions = externalOptions ? {
+    ...externalOptions,
+    onClick: defaultOptions.onClick
+  } : defaultOptions;
+
   return (
     <Card className={`p-4 ${className}`}>
       <div style={{ height }}>
-        <Line options={options} data={chartData} />
+        <Line options={mergedOptions} data={chartData} />
       </div>
     </Card>
   );
