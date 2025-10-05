@@ -69,10 +69,6 @@ async def get_ltv_data(filters: Dict = {}) -> Dict:
         logger.error(f"Error in LTV data endpoint: {str(e)}")
         return {"success": False, "error": str(e)}
 
-@router.post("/customer-lifetime-value/data")
-async def get_ltv_data_alt(filters: Dict = {}) -> Dict:
-    """Alternative path for older API compatibility"""
-    return await get_ltv_data(filters)
 
 @router.get("/health")
 async def health_check():

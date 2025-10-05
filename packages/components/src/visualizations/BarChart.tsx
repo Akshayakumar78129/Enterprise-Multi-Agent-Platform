@@ -12,7 +12,6 @@ import {
   Legend,
   ChartOptions
 } from 'chart.js';
-import { Card } from '../ui/Card';
 import { getShiftClickManager } from '../selection/ShiftClickSelectionManager';
 
 ChartJS.register(
@@ -158,10 +157,10 @@ export const BarChart: React.FC<BarChartProps> = ({
   };
 
   return (
-    <Card className={`p-4 ${className}`}>
+    <div className={className}>
       <div style={{ height, width: '100%', position: 'relative' }}>
         <Bar options={options} data={chartData} />
       </div>
-    </Card>
+    </div>
   );
 };

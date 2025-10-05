@@ -13,7 +13,6 @@ import {
   Legend,
   ChartOptions
 } from 'chart.js';
-import { Card } from '../ui/Card';
 import { getShiftClickManager } from '../selection/ShiftClickSelectionManager';
 
 ChartJS.register(
@@ -154,10 +153,10 @@ export const LineChart: React.FC<LineChartProps> = ({
   } : defaultOptions;
 
   return (
-    <Card className={`p-4 ${className}`}>
+    <div className={className}>
       <div style={{ height }}>
         <Line options={mergedOptions} data={chartData} />
       </div>
-    </Card>
+    </div>
   );
 };

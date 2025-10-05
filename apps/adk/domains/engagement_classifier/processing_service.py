@@ -41,7 +41,7 @@ class EngagementClassifierService:
             timeline_data = await self.data_service.get_engagement_timeline(filters)
 
             # Process customers for ML predictions if needed
-            customers_df = pd.DataFrame(customers_data.get('data', []))
+            customers_df = pd.DataFrame(customers_data.get('rows', customers_data.get('data', [])))
 
             # Prepare ML results
             ml_results = {}
@@ -67,7 +67,7 @@ class EngagementClassifierService:
                 "success": True,
                 "data": {
                     # Raw customer data
-                    "customers": customers_data.get('data', []),
+                    "customers": customers_data.get('rows', customers_data.get('data', [])),
 
                     # KPI data for tiles
                     "kpis": {
@@ -80,16 +80,16 @@ class EngagementClassifierService:
                     },
 
                     # Engagement distribution for pyramid
-                    "distribution": distribution_data.get('data', []),
+                    "distribution": distribution_data.get('rows', distribution_data.get('data', [])),
 
                     # RFM analysis
-                    "rfm_analysis": rfm_data.get('data', []),
+                    "rfm_analysis": rfm_data.get('rows', rfm_data.get('data', [])),
 
                     # Re-engagement opportunities
-                    "opportunities": opportunities_data.get('data', []),
+                    "opportunities": opportunities_data.get('rows', opportunities_data.get('data', [])),
 
                     # Timeline data
-                    "timeline": timeline_data.get('data', []),
+                    "timeline": timeline_data.get('rows', timeline_data.get('data', [])),
 
                     # Summary metrics
                     "summary": {
@@ -115,14 +115,14 @@ class EngagementClassifierService:
                     "avgEngagementScore": kpi_data.get('avg_engagement_score', 0),
                     "engagementTrend": kpi_data.get('engagement_trend_value', 0)  # Use actual trend value from data
                 },
-                "engagementDistribution": distribution_data.get('data', []),
-                "customerClassification": rfm_data.get('data', []),
+                "engagementDistribution": distribution_data.get('rows', distribution_data.get('data', [])),
+                "customerClassification": rfm_data.get('rows', rfm_data.get('data', [])),
                 "engagementScore": {
                     "current": kpi_data.get('avg_engagement_score', 0),
                     "previous": kpi_data.get('prev_engagement_score', kpi_data.get('avg_engagement_score', 0)),  # Use actual previous value or current as fallback
                     "trend": "up" if kpi_data.get('engagement_trend') == 'Improving' else "down"
                 },
-                "actionableInsights": self._generate_insights(kpi_data, distribution_data.get('data', []))
+                "actionableInsights": self._generate_insights(kpi_data, distribution_data.get('rows', distribution_data.get('data', [])))
             })
 
             return response
@@ -149,7 +149,7 @@ class EngagementClassifierService:
             result = await self.data_service.get_engagement_distribution(filters)
             return {
                 "success": True,
-                "data": result.get('data', []),
+                "data": result.get('rows', result.get('data', [])),
                 "timestamp": datetime.now().isoformat()
             }
         except Exception as e:
@@ -162,7 +162,7 @@ class EngagementClassifierService:
             result = await self.data_service.get_rfm_analysis(filters)
             return {
                 "success": True,
-                "data": result.get('data', []),
+                "data": result.get('rows', result.get('data', [])),
                 "timestamp": datetime.now().isoformat()
             }
         except Exception as e:
@@ -175,7 +175,7 @@ class EngagementClassifierService:
             result = await self.data_service.get_reengagement_opportunities(filters)
             return {
                 "success": True,
-                "data": result.get('data', []),
+                "data": result.get('rows', result.get('data', [])),
                 "timestamp": datetime.now().isoformat()
             }
         except Exception as e:
@@ -188,7 +188,7 @@ class EngagementClassifierService:
             result = await self.data_service.get_engagement_timeline(filters)
             return {
                 "success": True,
-                "data": result.get('data', []),
+                "data": result.get('rows', result.get('data', [])),
                 "timestamp": datetime.now().isoformat()
             }
         except Exception as e:
@@ -201,7 +201,7 @@ class EngagementClassifierService:
             result = await self.data_service.search_customers(search_term)
             return {
                 "success": True,
-                "data": result.get('data', []),
+                "data": result.get('rows', result.get('data', [])),
                 "timestamp": datetime.now().isoformat()
             }
         except Exception as e:

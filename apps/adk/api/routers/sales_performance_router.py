@@ -1,12 +1,73 @@
 """API endpoints for sales performance analysis"""
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from typing import Dict, Any, Optional, List
+from pydantic import BaseModel
+import importlib
+import sys
+
+# Force reload of modules to get latest code
+if 'domains.sales_performance.data_service' in sys.modules:
+    importlib.reload(sys.modules['domains.sales_performance.data_service'])
+if 'domains.sales_performance.processing_service' in sys.modules:
+    importlib.reload(sys.modules['domains.sales_performance.processing_service'])
+if 'domains.sales_performance.schema' in sys.modules:
+    importlib.reload(sys.modules['domains.sales_performance.schema'])
+
 from domains.sales_performance.processing_service import SalesPerformanceProcessingService
 from domains.sales_performance.models import SalesFilters
 
 router = APIRouter(prefix="/api/sales-performance", tags=["sales-performance"])
 processing_service = SalesPerformanceProcessingService()
+
+
+class SalesPerformanceFilters(BaseModel):
+    """Filters for sales performance analysis"""
+    dateFrom: Optional[str] = None
+    dateTo: Optional[str] = None
+    regions: Optional[List[str]] = []
+    categories: Optional[List[str]] = []
+    products: Optional[List[str]] = []
+    customers: Optional[List[str]] = []
+    segments: Optional[List[str]] = []
+    dimensions: Optional[List[str]] = []
+    metrics: Optional[List[str]] = []
+
+
+@router.post("/summary")
+async def get_dashboard_summary(filters: SalesPerformanceFilters, request: Request):
+    """Main dashboard endpoint - returns all sales performance metrics (POST with filters)"""
+    try:
+        # Create fresh service instance to avoid stale module cache
+        service = SalesPerformanceProcessingService()
+
+        # Convert Pydantic model to dict for processing service
+        filter_dict = {}
+
+        if filters.dateFrom:
+            filter_dict['dateFrom'] = filters.dateFrom
+        if filters.dateTo:
+            filter_dict['dateTo'] = filters.dateTo
+        if filters.regions and len(filters.regions) > 0:
+            filter_dict['regions'] = filters.regions
+        if filters.categories and len(filters.categories) > 0:
+            filter_dict['categories'] = filters.categories
+        if filters.products and len(filters.products) > 0:
+            filter_dict['products'] = filters.products
+        if filters.customers and len(filters.customers) > 0:
+            filter_dict['customers'] = filters.customers
+        if filters.segments and len(filters.segments) > 0:
+            filter_dict['segments'] = filters.segments
+        if filters.dimensions and len(filters.dimensions) > 0:
+            filter_dict['dimensions'] = filters.dimensions
+        if filters.metrics and len(filters.metrics) > 0:
+            filter_dict['metrics'] = filters.metrics
+
+        result = await service.get_dashboard_data(filter_dict)
+        return result
+    except Exception as e:
+        print(f"[SalesPerformanceRouter] Error in dashboard_summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/dashboard")

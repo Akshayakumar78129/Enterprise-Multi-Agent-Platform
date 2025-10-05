@@ -2,6 +2,7 @@
 
 from orchestration_agent.tools.customer_behaviour import analyze_customer_behavior
 from orchestration_agent.tools.sales_performance import analyze_sales_performance
+from orchestration_agent.tools.product_performance import analyze_product_performance
 from orchestration_agent.tools.financial_tool import cash_flow_analysis, revenue_forecast
 from orchestration_agent.tools.customer_segmentation import identify_customer_segments
 from orchestration_agent.tools.churn_prediction import predict_churn_risk
@@ -11,6 +12,7 @@ from orchestration_agent.tools.inventory_level import analyze_inventory_levels
 __all__ = [
     'analyze_customer_behavior',
     'analyze_sales_performance',
+    'analyze_product_performance',
     'cash_flow_analysis',
     'revenue_forecast',
     'identify_customer_segments',

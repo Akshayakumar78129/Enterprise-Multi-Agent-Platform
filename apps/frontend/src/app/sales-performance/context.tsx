@@ -1,29 +1,22 @@
 "use client";
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useMemo } from 'react';
 
 interface SalesPerformanceContextType {
   filters: Record<string, any>;
   setFilters: (filters: Record<string, any>) => void;
-  salesData: any[];
-  setSalesData: (data: any[]) => void;
 }
 
 const SalesPerformanceContext = createContext<SalesPerformanceContextType | undefined>(undefined);
 
 export function SalesPerformanceProvider({ children }: { children: React.ReactNode }) {
   const [filters, setFilters] = useState<Record<string, any>>({});
-  const [salesData, setSalesData] = useState<any[]>([]);
+
+  // Memoize the context value to prevent unnecessary re-renders
+  const value = useMemo(() => ({ filters, setFilters }), [filters]);
 
   return (
-    <SalesPerformanceContext.Provider
-      value={{
-        filters,
-        setFilters,
-        salesData,
-        setSalesData,
-      }}
-    >
+    <SalesPerformanceContext.Provider value={value}>
       {children}
     </SalesPerformanceContext.Provider>
   );

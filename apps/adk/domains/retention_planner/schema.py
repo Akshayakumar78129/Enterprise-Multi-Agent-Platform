@@ -34,7 +34,6 @@ class RetentionPlannerSchema(BaseSchema):
         columns={
             'id': '"Customer Key"',
             'name': '"Customer Name"',
-            'desc': '"Customer Desc"',
             'status': '"Customer Status"',
             'region': '"Customer State/Prov"',
             'type': '"Customer Type Desc"',
@@ -44,7 +43,6 @@ class RetentionPlannerSchema(BaseSchema):
         refs={
             'id': 'c."Customer Key"',
             'name': 'c."Customer Name"',
-            'desc': 'c."Customer Desc"',
             'status': 'c."Customer Status"',
             'region': 'c."Customer State/Prov"',
             'type': 'c."Customer Type Desc"',
@@ -54,7 +52,6 @@ class RetentionPlannerSchema(BaseSchema):
         output_aliases={
             'id': 'customer_id',
             'name': 'customer_name',
-            'desc': 'customer_desc',
             'status': 'customer_status',
             'region': 'region',
             'type': 'customer_type',

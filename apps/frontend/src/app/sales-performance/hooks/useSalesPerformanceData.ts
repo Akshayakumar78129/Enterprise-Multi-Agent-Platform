@@ -15,34 +15,34 @@ export function useSalesPerformanceData(filters: Record<string, any>) {
         const dashboardData = await salesPerformanceService.getDashboardData(filters);
 
         setData({
-          kpiMetrics: dashboardData.kpis,
+          kpiMetrics: dashboardData.kpiMetrics,
           mainData: {
             salesOverview: {
-              totalOrders: dashboardData.kpis.uniqueCustomers,
-              averageOrderValue: dashboardData.kpis.avgOrderValue,
-              conversionRate: dashboardData.kpis.conversionRate,
-              revenue: dashboardData.kpis.totalRevenue
+              totalOrders: dashboardData.kpiMetrics.uniqueCustomers,
+              averageOrderValue: dashboardData.kpiMetrics.avgOrderValue,
+              conversionRate: dashboardData.kpiMetrics.conversionRate,
+              revenue: dashboardData.kpiMetrics.totalRevenue
             },
-            topProducts: dashboardData.productPerformance?.map(p => ({
+            topProducts: dashboardData.mainData?.productPerformance?.map(p => ({
               name: p.productName,
               sales: p.revenue,
               units: p.unitsSold,
               category: p.category,
               avgPrice: p.avgPrice
             })) || [],
-            teamPerformance: dashboardData.regionPerformance?.map(r => ({
+            teamPerformance: dashboardData.mainData?.regionPerformance?.map(r => ({
               region: r.regionName,
               revenue: r.revenue,
               customers: r.customerCount,
               units: r.units
             })) || [],
-            salesTargets: dashboardData.categoryPerformance?.map(c => ({
+            salesTargets: dashboardData.mainData?.categoryPerformance?.map(c => ({
               category: c.category,
               revenue: c.revenue,
               units: c.units,
               productCount: c.productCount
             })) || [],
-            revenueTrends: dashboardData.salesTrends || []
+            revenueTrends: dashboardData.mainData?.salesTrends || []
           }
         });
       } catch (err) {
@@ -65,7 +65,7 @@ export function useSalesPerformanceData(filters: Record<string, any>) {
     };
 
     fetchData();
-  }, [filters]);
+  }, [JSON.stringify(filters)]);
 
   return {
     loading,

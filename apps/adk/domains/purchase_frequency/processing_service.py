@@ -34,7 +34,7 @@ class PurchaseFrequencyService:
 
             # Get purchase frequency data from data service
             frequency_data = await self.data_service.get_purchase_frequency_data(filters)
-            frequency_df = pd.DataFrame(frequency_data.get('data', []))
+            frequency_df = pd.DataFrame(frequency_data.get('rows', frequency_data.get('data', [])))
 
             if frequency_df.empty:
                 return self._get_empty_response()

@@ -24,7 +24,6 @@ class CustomerSegmentationDataService:
         SELECT DISTINCT
             {self.schema.CUSTOMER.refs['id']} AS {self.schema.CUSTOMER.output_aliases['id']},
             {self.schema.CUSTOMER.refs['name']} AS {self.schema.CUSTOMER.output_aliases['name']},
-            {self.schema.CUSTOMER.refs['desc']} AS {self.schema.CUSTOMER.output_aliases['desc']},
             {self.schema.CUSTOMER.refs['status']} AS {self.schema.CUSTOMER.output_aliases['status']},
             {self.schema.CUSTOMER.refs['region']} AS {self.schema.CUSTOMER.output_aliases['region']},
             {self.schema.CUSTOMER.refs['type']} AS {self.schema.CUSTOMER.output_aliases['type']},
@@ -94,7 +93,6 @@ class CustomerSegmentationDataService:
             SELECT
                 {self.schema.CUSTOMER.refs['id']} AS customer_id,
                 {self.schema.CUSTOMER.refs['name']} AS customer_name,
-                {self.schema.CUSTOMER.refs['desc']} AS customer_desc,
                 {self.schema.CUSTOMER.refs['type']} AS customer_type,
                 {self.schema.LOYALTY.refs['rfm_score']} AS rfm_score,
                 {self.schema.ALIASES['loyalty']}."RFM-RL Score" AS rfm_rl_score,

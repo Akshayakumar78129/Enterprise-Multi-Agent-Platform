@@ -29,9 +29,17 @@ export function useTransactionPatternsData(filters: Record<string, any>) {
   return {
     loading,
     error,
-    temporalPatterns: data?.mainData?.temporalPatterns || {},
-    productCombinations: data?.mainData?.productCombinations || {},
-    anomalyDetection: data?.mainData?.anomalyDetection || {},
+    // Map backend keys to frontend expected keys
+    temporalPatterns: {
+      heatmapData: data?.mainData?.distribution || [],
+      timeSeries: data?.mainData?.timeSeries || []
+    },
+    productCombinations: {
+      products: data?.mainData?.productMetrics || data?.mainData?.topMetrics || []
+    },
+    anomalyDetection: {
+      amountDistribution: data?.mainData?.distribution || []
+    },
     paymentMethods: data?.mainData?.paymentMethods || {},
     kpiMetrics: data?.kpiMetrics || {},
     hasNoData: !data?.mainData || Object.keys(data?.mainData || {}).length === 0

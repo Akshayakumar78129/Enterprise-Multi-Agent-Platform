@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 export interface SalesPerformanceData {
-  kpis: {
+  kpiMetrics: {
     totalRevenue: number;
     totalUnits: number;
     avgOrderValue: number;
@@ -11,44 +11,51 @@ export interface SalesPerformanceData {
     revenueGrowth: number;
     conversionRate: number;
   };
-  productPerformance: Array<{
-    productName: string;
-    category: string;
-    revenue: number;
-    unitsSold: number;
-    avgPrice: number;
-    marketShare: number;
-  }>;
-  regionPerformance: Array<{
-    regionName: string;
-    customerCount: number;
-    revenue: number;
-    units: number;
-    avgTransactionValue: number;
-    growthRate: number;
-  }>;
-  salesTrends: Array<{
-    date: string;
-    revenue: number;
-    units: number;
-    customers: number;
-    transactions: number;
-  }>;
-  categoryPerformance: Array<{
-    category: string;
-    productCount: number;
-    revenue: number;
-    units: number;
-    avgPrice: number;
-  }>;
-  topCustomers: Array<{
-    customerName: string;
-    segment: string;
-    purchaseDays: number;
-    totalRevenue: number;
-    totalUnits: number;
-    avgOrderValue: number;
-  }>;
+  mainData: {
+    productPerformance: Array<{
+      productName: string;
+      category: string;
+      revenue: number;
+      unitsSold: number;
+      avgPrice: number;
+      marketShare: number;
+    }>;
+    regionPerformance: Array<{
+      regionName: string;
+      customerCount: number;
+      revenue: number;
+      units: number;
+      avgTransactionValue: number;
+      growthRate: number;
+    }>;
+    salesTrends: Array<{
+      date: string;
+      revenue: number;
+      units: number;
+      customers: number;
+      transactions: number;
+    }>;
+    categoryPerformance: Array<{
+      category: string;
+      productCount: number;
+      revenue: number;
+      units: number;
+      avgPrice: number;
+    }>;
+    topCustomers: Array<{
+      customerName: string;
+      segment: string;
+      purchaseDays: number;
+      totalRevenue: number;
+      totalUnits: number;
+      avgOrderValue: number;
+    }>;
+  };
+  insights: string[];
+  metadata: {
+    filtersApplied: any;
+    timestamp: string;
+  };
 }
 
 export interface SalesFilters {
@@ -64,9 +71,48 @@ export interface SalesFilters {
 }
 
 class SalesPerformanceService {
-  private baseUrl = `${API_URL}/api/sales-performance`;
+  private baseUrl = `${API_BASE_URL}/sales-performance`;
 
   async getDashboardData(filters: SalesFilters = {}): Promise<SalesPerformanceData> {
+    try {
+      // Convert to POST /summary format
+      const postFilters: any = {};
+
+      if (filters.dateRange) {
+        postFilters.dateFrom = filters.dateRange.startDate;
+        postFilters.dateTo = filters.dateRange.endDate;
+      }
+
+      if (filters.region?.length) {
+        postFilters.regions = filters.region;
+      }
+
+      if (filters.category?.length) {
+        postFilters.categories = filters.category;
+      }
+
+      if (filters.product?.length) {
+        postFilters.products = filters.product;
+      }
+
+      if (filters.customer?.length) {
+        postFilters.customers = filters.customer;
+      }
+
+      if (filters.segment?.length) {
+        postFilters.segments = filters.segment;
+      }
+
+      const response = await axios.post(`${this.baseUrl}/summary`, postFilters);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching sales performance data:', error);
+      throw error;
+    }
+  }
+
+  // Legacy method for backward compatibility - calls GET /dashboard
+  async getDashboardDataLegacy(filters: SalesFilters = {}): Promise<SalesPerformanceData> {
     try {
       const params = new URLSearchParams();
 

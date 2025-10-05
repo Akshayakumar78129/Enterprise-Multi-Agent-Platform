@@ -781,56 +781,56 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
   // =============================
   // Customer LTV Components (alternate name)
   // =============================
-  'customer-ltv.kpiTiles': (summary) => {
+  'customer-lifetime-value.kpiTiles': (summary) => {
     return {
       metrics: summary.kpi_metrics || summary.ltv_metrics || [],
       summary: summary
     };
   },
 
-  'customer-ltv.ltvDistribution': (summary) => {
+  'customer-lifetime-value.ltvDistribution': (summary) => {
     return {
       data: summary.ltv_distribution || summary.value_distribution || [],
       segments: summary.segments
     };
   },
 
-  'customer-ltv.predictionAccuracy': (summary) => {
+  'customer-lifetime-value.predictionAccuracy': (summary) => {
     return {
       accuracy: summary.prediction_accuracy || summary.accuracy_metrics || {},
       historical: summary.historical_accuracy
     };
   },
 
-  'customer-ltv.geographicMap': (summary) => {
+  'customer-lifetime-value.geographicMap': (summary) => {
     return {
       data: summary.geographic_data || summary.ltv_by_region || [],
       regions: summary.regions
     };
   },
 
-  'customer-ltv.customerExplorer': (summary) => {
+  'customer-lifetime-value.customerExplorer': (summary) => {
     return {
       customers: summary.top_customers || summary.customer_list || [],
       metrics: summary.customer_metrics
     };
   },
 
-  'customer-ltv.valueContribution': (summary) => {
+  'customer-lifetime-value.valueContribution': (summary) => {
     return {
       contributions: summary.value_contributions || summary.contribution_data || [],
       categories: summary.categories
     };
   },
 
-  'customer-ltv.timeProjection': (summary) => {
+  'customer-lifetime-value.timeProjection': (summary) => {
     return {
       projections: summary.ltv_projections || summary.projections || [],
       timeline: summary.projection_timeline
     };
   },
 
-  'customer-ltv.filterPanel': (summary) => {
+  'customer-lifetime-value.filterPanel': (summary) => {
     return {
       filters: summary.available_filters || {},
       summary: summary

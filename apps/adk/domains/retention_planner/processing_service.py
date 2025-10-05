@@ -42,10 +42,10 @@ class RetentionPlannerService:
             aggregated = await self.data_service.get_aggregated_metrics(date_filters)
 
             # Convert to DataFrames
-            customers_df = pd.DataFrame(customers.get('data', []))
-            transactions_df = pd.DataFrame(transactions.get('data', []))
-            loyalty_df = pd.DataFrame(loyalty.get('data', []))
-            aggregated_df = pd.DataFrame(aggregated.get('data', []))
+            customers_df = pd.DataFrame(customers.get('rows', customers.get('data', [])))
+            transactions_df = pd.DataFrame(transactions.get('rows', transactions.get('data', [])))
+            loyalty_df = pd.DataFrame(loyalty.get('rows', loyalty.get('data', [])))
+            aggregated_df = pd.DataFrame(aggregated.get('rows', aggregated.get('data', [])))
 
             # Perform ML analysis based on dashboard type
             ml_results = self._perform_ml_analysis(

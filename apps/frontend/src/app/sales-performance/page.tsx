@@ -17,7 +17,7 @@ import { useSalesPerformanceContext } from './context';
 import { useSalesPerformanceData } from './hooks/useSalesPerformanceData';
 
 export default function SalesPerformancePage() {
-  const { filters, setSalesData } = useSalesPerformanceContext();
+  const { filters } = useSalesPerformanceContext();
 
   const {
     loading,
@@ -30,10 +30,6 @@ export default function SalesPerformancePage() {
     hasNoData,
     kpiMetrics
   } = useSalesPerformanceData(filters);
-
-  React.useEffect(() => {
-    setSalesData({ salesOverview, topProducts, teamPerformance });
-  }, [salesOverview, topProducts, teamPerformance, setSalesData]);
 
   if (error && !loading && hasNoData) {
     return (

@@ -24,7 +24,6 @@ class TransactionPatternsDataService:
         SELECT DISTINCT
             {self.schema.CUSTOMER.refs['id']} AS {self.schema.CUSTOMER.output_aliases['id']},
             {self.schema.CUSTOMER.refs['name']} AS {self.schema.CUSTOMER.output_aliases['name']},
-            {self.schema.CUSTOMER.refs['desc']} AS {self.schema.CUSTOMER.output_aliases['desc']},
             {self.schema.CUSTOMER.refs['status']} AS {self.schema.CUSTOMER.output_aliases['status']},
             {self.schema.CUSTOMER.refs['region']} AS {self.schema.CUSTOMER.output_aliases['region']},
             {self.schema.CUSTOMER.refs['type']} AS {self.schema.CUSTOMER.output_aliases['type']},
@@ -125,24 +124,19 @@ class TransactionPatternsDataService:
         """Get transaction pattern analysis data - matches web folder logic"""
 
         sql = f"""
-        WITH TransactionDetails AS (
-            SELECT
-                t.[Sales Txn Key] as transaction_id,
-                t.[Customer Key] as customer_id,
-                t.[Txn Date] as timestamp,
-                t.[Net Sales Amount] as total_value,
-                t.[Unit of Measure] as payment_method,
-                t.[Item Category Hrchy Key] as product_category,
-                t.[Location Code] as location,
-                t.[Discount Reason] as promotion_applied
-            FROM
-                {self.schema.TABLES['transaction']} t
-            WHERE
-                t.[Deleted Flag] = 0
-                AND t.[Excluded Flag] = 0
-                AND t.[Net Sales Amount] IS NOT NULL
-        )
-        SELECT * FROM TransactionDetails
+        SELECT
+            {self.schema.TRANSACTION.refs['txn_id']} as transaction_id,
+            {self.schema.TRANSACTION.refs['customer_id']} as customer_id,
+            {self.schema.TRANSACTION.refs['date']} as timestamp,
+            {self.schema.TRANSACTION.refs['net_amount']} as total_value,
+            {self.schema.TRANSACTION.refs['item_number']} as payment_method,
+            {self.schema.TRANSACTION.refs['item_number']} as product_category,
+            'Store' as location,
+            '' as promotion_applied
+        FROM
+            {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
+        WHERE
+            {self.schema.TRANSACTION.refs['net_amount']} IS NOT NULL
         """
 
         # Apply filters using filter engine

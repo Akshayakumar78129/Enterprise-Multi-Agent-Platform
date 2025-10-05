@@ -12,7 +12,6 @@ import {
   ProductPreferences,
   ChannelUsage,
   EngagementMetrics,
-  CustomerSegments,
   CustomerTable
 } from './components';
 import { useBehaviorContext } from './context';
@@ -28,7 +27,6 @@ export default function CustomerBehaviorPage() {
     productPreferences,
     channelUsage,
     engagementMetrics,
-    customerSegments,
     topCustomers,
     hasNoData,
     kpiMetrics

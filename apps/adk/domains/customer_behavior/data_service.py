@@ -127,7 +127,7 @@ class CustomerBehaviorDataService:
             {self.schema.CUSTOMER.refs['type']} as customer_type,
             {self.schema.CUSTOMER.refs['status']} as customer_status,
             COUNT({self.schema.TRANSACTION.refs['txn_key']}) as transaction_count,
-            SUM({self.schema.TRANSACTION.refs['net_sales_amount']}) as total_sales,
+            SUM({self.schema.TRANSACTION.refs['net_sales_amount']}) as total_spend,
             AVG({self.schema.TRANSACTION.refs['net_sales_amount']}) as avg_order_value,
             COUNT(DISTINCT {self.schema.TRANSACTION.refs['product_category']}) as category_diversity,
             COUNT(DISTINCT {self.schema.TRANSACTION.refs['line_type']}) as channel_diversity,

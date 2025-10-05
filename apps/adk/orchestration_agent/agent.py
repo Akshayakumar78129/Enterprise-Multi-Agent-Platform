@@ -26,6 +26,8 @@ from orchestration_agent.tools.anomaly_detection import detect_anomalies
 from orchestration_agent.tools.purchase_frequency import analyze_purchase_frequency
 from orchestration_agent.tools.engagement_classifier import classify_customer_engagement
 from orchestration_agent.tools.retention_planner import plan_retention_strategy
+from orchestration_agent.tools.sales_performance import analyze_sales_performance as analyze_sales_performance_adk
+from orchestration_agent.tools.product_performance import analyze_product_performance as analyze_product_performance_adk
 from orchestration_agent.tools.sales_analyst import register_tools as register_sales_analyst_tools
 from orchestration_agent.tools.sales_analyst.tools.RegionalSalesAnalyzer import analyze_regional_sales
 from orchestration_agent.tools.inventory_manager.InventoryHoldingCostAnalyzer import analyze_holding_costs
@@ -67,10 +69,28 @@ class StandardOutputSchema(BaseModel):
 #                 description="This agent is used to output the text to the user.",
 #         )
 
-# Get sales analyst tools
+# Get sales analyst tools (legacy)
 sales_analyst_tools = register_sales_analyst_tools()
 print("\nRegistered Sales Analyst Tools:")
 for tool in sales_analyst_tools:
+    print(f"- {tool['name']}: {tool['description']}")
+
+# Add new ADK-based sales tools (these use the same processing services as dashboards)
+adk_sales_tools = [
+    {
+        "name": "analyze_sales_performance_unified",
+        "description": "Analyze sales performance using unified ADK data (same as Sales Performance dashboard). Supports time periods, regions, categories, products. Returns consistent data with dashboard.",
+        "function": analyze_sales_performance_adk
+    },
+    {
+        "name": "analyze_product_performance_unified",
+        "description": "Analyze product performance using unified ADK data (same as Product Performance dashboard). Supports time periods, categories, products, margin filters. Returns consistent data with dashboard.",
+        "function": analyze_product_performance_adk
+    }
+]
+
+print("\nRegistered ADK Sales Tools (Dashboard-Consistent):")
+for tool in adk_sales_tools:
     print(f"- {tool['name']}: {tool['description']}")
 
 
@@ -90,14 +110,14 @@ inventory_agent = Agent(
 #         sub_agents=[inventory_agent, standard_output("inventory_analysis")]
 # )
 
-# Initialize sales agent with tools
+# Initialize sales agent with tools (include both legacy and new ADK tools)
 sales_agent = Agent(
         name="sales_agent",
         model=model,
         instruction=SALES_INSTR,
         output_key="agent_output",
-        description="Handles any sales analytics and insights including demand forecast, product performance, sales trends, sales performance",
-        tools=[tool["function"] for tool in sales_analyst_tools]
+        description="Handles any sales analytics and insights including demand forecast, product performance, sales trends, sales performance. Uses unified ADK data for consistency with dashboards.",
+        tools=[tool["function"] for tool in sales_analyst_tools] + [tool["function"] for tool in adk_sales_tools]
  )
 
 # sales_output_agent = SequentialAgent(

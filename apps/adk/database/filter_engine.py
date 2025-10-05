@@ -83,6 +83,103 @@ class FilterEngine:
                 where_clauses.append(f"{schema.CUSTOMER.refs['type']} IN ({placeholders})")
                 params.extend(segments)
 
+        # Category filters - support both category and categories
+        categories = filters.get('categories') or filters.get('category')
+        if categories:
+            if not isinstance(categories, list):
+                categories = [categories]
+            if categories and hasattr(schema, 'ITEM') and hasattr(schema.ITEM, 'refs'):
+                category_field = schema.ITEM.refs.get('category')
+                if category_field:
+                    placeholders = ','.join(['?' for _ in categories])
+                    where_clauses.append(f"{category_field} IN ({placeholders})")
+                    params.extend(categories)
+
+        # Subcategory filters - support both subcategory and subcategories
+        subcategories = filters.get('subcategories') or filters.get('subcategory')
+        if subcategories:
+            if not isinstance(subcategories, list):
+                subcategories = [subcategories]
+            if subcategories and hasattr(schema, 'ITEM') and hasattr(schema.ITEM, 'refs'):
+                subcategory_field = schema.ITEM.refs.get('subcategory')
+                if subcategory_field:
+                    placeholders = ','.join(['?' for _ in subcategories])
+                    where_clauses.append(f"{subcategory_field} IN ({placeholders})")
+                    params.extend(subcategories)
+
+        # Product filters - support both product and products
+        products = filters.get('products') or filters.get('product')
+        if products:
+            if not isinstance(products, list):
+                products = [products]
+            if products and hasattr(schema, 'ITEM') and hasattr(schema.ITEM, 'refs'):
+                product_field = schema.ITEM.refs.get('desc') or schema.ITEM.refs.get('name')
+                if product_field:
+                    placeholders = ','.join(['?' for _ in products])
+                    where_clauses.append(f"{product_field} IN ({placeholders})")
+                    params.extend(products)
+
+        # Region filters - support both region and regions
+        regions = filters.get('regions') or filters.get('region')
+        if regions:
+            if not isinstance(regions, list):
+                regions = [regions]
+            if regions and hasattr(schema, 'REGION') and hasattr(schema.REGION, 'refs'):
+                region_field = schema.REGION.refs.get('name')
+                if region_field:
+                    placeholders = ','.join(['?' for _ in regions])
+                    where_clauses.append(f"{region_field} IN ({placeholders})")
+                    params.extend(regions)
+
+        # Customer filters - support both customer and customers
+        customers = filters.get('customers') or filters.get('customer')
+        if customers:
+            if not isinstance(customers, list):
+                customers = [customers]
+            if customers and hasattr(schema, 'CUSTOMER') and hasattr(schema.CUSTOMER, 'refs'):
+                customer_field = schema.CUSTOMER.refs.get('name')
+                if customer_field:
+                    placeholders = ','.join(['?' for _ in customers])
+                    where_clauses.append(f"{customer_field} IN ({placeholders})")
+                    params.extend(customers)
+
+        # Margin filters - requires SALES schema with margin calculation support
+        min_margin = filters.get('minMargin') or filters.get('min_margin')
+        max_margin = filters.get('maxMargin') or filters.get('max_margin')
+        if (min_margin is not None or max_margin is not None) and hasattr(schema, 'SALES'):
+            # Note: Margin filtering requires the query to already have margin calculated
+            # This is typically done in the SELECT clause as: (amount - cost) / amount * 100
+            # We add a HAVING clause if the query has GROUP BY, otherwise WHERE
+            if min_margin is not None:
+                # Check if query has GROUP BY to determine if we should use HAVING
+                margin_condition = f"((SUM({schema.SALES.refs.get('amount', 'amount')}) - SUM({schema.SALES.refs.get('quantity', 'quantity')} * {schema.SALES.refs.get('unit_cost', 'unit_cost')})) / NULLIF(SUM({schema.SALES.refs.get('amount', 'amount')}), 0) * 100) >= ?"
+                where_clauses.append(margin_condition)
+                params.append(min_margin)
+            if max_margin is not None:
+                margin_condition = f"((SUM({schema.SALES.refs.get('amount', 'amount')}) - SUM({schema.SALES.refs.get('quantity', 'quantity')} * {schema.SALES.refs.get('unit_cost', 'unit_cost')})) / NULLIF(SUM({schema.SALES.refs.get('amount', 'amount')}), 0) * 100) <= ?"
+                where_clauses.append(margin_condition)
+                params.append(max_margin)
+
+        # Revenue filters
+        min_revenue = filters.get('minRevenue') or filters.get('min_revenue')
+        max_revenue = filters.get('maxRevenue') or filters.get('max_revenue')
+        if has_transaction_table and (min_revenue is not None or max_revenue is not None):
+            # Note: Revenue filtering on aggregated data requires special handling
+            # For row-level filtering, we can use the amount field directly
+            amount_field = None
+            if hasattr(schema, 'TRANSACTION') and hasattr(schema.TRANSACTION, 'refs'):
+                amount_field = schema.TRANSACTION.refs.get('amount')
+            elif hasattr(schema, 'SALES') and hasattr(schema.SALES, 'refs'):
+                amount_field = schema.SALES.refs.get('amount')
+
+            if amount_field:
+                if min_revenue is not None:
+                    where_clauses.append(f"{amount_field} >= ?")
+                    params.append(min_revenue)
+                if max_revenue is not None:
+                    where_clauses.append(f"{amount_field} <= ?")
+                    params.append(max_revenue)
+
         # Product categories filter - based on customer behavior patterns
         # Note: Since product categories are derived from customer behavior rather than
         # stored directly, this filter would need to be applied at the application level

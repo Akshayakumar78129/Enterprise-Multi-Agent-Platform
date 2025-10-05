@@ -2,12 +2,23 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/a
 
 class TransactionPatternsService {
   async getDashboardSummary(filters: Record<string, any> = {}) {
+    // Ensure 2021 dates are set if dateRange is provided
+    const filtersWithDefaults = { ...filters };
+    if (filters.dateRange) {
+      filtersWithDefaults.date_from = filters.dateRange.startDate || '2021-01-01';
+      filtersWithDefaults.date_to = filters.dateRange.endDate || '2021-12-31';
+    } else if (!filters.date_from && !filters.date_to) {
+      // Default to 2021 if no dates specified
+      filtersWithDefaults.date_from = '2021-01-01';
+      filtersWithDefaults.date_to = '2021-12-31';
+    }
+
     const response = await fetch(`${API_BASE_URL}/transaction-patterns/summary`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(filters),
+      body: JSON.stringify(filtersWithDefaults),
     });
 
     if (!response.ok) {

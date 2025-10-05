@@ -44,6 +44,7 @@ from domains.customer_insights.processing_service import CustomerInsightsService
 from domains.sales_performance.processing_service import SalesPerformanceProcessingService
 from domains.sales_forecast.processing_service import SalesForecastProcessingService
 from domains.revenue_analysis.processing_service import RevenueAnalysisProcessingService
+from domains.product_performance.processing_service import ProductPerformanceProcessingService
 
 # Import inventory domain services
 from domains.inventory_level.processing_service import InventoryLevelProcessingService
@@ -69,6 +70,7 @@ from api.routers.customer_insights_router import router as customer_insights_rou
 
 # Import sales API router
 from api.routers.sales_performance_router import router as sales_performance_router
+from api.routers.product_performance_router import router as product_performance_router
 
 # Import inventory API router
 from api.routers.inventory_level_router import router as inventory_level_router
@@ -119,6 +121,7 @@ customer_insights_service = CustomerInsightsService()
 sales_performance_service = SalesPerformanceProcessingService()
 sales_forecast_service = SalesForecastProcessingService()
 revenue_analysis_service = RevenueAnalysisProcessingService()
+product_performance_service = ProductPerformanceProcessingService()
 inventory_level_service = InventoryLevelProcessingService()
 
 app.add_middleware(
@@ -152,6 +155,7 @@ app.include_router(next_purchase_router)
 app.include_router(retention_planner_router)
 app.include_router(customer_insights_router)
 app.include_router(sales_performance_router)
+app.include_router(product_performance_router)
 app.include_router(inventory_level_router)
 
 # Simple in-memory session storage for fallback
@@ -196,6 +200,7 @@ async def startup_event():
     app.state.sales_performance_service = sales_performance_service
     app.state.sales_forecast_service = sales_forecast_service
     app.state.revenue_analysis_service = revenue_analysis_service
+    app.state.product_performance_service = product_performance_service
 
     print("[Main Server] All services initialized")
 

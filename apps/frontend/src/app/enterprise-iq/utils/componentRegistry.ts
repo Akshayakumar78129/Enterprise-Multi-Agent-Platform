@@ -32,7 +32,7 @@ export const componentRegistry = {
 
   // Customer Lifetime Value components
   'customer-lifetime-value': {
-    dashboard: dynamic(() => import('../customer-ltv/page').catch(() => null), { ssr: false }),
+    dashboard: dynamic(() => import('../customer-lifetime-value/page').catch(() => null), { ssr: false }),
     kpiTiles: dynamic(() => import('components').then(mod => mod.LTVKPITiles).catch(() => null), { ssr: false }),
     ltvDistribution: dynamic(() => import('components').then(mod => mod.LTVDistribution).catch(() => null), { ssr: false }),
     predictionAccuracy: dynamic(() => import('components').then(mod => mod.PredictionAccuracy).catch(() => null), { ssr: false }),

@@ -97,7 +97,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({ isOpen, onClo
         },
         {
           name: 'Customer LTV',
-          href: '/customer-ltv',
+          href: '/customer-lifetime-value',
           icon: DollarSign,
           description: 'Lifetime value analysis',
         },

@@ -30,7 +30,7 @@ async def test_endpoint():
     return {"status": "ok", "message": "Customer behavior router is working"}
 
 @router.post("/summary")
-async def get_behavior_summary(filters: CustomerBehaviorFilters, request: Request):
+async def get_behavior_summary(request: Request):
     """Main dashboard endpoint - returns all customer behavior metrics
 
     Comprehensive analysis of customer behavior patterns
@@ -39,32 +39,47 @@ async def get_behavior_summary(filters: CustomerBehaviorFilters, request: Reques
         # Use cached service from app state
         service = request.app.state.customer_behavior_service
 
-        # Convert Pydantic model to dict, handling arrays
+        # Get raw JSON body to handle both formats
+        body = await request.json()
+
+        # Convert to filter dict, handling both Pydantic and raw formats
         filter_dict = {}
 
-        # Handle time period
-        if filters.time_period:
-            filter_dict['time_period'] = filters.time_period
+        # Handle date filters (from frontend)
+        if 'dateFrom' in body:
+            filter_dict['dateFrom'] = body['dateFrom']
+        if 'dateTo' in body:
+            filter_dict['dateTo'] = body['dateTo']
 
-        # Handle segment filter
-        if filters.segment_id:
-            filter_dict['segment_id'] = filters.segment_id
+        # Handle time period (from Pydantic model)
+        if 'time_period' in body:
+            filter_dict['time_period'] = body['time_period']
+
+        # Handle segment filters
+        if 'segment_id' in body:
+            filter_dict['segment_id'] = body['segment_id']
+        if 'segment_ids' in body:
+            filter_dict['segment_ids'] = body['segment_ids']
 
         # Handle behavior types
-        if filters.behavior_types:
-            filter_dict['behavior_types'] = filters.behavior_types
+        if 'behavior_types' in body:
+            filter_dict['behavior_types'] = body['behavior_types']
+        else:
+            filter_dict['behavior_types'] = ["purchase_patterns", "product_preferences", "channel_usage", "engagement_metrics"]
 
         # Handle minimum transactions
-        if filters.min_transactions:
-            filter_dict['min_transactions'] = filters.min_transactions
+        if 'min_transactions' in body:
+            filter_dict['min_transactions'] = body['min_transactions']
+        else:
+            filter_dict['min_transactions'] = 2
 
         # Handle customer IDs filter
-        if filters.customer_ids and len(filters.customer_ids) > 0:
-            filter_dict['customer_ids'] = filters.customer_ids
+        if 'customer_ids' in body and len(body.get('customer_ids', [])) > 0:
+            filter_dict['customer_ids'] = body['customer_ids']
 
         # Handle loyalty status filter
-        if filters.loyalty_status and len(filters.loyalty_status) > 0:
-            filter_dict['loyalty_status'] = filters.loyalty_status
+        if 'loyalty_status' in body and len(body.get('loyalty_status', [])) > 0:
+            filter_dict['loyalty_status'] = body['loyalty_status']
 
         result = await service.get_dashboard_summary(filter_dict)
         return result

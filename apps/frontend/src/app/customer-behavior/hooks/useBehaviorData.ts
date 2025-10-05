@@ -78,31 +78,46 @@ export function useBehaviorData(filters: BehaviorFilters) {
   function normalizeSummary(summary: any) {
     const s = summary || {};
 
+    // Check if data is nested in mainData (new API structure)
+    const mainData = s.mainData || s;
+
     // Normalize channel usage to ensure channel_distribution is available
-    const channelUsage = s.channelUsage || s.channel_usage || {};
+    const channelUsage = mainData.channelUsage || mainData.channel_usage || {};
     if (channelUsage.channelDistribution && !channelUsage.channel_distribution) {
       channelUsage.channel_distribution = channelUsage.channelDistribution;
     }
 
     // Normalize engagement metrics
-    const engagementMetrics = s.engagementMetrics || s.engagement_metrics || {};
+    const engagementMetrics = mainData.engagementMetrics || mainData.engagement_metrics || {};
 
     // Normalize product preferences
-    const productPreferences = s.productPreferences || s.product_preferences || {};
+    const productPreferences = mainData.productPreferences || mainData.product_preferences || {};
     if (!productPreferences.topCategories && productPreferences.top_categories) {
       productPreferences.topCategories = productPreferences.top_categories;
     }
 
+    // Normalize behavioral metrics
+    const behavioralMetrics = mainData.behavioralMetrics || mainData.behavioral_metrics || {};
+
+    // Extract from behavioralMetrics if not at top level
+    const finalProductPreferences = productPreferences && Object.keys(productPreferences).length > 0
+      ? productPreferences
+      : behavioralMetrics.product_preferences || {};
+
+    const finalChannelUsage = channelUsage && Object.keys(channelUsage).length > 0
+      ? channelUsage
+      : behavioralMetrics.channel_usage || {};
+
     return {
-      purchasePatterns: s.purchasePatterns || s.purchase_patterns || {},
-      productPreferences,
-      channelUsage,
-      engagementMetrics,
-      customerSegments: s.customerSegments || s.customer_segments || [],
-      topCustomers: s.topCustomers || s.top_customers || [],
-      behaviorTrends: s.behaviorTrends || s.behavior_trends || [],
-      rfmAnalysis: s.rfmAnalysis || s.rfm_analysis || {},
-      clvAnalysis: s.clvAnalysis || s.clv_analysis || {},
+      purchasePatterns: mainData.purchasePatterns || mainData.purchase_patterns || {},
+      productPreferences: finalProductPreferences,
+      channelUsage: finalChannelUsage,
+      engagementMetrics: engagementMetrics || {},
+      customerSegments: mainData.customerSegments || mainData.customer_segments || [],
+      topCustomers: mainData.topCustomers || mainData.top_customers || [],
+      behaviorTrends: mainData.behaviorTrends || mainData.behavior_trends || [],
+      rfmAnalysis: mainData.rfmAnalysis || mainData.rfm_analysis || {},
+      clvAnalysis: mainData.clvAnalysis || mainData.clv_analysis || {},
     };
   }
 
@@ -139,11 +154,15 @@ export function useBehaviorData(filters: BehaviorFilters) {
           const [from, to] = filters.timePeriod.split(':');
           dateFrom = from;
           dateTo = to;
+        } else {
+          // Default to 2021 data
+          dateFrom = '2021-01-01';
+          dateTo = '2021-12-31';
         }
 
         const filterParams: Record<string, any> = {
-          dateFrom: dateFrom,
-          dateTo: dateTo,
+          dateFrom: dateFrom || '2021-01-01',
+          dateTo: dateTo || '2021-12-31',
           segment_id: filters.segmentId ? parseInt(filters.segmentId) : null,
           segment_ids: filters.segmentIds && filters.segmentIds.length > 0 ? filters.segmentIds : undefined,
           behavior_types: filters.behaviorTypes.length > 0 ? filters.behaviorTypes : ["purchase_patterns", "product_preferences", "channel_usage", "engagement_metrics"],
@@ -165,6 +184,7 @@ export function useBehaviorData(filters: BehaviorFilters) {
         lastGoodDataRef.current = effective;
 
         // Process purchase patterns
+        console.log('[useBehaviorData] purchasePatterns:', effective.purchasePatterns);
         setPurchasePatterns(effective.purchasePatterns);
 
         // Process product preferences
@@ -180,7 +200,8 @@ export function useBehaviorData(filters: BehaviorFilters) {
         setCustomerSegments(effective.customerSegments);
 
         // Process top customers - preserve original field names
-        setTopCustomers(effective.topCustomers.map((c: any) => ({
+        const customers = effective.topCustomers || [];
+        setTopCustomers(customers.length > 0 ? customers.map((c: any) => ({
           ...c,
           id: c.customerId || c.customer_id,
           name: c.customerName || c.customer_name || `Customer ${c.customerId || c.customer_id}`,
@@ -191,7 +212,7 @@ export function useBehaviorData(filters: BehaviorFilters) {
           engagementScore: c.engagementScore || c.engagement_score || 0,
           riskLevel: c.engagementScore && c.engagementScore < 0.3 ? 'High' :
                      c.engagementScore && c.engagementScore < 0.6 ? 'Medium' : 'Low',
-        })));
+        })) : []);
 
       } catch (err: any) {
         // Check if it's an abort error

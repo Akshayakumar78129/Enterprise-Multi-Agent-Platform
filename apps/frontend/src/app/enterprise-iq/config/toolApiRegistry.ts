@@ -85,12 +85,6 @@ export const toolApiRegistry: Record<string, ToolApiConfig> = {
     description: 'Customer lifetime value analysis and predictions'
   },
 
-  'customer-ltv': {
-    endpoint: '/api/customer-ltv/summary',
-    method: 'POST',
-    description: 'Customer lifetime value analysis and predictions'
-  },
-
   // Engagement Classifier Dashboard
   'engagement-classifier': {
     endpoint: '/api/engagement-classifier/summary',

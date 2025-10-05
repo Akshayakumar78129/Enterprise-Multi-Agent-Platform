@@ -25,26 +25,54 @@ class SalesPerformanceProcessingService:
     async def get_dashboard_data(self, filters: Dict[str, Any] = {}) -> Dict:
         """Get complete sales performance dashboard data"""
 
+        # Normalize filter format - support both old (dateRange) and new (dateFrom/dateTo) formats
+        normalized_filters = self._normalize_filters(filters)
+
         # Fetch all data components
-        kpis = await self._get_kpis(filters)
-        product_performance = await self._get_product_performance(filters)
-        region_performance = await self._get_region_performance(filters)
-        sales_trends = await self._get_sales_trends(filters)
-        category_performance = await self._get_category_performance(filters)
-        top_customers = await self._get_top_customers(filters)
+        kpis = await self._get_kpis(normalized_filters)
+        product_performance = await self._get_product_performance(normalized_filters)
+        region_performance = await self._get_region_performance(normalized_filters)
+        sales_trends = await self._get_sales_trends(normalized_filters)
+        category_performance = await self._get_category_performance(normalized_filters)
+        top_customers = await self._get_top_customers(normalized_filters)
 
-        # Create response
-        response = SalesPerformanceResponse(
-            kpis=kpis,
-            productPerformance=product_performance,
-            regionPerformance=region_performance,
-            salesTrends=sales_trends,
-            categoryPerformance=category_performance,
-            topCustomers=top_customers,
-            filters=filters
-        )
+        # Create response with KPI metrics structure
+        return {
+            'kpiMetrics': {
+                'totalRevenue': kpis.totalRevenue,
+                'totalUnits': kpis.totalUnits,
+                'avgOrderValue': kpis.avgOrderValue,
+                'uniqueCustomers': kpis.uniqueCustomers,
+                'revenueGrowth': kpis.revenueGrowth,
+                'conversionRate': kpis.conversionRate
+            },
+            'mainData': {
+                'productPerformance': [p.dict() for p in product_performance],
+                'regionPerformance': [r.dict() for r in region_performance],
+                'salesTrends': [t.dict() for t in sales_trends],
+                'categoryPerformance': [c.dict() for c in category_performance],
+                'topCustomers': [cust.dict() for cust in top_customers]
+            },
+            'insights': [],
+            'metadata': {
+                'filtersApplied': normalized_filters,
+                'timestamp': datetime.now().isoformat()
+            }
+        }
 
-        return response.dict()
+    def _normalize_filters(self, filters: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize filter format to handle both old and new formats"""
+        normalized = filters.copy()
+
+        # Handle old dateRange format → convert to dateFrom/dateTo
+        if 'dateRange' in normalized and isinstance(normalized['dateRange'], dict):
+            date_range = normalized.pop('dateRange')
+            if 'startDate' in date_range and not normalized.get('dateFrom'):
+                normalized['dateFrom'] = date_range['startDate']
+            if 'endDate' in date_range and not normalized.get('dateTo'):
+                normalized['dateTo'] = date_range['endDate']
+
+        return normalized
 
     async def _get_kpis(self, filters: Dict[str, Any]) -> SalesKPI:
         """Calculate KPI metrics"""
@@ -54,7 +82,7 @@ class SalesPerformanceProcessingService:
 
         # Calculate growth if date range provided
         revenue_growth = 0
-        if filters.get('dateRange'):
+        if filters.get('dateFrom') and filters.get('dateTo'):
             # Get previous period data for comparison
             prev_filters = self._get_previous_period_filters(filters)
             prev_summary = await self.data_service.get_sales_summary(prev_filters)
@@ -171,21 +199,18 @@ class SalesPerformanceProcessingService:
 
         prev_filters = filters.copy()
 
-        if 'dateRange' in filters and filters['dateRange']:
-            date_range = filters['dateRange']
-            if 'startDate' in date_range and 'endDate' in date_range:
-                # Parse dates
-                start = datetime.fromisoformat(date_range['startDate'])
-                end = datetime.fromisoformat(date_range['endDate'])
+        # Handle new dateFrom/dateTo format
+        if filters.get('dateFrom') and filters.get('dateTo'):
+            # Parse dates
+            start = datetime.fromisoformat(filters['dateFrom'])
+            end = datetime.fromisoformat(filters['dateTo'])
 
-                # Calculate period length
-                period_days = (end - start).days
+            # Calculate period length
+            period_days = (end - start).days
 
-                # Set previous period
-                prev_filters['dateRange'] = {
-                    'startDate': (start - timedelta(days=period_days)).isoformat(),
-                    'endDate': (end - timedelta(days=period_days)).isoformat()
-                }
+            # Set previous period
+            prev_filters['dateFrom'] = (start - timedelta(days=period_days)).isoformat()
+            prev_filters['dateTo'] = (end - timedelta(days=period_days)).isoformat()
 
         return prev_filters
 

@@ -140,7 +140,7 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
     ]
   } : null;
 
-  const frequencyData = data.frequency_distribution ? {
+  const frequencyData = data?.frequency_distribution ? {
     labels: Object.keys(data.frequency_distribution),
     datasets: [
       {
@@ -154,7 +154,7 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
   } : null;
 
   const handlePointClick = (elements: any, event: any) => {
-    if (elements.length > 0) {
+    if (elements.length > 0 && timeSeriesData) {
       const element = elements[0];
       const dataset = timeSeriesData.datasets[element.datasetIndex];
       const label = timeSeriesData.labels[element.index];
@@ -185,23 +185,23 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
   const radarData = hasRadarData ? [
     {
       label: 'Frequency',
-      value: Math.min(100, ((30 / (data.avgDaysBetweenPurchases || 30)) * 100))
+      value: Math.min(100, ((30 / (data?.avgDaysBetweenPurchases || 30)) * 100))
     },
     {
       label: 'Recency',
-      value: Math.max(0, 100 - ((data.avgDaysSinceLastPurchase || 0) / 365) * 100)
+      value: Math.max(0, 100 - ((data?.avgDaysSinceLastPurchase || 0) / 365) * 100)
     },
     {
       label: 'Value',
-      value: Math.min(100, ((data.avgOrderValue || 0) / 500) * 100)
+      value: Math.min(100, ((data?.avgOrderValue || 0) / 500) * 100)
     },
     {
       label: 'Loyalty',
-      value: Math.min(100, ((data.repeatPurchaseRate || 0) * 100))
+      value: Math.min(100, ((data?.repeatPurchaseRate || 0) * 100))
     },
     {
       label: 'Trend',
-      value: 50 + ((data.purchaseTrend || 0) * 50)
+      value: 50 + ((data?.purchaseTrend || 0) * 50)
     }
   ] : [];
 

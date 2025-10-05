@@ -47,8 +47,7 @@ export function CustomerTable({ data, loading, onCustomerSelect }: CustomerTable
 
   const filteredData = data
     .filter(customer =>
-      (customer.customer_name || customer.customerName || customer.name)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (customer.customer_id || customer.customerId || customer.id)?.toString().includes(searchTerm)
+      (customer.customer_name || customer.customerName || customer.name)?.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
       if (!sortColumn) return 0;
@@ -186,10 +185,7 @@ export function CustomerTable({ data, loading, onCustomerSelect }: CustomerTable
                         </div>
                         <div>
                           <div className="font-medium">
-                            {customer.customer_name || customer.customerName || customer.name || `Customer ${customer.customer_id || customer.customerId || customer.id}`}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            ID: {customer.customer_id || customer.customerId || customer.id}
+                            {customer.customer_name || customer.customerName || customer.name || "Unknown Customer"}
                           </div>
                         </div>
                       </div>

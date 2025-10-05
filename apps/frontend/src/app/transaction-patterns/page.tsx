@@ -2,17 +2,16 @@
 
 import React from 'react';
 import {
-  DashboardGrid,
   DashboardSection,
-  PageLoader
+  PageLoader,
+  ChartCard
 } from 'components/index';
 import {
   PatternKPIs,
-  TemporalPatterns,
-  ProductCombinations,
-  AnomalyDetection,
-  PaymentMethods,
-  PatternTrends
+  TemporalHeatmap,
+  DualAxisTimeSeries,
+  AmountDistribution,
+  ProductMatrix
 } from './components';
 import { useTransactionPatternsContext } from './context';
 import { useTransactionPatternsData } from './hooks/useTransactionPatternsData';
@@ -26,14 +25,15 @@ export default function TransactionPatternsPage() {
     temporalPatterns,
     productCombinations,
     anomalyDetection,
-    paymentMethods,
     hasNoData,
     kpiMetrics
   } = useTransactionPatternsData(filters);
 
   React.useEffect(() => {
-    setPatternData({ temporalPatterns, productCombinations });
-  }, [temporalPatterns, productCombinations, setPatternData]);
+    if (temporalPatterns || productCombinations) {
+      setPatternData({ temporalPatterns, productCombinations });
+    }
+  }, [JSON.stringify(temporalPatterns), JSON.stringify(productCombinations)]);
 
   if (error && !loading && hasNoData) {
     return (
@@ -58,31 +58,72 @@ export default function TransactionPatternsPage() {
       }}
     >
       <div className="space-y-6">
-        <DashboardSection title="Transaction Pattern Overview">
+        {/* KPI Section */}
+        <DashboardSection title="Key Metrics">
           <PatternKPIs metrics={kpiMetrics} loading={false} />
         </DashboardSection>
 
-        <DashboardGrid>
-          <DashboardSection title="Temporal Patterns" description="Transaction timing patterns">
-            <TemporalPatterns data={temporalPatterns} loading={false} />
-          </DashboardSection>
+        {/* Main Visualizations */}
+        <DashboardSection title="Transaction Analysis">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
+            {/* Temporal Heatmap */}
+            <ChartCard
+              title="Temporal Transaction Patterns"
+            >
+              <TemporalHeatmap
+                data={temporalPatterns?.heatmapData || []}
+                loading={false}
+                onCellClick={(day, hour, event) => {
+                  console.log('Heatmap cell clicked:', { day, hour });
+                }}
+              />
+            </ChartCard>
 
-          <DashboardSection title="Product Combinations" description="Frequently bought together">
-            <ProductCombinations data={productCombinations} loading={false} />
-          </DashboardSection>
+            {/* Dual Axis Time Series */}
+            <ChartCard
+              title="Transaction Volume & Value Trends"
+            >
+              <DualAxisTimeSeries
+                data={temporalPatterns?.timeSeries || []}
+                loading={false}
+                onDataPointClick={(dataPoint, event) => {
+                  console.log('Time series point clicked:', dataPoint);
+                }}
+              />
+            </ChartCard>
+          </div>
+        </DashboardSection>
 
-          <DashboardSection title="Anomaly Detection" description="Unusual transaction patterns">
-            <AnomalyDetection data={anomalyDetection} loading={false} />
-          </DashboardSection>
+        {/* Product and Amount Analysis */}
+        <DashboardSection title="Product & Amount Analysis">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
+            {/* Product Performance Matrix */}
+            <ChartCard
+              title="Product Performance Matrix"
+            >
+              <ProductMatrix
+                data={productCombinations?.products || []}
+                loading={false}
+                onProductClick={(product, event) => {
+                  console.log('Product clicked:', product);
+                }}
+              />
+            </ChartCard>
 
-          <DashboardSection title="Payment Methods" description="Payment method distribution">
-            <PaymentMethods data={paymentMethods} loading={false} />
-          </DashboardSection>
-
-          <DashboardSection title="Pattern Trends" description="Transaction pattern trends over time" className="col-span-2">
-            <PatternTrends data={temporalPatterns} loading={false} />
-          </DashboardSection>
-        </DashboardGrid>
+            {/* Amount Distribution */}
+            <ChartCard
+              title="Transaction Amount Distribution"
+            >
+              <AmountDistribution
+                data={anomalyDetection?.amountDistribution || []}
+                loading={false}
+                onBinClick={(bin, event) => {
+                  console.log('Distribution bin clicked:', bin);
+                }}
+              />
+            </ChartCard>
+          </div>
+        </DashboardSection>
       </div>
     </PageLoader>
   );
