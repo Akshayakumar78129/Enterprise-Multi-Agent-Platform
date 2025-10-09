@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { SelectedPoint } from "components";
+import { SelectedPoint, Message } from "components";
 import { SelectionManager, getSelectionManager } from "./services/SelectionManager";
 
 export type TimeRange = "30d" | "90d";
@@ -31,6 +31,15 @@ type ChurnContextValue = {
   // Data sharing for BI panel
   churnCustomers: any[];
   setChurnCustomers: React.Dispatch<React.SetStateAction<any[]>>;
+  // Chat state
+  chatMessages: Message[];
+  setChatMessages: React.Dispatch<React.SetStateAction<Message[]>>;
+  chatInput: string;
+  setChatInput: React.Dispatch<React.SetStateAction<string>>;
+  chatIsLoading: boolean;
+  setChatIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  chatSessionId: string;
+  chatUserId: string;
 };
 
 const ChurnContext = React.createContext<ChurnContextValue | undefined>(undefined);
@@ -48,6 +57,16 @@ export function ChurnProvider({ children }: { children: React.ReactNode }) {
   // Panel state management
   const [isChatOpen, setIsChatOpen] = React.useState(false);
   const [isBIModalOpen, setIsBIModalOpen] = React.useState(false);
+
+  // Chat state - persists across expand/collapse
+  const [chatMessages, setChatMessages] = React.useState<Message[]>([{
+    role: "assistant",
+    content: "Hello! I'm your AI assistant. How can I help you analyze your churn prediction data today?"
+  }]);
+  const [chatInput, setChatInput] = React.useState("");
+  const [chatIsLoading, setChatIsLoading] = React.useState(false);
+  const [chatSessionId] = React.useState(() => `session_${Date.now()}`);
+  const [chatUserId] = React.useState(() => `user_${Math.random().toString(36).substr(2, 9)}`);
 
   // Data sharing for BI panel
   const [churnCustomers, setChurnCustomers] = React.useState<any[]>([]);
@@ -140,8 +159,16 @@ export function ChurnProvider({ children }: { children: React.ReactNode }) {
       setIsBIModalOpen,
       churnCustomers,
       setChurnCustomers,
+      chatMessages,
+      setChatMessages,
+      chatInput,
+      setChatInput,
+      chatIsLoading,
+      setChatIsLoading,
+      chatSessionId,
+      chatUserId,
     }),
-    [filters, memoizedSetFilters, timeRange, memoizedSetTimeRange, selectedPoints, selectionManager, isChatOpen, isBIModalOpen, churnCustomers]
+    [filters, memoizedSetFilters, timeRange, memoizedSetTimeRange, selectedPoints, selectionManager, isChatOpen, isBIModalOpen, churnCustomers, chatMessages, chatInput, chatIsLoading, chatSessionId, chatUserId]
   );
 
   return <ChurnContext.Provider value={value}>{children}</ChurnContext.Provider>;

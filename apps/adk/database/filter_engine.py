@@ -48,6 +48,12 @@ class FilterEngine:
                     date_to = '2021-12-31'
 
                 if date_from and date_to:
+                    # Strip time portion from ISO timestamps if present (e.g., 2021-01-01T00:00:00 -> 2021-01-01)
+                    if 'T' in str(date_from):
+                        date_from = str(date_from).split('T')[0]
+                    if 'T' in str(date_to):
+                        date_to = str(date_to).split('T')[0]
+
                     # Since dates are stored as YYYY-MM-DD strings, use direct string comparison
                     where_clauses.append(f"{date_field} >= ?")
                     params.append(date_from)
@@ -217,14 +223,37 @@ class FilterEngine:
 
         # Build final query
         if where_clauses:
-            # Check if query already has WHERE clause
-            has_where = 'where' in query.lower()
             filter_clause = ' AND '.join(where_clauses)
 
-            if has_where:
-                query += f" AND {filter_clause}"
+            # Find the position to insert the filter clause
+            # It should go after WHERE clause but before GROUP BY, ORDER BY, LIMIT
+            query_lower = query.lower()
+
+            # Find insertion points - use strict patterns to avoid matching inside column names
+            import re
+            group_by_pos = query_lower.find('group by')
+            order_by_pos = query_lower.find('order by')
+            # Match LIMIT only when followed by whitespace and a number (actual SQL LIMIT clause)
+            # This prevents matching "limit" inside "Credit Limit Amount"
+            limit_match = re.search(r'\blimit\s+\d', query_lower)
+            limit_pos = limit_match.start() if limit_match else -1
+
+            # Find the earliest of these clauses
+            insert_positions = [pos for pos in [group_by_pos, order_by_pos, limit_pos] if pos != -1]
+            insert_pos = min(insert_positions) if insert_positions else len(query)
+
+            # Check if there's already a WHERE clause using word boundary
+            where_match = re.search(r'\bwhere\b', query_lower)
+            has_where = where_match is not None
+            where_pos = where_match.start() if where_match else -1
+
+            if has_where and where_pos < insert_pos:
+                # Insert as AND after existing WHERE clause but before GROUP BY/ORDER BY/LIMIT
+                # Find the end of the WHERE clause (before GROUP BY/ORDER BY/LIMIT)
+                query = query[:insert_pos].rstrip() + f" AND {filter_clause} " + query[insert_pos:]
             else:
-                query += f" WHERE {filter_clause}"
+                # Insert as new WHERE clause before GROUP BY/ORDER BY/LIMIT
+                query = query[:insert_pos].rstrip() + f" WHERE {filter_clause} " + query[insert_pos:]
 
         return query, params
 

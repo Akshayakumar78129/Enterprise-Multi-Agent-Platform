@@ -29,7 +29,7 @@ class CustomerLtvDataService:
             {self.schema.CUSTOMER.refs['type']} AS {self.schema.CUSTOMER.output_aliases['type']},
             {self.schema.CUSTOMER.refs['credit_limit']} AS {self.schema.CUSTOMER.output_aliases['credit_limit']}
         FROM {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
-        WHERE 1=1
+        WHERE {self.schema.CUSTOMER.refs['id']} > 0
         """
 
         # Apply filters using filter engine
@@ -52,7 +52,7 @@ class CustomerLtvDataService:
         FROM {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
         INNER JOIN {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
             ON {self.schema.CUSTOMER.refs['id']} = {self.schema.TRANSACTION.refs['customer_id']}
-        WHERE 1=1
+        WHERE {self.schema.TRANSACTION.refs['customer_id']} > 0
         """
 
         # Apply filters using filter engine
@@ -74,7 +74,7 @@ class CustomerLtvDataService:
         FROM {self.schema.TABLES['loyalty']} {self.schema.ALIASES['loyalty']}
         INNER JOIN {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
             ON {self.schema.CUSTOMER.refs['id']} = {self.schema.LOYALTY.refs['customer_id']}
-        WHERE 1=1
+        WHERE {self.schema.LOYALTY.refs['customer_id']} > 0
         """
 
         # Apply filters using filter engine
@@ -102,7 +102,7 @@ class CustomerLtvDataService:
             ON {self.schema.TRANSACTION.refs['customer_id']} = {self.schema.CUSTOMER.refs['id']}
         LEFT JOIN {self.schema.TABLES['loyalty']} {self.schema.ALIASES['loyalty']}
             ON {self.schema.LOYALTY.refs['customer_id']} = {self.schema.CUSTOMER.refs['id']}
-        WHERE 1=1
+        WHERE {self.schema.CUSTOMER.refs['id']} > 0
         GROUP BY
             {self.schema.CUSTOMER.refs['id']},
             {self.schema.CUSTOMER.refs['name']},

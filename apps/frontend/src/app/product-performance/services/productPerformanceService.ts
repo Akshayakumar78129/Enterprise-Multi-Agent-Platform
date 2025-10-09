@@ -57,8 +57,10 @@ export interface ProductPerformanceData {
 }
 
 export interface ProductFilters {
-  dateFrom?: string;
-  dateTo?: string;
+  dateRange?: {
+    startDate: string;
+    endDate: string;
+  };
   categories?: string[];
   subcategories?: string[];
   products?: string[];
@@ -75,7 +77,47 @@ class ProductPerformanceService {
 
   async getDashboardData(filters: ProductFilters = {}): Promise<ProductPerformanceData> {
     try {
-      const response = await axios.post(`${this.baseUrl}/summary`, filters);
+      // Convert to POST /summary format
+      const postFilters: any = {};
+
+      if (filters.dateRange) {
+        postFilters.dateFrom = filters.dateRange.startDate;
+        postFilters.dateTo = filters.dateRange.endDate;
+      }
+
+      if (filters.categories?.length) {
+        postFilters.categories = filters.categories;
+      }
+
+      if (filters.products?.length) {
+        postFilters.products = filters.products;
+      }
+
+      if (filters.priceBands?.length) {
+        postFilters.priceBands = filters.priceBands;
+      }
+
+      if (filters.minMargin !== undefined) {
+        postFilters.minMargin = filters.minMargin;
+      }
+
+      if (filters.maxMargin !== undefined) {
+        postFilters.maxMargin = filters.maxMargin;
+      }
+
+      if (filters.minRevenue !== undefined) {
+        postFilters.minRevenue = filters.minRevenue;
+      }
+
+      if (filters.maxRevenue !== undefined) {
+        postFilters.maxRevenue = filters.maxRevenue;
+      }
+
+      if (filters.topN) {
+        postFilters.topN = filters.topN;
+      }
+
+      const response = await axios.post(`${this.baseUrl}/summary`, postFilters);
       return response.data;
     } catch (error) {
       console.error('Error fetching product performance data:', error);

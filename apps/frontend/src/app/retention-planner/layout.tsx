@@ -1,5 +1,102 @@
-import React from 'react';
-import { RetentionPlannerProvider } from './context';
+"use client";
+
+import {
+  AppLayout,
+  ChatPanel,
+  BusinessIntelligencePanel
+} from "components/index";
+import React from "react";
+import { RetentionPlannerProvider, useRetentionPlannerContext } from './context';
+import { useRetentionPlannerData } from './hooks/useRetentionPlannerData';
+
+function RetentionPlannerLayoutContent({ children }: { children: React.ReactNode }) {
+  const {
+    filters,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId,
+    isChatPanelOpen,
+    setIsChatPanelOpen,
+    isBusinessIntelligencePanelOpen,
+    setIsBusinessIntelligencePanelOpen,
+    selectionManager,
+    retentionData
+  } = useRetentionPlannerContext();
+
+  const { insights, kpiMetrics } = useRetentionPlannerData(filters);
+
+  // Get selected points from selection manager
+  const [selectedPoints, setSelectedPoints] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    const unsubscribe = selectionManager.subscribe((points) => {
+      setSelectedPoints(points);
+    });
+    return unsubscribe;
+  }, [selectionManager]);
+
+  const mainContent = (
+    <div className="p-4 sm:p-6 lg:p-8">
+      {children}
+    </div>
+  );
+
+  const chatPanelContent = (
+    <ChatPanel
+      onClose={() => setIsChatPanelOpen(false)}
+      selectedPoints={selectedPoints}
+      onClearSelection={() => selectionManager.clearAll()}
+      dashboardContext="retention_planner"additionalContext={{
+        filters: filters,
+        totalRetentionRecords: retentionData.length
+      }}
+      messages={chatMessages}
+      setMessages={setChatMessages}
+      input={chatInput}
+      setInput={setChatInput}
+      isLoading={chatIsLoading}
+      setIsLoading={setChatIsLoading}
+      sessionId={chatSessionId}
+      userId={chatUserId}
+    />
+  );
+
+  const biPanelContent = (
+    <BusinessIntelligencePanel
+      onClose={() => setIsBusinessIntelligencePanelOpen(false)}
+      insights={insights || []}
+      kpiMetrics={kpiMetrics || {}}
+      data={{ retentionData }}
+      dashboardContext="retention"
+    />
+  );
+
+  return (
+    <AppLayout
+      title="Customer Retention Planning"
+      mainContent={mainContent}
+      chatPanel={isChatPanelOpen ? chatPanelContent : undefined}
+      biPanel={isBusinessIntelligencePanelOpen ? biPanelContent : undefined}
+      isChatOpen={isChatPanelOpen}
+      isBIOpen={isBusinessIntelligencePanelOpen}
+      onChatToggle={() => setIsChatPanelOpen(!isChatPanelOpen)}
+      onBIToggle={() => setIsBusinessIntelligencePanelOpen(!isBusinessIntelligencePanelOpen)}
+      onChatExpandToggle={(expanded) => {
+        if (!expanded) setIsChatPanelOpen(false);
+      }}
+      onBIExpandToggle={(expanded) => {
+        if (!expanded) setIsBusinessIntelligencePanelOpen(false);
+      }}
+      hasSelectedPoints={selectedPoints.length > 0}
+      highRiskCount={0}
+    />
+  );
+}
 
 export default function RetentionPlannerLayout({
   children,
@@ -8,15 +105,7 @@ export default function RetentionPlannerLayout({
 }) {
   return (
     <RetentionPlannerProvider>
-      <div className="container mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-foreground">Customer Retention Planning</h1>
-          <p className="text-muted-foreground mt-2">
-            Plan and optimize customer retention strategies
-          </p>
-        </div>
-        {children}
-      </div>
+      <RetentionPlannerLayoutContent>{children}</RetentionPlannerLayoutContent>
     </RetentionPlannerProvider>
   );
 }

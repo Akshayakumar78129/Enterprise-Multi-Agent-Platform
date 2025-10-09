@@ -19,16 +19,20 @@ class SalesPerformanceDataService:
     async def get_sales_summary(self, filters: Dict[str, Any] = {}) -> Dict:
         """Get sales summary data with KPIs"""
 
-        sql = """
+        sql = f"""
         SELECT
-            COUNT(DISTINCT t."Txn Date") as total_days,
-            SUM(t."Net Sales Amount") as total_revenue,
-            SUM(t."Net Sales Quantity") as total_units,
-            AVG(t."Net Sales Amount") as avg_order_value,
-            COUNT(DISTINCT t."Customer Key") as unique_customers
-        FROM dbo_F_Sales_Transaction t
-        WHERE t."Deleted Flag" = 0
-            AND t."Excluded Flag" = 0
+            COUNT(DISTINCT {self.schema.TRANSACTION.refs['date']}) as total_days,
+            SUM({self.schema.TRANSACTION.refs['amount']}) as total_revenue,
+            SUM({self.schema.TRANSACTION.refs['quantity']}) as total_units,
+            AVG({self.schema.TRANSACTION.refs['amount']}) as avg_order_value,
+            COUNT(DISTINCT {self.schema.TRANSACTION.refs['customer_key']}) as unique_customers
+        FROM {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
+        LEFT JOIN {self.schema.TABLES['item']} {self.schema.ALIASES['item']}
+            ON {self.schema.TRANSACTION.refs['item_key']} = {self.schema.ITEM.refs['key']}
+        LEFT JOIN {self.schema.TABLES['region']} {self.schema.ALIASES['region']}
+            ON {self.schema.TRANSACTION.refs['region_key']} = {self.schema.REGION.refs['key']}
+        WHERE {self.schema.TRANSACTION.refs['deleted_flag']} = 0
+            AND {self.schema.TRANSACTION.refs['excluded_flag']} = 0
         """
 
         query, params = self.filter_engine.apply_filters(sql, filters, self.schema)
@@ -55,16 +59,19 @@ class SalesPerformanceDataService:
 
         sql = f"""
         SELECT
-            i."Item Desc" as product_name,
-            i."Item Category Desc" as category,
-            SUM(t."Net Sales Amount") as revenue,
-            SUM(t."Net Sales Quantity") as units_sold,
-            AVG(t."Net Sales Amount" / NULLIF(t."Net Sales Quantity", 0)) as avg_price
-        FROM dbo_F_Sales_Transaction t
-        LEFT JOIN `"dbo_D_Item"` i ON t."Item Key" = i."Item Key"
-        WHERE t."Deleted Flag" = 0
-            AND t."Excluded Flag" = 0
-        GROUP BY i."Item Desc", i."Item Category Desc"
+            {self.schema.ITEM.refs['desc']} as product_name,
+            {self.schema.ITEM.refs['category']} as category,
+            SUM({self.schema.TRANSACTION.refs['amount']}) as revenue,
+            SUM({self.schema.TRANSACTION.refs['quantity']}) as units_sold,
+            AVG({self.schema.TRANSACTION.refs['amount']} / NULLIF({self.schema.TRANSACTION.refs['quantity']}, 0)) as avg_price
+        FROM {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
+        LEFT JOIN {self.schema.TABLES['item']} {self.schema.ALIASES['item']}
+            ON {self.schema.TRANSACTION.refs['item_key']} = {self.schema.ITEM.refs['key']}
+        LEFT JOIN {self.schema.TABLES['region']} {self.schema.ALIASES['region']}
+            ON {self.schema.TRANSACTION.refs['region_key']} = {self.schema.REGION.refs['key']}
+        WHERE {self.schema.TRANSACTION.refs['deleted_flag']} = 0
+            AND {self.schema.TRANSACTION.refs['excluded_flag']} = 0
+        GROUP BY {self.schema.ITEM.refs['desc']}, {self.schema.ITEM.refs['category']}
         ORDER BY revenue DESC
         LIMIT {limit}
         """
@@ -84,18 +91,21 @@ class SalesPerformanceDataService:
     async def get_sales_by_region(self, filters: Dict[str, Any] = {}) -> List[Dict]:
         """Get sales performance by region"""
 
-        sql = """
+        sql = f"""
         SELECT
-            r."Sales Org Hrchy L1 Name" as region_name,
-            COUNT(DISTINCT t."Customer Key") as customer_count,
-            SUM(t."Net Sales Amount") as revenue,
-            SUM(t."Net Sales Quantity") as units,
-            AVG(t."Net Sales Amount") as avg_transaction_value
-        FROM dbo_F_Sales_Transaction t
-        LEFT JOIN `"dbo_D_Sales_Organization"` r ON t."Sales Organization Key" = r."Sales Organization Key"
-        WHERE t."Deleted Flag" = 0
-            AND t."Excluded Flag" = 0
-        GROUP BY r."Sales Org Hrchy L1 Name"
+            {self.schema.REGION.refs['name']} as region_name,
+            COUNT(DISTINCT {self.schema.TRANSACTION.refs['customer_key']}) as customer_count,
+            SUM({self.schema.TRANSACTION.refs['amount']}) as revenue,
+            SUM({self.schema.TRANSACTION.refs['quantity']}) as units,
+            AVG({self.schema.TRANSACTION.refs['amount']}) as avg_transaction_value
+        FROM {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
+        LEFT JOIN {self.schema.TABLES['item']} {self.schema.ALIASES['item']}
+            ON {self.schema.TRANSACTION.refs['item_key']} = {self.schema.ITEM.refs['key']}
+        LEFT JOIN {self.schema.TABLES['region']} {self.schema.ALIASES['region']}
+            ON {self.schema.TRANSACTION.refs['region_key']} = {self.schema.REGION.refs['key']}
+        WHERE {self.schema.TRANSACTION.refs['deleted_flag']} = 0
+            AND {self.schema.TRANSACTION.refs['excluded_flag']} = 0
+        GROUP BY {self.schema.REGION.refs['name']}
         ORDER BY revenue DESC
         """
 
@@ -114,17 +124,21 @@ class SalesPerformanceDataService:
     async def get_sales_trends(self, filters: Dict[str, Any] = {}) -> List[Dict]:
         """Get sales trends over time"""
 
-        sql = """
+        sql = f"""
         SELECT
-            DATE(t."Txn Date") as date,
-            SUM(t."Net Sales Amount") as daily_revenue,
-            SUM(t."Net Sales Quantity") as daily_units,
-            COUNT(DISTINCT t."Customer Key") as daily_customers,
+            DATE({self.schema.TRANSACTION.refs['date']}) as date,
+            SUM({self.schema.TRANSACTION.refs['amount']}) as daily_revenue,
+            SUM({self.schema.TRANSACTION.refs['quantity']}) as daily_units,
+            COUNT(DISTINCT {self.schema.TRANSACTION.refs['customer_key']}) as daily_customers,
             COUNT(*) as transaction_count
-        FROM dbo_F_Sales_Transaction t
-        WHERE t."Deleted Flag" = 0
-            AND t."Excluded Flag" = 0
-        GROUP BY DATE(t."Txn Date")
+        FROM {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
+        LEFT JOIN {self.schema.TABLES['item']} {self.schema.ALIASES['item']}
+            ON {self.schema.TRANSACTION.refs['item_key']} = {self.schema.ITEM.refs['key']}
+        LEFT JOIN {self.schema.TABLES['region']} {self.schema.ALIASES['region']}
+            ON {self.schema.TRANSACTION.refs['region_key']} = {self.schema.REGION.refs['key']}
+        WHERE {self.schema.TRANSACTION.refs['deleted_flag']} = 0
+            AND {self.schema.TRANSACTION.refs['excluded_flag']} = 0
+        GROUP BY DATE({self.schema.TRANSACTION.refs['date']})
         ORDER BY date
         """
 
@@ -143,18 +157,21 @@ class SalesPerformanceDataService:
     async def get_sales_by_category(self, filters: Dict[str, Any] = {}) -> List[Dict]:
         """Get sales distribution by category"""
 
-        sql = """
+        sql = f"""
         SELECT
-            i."Item Category Desc" as category,
-            COUNT(DISTINCT i."Item Desc") as product_count,
-            SUM(t."Net Sales Amount") as revenue,
-            SUM(t."Net Sales Quantity") as units,
-            AVG(t."Net Sales Amount" / NULLIF(t."Net Sales Quantity", 0)) as avg_price
-        FROM dbo_F_Sales_Transaction t
-        LEFT JOIN `"dbo_D_Item"` i ON t."Item Key" = i."Item Key"
-        WHERE t."Deleted Flag" = 0
-            AND t."Excluded Flag" = 0
-        GROUP BY i."Item Category Desc"
+            {self.schema.ITEM.refs['category']} as category,
+            COUNT(DISTINCT {self.schema.ITEM.refs['desc']}) as product_count,
+            SUM({self.schema.TRANSACTION.refs['amount']}) as revenue,
+            SUM({self.schema.TRANSACTION.refs['quantity']}) as units,
+            AVG({self.schema.TRANSACTION.refs['amount']} / NULLIF({self.schema.TRANSACTION.refs['quantity']}, 0)) as avg_price
+        FROM {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
+        LEFT JOIN {self.schema.TABLES['item']} {self.schema.ALIASES['item']}
+            ON {self.schema.TRANSACTION.refs['item_key']} = {self.schema.ITEM.refs['key']}
+        LEFT JOIN {self.schema.TABLES['region']} {self.schema.ALIASES['region']}
+            ON {self.schema.TRANSACTION.refs['region_key']} = {self.schema.REGION.refs['key']}
+        WHERE {self.schema.TRANSACTION.refs['deleted_flag']} = 0
+            AND {self.schema.TRANSACTION.refs['excluded_flag']} = 0
+        GROUP BY {self.schema.ITEM.refs['category']}
         ORDER BY revenue DESC
         """
 
@@ -170,22 +187,57 @@ class SalesPerformanceDataService:
             'avgPrice': row.get('avg_price', 0) or 0
         } for row in result]
 
+    async def get_filter_options(self) -> Dict[str, List[str]]:
+        """Get available filter options from the database"""
+
+        # Get distinct regions
+        region_sql = f"""
+        SELECT DISTINCT {self.schema.REGION.refs['name']} as region_name
+        FROM {self.schema.TABLES['region']} {self.schema.ALIASES['region']}
+        WHERE {self.schema.REGION.refs['name']} IS NOT NULL
+        ORDER BY region_name
+        """
+
+        region_result = await self.db.query(region_sql, [])
+        regions = [row['region_name'] for row in region_result.get('rows', [])]
+
+        # Get distinct categories
+        category_sql = f"""
+        SELECT DISTINCT {self.schema.ITEM.refs['category']} as category
+        FROM {self.schema.TABLES['item']} {self.schema.ALIASES['item']}
+        WHERE {self.schema.ITEM.refs['category']} IS NOT NULL
+        ORDER BY category
+        """
+
+        category_result = await self.db.query(category_sql, [])
+        categories = [row['category'] for row in category_result.get('rows', [])]
+
+        return {
+            'regions': regions,
+            'categories': categories
+        }
+
     async def get_top_customers(self, filters: Dict[str, Any] = {}, limit: int = 10) -> List[Dict]:
         """Get top customers by revenue"""
 
         sql = f"""
         SELECT
-            c."Customer Name" as customer_name,
-            c."Customer Type Desc" as segment,
-            COUNT(DISTINCT t."Txn Date") as purchase_days,
-            SUM(t."Net Sales Amount") as total_revenue,
-            SUM(t."Net Sales Quantity") as total_units,
-            AVG(t."Net Sales Amount") as avg_order_value
-        FROM dbo_F_Sales_Transaction t
-        LEFT JOIN dbo_D_Customer c ON t."Customer Key" = c."Customer Key"
-        WHERE t."Deleted Flag" = 0
-            AND t."Excluded Flag" = 0
-        GROUP BY c."Customer Name", c."Customer Type Desc"
+            {self.schema.CUSTOMER.refs['name']} as customer_name,
+            {self.schema.CUSTOMER.refs['type']} as segment,
+            COUNT(DISTINCT {self.schema.TRANSACTION.refs['date']}) as purchase_days,
+            SUM({self.schema.TRANSACTION.refs['amount']}) as total_revenue,
+            SUM({self.schema.TRANSACTION.refs['quantity']}) as total_units,
+            AVG({self.schema.TRANSACTION.refs['amount']}) as avg_order_value
+        FROM {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
+        LEFT JOIN {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
+            ON {self.schema.TRANSACTION.refs['customer_key']} = {self.schema.CUSTOMER.refs['key']}
+        LEFT JOIN {self.schema.TABLES['item']} {self.schema.ALIASES['item']}
+            ON {self.schema.TRANSACTION.refs['item_key']} = {self.schema.ITEM.refs['key']}
+        LEFT JOIN {self.schema.TABLES['region']} {self.schema.ALIASES['region']}
+            ON {self.schema.TRANSACTION.refs['region_key']} = {self.schema.REGION.refs['key']}
+        WHERE {self.schema.TRANSACTION.refs['deleted_flag']} = 0
+            AND {self.schema.TRANSACTION.refs['excluded_flag']} = 0
+        GROUP BY {self.schema.CUSTOMER.refs['name']}, {self.schema.CUSTOMER.refs['type']}
         ORDER BY total_revenue DESC
         LIMIT {limit}
         """

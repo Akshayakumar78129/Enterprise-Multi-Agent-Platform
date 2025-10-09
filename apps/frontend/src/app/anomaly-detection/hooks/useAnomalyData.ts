@@ -241,6 +241,13 @@ export function useAnomalyData(filters: AnomalyFilters) {
     };
   }, [data, customerAnomalies, featureImportance, hasNoData]);
 
+  // Extract insights from data
+  const insights = useMemo(() => {
+    if (!data || hasNoData) return [];
+    // Check if insights exist in the response
+    return data.insights || [];
+  }, [data, hasNoData]);
+
   return {
     loading,
     error,
@@ -254,6 +261,7 @@ export function useAnomalyData(filters: AnomalyFilters) {
     timeSeriesAnomalies,
     hasNoData,
     kpiMetrics,
+    insights,
     client
   };
 }

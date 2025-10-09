@@ -40,6 +40,14 @@ function ChurnLayoutContent({ children }: { children: React.ReactNode }) {
     selectedPoints,
     selectionManager,
     filters,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId,
     timeRange,
     churnCustomers
   } = useChurnContext();
@@ -73,14 +81,25 @@ function ChurnLayoutContent({ children }: { children: React.ReactNode }) {
           dateRange: filters.dateRange
         }
       }}
+      messages={chatMessages}
+      setMessages={setChatMessages}
+      input={chatInput}
+      setInput={setChatInput}
+      isLoading={chatIsLoading}
+      setIsLoading={setChatIsLoading}
+      sessionId={chatSessionId}
+      userId={chatUserId}
     />
   );
 
   const biPanelContent = (
     <BusinessIntelligencePanel
       onClose={() => setIsBIModalOpen(false)}
-      customers={churnCustomers}
-      dashboardContext="churn_prediction"
+      insights={[]} // Will be populated when page passes data
+      kpiMetrics={{}}
+      data={{ customers: churnCustomers }}
+      dashboardContext="churn"
+      customers={churnCustomers} // Legacy support
     />
   );
 

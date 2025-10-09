@@ -11,9 +11,27 @@ class SyncProductPerformanceProcessingService:
     def __init__(self):
         self.async_service = ProductPerformanceProcessingService()
 
+    def _run_async(self, coro):
+        """Helper to run async methods synchronously"""
+        try:
+            # Try to get existing event loop
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # If loop is already running, run in separate thread
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(asyncio.run, coro)
+                    return future.result()
+            else:
+                # No running loop, we can use asyncio.run
+                return asyncio.run(coro)
+        except RuntimeError:
+            # No event loop exists, create one
+            return asyncio.run(coro)
+
     def get_dashboard_data(self, filters: Dict[str, Any] = {}) -> Dict:
         """Synchronous wrapper for get_dashboard_summary"""
-        return asyncio.run(self.async_service.get_dashboard_summary(filters))
+        return self._run_async(self.async_service.get_dashboard_summary(filters))
 
     def get_product_summary(self, filters: Dict[str, Any] = {}) -> Dict:
         """Get product summary KPIs"""

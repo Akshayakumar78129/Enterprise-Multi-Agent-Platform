@@ -7,6 +7,7 @@ import {
 } from "components/index";
 import React from "react";
 import { CustomerLtvProvider, useCustomerLtvContext } from './context';
+import { useCustomerLtvData } from './hooks/useCustomerLtvData';
 
 function LtvLayoutContent({ children }: { children: React.ReactNode }) {
   const {
@@ -18,6 +19,8 @@ function LtvLayoutContent({ children }: { children: React.ReactNode }) {
     selectionManager,
     customers
   } = useCustomerLtvContext();
+
+  const { insights, kpiMetrics } = useCustomerLtvData({});
 
   // Get selected points from selection manager
   const [selectedPoints, setSelectedPoints] = React.useState<any[]>([]);
@@ -40,19 +43,28 @@ function LtvLayoutContent({ children }: { children: React.ReactNode }) {
       onClose={() => setIsChatPanelOpen(false)}
       selectedPoints={selectedPoints}
       onClearSelection={() => selectionManager.clearAll()}
-      dashboardContext="customer_ltv"
-      additionalContext={{
+      dashboardContext="customer_ltv"additionalContext={{
         selectedCustomer: selectedCustomer,
         totalCustomers: customers.length
       }}
+      messages={chatMessages}
+      setMessages={setChatMessages}
+      input={chatInput}
+      setInput={setChatInput}
+      isLoading={chatIsLoading}
+      setIsLoading={setChatIsLoading}
+      sessionId={chatSessionId}
+      userId={chatUserId}
     />
   );
 
   const biPanelContent = (
     <BusinessIntelligencePanel
       onClose={() => setIsBusinessIntelligencePanelOpen(false)}
-      customers={customers}
-      dashboardContext="customer_ltv"
+      insights={insights || []}
+      kpiMetrics={kpiMetrics || {}}
+      data={{ customers }}
+      dashboardContext="ltv"
     />
   );
 

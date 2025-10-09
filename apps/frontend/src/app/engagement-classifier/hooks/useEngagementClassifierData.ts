@@ -138,6 +138,9 @@ export function useEngagementClassifierData(filters: EngagementFilters) {
     // Status flags
     hasNoData: !responseData.customers || responseData.customers.length === 0,
 
+    // Insights from API
+    insights: data?.insights || [],
+
     // Raw response for debugging
     rawResponse: data
   };

@@ -16,7 +16,12 @@ interface CustomerInsightsContextType {
   filters: InsightsFilters;
   setFilters: (filters: InsightsFilters) => void;
   insightData: any[];
-  setInsightData: (data: any[]) => void;
+  setInsightData: (data: any[,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId]) => void;
   customers: any[];
   setCustomers: (customers: any[]) => void;
   selectionManager: SelectionManager;
@@ -48,7 +53,12 @@ export function CustomerInsightsProvider({ children }: { children: React.ReactNo
 
     return {
       dateRange: {
-        from: lastYear.toISOString().split('T')[0],
+        from: lastYear.toISOString().split('T')[0,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId],
         to: today.toISOString().split('T')[0]
       }
     };

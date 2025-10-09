@@ -12,6 +12,9 @@ import {
   InvestmentCashFlow,
   FinancingCashFlow,
   CashFlowProjection,
+  FCFValueBridge,
+  LiquidityTimeline,
+  CapitalAllocationMatrix,
   CashFlowTable
 } from './components';
 import { useCashFlowContext } from './context';
@@ -29,20 +32,19 @@ export default function CashFlowPage() {
     financingCashFlow,
     cashFlowProjection,
     cashFlowItems,
+    fcfBridge,
+    liquidityTimeline,
+    capitalAllocation,
     hasNoData,
     kpiMetrics
   } = useCashFlowData(filters);
 
   // Update context with cash flow data for BI panel
   React.useEffect(() => {
-    setCashFlowData(cashFlowItems);
-  }, [cashFlowItems, setCashFlowData]);
-
-  // Handle cash flow item selection
-  const handleItemSelect = (item: any) => {
-    console.log('Selected cash flow item:', item);
-    // Could open a detail modal or navigate to item details
-  };
+    if (cashFlowItems && cashFlowItems.length > 0) {
+      setCashFlowData(cashFlowItems);
+    }
+  }, [cashFlowItems]);
 
   if (error && !loading && hasNoData) {
     return (
@@ -56,40 +58,43 @@ export default function CashFlowPage() {
   }
 
   return (
-    <>
+    <div className="space-y-6">
       {/* KPI Section */}
-      <DashboardSection title="Cash Flow Metrics">
-        <CashFlowKPIs kpiMetrics={kpiMetrics} loading={loading} />
+      <DashboardSection title="Key Metrics">
+        <CashFlowKPIs metrics={kpiMetrics} loading={loading} />
       </DashboardSection>
 
-      {/* Primary Analysis Section */}
-      <DashboardSection title="Cash Flow Analysis">
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
-          {/* Left Column - Trends and Operating */}
-          <div className="space-y-4 lg:space-y-6">
-            <CashFlowTrends
-              data={cashFlowTrends}
-              loading={loading}
-            />
-            <OperatingCashFlow
-              data={operatingCashFlow}
-              loading={loading}
-            />
-          </div>
-
-          {/* Right Column - Investment and Financing */}
-          <div className="space-y-4 lg:space-y-6">
-            <InvestmentCashFlow
-              data={investmentCashFlow}
-              loading={loading}
-            />
-            <FinancingCashFlow
-              data={financingCashFlow}
-              loading={loading}
-            />
-          </div>
-        </div>
+      {/* Cash Flow Trends - Full Width */}
+      <DashboardSection title="Cash Flow Trends">
+        <CashFlowTrends
+          data={cashFlowTrends}
+          loading={loading}
+        />
       </DashboardSection>
+
+      {/* Cash Flow Breakdown Grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-6">
+        <DashboardSection title="Operating Cash Flow">
+          <OperatingCashFlow
+            data={operatingCashFlow}
+            loading={loading}
+          />
+        </DashboardSection>
+
+        <DashboardSection title="Investment Cash Flow">
+          <InvestmentCashFlow
+            data={investmentCashFlow}
+            loading={loading}
+          />
+        </DashboardSection>
+
+        <DashboardSection title="Financing Cash Flow">
+          <FinancingCashFlow
+            data={financingCashFlow}
+            loading={loading}
+          />
+        </DashboardSection>
+      </div>
 
       {/* Cash Flow Projection Section */}
       <DashboardSection title="Cash Flow Projection">
@@ -99,14 +104,38 @@ export default function CashFlowPage() {
         />
       </DashboardSection>
 
-      {/* Cash Flow Details Table */}
-      <DashboardSection title="Cash Flow Details">
+      {/* FCF Value Bridge & Liquidity Timeline Grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
+        <DashboardSection title="FCF Value Bridge">
+          <FCFValueBridge
+            data={fcfBridge}
+            loading={loading}
+          />
+        </DashboardSection>
+
+        <DashboardSection title="Liquidity Timeline">
+          <LiquidityTimeline
+            data={liquidityTimeline}
+            loading={loading}
+          />
+        </DashboardSection>
+      </div>
+
+      {/* Capital Allocation Matrix - Full Width */}
+      <DashboardSection title="Capital Allocation Matrix">
+        <CapitalAllocationMatrix
+          data={capitalAllocation}
+          loading={loading}
+        />
+      </DashboardSection>
+
+      {/* Transaction Details Table - Full Width */}
+      <DashboardSection title="Transaction Details">
         <CashFlowTable
           data={cashFlowItems}
           loading={loading}
-          onItemSelect={handleItemSelect}
         />
       </DashboardSection>
-    </>
+    </div>
   );
 }

@@ -21,21 +21,30 @@ def analyze_product_performance(
     """
     Analyze product performance metrics including sales, margins, and categories.
 
+    IMPORTANT: Use "default" or date range format "2017-01-01:2021-12-31" for multi-year analysis.
+    Do NOT call this tool multiple times for different years - use a single call with date range.
+
     Args:
         time_period: Analysis period - MUST be one of:
-            - "default" - Last 90 days (default)
+            - "default" - Full historical data 2017-2021 (RECOMMENDED for multi-year analysis)
             - "last_30_days" - Last 30 days
             - "last_90_days" - Last 90 days
             - "last_year" - Last 365 days
             - "YYYY" - Full year (e.g., "2021")
-            - "YYYY-MM-DD:YYYY-MM-DD" - Custom date range
+            - "YYYY-MM-DD:YYYY-MM-DD" - Custom date range (e.g., "2017-01-01:2021-12-31")
             - "QX YYYY" - Quarter (e.g., "Q1 2021")
-        category: Optional category to filter
+        category: Optional category name to filter (e.g., "Bikes", "Cargo")
         product: Optional product name to filter
-        min_margin: Minimum margin percentage to filter
+        min_margin: Minimum margin percentage to filter (e.g., 30.0 for products with >30% margin)
 
     Returns:
-        String containing the product performance analysis report
+        String containing the product performance analysis report with KPIs and visualization metadata
+
+    Examples:
+        - analyze_product_performance("default") - Full 2017-2021 analysis
+        - analyze_product_performance("2021") - Single year
+        - analyze_product_performance("default", category="Bikes") - Bikes category 2017-2021
+        - analyze_product_performance("default", min_margin=30.0) - High-margin products
     """
     # Initialize the sync wrapper for agent framework
     service = SyncProductPerformanceProcessingService()
@@ -49,12 +58,16 @@ def analyze_product_performance(
     if time_period == "last_30_days":
         filters['dateFrom'] = (current_date - timedelta(days=30)).strftime('%Y-%m-%d')
         filters['dateTo'] = current_date.strftime('%Y-%m-%d')
-    elif time_period == "last_90_days" or time_period == "default":
+    elif time_period == "last_90_days":
         filters['dateFrom'] = (current_date - timedelta(days=90)).strftime('%Y-%m-%d')
         filters['dateTo'] = current_date.strftime('%Y-%m-%d')
     elif time_period == "last_year":
         filters['dateFrom'] = (current_date - timedelta(days=365)).strftime('%Y-%m-%d')
         filters['dateTo'] = current_date.strftime('%Y-%m-%d')
+    elif time_period == "default" or not time_period:
+        # Default to 2017-2021 for consistency with all dashboards
+        filters['dateFrom'] = '2017-01-01'
+        filters['dateTo'] = '2021-12-31'
     elif time_period and time_period.isdigit() and len(time_period) == 4:
         # Year format
         year = int(time_period)
@@ -189,18 +202,29 @@ ensuring complete consistency between agent responses and dashboard visualizatio
 
 ```json
 {
-  "kpiMetrics": """ + json.dumps(kpis, indent=2) + """,
-  "topProducts": """ + json.dumps(top_products[:5], indent=2) + """,
-  "categoryPerformance": """ + json.dumps(category_performance[:5], indent=2) + """,
-  "marginAnalysis": """ + json.dumps(margin_analysis[:5], indent=2) + """
+  "toolname": "product-performance",
+  "componentName": "overview",
+  "body": {
+    "dateFrom": """ + json.dumps(filters.get('dateFrom')) + """,
+    "dateTo": """ + json.dumps(filters.get('dateTo')) + """
+""" + (f""",
+    "categories": {json.dumps(filters.get('categories'))}""" if filters.get('categories') else "") + """
+""" + (f""",
+    "products": {json.dumps(filters.get('products'))}""" if filters.get('products') else "") + """
+""" + (f""",
+    "minMargin": {filters.get('minMargin')}""" if filters.get('minMargin') is not None else "") + """
+  }
 }
 ```
+</output>
+<is_visualisation>true</is_visualisation>
 """
 
         return result
 
     except Exception as e:
-        return f"""# Product Performance Analysis Error
+        return f"""<output>
+# Product Performance Analysis Error
 
 An error occurred while analyzing product performance: {str(e)}
 
@@ -210,6 +234,8 @@ Please check:
 3. Filter validity
 
 Error details: {str(e)}
+</output>
+<is_visualisation>false</is_visualisation>
 """
 
 

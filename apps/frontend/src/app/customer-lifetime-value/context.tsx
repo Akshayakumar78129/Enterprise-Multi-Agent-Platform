@@ -16,7 +16,12 @@ interface CustomerLtvContextType {
   setIsBusinessIntelligencePanelOpen: (open: boolean) => void;
   selectionManager: SelectionManager;
   customers: any[];
-  setCustomers: (customers: any[]) => void;
+  setCustomers: (customers: any[,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId]) => void;
 }
 
 const CustomerLtvContext = createContext<CustomerLtvContextType | undefined>(undefined);

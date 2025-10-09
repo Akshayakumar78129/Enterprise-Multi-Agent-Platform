@@ -1,39 +1,58 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from 'components/ui/card';
-import { Skeleton } from 'components/ui/skeleton';
+import { AnimatedKPITile } from 'components/index';
+import { DollarSign, Package, TrendingUp, Percent, Tag, ShoppingCart } from 'lucide-react';
 
 export function ProductKPIs({ metrics, loading }: { metrics: any; loading?: boolean }) {
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => (
-          <Card key={i}>
-            <CardContent className="p-6">
-              <Skeleton className="h-4 w-24 mb-2" />
-              <Skeleton className="h-8 w-16" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  }
-
   const kpis = [
-    { label: 'Total Products', value: metrics?.totalProducts || '0' },
-    { label: 'Top Seller', value: metrics?.topSeller || 'N/A' },
-    { label: 'Avg Rating', value: metrics?.averageRating || '0' },
-    { label: 'Stock Level', value: metrics?.stockLevel || '0%' }
+    {
+      title: 'Total Sales',
+      value: metrics?.totalRevenue ? `$${(metrics.totalRevenue / 1000000).toFixed(1)}M` : '$0',
+      subtitle: 'All products',
+      icon: DollarSign,
+      trend: metrics?.revenueGrowth || 0,
+      color: '#8b5cf6' as const
+    },
+    {
+      title: 'Total Units',
+      value: metrics?.totalUnits?.toLocaleString() || '0',
+      subtitle: 'Units sold',
+      icon: ShoppingCart,
+      color: '#10b981' as const
+    },
+    {
+      title: 'Avg Price',
+      value: metrics?.avgPrice ? `$${metrics.avgPrice.toFixed(2)}` : '$0',
+      subtitle: 'Per unit',
+      icon: Tag,
+      color: '#f59e0b' as const
+    },
+    {
+      title: 'Avg Margin',
+      value: metrics?.avgMargin ? `${metrics.avgMargin.toFixed(1)}%` : '0%',
+      subtitle: 'Profit margin',
+      icon: Percent,
+      color: '#ef4444' as const
+    },
+    {
+      title: 'Top Category',
+      value: metrics?.topCategory?.name || 'N/A',
+      subtitle: metrics?.topCategory?.revenue ? `$${(metrics.topCategory.revenue / 1000).toFixed(0)}k` : 'Revenue',
+      icon: TrendingUp,
+      color: '#3b82f6' as const
+    },
+    {
+      title: 'Total Products',
+      value: metrics?.totalProducts?.toLocaleString() || '0',
+      subtitle: 'In catalog',
+      icon: Package,
+      color: '#ec4899' as const
+    }
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {kpis.map((kpi, index) => (
-        <Card key={index}>
-          <CardContent className="p-6">
-            <div className="text-sm font-medium text-muted-foreground">{kpi.label}</div>
-            <div className="text-2xl font-bold">{kpi.value}</div>
-          </CardContent>
-        </Card>
+        <AnimatedKPITile key={index} {...kpi} loading={loading} />
       ))}
     </div>
   );
@@ -98,3 +117,16 @@ export function ProductTrends({ data, loading }: { data: any; loading?: boolean 
     </Card>
   );
 }
+
+// Export filters
+export { ProductFilters } from './ProductFilters';
+
+// Export visualization components
+export {
+  ProductPerformanceOverview,
+  TopProductsTable,
+  CategoryPerformanceChart,
+  MarginAnalysisScatter,
+  PriceBandDistribution,
+  ProductTrendsTimeSeries
+} from './visualizations';

@@ -77,6 +77,7 @@ export { DateRangeFilter } from "./filters/DateRangeFilter";
 export { FilterBar } from "./filters/FilterBar";
 export { MultiSelectFilter } from "./filters/MultiSelectFilter";
 export { SearchFilter } from "./filters/SearchFilter";
+export { SingleSelectFilter } from "./filters/SingleSelectFilter";
 
 // Table Components
 export { DataTable } from "./tables/DataTable";

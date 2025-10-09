@@ -45,6 +45,7 @@ export function useProductPerformanceData(filters: ProductFilters) {
   return {
     loading,
     error,
+    data,
     kpiMetrics: data?.kpiMetrics || {},
     topProducts: data?.mainData?.topProducts || [],
     categoryPerformance: data?.mainData?.categoryPerformance || [],

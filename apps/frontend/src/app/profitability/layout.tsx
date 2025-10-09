@@ -10,7 +10,15 @@ import { ProfitabilityFilters } from "./components";
 import { ProfitabilityProvider, useProfitabilityContext } from "./context";
 
 function HeaderFilters() {
-  const { filters, setFilters } = useProfitabilityContext();
+  const { filters,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId, setFilters } = useProfitabilityContext();
   return (
     <ProfitabilityFilters
       filters={filters}
@@ -38,6 +46,14 @@ function ProfitabilityLayoutContent({ children }: { children: React.ReactNode })
     selectedPoints,
     selectionManager,
     filters,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId,
     profitabilityData
   } = useProfitabilityContext();
 
@@ -59,8 +75,7 @@ function ProfitabilityLayoutContent({ children }: { children: React.ReactNode })
       onClose={() => setIsChatOpen(false)}
       selectedPoints={selectedPoints}
       onClearSelection={() => selectionManager.clearAll()}
-      dashboardContext="profitability"
-      additionalContext={{
+      dashboardContext="profitability"additionalContext={{
         filters: {
           timePeriod: filters.timePeriod,
           profitType: filters.profitType,
@@ -70,6 +85,14 @@ function ProfitabilityLayoutContent({ children }: { children: React.ReactNode })
           costCategories: filters.costCategories.join(", ") || "All"
         }
       }}
+      messages={chatMessages}
+      setMessages={setChatMessages}
+      input={chatInput}
+      setInput={setChatInput}
+      isLoading={chatIsLoading}
+      setIsLoading={setChatIsLoading}
+      sessionId={chatSessionId}
+      userId={chatUserId}
     />
   );
 

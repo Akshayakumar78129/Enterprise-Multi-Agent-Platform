@@ -8,9 +8,18 @@ import {
 import React from "react";
 import { BehaviorFilters } from "./components";
 import { BehaviorProvider, useBehaviorContext } from "./context";
+import { useBehaviorData } from "./hooks/useBehaviorData";
 
 function HeaderFilters() {
-  const { filters, setFilters } = useBehaviorContext();
+  const { filters,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId, setFilters } = useBehaviorContext();
   return (
     <BehaviorFilters
       filters={filters}
@@ -39,8 +48,18 @@ function BehaviorLayoutContent({ children }: { children: React.ReactNode }) {
     selectedPoints,
     selectionManager,
     filters,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId,
     behaviorCustomers
   } = useBehaviorContext();
+
+  const { insights, kpiMetrics } = useBehaviorData(filters);
 
   // Calculate high engagement customers for BI trigger
   const highEngagementCount = behaviorCustomers.filter(c =>
@@ -61,8 +80,7 @@ function BehaviorLayoutContent({ children }: { children: React.ReactNode }) {
       onClose={() => setIsChatOpen(false)}
       selectedPoints={selectedPoints}
       onClearSelection={() => selectionManager.clearAll()}
-      dashboardContext="customer_behavior"
-      additionalContext={{
+      dashboardContext="customer_behavior"additionalContext={{
         filters: {
           timePeriod: filters.timePeriod,
           segmentId: filters.segmentId || "All",
@@ -71,26 +89,24 @@ function BehaviorLayoutContent({ children }: { children: React.ReactNode }) {
           loyaltyStatus: filters.loyaltyStatus.join(", ") || "All"
         }
       }}
+      messages={chatMessages}
+      setMessages={setChatMessages}
+      input={chatInput}
+      setInput={setChatInput}
+      isLoading={chatIsLoading}
+      setIsLoading={setChatIsLoading}
+      sessionId={chatSessionId}
+      userId={chatUserId}
     />
   );
-
-  // Transform behavior customers to match BI panel expectations
-  const transformedCustomers = behaviorCustomers.map(customer => ({
-    customer_id: customer.customer_id,
-    name: customer.customer_name || `Customer ${customer.customer_id}`,
-    risk_level: customer.engagement_score && customer.engagement_score < 0.3 ? 'High' :
-                customer.engagement_score && customer.engagement_score < 0.6 ? 'Medium' : 'Low',
-    churn_probability: customer.engagement_score ? (1 - customer.engagement_score) : 0.5,
-    avg_order_value: customer.avg_order_value,
-    frequency: customer.purchase_frequency,
-    lifetime_value: customer.total_spend || customer.estimated_clv
-  }));
 
   const biPanelContent = (
     <BusinessIntelligencePanel
       onClose={() => setIsBIModalOpen(false)}
-      customers={transformedCustomers}
-      dashboardContext="customer_behavior"
+      insights={insights || []}
+      kpiMetrics={kpiMetrics || {}}
+      data={{ customers: behaviorCustomers }}
+      dashboardContext="customer"
     />
   );
 

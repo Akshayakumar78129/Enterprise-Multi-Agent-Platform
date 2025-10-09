@@ -33,14 +33,16 @@ COMPONENT_SCHEMA = {
             }
         },
         "product-performance": {
-            "components": ["salesExplorer", "marginAnalysis", "priceBandDistribution", "growthMatrix"],
+            "components": ["kpis", "overview", "topProducts", "categoryAnalysis", "marginAnalysis", "priceBands"],
             "parameters": {
                 "start_date": "date",
                 "end_date": "date",
-                "metrics": "array",
-                "category_level": "string",
-                "min_sales_threshold": "number|null",
-                "time_granularity": "string"
+                "categories": "array",
+                "products": "array",
+                "priceBands": "array",
+                "minMargin": "number|null",
+                "maxMargin": "number|null",
+                "topN": "number"
             }
         },
         "sales-performance": {
@@ -54,7 +56,7 @@ COMPONENT_SCHEMA = {
             }
         },
         "customer-segmentation": {
-            "components": ["distributionMap", "profileCards", "metricComparison", "kpiTiles", "evolutionTimeline", "attributeHeatmap"],
+            "components": ["distributionMap", "profileCards", "metricComparison", "kpiTiles"],
             "parameters": {
                 "start_date": "date",
                 "end_date": "date",
@@ -196,6 +198,17 @@ COMPONENT_SCHEMA = {
                 "warehouseId": "string|null",
                 "annualHoldingCostPercentage": "number",
                 "opportunityCostRate": "number"
+            }
+        },
+        "cash-flow": {
+            "components": ["kpis", "trends", "operating", "investing", "financing", "projection", "table", "fcf-bridge", "liquidity-timeline", "capital-allocation"],
+            "parameters": {
+                "dateFrom": "date",
+                "dateTo": "date",
+                "cashFlowType": "string",
+                "departments": "array",
+                "regions": "array",
+                "minAmount": "number|null"
             }
         }
     }
@@ -856,11 +869,28 @@ async def get_visualisation(user_query: str, adk_response: str) -> dict:
     print(f"Query: {user_query[:100]}")
     print(f"ADK Response length: {len(adk_response)} chars")
 
-    # NEW: Skip direct JSON extraction since we want metadata only
-    # The AI will extract metadata parameters from the query, not data from ADK response
-    print("Using AI to extract metadata parameters from user query...")
+    # FIRST: Try to extract tool's embedded JSON metadata from the response
+    # Tools output JSON in a section like "## Visualization Data (Machine-Readable)"
+    import re
+    viz_pattern = r'## Visualization Data \(Machine-Readable\)\s*```json\s*(\{[\s\S]*?\}|\[[\s\S]*?\])\s*```'
+    viz_match = re.search(viz_pattern, adk_response)
+
+    if viz_match:
+        try:
+            embedded_json = json.loads(viz_match.group(1))
+            print("✅ Found embedded visualization JSON from tool!")
+            print(f"Embedded metadata: {json.dumps(embedded_json, indent=2)[:500]}")
+
+            # If it's a single object, wrap in array
+            if isinstance(embedded_json, dict):
+                embedded_json = [embedded_json]
+
+            return embedded_json
+        except json.JSONDecodeError as e:
+            print(f"⚠️ Failed to parse embedded JSON: {e}, falling back to AI extraction")
 
     # Fall back to AI extraction if direct extraction failed
+    print("No embedded JSON found, using AI to extract metadata parameters from user query...")
     gemini_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY", ""))
     prompt = f"""
     {VIS_SCHEMA_PROMPT}

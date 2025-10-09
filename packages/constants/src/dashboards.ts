@@ -228,9 +228,9 @@ export const DASHBOARDS: Dashboard[] = [
 
   // Finance Domain Dashboards
   {
-    id: 'cash-flow-analysis',
+    id: 'cash-flow',
     name: 'Cash Flow Analysis',
-    path: '/cash-flow-analysis',
+    path: '/cash-flow',
     domain: 'finance',
     description: 'Analyze cash flow patterns and projections',
     icon: '💸',

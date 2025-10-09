@@ -8,6 +8,7 @@ import {
 import React from "react";
 import { CashFlowFilters } from "./components";
 import { CashFlowProvider, useCashFlowContext } from "./context";
+import { useCashFlowData } from "./hooks/useCashFlowData";
 
 function HeaderFilters() {
   const { filters, setFilters } = useCashFlowContext();
@@ -17,12 +18,14 @@ function HeaderFilters() {
       onFiltersChange={setFilters}
       onReset={() =>
         setFilters({
-          timePeriod: "2021-01-01:2021-12-31",
+          dateRange: {
+            startDate: "2017-01-01",
+            endDate: "2021-12-31",
+          },
           cashFlowType: "all",
           departments: [],
-          projects: [],
-          minAmount: 1000,
-          includeProjections: true,
+          regions: [],
+          minAmount: null,
         })
       }
     />
@@ -38,12 +41,23 @@ function CashFlowLayoutContent({ children }: { children: React.ReactNode }) {
     selectedPoints,
     selectionManager,
     filters,
-    cashFlowData
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId,
   } = useCashFlowContext();
 
-  const negativeCashFlowCount = cashFlowData.filter(item =>
-    item.net_cash_flow && item.net_cash_flow < 0
-  ).length;
+  // Get insights and kpiMetrics from the hook
+  const { insights, kpiMetrics, cashFlowItems } = useCashFlowData(filters);
+
+  // Calculate negative cash flow count for BI trigger
+  const negativeCashFlowCount = cashFlowItems?.filter(item =>
+    item.amount && item.amount < 0
+  ).length || 0;
 
   const mainContent = (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -62,32 +76,29 @@ function CashFlowLayoutContent({ children }: { children: React.ReactNode }) {
       dashboardContext="cash_flow"
       additionalContext={{
         filters: {
-          timePeriod: filters.timePeriod,
-          cashFlowType: filters.cashFlowType,
-          departments: filters.departments.join(", ") || "All",
-          projects: filters.projects.join(", ") || "All",
-          minAmount: filters.minAmount,
-          includeProjections: filters.includeProjections
+          cashFlowType: filters.cashFlowType || "All",
+          departments: filters.departments?.join(", ") || "All",
+          regions: filters.regions?.join(", ") || "All",
+          dateRange: filters.dateRange
         }
       }}
+      messages={chatMessages}
+      setMessages={setChatMessages}
+      input={chatInput}
+      setInput={setChatInput}
+      isLoading={chatIsLoading}
+      setIsLoading={setChatIsLoading}
+      sessionId={chatSessionId}
+      userId={chatUserId}
     />
   );
-
-  const transformedItems = cashFlowData.map(item => ({
-    item_id: item.item_id,
-    name: item.item_name || `Item ${item.item_id}`,
-    net_cash_flow: item.net_cash_flow,
-    operating_cf: item.operating_cf,
-    investment_cf: item.investment_cf,
-    risk_level: item.net_cash_flow && item.net_cash_flow < 0 ? 'High' :
-                item.net_cash_flow && item.net_cash_flow < 50000 ? 'Medium' : 'Low',
-    category: item.category
-  }));
 
   const biPanelContent = (
     <BusinessIntelligencePanel
       onClose={() => setIsBIModalOpen(false)}
-      customers={transformedItems}
+      insights={insights || []}
+      kpiMetrics={kpiMetrics || {}}
+      data={cashFlowItems}
       dashboardContext="cash_flow"
     />
   );

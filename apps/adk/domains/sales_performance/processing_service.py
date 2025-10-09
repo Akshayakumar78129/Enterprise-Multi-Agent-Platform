@@ -53,12 +53,68 @@ class SalesPerformanceProcessingService:
                 'categoryPerformance': [c.dict() for c in category_performance],
                 'topCustomers': [cust.dict() for cust in top_customers]
             },
-            'insights': [],
+            'insights': self._generate_insights(kpis.dict(), product_performance, region_performance),
             'metadata': {
                 'filtersApplied': normalized_filters,
                 'timestamp': datetime.now().isoformat()
             }
         }
+
+    def _generate_insights(self, kpis: dict, product_performance: list, region_performance: list) -> list:
+        """Generate AI insights based on data"""
+        insights = []
+
+        # Revenue insights
+        revenue_growth = kpis.get('revenueGrowth', 0)
+        if revenue_growth > 10:
+            insights.append({
+                'type': 'positive',
+                'message': f"Revenue growing strongly at {revenue_growth:.1f}%"
+            })
+        elif revenue_growth < -5:
+            insights.append({
+                'type': 'warning',
+                'message': f"Revenue declining by {abs(revenue_growth):.1f}%"
+            })
+
+        # Total revenue insight
+        total_revenue = kpis.get('totalRevenue', 0)
+        if total_revenue > 1000000:
+            insights.append({
+                'type': 'positive',
+                'message': f"Strong revenue performance at ${total_revenue:,.0f}"
+            })
+
+        # Product insights
+        if product_performance:
+            top_product = product_performance[0]
+            insights.append({
+                'type': 'info',
+                'message': f"Top product: {top_product.productName} with {top_product.marketShare:.1f}% market share"
+            })
+
+        # Regional insights
+        if region_performance:
+            top_region = max(region_performance, key=lambda x: x.revenue)
+            insights.append({
+                'type': 'info',
+                'message': f"Best performing region: {top_region.regionName}"
+            })
+
+        # Conversion rate insight
+        conversion_rate = kpis.get('conversionRate', 0)
+        if conversion_rate > 30:
+            insights.append({
+                'type': 'positive',
+                'message': f"Strong conversion rate of {conversion_rate:.1f}%"
+            })
+        elif conversion_rate < 10:
+            insights.append({
+                'type': 'warning',
+                'message': f"Low conversion rate at {conversion_rate:.1f}% - consider optimization"
+            })
+
+        return insights
 
     def _normalize_filters(self, filters: Dict[str, Any]) -> Dict[str, Any]:
         """Normalize filter format to handle both old and new formats"""
@@ -128,11 +184,25 @@ class SalesPerformanceProcessingService:
 
         regions = await self.data_service.get_sales_by_region(filters)
 
-        # Calculate growth rates (would need historical data)
+        # Calculate growth rates if date range provided
         result = []
+
+        # Get previous period data for growth calculation
+        prev_regions_dict = {}
+        if filters.get('dateFrom') and filters.get('dateTo'):
+            prev_filters = self._get_previous_period_filters(filters)
+            prev_regions = await self.data_service.get_sales_by_region(prev_filters)
+            prev_regions_dict = {r['regionName']: r for r in prev_regions}
+
         for region in regions:
-            # Mock growth calculation
-            growth_rate = 5.0  # Would calculate from historical data
+            # Calculate growth rate if previous period data exists
+            growth_rate = 0.0
+            region_name = region['regionName']
+            if region_name in prev_regions_dict:
+                prev_revenue = prev_regions_dict[region_name]['revenue']
+                curr_revenue = region['revenue']
+                if prev_revenue > 0:
+                    growth_rate = ((curr_revenue - prev_revenue) / prev_revenue * 100)
 
             result.append(RegionPerformance(
                 regionName=region['regionName'],

@@ -37,6 +37,7 @@ export function useCustomerLtvData(filters: Record<string, any>) {
     predictionData: data?.mainData?.predictionData || [],
     valueContribution: data?.mainData?.valueContribution || [],
     kpiMetrics: data?.kpiMetrics || {},
+    insights: data?.insights || [],
     hasNoData: !data?.mainData || Object.keys(data?.mainData || {}).length === 0
   };
 }

@@ -1,81 +1,95 @@
-import { useState, useEffect } from 'react';
-import { salesPerformanceService } from '../services/salesPerformanceService';
+import { useState, useEffect, useCallback } from 'react';
+import { salesPerformanceService, SalesPerformanceData } from '../services/salesPerformanceService';
+import { SalesPerformanceFilters } from '../context';
 
-export function useSalesPerformanceData(filters: Record<string, any>) {
+export function useSalesPerformanceData(filters: SalesPerformanceFilters, dimension?: string, metric?: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>({});
+  const [data, setData] = useState<SalesPerformanceData | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    try {
       setLoading(true);
       setError(null);
 
-      try {
-        const dashboardData = await salesPerformanceService.getDashboardData(filters);
+      const filtersWithDimensionMetric = {
+        ...filters,
+        dimension,
+        metric
+      };
 
-        setData({
-          kpiMetrics: dashboardData.kpiMetrics,
-          mainData: {
-            salesOverview: {
-              totalOrders: dashboardData.kpiMetrics.uniqueCustomers,
-              averageOrderValue: dashboardData.kpiMetrics.avgOrderValue,
-              conversionRate: dashboardData.kpiMetrics.conversionRate,
-              revenue: dashboardData.kpiMetrics.totalRevenue
-            },
-            topProducts: dashboardData.mainData?.productPerformance?.map(p => ({
-              name: p.productName,
-              sales: p.revenue,
-              units: p.unitsSold,
-              category: p.category,
-              avgPrice: p.avgPrice
-            })) || [],
-            teamPerformance: dashboardData.mainData?.regionPerformance?.map(r => ({
-              region: r.regionName,
-              revenue: r.revenue,
-              customers: r.customerCount,
-              units: r.units
-            })) || [],
-            salesTargets: dashboardData.mainData?.categoryPerformance?.map(c => ({
-              category: c.category,
-              revenue: c.revenue,
-              units: c.units,
-              productCount: c.productCount
-            })) || [],
-            revenueTrends: dashboardData.mainData?.salesTrends || []
-          }
-        });
-      } catch (err) {
-        console.error('Error fetching sales performance data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch data');
-        setData({
-          kpiMetrics: {
-            totalRevenue: 0,
-            totalUnits: 0,
-            avgOrderValue: 0,
-            uniqueCustomers: 0,
-            revenueGrowth: 0,
-            conversionRate: 0
-          },
-          mainData: {}
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+      const result = await salesPerformanceService.getDashboardData(filtersWithDimensionMetric);
+      setData(result);
+    } catch (err: any) {
+      console.error('Error fetching sales performance data:', err);
+      setError(err.message || 'Failed to load sales performance data');
+      // Set empty data on error
+      setData({
+        kpiMetrics: {
+          totalRevenue: 0,
+          totalUnits: 0,
+          avgOrderValue: 0,
+          uniqueCustomers: 0,
+          revenueGrowth: 0,
+          conversionRate: 0
+        },
+        mainData: {
+          productPerformance: [],
+          regionPerformance: [],
+          salesTrends: [],
+          categoryPerformance: [],
+          topCustomers: []
+        },
+        insights: [],
+        metadata: {
+          filtersApplied: filters,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [filters, dimension, metric]);
 
+  useEffect(() => {
     fetchData();
-  }, [JSON.stringify(filters)]);
+  }, [fetchData]);
+
+  // Derived data for easier component access
+  const kpiMetrics = data?.kpiMetrics || {
+    totalRevenue: 0,
+    totalUnits: 0,
+    avgOrderValue: 0,
+    uniqueCustomers: 0,
+    revenueGrowth: 0,
+    conversionRate: 0
+  };
+
+  const salesOverview = data?.mainData || null;
+  const topProducts = data?.mainData?.productPerformance || [];
+  const teamPerformance = data?.mainData?.regionPerformance || [];
+  const revenueTrends = data?.mainData?.salesTrends || [];
+  const salesTargets = data?.mainData?.categoryPerformance || [];
+  const topCustomers = data?.mainData?.topCustomers || [];
+
+  const hasNoData = !loading && (!data ||
+    (topProducts.length === 0 &&
+     teamPerformance.length === 0 &&
+     revenueTrends.length === 0));
 
   return {
     loading,
     error,
-    salesOverview: data?.mainData?.salesOverview || {},
-    topProducts: data?.mainData?.topProducts || [],
-    teamPerformance: data?.mainData?.teamPerformance || {},
-    salesTargets: data?.mainData?.salesTargets || {},
-    revenueTrends: data?.mainData?.revenueTrends || {},
-    kpiMetrics: data?.kpiMetrics || {},
-    hasNoData: !data?.mainData || Object.keys(data?.mainData || {}).length === 0
+    data,
+    kpiMetrics,
+    salesOverview,
+    topProducts,
+    teamPerformance,
+    revenueTrends,
+    salesTargets,
+    topCustomers,
+    insights: data?.insights || [],
+    hasNoData,
+    refetch: fetchData
   };
 }

@@ -314,6 +314,13 @@ export function useBehaviorData(filters: BehaviorFilters) {
     };
   }, [data, purchasePatterns, productPreferences, channelUsage, engagementMetrics, topCustomers, hasNoData]);
 
+  // Extract insights from data
+  const insights = useMemo(() => {
+    if (!data || hasNoData) return [];
+    // Check if insights exist in the response
+    return data.insights || [];
+  }, [data, hasNoData]);
+
   return {
     loading,
     error,
@@ -326,6 +333,7 @@ export function useBehaviorData(filters: BehaviorFilters) {
     topCustomers,
     hasNoData,
     kpiMetrics,
+    insights,
     client
   };
 }

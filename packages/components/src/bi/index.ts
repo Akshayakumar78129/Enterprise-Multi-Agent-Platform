@@ -6,3 +6,9 @@ export type {
   BusinessIntelligenceModalProps,
   ChurnCustomer
 } from "./BusinessIntelligenceModal";
+
+export { BusinessIntelligencePanel } from "./BusinessIntelligencePanel";
+export type {
+  BusinessIntelligencePanelProps,
+  Insight
+} from "./BusinessIntelligencePanel";

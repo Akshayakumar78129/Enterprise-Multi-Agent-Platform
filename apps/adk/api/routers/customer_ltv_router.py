@@ -30,7 +30,7 @@ async def get_ltv_data(filters: Dict = {}) -> Dict:
         # Convert older filter format to new format
         converted_filters = {}
         if 'dateRange' in filters:
-            converted_filters['date_from'] = filters['dateRange'].get('start', '2021-01-01')
+            converted_filters['date_from'] = filters['dateRange'].get('start', '2017-01-01')
             converted_filters['date_to'] = filters['dateRange'].get('end', '2021-12-31')
         else:
             converted_filters = filters

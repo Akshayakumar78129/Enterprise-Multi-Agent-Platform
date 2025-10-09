@@ -8,7 +8,12 @@ export interface AnomalyFilters {
   dateFrom: string;
   dateTo: string;
   severityLevels: number[];
-  segments: string[];
+  segments: string[,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId];
   regions: string[];
   contamination: number;
   search: string;
@@ -38,20 +43,35 @@ export function useAnomalyContext(): AnomalyContextValue {
 }
 
 export function AnomalyProvider({ children }: { children: React.ReactNode }) {
-  const [selectedPoints, setSelectedPoints] = React.useState<SelectedPoint[]>([]);
+  const [selectedPoints, setSelectedPoints,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId] = React.useState<SelectedPoint[]>([]);
   const [selectionManager] = React.useState(() => getSelectionManager());
 
   // Panel state management
   const [isChatOpen, setIsChatOpen] = React.useState(false);
   const [isBIModalOpen, setIsBIModalOpen] = React.useState(false);
+  // Chat state - persists across expand/collapse
+  const [chatMessages, setChatMessages] = useState<Message[]>([{
+    role: "assistant",
+    content: "Hello! I'm your AI assistant. How can I help you analyze your anomaly detection data today?"
+  }]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatIsLoading, setChatIsLoading] = useState(false);
+  const [chatSessionId] = useState(() => `session_${Date.now()}`);
+  const [chatUserId] = useState(() => `user_${Math.random().toString(36).substr(2, 9)}`);
+
 
   // Data sharing for BI panel
   const [anomalyCustomers, setAnomalyCustomers] = React.useState<any[]>([]);
 
   const [filters, setFilters] = React.useState<AnomalyFilters>(() => {
-    // Default to full year 2021
+    // Default to 2017-2021 (consistent with sales performance)
     const defaultFilters = {
-      dateFrom: "2021-01-01",
+      dateFrom: "2017-01-01",
       dateTo: "2021-12-31",
       severityLevels: [],
       segments: [],
@@ -80,7 +100,12 @@ export function AnomalyProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem("anomalyFilters", JSON.stringify(filters));
     } catch {}
-  }, [filters]);
+  }, [filters,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId]);
 
   // Subscribe to selection manager
   React.useEffect(() => {
@@ -91,7 +116,12 @@ export function AnomalyProvider({ children }: { children: React.ReactNode }) {
     return () => {
       unsubscribe();
     };
-  }, [selectionManager]);
+  }, [selectionManager,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId]);
 
   const value = React.useMemo(
     () => ({
@@ -105,7 +135,15 @@ export function AnomalyProvider({ children }: { children: React.ReactNode }) {
       setIsBIModalOpen,
       anomalyCustomers,
       setAnomalyCustomers,
-    }),
+    ,
+      chatMessages,
+      setChatMessages,
+      chatInput,
+      setChatInput,
+      chatIsLoading,
+      setChatIsLoading,
+      chatSessionId,
+      chatUserId}),
     [filters, selectedPoints, selectionManager, isChatOpen, isBIModalOpen, anomalyCustomers]
   );
 

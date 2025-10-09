@@ -42,6 +42,7 @@ export function useTransactionPatternsData(filters: Record<string, any>) {
     },
     paymentMethods: data?.mainData?.paymentMethods || {},
     kpiMetrics: data?.kpiMetrics || {},
+    insights: data?.insights || [],
     hasNoData: !data?.mainData || Object.keys(data?.mainData || {}).length === 0
   };
 }

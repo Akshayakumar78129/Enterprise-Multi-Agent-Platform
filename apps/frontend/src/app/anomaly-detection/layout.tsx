@@ -8,9 +8,18 @@ import {
 import React from "react";
 import { AnomalyFilters } from "./components";
 import { AnomalyProvider, useAnomalyContext } from "./context";
+import { useAnomalyData } from "./hooks/useAnomalyData";
 
 function HeaderFilters() {
-  const { filters, setFilters } = useAnomalyContext();
+  const { filters,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId, setFilters } = useAnomalyContext();
   return (
     <AnomalyFilters
       filters={filters}
@@ -39,8 +48,18 @@ function AnomalyLayoutContent({ children }: { children: React.ReactNode }) {
     selectedPoints,
     selectionManager,
     filters,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId,
     anomalyCustomers
   } = useAnomalyContext();
+
+  const { insights, kpiMetrics } = useAnomalyData(filters);
 
   // Calculate high severity anomalies for BI trigger
   const highSeverityCount = anomalyCustomers.filter(c =>
@@ -61,8 +80,7 @@ function AnomalyLayoutContent({ children }: { children: React.ReactNode }) {
       onClose={() => setIsChatOpen(false)}
       selectedPoints={selectedPoints}
       onClearSelection={() => selectionManager.clearAll()}
-      dashboardContext="anomaly_detection"
-      additionalContext={{
+      dashboardContext="anomaly_detection"additionalContext={{
         filters: {
           severityLevels: filters.severityLevels.join(", ") || "All",
           segments: filters.segments.join(", ") || "All",
@@ -74,27 +92,24 @@ function AnomalyLayoutContent({ children }: { children: React.ReactNode }) {
           contamination: filters.contamination
         }
       }}
+      messages={chatMessages}
+      setMessages={setChatMessages}
+      input={chatInput}
+      setInput={setChatInput}
+      isLoading={chatIsLoading}
+      setIsLoading={setChatIsLoading}
+      sessionId={chatSessionId}
+      userId={chatUserId}
     />
   );
-
-  // Transform anomaly customers to match BI panel expectations
-  const transformedCustomers = anomalyCustomers.map(customer => ({
-    customer_id: customer.customer_id,
-    name: customer.customer_name || `Customer ${customer.customer_id}`,
-    risk_level: customer.severity_level >= 4 ? 'Very High' :
-                customer.severity_level >= 3 ? 'High' :
-                customer.severity_level >= 2 ? 'Medium' : 'Low',
-    churn_probability: customer.anomaly_score,
-    avg_order_value: customer.avg_transaction_value,
-    frequency: customer.transaction_count,
-    lifetime_value: customer.avg_transaction_value * customer.transaction_count
-  }));
 
   const biPanelContent = (
     <BusinessIntelligencePanel
       onClose={() => setIsBIModalOpen(false)}
-      customers={transformedCustomers}
-      dashboardContext="anomaly_detection"
+      insights={insights || []}
+      kpiMetrics={kpiMetrics || {}}
+      data={{ customers: anomalyCustomers }}
+      dashboardContext="anomaly"
     />
   );
 

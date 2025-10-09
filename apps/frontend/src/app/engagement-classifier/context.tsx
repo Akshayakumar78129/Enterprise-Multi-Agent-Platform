@@ -6,7 +6,12 @@ interface EngagementFilters {
   startDate?: string;
   endDate?: string;
   engagementLevels?: string[];
-  loyaltyStatus?: string[];
+  loyaltyStatus?: string[,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId];
   minTransactions?: number;
   minLTVAmount?: number;
   rfmScoreMin?: number;
@@ -39,6 +44,16 @@ export function EngagementClassifierProvider({ children }: { children: React.Rea
   const [engagementData, setEngagementData] = useState<any[]>([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isBIModalOpen, setIsBIModalOpen] = useState(false);
+  // Chat state - persists across expand/collapse
+  const [chatMessages, setChatMessages] = useState<Message[]>([{
+    role: "assistant",
+    content: "Hello! I'm your AI assistant. How can I help you analyze your engagement classifier data today?"
+  }]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatIsLoading, setChatIsLoading] = useState(false);
+  const [chatSessionId] = useState(() => `session_${Date.now()}`);
+  const [chatUserId] = useState(() => `user_${Math.random().toString(36).substr(2, 9)}`);
+
   const [selectedPoints, setSelectedPoints] = useState<any[]>([]);
 
   const timeRange = filters.startDate && filters.endDate
@@ -49,7 +64,12 @@ export function EngagementClassifierProvider({ children }: { children: React.Rea
     addPoint: (point: any) => {
       setSelectedPoints(prev => {
         if (!prev.find(p => p.id === point.id)) {
-          return [...prev, point];
+          return [...prev, point,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId];
         }
         return prev;
       });

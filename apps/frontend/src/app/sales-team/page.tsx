@@ -40,7 +40,7 @@ export default function SalesteamPage() {
 
       {/* Chatbot & BI Panel Section - Following Churn Pattern */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
-        <DashboardSection title="AI Assistant">
+        <DashboardSection title="Thought Catalyst">
           <div className="h-[400px] border border-border rounded-lg p-4">
             <div className="text-sm text-muted-foreground">
               AI Chatbot for sales team performance insights will be integrated here
@@ -48,7 +48,7 @@ export default function SalesteamPage() {
           </div>
         </DashboardSection>
 
-        <DashboardSection title="BI Panel">
+        <DashboardSection title="Decision Intelligence">
           <div className="h-[400px] border border-border rounded-lg p-4">
             <div className="text-sm text-muted-foreground">
               Business Intelligence panel for sales team performance analysis will be integrated here

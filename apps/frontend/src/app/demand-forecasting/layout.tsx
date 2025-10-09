@@ -10,7 +10,15 @@ import { ForecastFilters } from "./components";
 import { ForecastProvider, useForecastContext } from "./context";
 
 function HeaderFilters() {
-  const { filters, setFilters } = useForecastContext();
+  const { filters,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId, setFilters } = useForecastContext();
   return (
     <ForecastFilters
       filters={filters}
@@ -38,6 +46,14 @@ function ForecastLayoutContent({ children }: { children: React.ReactNode }) {
     selectedPoints,
     selectionManager,
     filters,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId,
     forecastData
   } = useForecastContext();
 
@@ -60,8 +76,7 @@ function ForecastLayoutContent({ children }: { children: React.ReactNode }) {
       onClose={() => setIsChatOpen(false)}
       selectedPoints={selectedPoints}
       onClearSelection={() => selectionManager.clearAll()}
-      dashboardContext="demand_forecasting"
-      additionalContext={{
+      dashboardContext="demand_forecasting"additionalContext={{
         filters: {
           timePeriod: filters.timePeriod,
           forecastHorizon: filters.forecastHorizon,
@@ -71,6 +86,14 @@ function ForecastLayoutContent({ children }: { children: React.ReactNode }) {
           confidenceLevel: filters.confidenceLevel
         }
       }}
+      messages={chatMessages}
+      setMessages={setChatMessages}
+      input={chatInput}
+      setInput={setChatInput}
+      isLoading={chatIsLoading}
+      setIsLoading={setChatIsLoading}
+      sessionId={chatSessionId}
+      userId={chatUserId}
     />
   );
 

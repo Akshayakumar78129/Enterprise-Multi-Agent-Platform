@@ -10,7 +10,15 @@ import { StockFilters } from "./components";
 import { StockProvider, useStockContext } from "./context";
 
 function HeaderFilters() {
-  const { filters, setFilters } = useStockContext();
+  const { filters,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId, setFilters } = useStockContext();
   return (
     <StockFilters
       filters={filters}
@@ -38,6 +46,14 @@ function StockLayoutContent({ children }: { children: React.ReactNode }) {
     selectedPoints,
     selectionManager,
     filters,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId,
     stockData
   } = useStockContext();
 
@@ -60,8 +76,7 @@ function StockLayoutContent({ children }: { children: React.ReactNode }) {
       onClose={() => setIsChatOpen(false)}
       selectedPoints={selectedPoints}
       onClearSelection={() => selectionManager.clearAll()}
-      dashboardContext="stock_levels"
-      additionalContext={{
+      dashboardContext="stock_levels"additionalContext={{
         filters: {
           timePeriod: filters.timePeriod,
           warehouseId: filters.warehouseId || "All",
@@ -71,6 +86,14 @@ function StockLayoutContent({ children }: { children: React.ReactNode }) {
           suppliers: filters.suppliers.join(", ") || "All"
         }
       }}
+      messages={chatMessages}
+      setMessages={setChatMessages}
+      input={chatInput}
+      setInput={setChatInput}
+      isLoading={chatIsLoading}
+      setIsLoading={setChatIsLoading}
+      sessionId={chatSessionId}
+      userId={chatUserId}
     />
   );
 

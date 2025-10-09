@@ -32,6 +32,7 @@ export function usePurchaseFrequencyData(filters: Record<string, any>) {
     customerSegments: data?.mainData?.customerSegments || [],
     valuePatterns: data?.mainData?.valuePatterns || {},
     kpiMetrics: data?.kpiMetrics || {},
+    insights: data?.insights || [],
     hasNoData: !data?.mainData || Object.keys(data?.mainData || {}).length === 0
   };
 }

@@ -8,9 +8,18 @@ import {
 import React from "react";
 import { TransactionFilters } from "./components";
 import { TransactionPatternsProvider, useTransactionPatternsContext } from "./context";
+import { useTransactionPatternsData } from "./hooks/useTransactionPatternsData";
 
 function HeaderFilters() {
-  const { filters, setFilters } = useTransactionPatternsContext();
+  const { filters,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId, setFilters } = useTransactionPatternsContext();
   return (
     <TransactionFilters
       filters={filters}
@@ -40,8 +49,18 @@ function TransactionPatternsLayoutContent({ children }: { children: React.ReactN
     selectedPoints,
     selectionManager,
     filters,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId,
     patternData
   } = useTransactionPatternsContext();
+
+  const { insights, kpiMetrics } = useTransactionPatternsData(filters);
 
   // Calculate anomaly count for BI trigger
   const anomalyCount = patternData?.anomalyCount || 0;
@@ -60,8 +79,7 @@ function TransactionPatternsLayoutContent({ children }: { children: React.ReactN
       onClose={() => setIsChatOpen(false)}
       selectedPoints={selectedPoints}
       onClearSelection={() => selectionManager.clearAll()}
-      dashboardContext="transaction_patterns"
-      additionalContext={{
+      dashboardContext="transaction_patterns"additionalContext={{
         filters: {
           paymentMethods: filters.paymentMethods?.join(", ") || "All",
           segments: filters.segments?.join(", ") || "All",
@@ -74,14 +92,24 @@ function TransactionPatternsLayoutContent({ children }: { children: React.ReactN
           }
         }
       }}
+      messages={chatMessages}
+      setMessages={setChatMessages}
+      input={chatInput}
+      setInput={setChatInput}
+      isLoading={chatIsLoading}
+      setIsLoading={setChatIsLoading}
+      sessionId={chatSessionId}
+      userId={chatUserId}
     />
   );
 
   const biPanelContent = (
     <BusinessIntelligencePanel
       onClose={() => setIsBIModalOpen(false)}
+      insights={insights || []}
+      kpiMetrics={kpiMetrics || {}}
       data={patternData}
-      dashboardContext="transaction_patterns"
+      dashboardContext="transaction"
     />
   );
 

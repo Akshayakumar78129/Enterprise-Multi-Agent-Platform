@@ -6,3 +6,6 @@ export { InvestmentCashFlow } from './InvestmentCashFlow';
 export { FinancingCashFlow } from './FinancingCashFlow';
 export { CashFlowProjection } from './CashFlowProjection';
 export { CashFlowTable } from './CashFlowTable';
+export { FCFValueBridge } from './visualizations/FCFValueBridge';
+export { LiquidityTimeline } from './visualizations/LiquidityTimeline';
+export { CapitalAllocationMatrix } from './visualizations/CapitalAllocationMatrix';

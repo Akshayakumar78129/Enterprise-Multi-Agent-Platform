@@ -1,14 +1,19 @@
 "use client";
 
 import React from "react";
-import { SelectedPoint } from "components";
+import { SelectedPoint, Message } from "components";
 import { SelectionManager, getSelectionManager } from "./services/SelectionManager";
 
 export interface ProfitabilityFilters {
   timePeriod: string;
   profitType: string;
   segments: string[];
-  products: string[];
+  products: string[,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId];
   minMargin: number;
   costCategories: string[];
 }
@@ -35,10 +40,25 @@ export function useProfitabilityContext(): ProfitabilityContextValue {
 }
 
 export function ProfitabilityProvider({ children }: { children: React.ReactNode }) {
-  const [selectedPoints, setSelectedPoints] = React.useState<SelectedPoint[]>([]);
+  const [selectedPoints, setSelectedPoints,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId] = React.useState<SelectedPoint[]>([]);
   const [selectionManager] = React.useState(() => getSelectionManager());
   const [isChatOpen, setIsChatOpen] = React.useState(false);
   const [isBIModalOpen, setIsBIModalOpen] = React.useState(false);
+  // Chat state - persists across expand/collapse
+  const [chatMessages, setChatMessages] = useState<Message[]>([{
+    role: "assistant",
+    content: "Hello! I'm your AI assistant. How can I help you analyze your profitability data today?"
+  }]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatIsLoading, setChatIsLoading] = useState(false);
+  const [chatSessionId] = useState(() => `session_${Date.now()}`);
+  const [chatUserId] = useState(() => `user_${Math.random().toString(36).substr(2, 9)}`);
+
   const [profitabilityData, setProfitabilityData] = React.useState<any[]>([]);
 
   const [filters, setFilters] = React.useState<ProfitabilityFilters>(() => {
@@ -69,21 +89,39 @@ export function ProfitabilityProvider({ children }: { children: React.ReactNode 
     try {
       localStorage.setItem("profitabilityFilters", JSON.stringify(filters));
     } catch {}
-  }, [filters]);
+  }, [filters,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId]);
 
   React.useEffect(() => {
     const unsubscribe = selectionManager.subscribe((points) => {
       setSelectedPoints(points);
     });
     return () => unsubscribe();
-  }, [selectionManager]);
+  }, [selectionManager,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId]);
 
   const value = React.useMemo(
     () => ({
       filters, setFilters, selectedPoints, selectionManager,
       isChatOpen, setIsChatOpen, isBIModalOpen, setIsBIModalOpen,
       profitabilityData, setProfitabilityData,
-    }),
+    ,
+      chatMessages,
+      setChatMessages,
+      chatInput,
+      setChatInput,
+      chatIsLoading,
+      setChatIsLoading,
+      chatSessionId,
+      chatUserId}),
     [filters, selectedPoints, selectionManager, isChatOpen, isBIModalOpen, profitabilityData]
   );
 

@@ -24,7 +24,7 @@ export const toolApiRegistry: Record<string, ToolApiConfig> = {
 
   // Sales Performance Dashboard
   'sales-performance': {
-    endpoint: '/api/sales/summary',
+    endpoint: '/api/sales-performance/summary',
     method: 'POST',
     description: 'Sales metrics and performance analytics'
   },
@@ -45,7 +45,7 @@ export const toolApiRegistry: Record<string, ToolApiConfig> = {
 
   // Product Performance Dashboard
   'product-performance': {
-    endpoint: '/api/product/summary',
+    endpoint: '/api/product-performance/summary',
     method: 'POST',
     description: 'Product sales and margin analysis'
   },
@@ -139,6 +139,13 @@ export const toolApiRegistry: Record<string, ToolApiConfig> = {
     endpoint: '/api/customer-behavior/summary',
     method: 'POST',
     description: 'Customer behavior analysis and insights'
+  },
+
+  // Cash Flow Analysis Dashboard
+  'cash-flow': {
+    endpoint: '/api/cash-flow/summary',
+    method: 'POST',
+    description: 'Cash flow analysis with operating, investing, and financing breakdowns'
   },
 
   // Add more dashboard endpoints as they are implemented

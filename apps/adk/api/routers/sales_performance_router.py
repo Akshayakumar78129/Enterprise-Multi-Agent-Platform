@@ -30,8 +30,8 @@ class SalesPerformanceFilters(BaseModel):
     products: Optional[List[str]] = []
     customers: Optional[List[str]] = []
     segments: Optional[List[str]] = []
-    dimensions: Optional[List[str]] = []
-    metrics: Optional[List[str]] = []
+    dimension: Optional[str] = None
+    metric: Optional[str] = None
 
 
 @router.post("/summary")
@@ -58,10 +58,10 @@ async def get_dashboard_summary(filters: SalesPerformanceFilters, request: Reque
             filter_dict['customers'] = filters.customers
         if filters.segments and len(filters.segments) > 0:
             filter_dict['segments'] = filters.segments
-        if filters.dimensions and len(filters.dimensions) > 0:
-            filter_dict['dimensions'] = filters.dimensions
-        if filters.metrics and len(filters.metrics) > 0:
-            filter_dict['metrics'] = filters.metrics
+        if filters.dimension:
+            filter_dict['dimension'] = filters.dimension
+        if filters.metric:
+            filter_dict['metric'] = filters.metric
 
         result = await service.get_dashboard_data(filter_dict)
         return result
@@ -257,4 +257,17 @@ async def get_category_performance(
         return {"success": True, "data": data.get('categoryPerformance', [])}
 
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/filter-options")
+async def get_filter_options() -> Dict[str, Any]:
+    """Get available filter options (regions, categories) from database"""
+    try:
+        from domains.sales_performance.data_service import SalesPerformanceDataService
+        data_service = SalesPerformanceDataService()
+        options = await data_service.get_filter_options()
+        return {"success": True, "data": options}
+    except Exception as e:
+        print(f"[SalesPerformanceRouter] Error getting filter options: {e}")
         raise HTTPException(status_code=500, detail=str(e))

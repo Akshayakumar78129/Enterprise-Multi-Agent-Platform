@@ -51,6 +51,7 @@ const componentRegistry: any = {
     distributionMap: dynamic(() => import('./components/Visualizations/FrequencyHistogram')),
     profileCards: dynamic(() => import('./components/Visualizations/FrequencyHistogram')),
     metricComparison: dynamic(() => import('components').then(mod => mod.SegmentComparisonMatrix)),
+    kpiTiles: dynamic(() => import('components').then(mod => mod.KPITiles)),
   },
   'churn-prediction': {
     riskPyramid: dynamic(() => import('components').then(mod => mod.RiskPyramid)),
@@ -73,6 +74,52 @@ const componentRegistry: any = {
     valueRiskMatrix: dynamic(() => import('./components/Visualizations/IntervalHeatmap')), // Using heatmap as placeholder
     actionSankey: dynamic(() => import('./components/Visualizations/FrequencyHistogram')), // Using histogram as placeholder
     roiWaterfall: dynamic(() => import('./components/Visualizations/FrequencyHistogram')) // Using histogram as placeholder
+  },
+  'sales-performance': {
+    kpis: dynamic(() => import('../sales-performance/components/SalesKPIs')),
+    // Full names
+    performanceOverview: dynamic(() => import('../sales-performance/components').then(mod => mod.PerformanceOverview)),
+    timeSeriesExplorer: dynamic(() => import('../sales-performance/components').then(mod => mod.TimeSeriesExplorer)),
+    distributionAnalyzer: dynamic(() => import('../sales-performance/components').then(mod => mod.PerformanceDistributionAnalyzer)),
+    comparativeGrid: dynamic(() => import('../sales-performance/components').then(mod => mod.ComparativePerformanceGrid)),
+    correlationMatrix: dynamic(() => import('../sales-performance/components').then(mod => mod.PerformanceCorrelationMatrix)),
+    driverAnalysis: dynamic(() => import('../sales-performance/components').then(mod => mod.PerformanceDriverAnalysis)),
+    // Short aliases for agent compatibility
+    overview: dynamic(() => import('../sales-performance/components').then(mod => mod.PerformanceOverview)),
+    timeSeries: dynamic(() => import('../sales-performance/components').then(mod => mod.TimeSeriesExplorer)),
+    distribution: dynamic(() => import('../sales-performance/components').then(mod => mod.PerformanceDistributionAnalyzer)),
+    comparative: dynamic(() => import('../sales-performance/components').then(mod => mod.ComparativePerformanceGrid)),
+    correlation: dynamic(() => import('../sales-performance/components').then(mod => mod.PerformanceCorrelationMatrix)),
+    drivers: dynamic(() => import('../sales-performance/components').then(mod => mod.PerformanceDriverAnalysis))
+  },
+  'customer-lifetime-value': {
+    kpiTiles: dynamic(() => import('../customer-lifetime-value/components').then(mod => mod.LtvKPIs)),
+    ltvDistribution: dynamic(() => import('../customer-lifetime-value/components').then(mod => mod.LtvDistribution)),
+    customerExplorer: dynamic(() => import('../customer-lifetime-value/components').then(mod => mod.TopCustomers)),
+    predictionAccuracy: dynamic(() => import('../customer-lifetime-value/components').then(mod => mod.PredictionAccuracy)),
+    segmentAnalysis: dynamic(() => import('../customer-lifetime-value/components').then(mod => mod.SegmentAnalysis)),
+    ltvTrends: dynamic(() => import('../customer-lifetime-value/components').then(mod => mod.LtvTrends)),
+    valueContribution: dynamic(() => import('../customer-lifetime-value/components').then(mod => mod.ValueContributionAnalysis))
+  },
+  'product-performance': {
+    kpis: dynamic(() => import('../product-performance/components').then(mod => mod.ProductKPIs)),
+    overview: dynamic(() => import('../product-performance/components').then(mod => mod.ProductPerformanceOverview)),
+    topProducts: dynamic(() => import('../product-performance/components').then(mod => mod.TopProductsTable)),
+    categoryAnalysis: dynamic(() => import('../product-performance/components').then(mod => mod.CategoryPerformanceChart)),
+    marginAnalysis: dynamic(() => import('../product-performance/components').then(mod => mod.MarginAnalysisScatter)),
+    priceBands: dynamic(() => import('../product-performance/components').then(mod => mod.PriceBandDistribution))
+  },
+  'cash-flow': {
+    kpis: dynamic(() => import('../cash-flow/components').then(mod => mod.CashFlowKPIs)),
+    trends: dynamic(() => import('../cash-flow/components').then(mod => mod.CashFlowTrends)),
+    operating: dynamic(() => import('../cash-flow/components').then(mod => mod.OperatingCashFlow)),
+    investing: dynamic(() => import('../cash-flow/components').then(mod => mod.InvestmentCashFlow)),
+    financing: dynamic(() => import('../cash-flow/components').then(mod => mod.FinancingCashFlow)),
+    projection: dynamic(() => import('../cash-flow/components').then(mod => mod.CashFlowProjection)),
+    table: dynamic(() => import('../cash-flow/components').then(mod => mod.CashFlowTable)),
+    'fcf-bridge': dynamic(() => import('../cash-flow/components').then(mod => mod.FCFValueBridge)),
+    'liquidity-timeline': dynamic(() => import('../cash-flow/components').then(mod => mod.LiquidityTimeline)),
+    'capital-allocation': dynamic(() => import('../cash-flow/components').then(mod => mod.CapitalAllocationMatrix))
   }
 };
 

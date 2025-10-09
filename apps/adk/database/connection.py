@@ -150,7 +150,14 @@ class DatabaseConnection:
 
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(sql, params)
+            try:
+                cursor.execute(sql, params)
+            except Exception as e:
+                print(f"[ERROR] SQL execution failed:")
+                print(f"[ERROR] SQL: {repr(sql)}")
+                print(f"[ERROR] Params: {params}")
+                print(f"[ERROR] Exception: {e}")
+                raise
 
             # Fetch all rows
             rows = cursor.fetchall()

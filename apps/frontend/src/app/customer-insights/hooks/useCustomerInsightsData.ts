@@ -34,6 +34,7 @@ export function useCustomerInsightsData(filters: Record<string, any>) {
     behaviorInsights: data?.mainData?.behaviorInsights || {},
     recommendations: data?.mainData?.recommendations || [],
     kpiMetrics: data?.kpiMetrics || {},
+    insights: data?.insights || [],
     hasNoData: !data?.mainData || Object.keys(data?.mainData || {}).length === 0
   };
 }

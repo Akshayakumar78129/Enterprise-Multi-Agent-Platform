@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState } from 'react';
-import { SelectedPoint } from "components";
+import { SelectedPoint, Message } from "components";
 import { SelectionManager, getSelectionManager } from "./services/SelectionManager";
 
 interface TransactionPatternsContextType {
@@ -20,9 +20,14 @@ interface TransactionPatternsContextType {
 const TransactionPatternsContext = createContext<TransactionPatternsContextType | undefined>(undefined);
 
 export function TransactionPatternsProvider({ children }: { children: React.ReactNode }) {
-  const [filters, setFilters] = useState<Record<string, any>>({
+  const [filters, setFilters,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId] = useState<Record<string, any>>({
     dateRange: {
-      startDate: "2021-01-01",
+      startDate: "2017-01-01",
       endDate: "2021-12-31",
     },
     paymentMethods: [],
@@ -32,6 +37,16 @@ export function TransactionPatternsProvider({ children }: { children: React.Reac
   const [patternData, setPatternData] = useState<any>({});
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isBIModalOpen, setIsBIModalOpen] = useState(false);
+  // Chat state - persists across expand/collapse
+  const [chatMessages, setChatMessages] = useState<Message[]>([{
+    role: "assistant",
+    content: "Hello! I'm your AI assistant. How can I help you analyze your transaction patterns data today?"
+  }]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatIsLoading, setChatIsLoading] = useState(false);
+  const [chatSessionId] = useState(() => `session_${Date.now()}`);
+  const [chatUserId] = useState(() => `user_${Math.random().toString(36).substr(2, 9)}`);
+
   const [selectedPoints, setSelectedPoints] = useState<SelectedPoint[]>([]);
   const [selectionManager] = useState(() => getSelectionManager());
 
@@ -41,7 +56,12 @@ export function TransactionPatternsProvider({ children }: { children: React.Reac
       setSelectedPoints(points);
     });
     return unsubscribe;
-  }, [selectionManager]);
+  }, [selectionManager,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId]);
 
   return (
     <TransactionPatternsContext.Provider

@@ -286,14 +286,8 @@ class ChurnMLPredictor:
             List of feature importance dictionaries (without icons)
         """
         if not self.is_trained or not hasattr(self.model, 'coef_'):
-            # Return default values if model not trained
-            return [
-                {"name": "Recency", "importance": 35.0, "impact": 35.0, "color": "#ef4444"},
-                {"name": "Frequency", "importance": 25.0, "impact": 25.0, "color": "#f59e0b"},
-                {"name": "Monetary", "importance": 20.0, "impact": 20.0, "color": "#eab308"},
-                {"name": "RFM Score", "importance": 12.0, "impact": 12.0, "color": "#10b981"},
-                {"name": "Product Diversity", "importance": 8.0, "impact": 8.0, "color": "#8b5cf6"}
-            ]
+            # Return empty if model not trained (no misleading hardcoded values)
+            return []
 
         # Get actual feature importance from model coefficients
         importance = np.abs(self.model.coef_[0])

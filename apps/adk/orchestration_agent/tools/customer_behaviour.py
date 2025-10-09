@@ -61,18 +61,18 @@ def _analyze_customer_behavior_sync(time_period: str, segment_id: Optional[str],
         filters['dateFrom'] = (reference_date - timedelta(days=180)).strftime('%Y-%m-%d')
         filters['dateTo'] = reference_date.strftime('%Y-%m-%d')
     elif time_period == "last_year" or time_period == "annual" or time_period == "yearly":
-        # Match frontend behavior - use Q4 2021 for "last year"
-        filters['dateFrom'] = '2021-10-01'
+        # Use 2017-2021 for "last year" (consistent with other dashboards)
+        filters['dateFrom'] = '2017-01-01'
         filters['dateTo'] = '2021-12-31'
     elif time_period == "monthly":
         filters['dateFrom'] = (reference_date - timedelta(days=30)).strftime('%Y-%m-%d')
         filters['dateTo'] = reference_date.strftime('%Y-%m-%d')
         filters['time_period'] = '30d'
     else:
-        # Default to last 90 days of 2021
-        filters['dateFrom'] = '2021-10-01'
+        # Default to 2017-2021 (consistent with other dashboards)
+        filters['dateFrom'] = '2017-01-01'
         filters['dateTo'] = '2021-12-31'
-        filters['time_period'] = '90d'
+        filters['time_period'] = 'all'
 
     # Add segment filter if specified
     if segment_id:

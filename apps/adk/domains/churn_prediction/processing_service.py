@@ -122,13 +122,22 @@ class ChurnProcessingService:
                 self.get_feature_importance(filters)
             )
 
+            # Generate insights
+            insights = self._generate_insights(
+                customer_stats,
+                segment_risk,
+                probability_dist,
+                feature_importance
+            )
+
             # Return in Express format
             return {
                 "customerStats": customer_stats or [],
                 "segmentRisk": segment_risk or [],
                 "monthlyRisk": monthly_risk or [],
                 "probabilityDistribution": probability_dist or [],
-                "featureImportance": feature_importance or []
+                "featureImportance": feature_importance or [],
+                "insights": insights
             }
         except Exception as e:
             import traceback
@@ -140,7 +149,8 @@ class ChurnProcessingService:
                 "segmentRisk": [],
                 "monthlyRisk": [],
                 "probabilityDistribution": [],
-                "featureImportance": []
+                "featureImportance": [],
+                "insights": []
             }
 
     @cache_dashboard_endpoint(dashboard_type='churn', ttl=300)
@@ -459,14 +469,75 @@ class ChurnProcessingService:
 
         except Exception as e:
             print(f"[ChurnProcessingService] Error in getFeatureImportance: {e}")
-            # Return default values without icons
-            return [
-                {"name": "Recency", "importance": 35.0, "impact": 35.0, "color": "#ef4444"},
-                {"name": "Frequency", "importance": 25.0, "impact": 25.0, "color": "#f59e0b"},
-                {"name": "Monetary", "importance": 20.0, "impact": 20.0, "color": "#eab308"},
-                {"name": "RFM Score", "importance": 12.0, "impact": 12.0, "color": "#10b981"},
-                {"name": "Product Diversity", "importance": 8.0, "impact": 8.0, "color": "#8b5cf6"}
-            ]
+            # Return empty on error (no misleading hardcoded values)
+            return []
+
+    def _generate_insights(
+        self,
+        customer_stats: List[Dict],
+        segment_risk: List[Dict],
+        probability_dist: List[Dict],
+        feature_importance: List[Dict]
+    ) -> List[str]:
+        """Generate AI insights based on churn prediction results"""
+        insights = []
+
+        if not customer_stats:
+            return ["No customer data available for churn analysis"]
+
+        # Calculate risk metrics
+        total_customers = len(customer_stats)
+        high_risk = sum(1 for c in customer_stats if c.get('riskLevel') in ['High', 'Very High'])
+        very_high_risk = sum(1 for c in customer_stats if c.get('riskLevel') == 'Very High')
+        avg_risk = sum(c.get('riskPercentage', 0) for c in customer_stats) / total_customers if total_customers > 0 else 0
+
+        # High risk customers insight
+        if very_high_risk > 0:
+            insights.append(
+                f"{very_high_risk} customers at very high churn risk require immediate intervention"
+            )
+
+        if high_risk > 0:
+            risk_pct = (high_risk / total_customers * 100) if total_customers > 0 else 0
+            insights.append(
+                f"{high_risk} customers ({risk_pct:.1f}%) are at high or very high churn risk"
+            )
+
+        # Average risk insight
+        if avg_risk > 50:
+            insights.append(
+                f"Warning: Average churn risk is {avg_risk:.1f}% - consider retention campaigns"
+            )
+        elif avg_risk > 30:
+            insights.append(
+                f"Moderate churn risk detected at {avg_risk:.1f}% average across all customers"
+            )
+
+        # Segment-specific insights
+        if segment_risk:
+            high_risk_segments = [s for s in segment_risk if s.get('avgRisk', 0) > 60]
+            if high_risk_segments:
+                top_segment = max(high_risk_segments, key=lambda x: x.get('avgRisk', 0))
+                insights.append(
+                    f"{top_segment['segment']} segment shows highest churn risk at {top_segment['avgRisk']:.1f}%"
+                )
+
+        # Feature importance insights
+        if feature_importance:
+            top_factor = feature_importance[0]
+            insights.append(
+                f"{top_factor.get('name', 'Unknown')} is the top churn factor with {top_factor.get('importance', 0):.1f}% importance"
+            )
+
+        # Probability distribution insights
+        if probability_dist:
+            high_prob_bin = next((b for b in probability_dist if b.get('range') == '0.8-1.0'), None)
+            if high_prob_bin and high_prob_bin.get('count', 0) > 0:
+                insights.append(
+                    f"{high_prob_bin['count']} customers have >80% churn probability - priority focus needed"
+                )
+
+        return insights
 
     async def get_customers(self, filters: Dict) -> List[Dict]:
         """Get customer list with churn risk levels

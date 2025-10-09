@@ -53,7 +53,7 @@ class ProductPerformanceProcessingService:
             'topProducts': top_products,
             'categoryPerformance': category_performance,
             'marginAnalysis': margin_analysis[:20],  # Top 20 by margin
-            'priceBandDistribution': await self._calculate_price_bands(top_products)
+            'priceBandDistribution': self._calculate_price_bands(top_products)
         }
 
         # Generate insights

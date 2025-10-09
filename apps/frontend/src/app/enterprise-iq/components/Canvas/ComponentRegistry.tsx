@@ -24,8 +24,18 @@ const componentRegistry: Record<string, Record<string, () => Promise<any>>> = {
     distributionMap: () => import('../Visualizations/FrequencyHistogram'),
     profileCards: () => import('../Visualizations/FrequencyHistogram'),
     metricComparison: () => import('components/index').then(mod => ({ default: mod.SegmentComparisonMatrix })),
+    kpiTiles: () => import('components/index').then(mod => ({ default: mod.KPITiles })),
     flow: () => import('../Visualizations/FrequencyHistogram'),
     analysis: () => import('../Visualizations/IntervalHeatmap')
+  },
+  'customer-lifetime-value': {
+    kpiTiles: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.LtvKPIs })),
+    ltvDistribution: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.LtvDistribution })),
+    customerExplorer: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.TopCustomers })),
+    predictionAccuracy: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.PredictionAccuracy })),
+    segmentAnalysis: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.SegmentAnalysis })),
+    ltvTrends: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.LtvTrends })),
+    valueContribution: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.ValueContributionAnalysis }))
   },
   'churn-prediction': {
     riskPyramid: () => import('components/index').then(mod => ({ default: mod.RiskPyramid })),
@@ -51,10 +61,41 @@ const componentRegistry: Record<string, Record<string, () => Promise<any>>> = {
     alerts: () => import('../Visualizations/IntervalHeatmap')
   },
   'sales-performance': {
-    dashboard: () => import('../Visualizations/FrequencyHistogram'),
-    funnel: () => import('../Visualizations/FrequencyHistogram'),
-    trends: () => import('../Visualizations/FrequencyHistogram'),
-    targets: () => import('../Visualizations/IntervalHeatmap')
+    kpis: () => import('../../../sales-performance/components/SalesKPIs'),
+    // Full names
+    performanceOverview: () => import('../../../sales-performance/components').then(mod => ({ default: mod.PerformanceOverview })),
+    timeSeriesExplorer: () => import('../../../sales-performance/components').then(mod => ({ default: mod.TimeSeriesExplorer })),
+    distributionAnalyzer: () => import('../../../sales-performance/components').then(mod => ({ default: mod.PerformanceDistributionAnalyzer })),
+    comparativeGrid: () => import('../../../sales-performance/components').then(mod => ({ default: mod.ComparativePerformanceGrid })),
+    correlationMatrix: () => import('../../../sales-performance/components').then(mod => ({ default: mod.PerformanceCorrelationMatrix })),
+    driverAnalysis: () => import('../../../sales-performance/components').then(mod => ({ default: mod.PerformanceDriverAnalysis })),
+    // Short aliases for agent compatibility
+    overview: () => import('../../../sales-performance/components').then(mod => ({ default: mod.PerformanceOverview })),
+    timeSeries: () => import('../../../sales-performance/components').then(mod => ({ default: mod.TimeSeriesExplorer })),
+    distribution: () => import('../../../sales-performance/components').then(mod => ({ default: mod.PerformanceDistributionAnalyzer })),
+    comparative: () => import('../../../sales-performance/components').then(mod => ({ default: mod.ComparativePerformanceGrid })),
+    correlation: () => import('../../../sales-performance/components').then(mod => ({ default: mod.PerformanceCorrelationMatrix })),
+    drivers: () => import('../../../sales-performance/components').then(mod => ({ default: mod.PerformanceDriverAnalysis }))
+  },
+  'product-performance': {
+    kpis: () => import('../../../product-performance/components').then(mod => ({ default: mod.ProductKPIs })),
+    overview: () => import('../../../product-performance/components').then(mod => ({ default: mod.ProductPerformanceOverview })),
+    topProducts: () => import('../../../product-performance/components').then(mod => ({ default: mod.TopProductsTable })),
+    categoryAnalysis: () => import('../../../product-performance/components').then(mod => ({ default: mod.CategoryPerformanceChart })),
+    marginAnalysis: () => import('../../../product-performance/components').then(mod => ({ default: mod.MarginAnalysisScatter })),
+    priceBands: () => import('../../../product-performance/components').then(mod => ({ default: mod.PriceBandDistribution }))
+  },
+  'cash-flow': {
+    kpis: () => import('../../../cash-flow/components').then(mod => ({ default: mod.CashFlowKPIs })),
+    trends: () => import('../../../cash-flow/components').then(mod => ({ default: mod.CashFlowTrends })),
+    operating: () => import('../../../cash-flow/components').then(mod => ({ default: mod.OperatingCashFlow })),
+    investing: () => import('../../../cash-flow/components').then(mod => ({ default: mod.InvestmentCashFlow })),
+    financing: () => import('../../../cash-flow/components').then(mod => ({ default: mod.FinancingCashFlow })),
+    projection: () => import('../../../cash-flow/components').then(mod => ({ default: mod.CashFlowProjection })),
+    table: () => import('../../../cash-flow/components').then(mod => ({ default: mod.CashFlowTable })),
+    'fcf-bridge': () => import('../../../cash-flow/components').then(mod => ({ default: mod.FCFValueBridge })),
+    'liquidity-timeline': () => import('../../../cash-flow/components').then(mod => ({ default: mod.LiquidityTimeline })),
+    'capital-allocation': () => import('../../../cash-flow/components').then(mod => ({ default: mod.CapitalAllocationMatrix }))
   },
   'product-analytics': {
     performance: () => import('../Visualizations/FrequencyHistogram'),

@@ -7,10 +7,19 @@ import {
 } from "components/index";
 import React from "react";
 import { CustomerInsightsProvider, useCustomerInsightsContext } from './context';
+import { useCustomerInsightsData } from './hooks/useCustomerInsightsData';
 
 function InsightsLayoutContent({ children }: { children: React.ReactNode }) {
   const {
     filters,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId,
     setFilters,
     isChatPanelOpen,
     setIsChatPanelOpen,
@@ -19,6 +28,8 @@ function InsightsLayoutContent({ children }: { children: React.ReactNode }) {
     selectionManager,
     customers
   } = useCustomerInsightsContext();
+
+  const { insights, kpiMetrics } = useCustomerInsightsData(filters);
 
   // Get selected points from selection manager
   const [selectedPoints, setSelectedPoints] = React.useState<any[]>([]);
@@ -41,8 +52,7 @@ function InsightsLayoutContent({ children }: { children: React.ReactNode }) {
       onClose={() => setIsChatPanelOpen(false)}
       selectedPoints={selectedPoints}
       onClearSelection={() => selectionManager.clearAll()}
-      dashboardContext="customer_insights"
-      additionalContext={{
+      dashboardContext="customer_insights"additionalContext={{
         filters: {
           dateRange: filters.dateRange ? `${filters.dateRange.from} to ${filters.dateRange.to}` : "All time",
           insightType: filters.insightType || "All",
@@ -50,14 +60,24 @@ function InsightsLayoutContent({ children }: { children: React.ReactNode }) {
         },
         totalCustomers: customers.length
       }}
+      messages={chatMessages}
+      setMessages={setChatMessages}
+      input={chatInput}
+      setInput={setChatInput}
+      isLoading={chatIsLoading}
+      setIsLoading={setChatIsLoading}
+      sessionId={chatSessionId}
+      userId={chatUserId}
     />
   );
 
   const biPanelContent = (
     <BusinessIntelligencePanel
       onClose={() => setIsBusinessIntelligencePanelOpen(false)}
-      customers={customers}
-      dashboardContext="customer_insights"
+      insights={insights || []}
+      kpiMetrics={kpiMetrics || {}}
+      data={{ customers }}
+      dashboardContext="customer"
     />
   );
 

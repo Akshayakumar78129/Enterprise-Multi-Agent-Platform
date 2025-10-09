@@ -16,9 +16,9 @@ export default function CustomerLtvPage() {
   const { setCustomers } = useCustomerLtvContext();
   const [selectedCustomer, setSelectedCustomer] = React.useState<any>(null);
 
-  // Use fixed date range for 2021 data - memoized to prevent infinite loops
+  // Use fixed date range for 2017-2021 data - memoized to prevent infinite loops
   const filters = useMemo(() => ({
-    date_from: '2021-01-01',
+    date_from: '2017-01-01',
     date_to: '2021-12-31'
   }), []);
 

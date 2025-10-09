@@ -509,25 +509,134 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
   // =============================
   // Sales Performance Components
   // =============================
-  'sales-performance.overview': (summary) => {
+  'sales-performance.kpis': (summary) => {
+    // Map from backend structure: { kpiMetrics, mainData }
     return {
-      metrics: summary.overview || summary.metrics || summary,
-      kpis: summary.kpis
+      metrics: summary.kpiMetrics || summary.kpis || {},
+      loading: false
+    };
+  },
+
+  'sales-performance.performanceOverview': (summary) => {
+    // Map from mainData.productPerformance or mainData.regionPerformance
+    const data = summary.mainData?.productPerformance || summary.mainData?.products || summary.topProducts || [];
+    return {
+      data: data,
+      loading: false,
+      selectedDimension: summary.dimension || 'product',
+      selectedMetric: summary.metric || 'revenue'
+    };
+  },
+
+  'sales-performance.timeSeriesExplorer': (summary) => {
+    // Map from mainData.salesTrends
+    const data = summary.mainData?.salesTrends || summary.revenueTrends || summary.timeSeries || [];
+    return {
+      data: data,
+      loading: false,
+      selectedMetric: summary.metric || 'revenue'
+    };
+  },
+
+  'sales-performance.distributionAnalyzer': (summary) => {
+    // Map from mainData.productPerformance or categoryPerformance
+    const data = summary.mainData?.productPerformance || summary.mainData?.categoryPerformance || summary.topProducts || [];
+    return {
+      data: data,
+      loading: false,
+      selectedDimension: summary.dimension || 'product',
+      selectedMetric: summary.metric || 'revenue'
+    };
+  },
+
+  'sales-performance.comparativeGrid': (summary) => {
+    // Map from mainData.productPerformance
+    const data = summary.mainData?.productPerformance || summary.mainData?.products || summary.topProducts || [];
+    return {
+      data: data,
+      loading: false,
+      selectedDimension: summary.dimension || 'product',
+      selectedMetric: summary.metric || 'revenue'
+    };
+  },
+
+  'sales-performance.correlationMatrix': (summary) => {
+    // Map from mainData.productPerformance
+    const data = summary.mainData?.productPerformance || summary.mainData?.products || summary.topProducts || [];
+    return {
+      data: data,
+      loading: false,
+      selectedDimension: summary.dimension || 'product'
+    };
+  },
+
+  'sales-performance.driverAnalysis': (summary) => {
+    // Map from mainData.productPerformance
+    const data = summary.mainData?.productPerformance || summary.mainData?.products || summary.topProducts || [];
+    return {
+      data: data,
+      loading: false,
+      selectedDimension: summary.dimension || 'product',
+      selectedMetric: summary.metric || 'revenue'
+    };
+  },
+
+  // Short aliases for agent compatibility
+  'sales-performance.overview': (summary) => {
+    const data = summary.mainData?.productPerformance || summary.mainData?.products || summary.topProducts || [];
+    return {
+      data: data,
+      loading: false,
+      selectedDimension: summary.dimension || 'product',
+      selectedMetric: summary.metric || 'revenue'
     };
   },
 
   'sales-performance.timeSeries': (summary) => {
+    const data = summary.mainData?.salesTrends || summary.revenueTrends || summary.timeSeries || [];
     return {
-      data: summary.time_series || summary.timeSeries || [],
-      labels: summary.labels,
-      datasets: summary.datasets
+      data: data,
+      loading: false,
+      selectedMetric: summary.metric || 'revenue'
     };
   },
 
   'sales-performance.distribution': (summary) => {
+    const data = summary.mainData?.productPerformance || summary.mainData?.categoryPerformance || summary.topProducts || [];
     return {
-      data: summary.distribution || summary.sales_distribution || [],
-      categories: summary.categories
+      data: data,
+      loading: false,
+      selectedDimension: summary.dimension || 'product',
+      selectedMetric: summary.metric || 'revenue'
+    };
+  },
+
+  'sales-performance.comparative': (summary) => {
+    const data = summary.mainData?.productPerformance || summary.mainData?.products || summary.topProducts || [];
+    return {
+      data: data,
+      loading: false,
+      selectedDimension: summary.dimension || 'product',
+      selectedMetric: summary.metric || 'revenue'
+    };
+  },
+
+  'sales-performance.correlation': (summary) => {
+    const data = summary.mainData?.productPerformance || summary.mainData?.products || summary.topProducts || [];
+    return {
+      data: data,
+      loading: false,
+      selectedDimension: summary.dimension || 'product'
+    };
+  },
+
+  'sales-performance.drivers': (summary) => {
+    const data = summary.mainData?.productPerformance || summary.mainData?.products || summary.topProducts || [];
+    return {
+      data: data,
+      loading: false,
+      selectedDimension: summary.dimension || 'product',
+      selectedMetric: summary.metric || 'revenue'
     };
   },
 
@@ -535,51 +644,70 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
   // Customer Segmentation Components
   // =============================
   'customer-segmentation.distributionMap': (summary) => {
+    const segments = summary.mainData?.segmentDistribution || [];
     return {
-      segments: summary.segments || summary.distribution || [],
-      metrics: summary.metrics
+      labels: segments.map(s => s.segment_name || s.segmentName || s.name),
+      datasets: [{
+        label: 'Customer Count',
+        data: segments.map(s => s.customer_count || s.customerCount || s.count),
+        backgroundColor: segments.map(s => s.color || '#8b5cf6')
+      }],
+      loading: false
     };
   },
 
   'customer-segmentation.profileCards': (summary) => {
+    const segments = summary.mainData?.segmentDistribution || [];
     return {
-      profiles: summary.profiles || summary.segments || [],
-      metrics: summary.segment_metrics
+      labels: segments.map(s => s.segment_name || s.segmentName || s.name),
+      datasets: [{
+        label: 'Average Value',
+        data: segments.map(s => s.avg_lifetime_value || s.avgValue || 0),
+        backgroundColor: segments.map(s => s.color || '#8b5cf6')
+      }],
+      loading: false
     };
   },
 
   'customer-segmentation.metricComparison': (summary) => {
     return {
-      segments: summary.segments || [],
-      metrics: summary.comparison_metrics || summary.metrics
+      segments: summary.mainData?.segmentComparison || summary.mainData?.segmentDistribution || [],
+      metrics: summary.kpiMetrics,
+      loading: false
     };
   },
 
   'customer-segmentation.kpiTiles': (summary) => {
+    const kpis = summary.kpiMetrics || {};
     return {
-      tiles: summary.kpiMetrics || summary.kpiTiles || [
+      tiles: [
         {
           title: 'Total Segments',
-          value: summary.totalSegments || 0,
-          unit: 'segments'
+          value: kpis.totalSegments || 0,
+          unit: 'segments',
+          color: '#8b5cf6'
         },
         {
           title: 'Largest Segment',
-          value: summary.largestSegmentSize || 0,
-          unit: 'customers'
+          value: kpis.largestSegmentSize || 0,
+          unit: 'customers',
+          color: '#10b981'
         },
         {
           title: 'Avg Segment Value',
-          value: summary.avgSegmentValue || 0,
+          value: kpis.avgSegmentValue || 0,
           unit: '$',
-          format: 'currency'
+          format: 'currency',
+          color: '#f59e0b'
         },
         {
           title: 'Segmentation Quality',
-          value: summary.segmentationQuality || 0,
-          unit: '%'
+          value: Math.round(kpis.segmentationQuality || 0),
+          unit: '%',
+          color: '#ef4444'
         }
-      ]
+      ],
+      loading: false
     };
   },
 
@@ -724,116 +852,173 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
   // =============================
   'customer-lifetime-value.kpiTiles': (summary) => {
     return {
-      metrics: summary.kpi_metrics || summary.ltv_metrics || [],
-      summary: summary
+      metrics: summary.kpiMetrics || {},
+      loading: false
     };
   },
 
   'customer-lifetime-value.ltvDistribution': (summary) => {
     return {
-      data: summary.ltv_distribution || summary.value_distribution || [],
-      segments: summary.segments
-    };
-  },
-
-  'customer-lifetime-value.predictionAccuracy': (summary) => {
-    return {
-      accuracy: summary.prediction_accuracy || summary.accuracy_metrics || {},
-      historical: summary.historical_accuracy
-    };
-  },
-
-  'customer-lifetime-value.geographicMap': (summary) => {
-    return {
-      data: summary.geographic_data || summary.ltv_by_region || [],
-      regions: summary.regions
+      data: summary.mainData?.ltvDistribution || [],
+      loading: false
     };
   },
 
   'customer-lifetime-value.customerExplorer': (summary) => {
     return {
-      customers: summary.top_customers || summary.customer_list || [],
-      metrics: summary.customer_metrics
-    };
-  },
-
-  'customer-lifetime-value.valueContribution': (summary) => {
-    return {
-      contributions: summary.value_contributions || summary.contribution_data || [],
-      categories: summary.categories
-    };
-  },
-
-  'customer-lifetime-value.timeProjection': (summary) => {
-    return {
-      projections: summary.ltv_projections || summary.projections || [],
-      timeline: summary.projection_timeline
-    };
-  },
-
-  'customer-lifetime-value.filterPanel': (summary) => {
-    return {
-      filters: summary.available_filters || {},
-      summary: summary
-    };
-  },
-
-  // =============================
-  // Customer LTV Components (alternate name)
-  // =============================
-  'customer-lifetime-value.kpiTiles': (summary) => {
-    return {
-      metrics: summary.kpi_metrics || summary.ltv_metrics || [],
-      summary: summary
-    };
-  },
-
-  'customer-lifetime-value.ltvDistribution': (summary) => {
-    return {
-      data: summary.ltv_distribution || summary.value_distribution || [],
-      segments: summary.segments
+      data: summary.mainData?.topCustomers || [],
+      loading: false
     };
   },
 
   'customer-lifetime-value.predictionAccuracy': (summary) => {
     return {
-      accuracy: summary.prediction_accuracy || summary.accuracy_metrics || {},
-      historical: summary.historical_accuracy
+      data: summary.mainData?.predictionData || [],
+      loading: false
     };
   },
 
-  'customer-lifetime-value.geographicMap': (summary) => {
+  'customer-lifetime-value.segmentAnalysis': (summary) => {
     return {
-      data: summary.geographic_data || summary.ltv_by_region || [],
-      regions: summary.regions
+      data: summary.mainData?.segmentAnalysis || [],
+      loading: false
     };
   },
 
-  'customer-lifetime-value.customerExplorer': (summary) => {
+  'customer-lifetime-value.ltvTrends': (summary) => {
     return {
-      customers: summary.top_customers || summary.customer_list || [],
-      metrics: summary.customer_metrics
+      data: summary.mainData?.ltvTrends || [],
+      loading: false
     };
   },
 
   'customer-lifetime-value.valueContribution': (summary) => {
     return {
-      contributions: summary.value_contributions || summary.contribution_data || [],
-      categories: summary.categories
+      data: summary.mainData?.valueContribution || [],
+      loading: false
     };
   },
 
-  'customer-lifetime-value.timeProjection': (summary) => {
+  // =============================
+  // Product Performance Components
+  // =============================
+  'product-performance.kpis': (summary) => {
     return {
-      projections: summary.ltv_projections || summary.projections || [],
-      timeline: summary.projection_timeline
+      metrics: summary.kpiMetrics || {},
+      loading: false
     };
   },
 
-  'customer-lifetime-value.filterPanel': (summary) => {
+  'product-performance.overview': (summary) => {
     return {
-      filters: summary.available_filters || {},
-      summary: summary
+      data: {
+        revenue: summary.mainData?.topProducts?.map(p => p.revenue) || [],
+        units: summary.mainData?.topProducts?.map(p => p.unitsSold) || [],
+        margin: summary.mainData?.topProducts?.map(p => p.marginPercent) || [],
+        labels: summary.mainData?.topProducts?.map(p => p.productName) || []
+      },
+      loading: false
+    };
+  },
+
+  'product-performance.topProducts': (summary) => {
+    return {
+      data: summary.mainData?.topProducts || [],
+      loading: false
+    };
+  },
+
+  'product-performance.categoryAnalysis': (summary) => {
+    return {
+      data: summary.mainData?.categoryPerformance || [],
+      loading: false
+    };
+  },
+
+  'product-performance.marginAnalysis': (summary) => {
+    return {
+      data: summary.mainData?.marginAnalysis || [],
+      loading: false
+    };
+  },
+
+  'product-performance.priceBands': (summary) => {
+    return {
+      data: summary.mainData?.priceBandDistribution || [],
+      loading: false
+    };
+  },
+
+  // =============================
+  // Cash Flow Components
+  // =============================
+  'cash-flow.kpis': (summary) => {
+    return {
+      metrics: summary.kpiMetrics || {},
+      loading: false
+    };
+  },
+
+  'cash-flow.trends': (summary) => {
+    return {
+      data: summary.mainData?.trends || [],
+      loading: false
+    };
+  },
+
+  'cash-flow.operating': (summary) => {
+    return {
+      data: summary.mainData?.operating || [],
+      loading: false
+    };
+  },
+
+  'cash-flow.investing': (summary) => {
+    return {
+      data: summary.mainData?.investing || [],
+      loading: false
+    };
+  },
+
+  'cash-flow.financing': (summary) => {
+    return {
+      data: summary.mainData?.financing || [],
+      loading: false
+    };
+  },
+
+  'cash-flow.projection': (summary) => {
+    return {
+      data: summary.mainData?.projection || [],
+      loading: false
+    };
+  },
+
+  'cash-flow.table': (summary) => {
+    return {
+      data: summary.mainData?.transactions || [],
+      loading: false
+    };
+  },
+
+  'cash-flow.fcf-bridge': (summary) => {
+    return {
+      data: summary.mainData?.fcfBridge || [],
+      loading: false
+    };
+  },
+
+  'cash-flow.liquidity-timeline': (summary) => {
+    return {
+      data: summary.mainData?.liquidityTimeline || [],
+      loading: false
+    };
+  },
+
+  'cash-flow.capital-allocation': (summary) => {
+    return {
+      data: summary.mainData?.capitalAllocation || [],
+      loading: false
     };
   },
 

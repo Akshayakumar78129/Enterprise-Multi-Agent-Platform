@@ -64,14 +64,14 @@ def _detect_anomalies_sync(time_period: str, segment_id: Optional[str], contamin
         filters['dateFrom'] = (reference_date - timedelta(days=180)).strftime('%Y-%m-%d')
         filters['dateTo'] = reference_date.strftime('%Y-%m-%d')
     elif time_period == "last_year":
-        # Match frontend behavior - use Q4 2021 for "last year"
-        filters['dateFrom'] = '2021-01-01'
+        # Match frontend behavior - use 2017-2021 for consistency
+        filters['dateFrom'] = '2017-01-01'
         filters['dateTo'] = '2021-12-31'
     else:
-        # Default to last 30 days of 2021
-        filters['dateFrom'] = '2021-12-01'
+        # Default to 2017-2021 (consistent with all dashboards)
+        filters['dateFrom'] = '2017-01-01'
         filters['dateTo'] = '2021-12-31'
-        filters['timeRange'] = '30d'
+        filters['timeRange'] = 'full_period'
 
     # Add segment filter if specified
     if segment_id:

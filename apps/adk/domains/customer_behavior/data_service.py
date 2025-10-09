@@ -86,7 +86,7 @@ class CustomerBehaviorDataService:
         FROM {self.schema.TABLES['loyalty']} {self.schema.ALIASES['loyalty']}
         LEFT JOIN {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
             ON {self.schema.CUSTOMER.refs['id']} = {self.schema.LOYALTY.refs['customer_id']}
-        WHERE 1=1
+        WHERE {self.schema.LOYALTY.refs['customer_id']} > 0
         """
 
         # Apply filters using filter engine

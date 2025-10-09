@@ -2,6 +2,7 @@ import React, { ReactNode } from "react";
 import { Button } from "../ui/Button";
 import { DateRangeFilter, DateRange } from "./DateRangeFilter";
 import { MultiSelectFilter } from "./MultiSelectFilter";
+import { SingleSelectFilter } from "./SingleSelectFilter";
 import { SearchFilter } from "./SearchFilter";
 
 export interface FilterConfig {
@@ -17,6 +18,14 @@ export interface FilterConfig {
     onChange: (value: string) => void;
     placeholder?: string;
   };
+  singleSelect?: Array<{
+    id: string;
+    label: string;
+    options: Array<{ value: string; label: string; disabled?: boolean }>;
+    value: string;
+    onChange: (value: string) => void;
+    placeholder?: string;
+  }>;
   multiSelect?: Array<{
     id: string;
     label: string;
@@ -48,6 +57,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   const filterCount =
     (config.dateRange?.enabled ? 1 : 0) +
     (config.search?.enabled ? 1 : 0) +
+    (config.singleSelect?.length || 0) +
     (config.multiSelect?.length || 0) +
     (config.customFilters ? 1 : 0);
 
@@ -83,6 +93,19 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             />
           </div>
         )}
+
+        {/* Single-Select Filters */}
+        {config.singleSelect?.map((filter) => (
+          <div key={filter.id} className="w-full">
+            <SingleSelectFilter
+              label={filter.label}
+              options={filter.options}
+              value={filter.value}
+              onChange={filter.onChange}
+              placeholder={filter.placeholder}
+            />
+          </div>
+        ))}
 
         {/* Multi-Select Filters */}
         {config.multiSelect?.map((filter) => (

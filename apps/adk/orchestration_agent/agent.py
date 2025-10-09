@@ -15,7 +15,8 @@ from pydantic import BaseModel, Field
 from orchestration_agent.prompt import ROOT_AGENT_INSTR, CUSTOMER_INSTR, FINANCIAL_INSTR, SALES_INSTR, INVENTORY_INSTR
 
 from orchestration_agent.tools.customer_behaviour import analyze_customer_behavior
-from orchestration_agent.tools.financial_tool import cash_flow_analysis, revenue_forecast
+from orchestration_agent.tools.cash_flow import analyze_cash_flow
+from orchestration_agent.tools.financial_tool import revenue_forecast
 from orchestration_agent.tools.customer_segmentation import identify_customer_segments
 from orchestration_agent.tools.customer_lifetime_value import predict_customer_ltv
 from orchestration_agent.tools.churn_prediction import predict_churn_risk
@@ -110,14 +111,14 @@ inventory_agent = Agent(
 #         sub_agents=[inventory_agent, standard_output("inventory_analysis")]
 # )
 
-# Initialize sales agent with tools (include both legacy and new ADK tools)
+# Initialize sales agent with tools (ONLY ADK tools for dashboard consistency)
 sales_agent = Agent(
         name="sales_agent",
         model=model,
         instruction=SALES_INSTR,
         output_key="agent_output",
-        description="Handles any sales analytics and insights including demand forecast, product performance, sales trends, sales performance. Uses unified ADK data for consistency with dashboards.",
-        tools=[tool["function"] for tool in sales_analyst_tools] + [tool["function"] for tool in adk_sales_tools]
+        description="Handles sales performance and product analytics. Uses unified ADK data for consistency with dashboards.",
+        tools=[tool["function"] for tool in adk_sales_tools]
  )
 
 # sales_output_agent = SequentialAgent(
@@ -149,7 +150,7 @@ financial_agent = Agent(
         output_key="agent_output",
         # Crucial for delegation: Clear description of capability
         description="Handles financial analytics and insights including cash flow, revenue forecasting, and performance tracking",
-        tools=[cash_flow_analysis, revenue_forecast]
+        tools=[analyze_cash_flow, revenue_forecast]
 )
 
 # financial_output_agent = SequentialAgent(

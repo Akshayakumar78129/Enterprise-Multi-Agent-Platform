@@ -120,84 +120,32 @@ def identify_customer_segments(
             for feature in result['mlResults']['feature_importance'][:5]:
                 output.append(f"- {feature['feature']}: {feature['importance']*100:.1f}%")
 
-        # Add visualization metadata
+        # Add visualization metadata - using metadata-only approach like sales-performance
         output.append("\n## Visualization Data (Machine-Readable)")
         output.append("```json")
 
-        # Build visualization data matching the expected components
-        viz_data = {}
+        # Build filter metadata for frontend to fetch data
+        viz_data = {
+            "toolname": "customer-segmentation",
+            "componentName": "distributionMap",  # Primary component for segmentation
+            "body": {}
+        }
 
-        # Add KPI tiles data if we have metrics
-        if kpi_data:
-            viz_data["kpiTiles"] = [
-                {
-                    "title": "Total Segments",
-                    "value": kpi_data.get('totalSegments', 0),
-                    "unit": "segments",
-                    "color": "#8b5cf6"
-                },
-                {
-                    "title": "Largest Segment",
-                    "value": kpi_data.get('largestSegmentSize', 0),
-                    "unit": "customers",
-                    "color": "#10b981"
-                },
-                {
-                    "title": "Avg Value",
-                    "value": round(kpi_data.get('avgSegmentValue', 0), 2),
-                    "unit": "$",
-                    "format": "currency",
-                    "color": "#f59e0b"
-                },
-                {
-                    "title": "Quality Score",
-                    "value": round(kpi_data.get('segmentationQuality', 0), 1),
-                    "unit": "%",
-                    "color": "#ef4444"
-                }
-            ]
+        # Add time period filters if available
+        if request_filters.get('dateRange'):
+            viz_data["body"]["dateFrom"] = request_filters['dateRange'].get('startDate')
+            viz_data["body"]["dateTo"] = request_filters['dateRange'].get('endDate')
+        elif request_filters.get('date_from'):
+            viz_data["body"]["dateFrom"] = request_filters.get('date_from')
+            viz_data["body"]["dateTo"] = request_filters.get('date_to')
 
-        # Add segment distribution map data
-        if segment_details:
-            viz_data["distributionMap"] = [
-                {
-                    "segment_id": segment.get('segment_id', 'Unknown'),
-                    "size": segment.get('size', 0),
-                    "percentage": round(segment.get('percentage', 0), 1),
-                    "avg_revenue": round(segment.get('avg_revenue', 0), 2),
-                    "color": segment.get('color', '#8b5cf6')
-                }
-                for segment in segment_details[:8]  # Limit to 8 segments for visualization
-            ]
+        # Add segmentation method
+        if segmentation_method and segmentation_method != "default":
+            viz_data["body"]["method"] = segmentation_method
 
-        # Add profile cards data
-        if segment_details:
-            viz_data["profileCards"] = [
-                {
-                    "id": segment.get('segment_id', 'Unknown'),
-                    "name": f"Segment {segment.get('segment_id', 'Unknown')}",
-                    "size": segment.get('size', 0),
-                    "percentage": round(segment.get('percentage', 0), 1),
-                    "metrics": {
-                        "revenue": round(segment.get('avg_revenue', 0), 2),
-                        "transactions": round(segment.get('avg_transactions', 0), 1),
-                        "value_score": round(segment.get('value_score', 0), 2) if 'value_score' in segment else 0
-                    },
-                    "characteristics": segment.get('characteristics', {})
-                }
-                for segment in segment_details[:4]  # Top 4 segments for profile cards
-            ]
-
-        # Add metric comparison data
-        if segment_details and len(segment_details) > 1:
-            viz_data["metricComparison"] = {
-                "segments": [segment.get('segment_id', 'Unknown') for segment in segment_details[:5]],
-                "metrics": {
-                    "revenue": [round(segment.get('avg_revenue', 0), 2) for segment in segment_details[:5]],
-                    "transactions": [round(segment.get('avg_transactions', 0), 1) for segment in segment_details[:5]],
-                    "size": [segment.get('size', 0) for segment in segment_details[:5]]
-                }
-            }
+        # Add number of segments
+        if num_segments and num_segments != 0:
+            viz_data["body"]["numSegments"] = num_segments
 
         import json
         output.append(json.dumps(viz_data, indent=2))

@@ -73,6 +73,14 @@ class AnomalyProcessingService:
                 self.get_time_series_anomalies(filters)
             )
 
+            # Generate insights
+            insights = self._generate_insights(
+                customer_anomalies,
+                segment_distribution,
+                severity_distribution,
+                feature_importance
+            )
+
             # Return in structured format
             return {
                 "customerAnomalies": customer_anomalies or [],
@@ -80,7 +88,8 @@ class AnomalyProcessingService:
                 "regionDistribution": region_distribution or [],
                 "severityDistribution": severity_distribution or [],
                 "featureImportance": feature_importance or [],
-                "timeSeriesAnomalies": time_series_anomalies or []
+                "timeSeriesAnomalies": time_series_anomalies or [],
+                "insights": insights
             }
         except Exception as e:
             print(f"[AnomalyProcessingService] Error in getDashboardSummary: {e}")
@@ -90,7 +99,8 @@ class AnomalyProcessingService:
                 "regionDistribution": [],
                 "severityDistribution": [],
                 "featureImportance": [],
-                "timeSeriesAnomalies": []
+                "timeSeriesAnomalies": [],
+                "insights": []
             }
 
     @cache_dashboard_endpoint(dashboard_type='anomaly', ttl=300)
@@ -333,6 +343,69 @@ class AnomalyProcessingService:
         except Exception as e:
             print(f"[AnomalyProcessingService] Error in getTimeSeriesAnomalies: {e}")
             return []
+
+    def _generate_insights(
+        self,
+        customer_anomalies: List[Dict],
+        segment_distribution: List[Dict],
+        severity_distribution: List[Dict],
+        feature_importance: List[Dict]
+    ) -> List[str]:
+        """Generate AI insights based on anomaly detection results"""
+        insights = []
+
+        if not customer_anomalies:
+            return ["No anomalies detected in the current dataset"]
+
+        # Count anomalies by severity
+        total_customers = len(customer_anomalies)
+        high_severity = sum(1 for c in customer_anomalies if c.get('severity_level', 0) >= 4)
+        anomaly_count = sum(1 for c in customer_anomalies if c.get('is_anomaly', False))
+
+        # High severity insight
+        if high_severity > 0:
+            severity_pct = (high_severity / total_customers * 100) if total_customers > 0 else 0
+            insights.append(
+                f"{high_severity} customers show high severity anomalies ({severity_pct:.1f}%) requiring immediate attention"
+            )
+
+        # Overall anomaly rate
+        if anomaly_count > 0:
+            anomaly_rate = (anomaly_count / total_customers * 100) if total_customers > 0 else 0
+            if anomaly_rate > 20:
+                insights.append(
+                    f"Warning: {anomaly_rate:.1f}% anomaly rate detected across {anomaly_count} customers"
+                )
+            else:
+                insights.append(
+                    f"{anomaly_count} anomalies detected ({anomaly_rate:.1f}% of customers)"
+                )
+
+        # Segment-specific insights
+        if segment_distribution:
+            high_risk_segments = [s for s in segment_distribution if s.get('anomaly_rate', 0) > 30]
+            if high_risk_segments:
+                top_segment = max(high_risk_segments, key=lambda x: x.get('anomaly_rate', 0))
+                insights.append(
+                    f"{top_segment['segment']} segment has highest anomaly rate at {top_segment['anomaly_rate']:.1f}%"
+                )
+
+        # Feature importance insights
+        if feature_importance:
+            top_feature = feature_importance[0]
+            insights.append(
+                f"Top anomaly indicator: {top_feature.get('feature', 'Unknown')} "
+                f"(importance: {top_feature.get('importance', 0):.1f}%)"
+            )
+
+        # Severity distribution insight
+        critical_count = sum(s.get('count', 0) for s in severity_distribution if s.get('severity_level', 0) == 5)
+        if critical_count > 0:
+            insights.append(
+                f"{critical_count} customers at critical severity level - prioritize investigation"
+            )
+
+        return insights
 
     async def get_customers(self, filters: Dict) -> List[Dict]:
         """Get raw customer data"""

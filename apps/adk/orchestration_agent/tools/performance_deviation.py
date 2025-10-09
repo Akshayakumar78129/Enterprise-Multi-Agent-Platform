@@ -69,18 +69,18 @@ def analyze_performance_deviations(
 
         # Parse time_period to extract date range
         if time_period == "default":
-            # Default to full year 2021
-            filters['dateFrom'] = '2021-01-01'
+            # Default to 2017-2021 (consistent with other dashboards)
+            filters['dateFrom'] = '2017-01-01'
             filters['dateTo'] = '2021-12-31'
-            print(f"[performance_deviation] Using default period: 2021 full year")
+            print(f"[performance_deviation] Using default period: 2017-2021")
 
         elif time_period == "last_30_days":
             # Calculate from current date but check data availability
             if current_date > DATA_END:
-                # Use last 30 days of available data
+                # Use last 30 days of available data (end of 2021)
                 filters['dateTo'] = '2021-12-31'
                 filters['dateFrom'] = '2021-12-01'
-                print(f"[performance_deviation] Adjusted to last 30 days of available data")
+                print(f"[performance_deviation] Adjusted to last 30 days of available data (Dec 2021)")
             else:
                 filters['dateTo'] = current_date.strftime('%Y-%m-%d')
                 filters['dateFrom'] = (current_date - timedelta(days=30)).strftime('%Y-%m-%d')
@@ -88,10 +88,10 @@ def analyze_performance_deviations(
         elif time_period == "last_90_days":
             # Calculate from current date but check data availability
             if current_date > DATA_END:
-                # Use last 90 days of available data
+                # Use last 90 days of available data (Q4 2021)
                 filters['dateTo'] = '2021-12-31'
                 filters['dateFrom'] = '2021-10-02'
-                print(f"[performance_deviation] Adjusted to last 90 days of available data")
+                print(f"[performance_deviation] Adjusted to last 90 days of available data (Q4 2021)")
             else:
                 filters['dateTo'] = current_date.strftime('%Y-%m-%d')
                 filters['dateFrom'] = (current_date - timedelta(days=90)).strftime('%Y-%m-%d')
@@ -99,10 +99,10 @@ def analyze_performance_deviations(
         elif time_period == "last_180_days":
             # Calculate from current date but check data availability
             if current_date > DATA_END:
-                # Use last 180 days of available data
+                # Use last 180 days of available data (H2 2021)
                 filters['dateTo'] = '2021-12-31'
                 filters['dateFrom'] = '2021-07-04'
-                print(f"[performance_deviation] Adjusted to last 180 days of available data")
+                print(f"[performance_deviation] Adjusted to last 180 days of available data (H2 2021)")
             else:
                 filters['dateTo'] = current_date.strftime('%Y-%m-%d')
                 filters['dateFrom'] = (current_date - timedelta(days=180)).strftime('%Y-%m-%d')
@@ -110,10 +110,10 @@ def analyze_performance_deviations(
         elif time_period == "last_year":
             # Calculate from current date but check data availability
             if current_date > DATA_END:
-                # Use full year 2021
+                # Use 2017-2021 (consistent with other dashboards)
                 filters['dateTo'] = '2021-12-31'
-                filters['dateFrom'] = '2021-01-01'
-                print(f"[performance_deviation] Adjusted to year 2021 (last available)")
+                filters['dateFrom'] = '2017-01-01'
+                print(f"[performance_deviation] Adjusted to 2017-2021 (full available range)")
             else:
                 filters['dateTo'] = current_date.strftime('%Y-%m-%d')
                 filters['dateFrom'] = (current_date - timedelta(days=365)).strftime('%Y-%m-%d')
@@ -214,10 +214,10 @@ def analyze_performance_deviations(
                             break
 
             else:
-                # Default to 2021 if we can't parse the time period
-                filters['dateFrom'] = '2021-01-01'
+                # Default to 2017-2021 if we can't parse the time period
+                filters['dateFrom'] = '2017-01-01'
                 filters['dateTo'] = '2021-12-31'
-                print(f"[performance_deviation] Could not parse '{time_period}', defaulting to 2021 full year")
+                print(f"[performance_deviation] Could not parse '{time_period}', defaulting to 2017-2021")
 
         # Validate dates are within available range
         try:
@@ -234,9 +234,9 @@ def analyze_performance_deviations(
 
         except ValueError:
             # If date parsing fails, use default
-            filters['dateFrom'] = '2021-01-01'
+            filters['dateFrom'] = '2017-01-01'
             filters['dateTo'] = '2021-12-31'
-            print(f"[performance_deviation] Date validation failed, using default 2021")
+            print(f"[performance_deviation] Date validation failed, using default 2017-2021")
 
         # Handle business functions
         if business_functions:

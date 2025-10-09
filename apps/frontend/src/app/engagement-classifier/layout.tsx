@@ -8,9 +8,18 @@ import {
 import React from "react";
 import { EngagementFilters } from "./components";
 import { EngagementClassifierProvider, useEngagementClassifierContext } from "./context";
+import { useEngagementClassifierData } from "./hooks/useEngagementClassifierData";
 
 function HeaderFilters() {
-  const { filters, setFilters } = useEngagementClassifierContext();
+  const { filters,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId, setFilters } = useEngagementClassifierContext();
   return (
     <EngagementFilters
       filters={filters}
@@ -31,9 +40,19 @@ function EngagementClassifierLayoutContent({ children }: { children: React.React
     selectedPoints,
     selectionManager,
     filters,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId,
     timeRange,
     engagementData
   } = useEngagementClassifierContext();
+
+  const { insights, kpiMetrics } = useEngagementClassifierData(filters);
 
   // Calculate at risk customers for BI trigger
   const atRiskCount = engagementData.filter((c: any) =>
@@ -54,8 +73,7 @@ function EngagementClassifierLayoutContent({ children }: { children: React.React
       onClose={() => setIsChatOpen(false)}
       selectedPoints={selectedPoints}
       onClearSelection={() => selectionManager.clearAll()}
-      dashboardContext="engagement_classifier"
-      additionalContext={{
+      dashboardContext="engagement_classifier"additionalContext={{
         filters: {
           engagementLevels: filters.engagementLevels?.join(", ") || "All",
           loyaltyStatus: filters.loyaltyStatus?.join(", ") || "All",
@@ -66,14 +84,24 @@ function EngagementClassifierLayoutContent({ children }: { children: React.React
           }
         }
       }}
+      messages={chatMessages}
+      setMessages={setChatMessages}
+      input={chatInput}
+      setInput={setChatInput}
+      isLoading={chatIsLoading}
+      setIsLoading={setChatIsLoading}
+      sessionId={chatSessionId}
+      userId={chatUserId}
     />
   );
 
   const biPanelContent = (
     <BusinessIntelligencePanel
       onClose={() => setIsBIModalOpen(false)}
-      customers={engagementData}
-      dashboardContext="engagement_classifier"
+      insights={insights || []}
+      kpiMetrics={kpiMetrics || {}}
+      data={{ customers: engagementData }}
+      dashboardContext="customer"
     />
   );
 

@@ -63,11 +63,13 @@ export interface SalesFilters {
     startDate: string;
     endDate: string;
   };
-  region?: string[];
-  category?: string[];
-  product?: string[];
-  customer?: string[];
-  segment?: string[];
+  regions?: string[];
+  categories?: string[];
+  products?: string[];
+  customers?: string[];
+  segments?: string[];
+  dimension?: string;
+  metric?: string;
 }
 
 class SalesPerformanceService {
@@ -83,24 +85,32 @@ class SalesPerformanceService {
         postFilters.dateTo = filters.dateRange.endDate;
       }
 
-      if (filters.region?.length) {
-        postFilters.regions = filters.region;
+      if (filters.regions?.length) {
+        postFilters.regions = filters.regions;
       }
 
-      if (filters.category?.length) {
-        postFilters.categories = filters.category;
+      if (filters.categories?.length) {
+        postFilters.categories = filters.categories;
       }
 
-      if (filters.product?.length) {
-        postFilters.products = filters.product;
+      if (filters.products?.length) {
+        postFilters.products = filters.products;
       }
 
-      if (filters.customer?.length) {
-        postFilters.customers = filters.customer;
+      if (filters.customers?.length) {
+        postFilters.customers = filters.customers;
       }
 
-      if (filters.segment?.length) {
-        postFilters.segments = filters.segment;
+      if (filters.segments?.length) {
+        postFilters.segments = filters.segments;
+      }
+
+      if (filters.dimension) {
+        postFilters.dimension = filters.dimension;
+      }
+
+      if (filters.metric) {
+        postFilters.metric = filters.metric;
       }
 
       const response = await axios.post(`${this.baseUrl}/summary`, postFilters);
@@ -121,24 +131,24 @@ class SalesPerformanceService {
         params.append('dateRange_endDate', filters.dateRange.endDate);
       }
 
-      if (filters.region?.length) {
-        filters.region.forEach(r => params.append('region', r));
+      if (filters.regions?.length) {
+        filters.regions.forEach(r => params.append('region', r));
       }
 
-      if (filters.category?.length) {
-        filters.category.forEach(c => params.append('category', c));
+      if (filters.categories?.length) {
+        filters.categories.forEach(c => params.append('category', c));
       }
 
-      if (filters.product?.length) {
-        filters.product.forEach(p => params.append('product', p));
+      if (filters.products?.length) {
+        filters.products.forEach(p => params.append('product', p));
       }
 
-      if (filters.customer?.length) {
-        filters.customer.forEach(c => params.append('customer', c));
+      if (filters.customers?.length) {
+        filters.customers.forEach(c => params.append('customer', c));
       }
 
-      if (filters.segment?.length) {
-        filters.segment.forEach(s => params.append('segment', s));
+      if (filters.segments?.length) {
+        filters.segments.forEach(s => params.append('segment', s));
       }
 
       const response = await axios.get(`${this.baseUrl}/dashboard?${params}`);
@@ -175,8 +185,8 @@ class SalesPerformanceService {
         params.append('dateRange_endDate', filters.dateRange.endDate);
       }
 
-      if (filters.category?.length) {
-        filters.category.forEach(c => params.append('category', c));
+      if (filters.categories?.length) {
+        filters.categories.forEach(c => params.append('category', c));
       }
 
       const response = await axios.get(`${this.baseUrl}/products?${params}`);
@@ -196,8 +206,8 @@ class SalesPerformanceService {
         params.append('dateRange_endDate', filters.dateRange.endDate);
       }
 
-      if (filters.region?.length) {
-        filters.region.forEach(r => params.append('region', r));
+      if (filters.regions?.length) {
+        filters.regions.forEach(r => params.append('region', r));
       }
 
       const response = await axios.get(`${this.baseUrl}/regions?${params}`);

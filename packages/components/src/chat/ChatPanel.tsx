@@ -24,6 +24,15 @@ export interface ChatPanelProps {
   onClearSelection?: () => void;
   dashboardContext?: string;
   additionalContext?: Record<string, any>;
+  // External state props (for controlled mode)
+  messages?: Message[];
+  setMessages?: (messages: Message[] | ((prev: Message[]) => Message[])) => void;
+  input?: string;
+  setInput?: (input: string) => void;
+  isLoading?: boolean;
+  setIsLoading?: (loading: boolean) => void;
+  sessionId?: string;
+  userId?: string;
 }
 
 export function ChatPanel({
@@ -31,7 +40,16 @@ export function ChatPanel({
   selectedPoints = [],
   onClearSelection,
   dashboardContext = "general",
-  additionalContext = {}
+  additionalContext = {},
+  // External state props with defaults for backward compatibility
+  messages: externalMessages,
+  setMessages: externalSetMessages,
+  input: externalInput,
+  setInput: externalSetInput,
+  isLoading: externalIsLoading,
+  setIsLoading: externalSetIsLoading,
+  sessionId: externalSessionId,
+  userId: externalUserId
 }: ChatPanelProps) {
   const getInitialMessage = () => {
     const contextMessages: Record<string, string> = {
@@ -42,18 +60,30 @@ export function ChatPanel({
     return contextMessages[dashboardContext] || contextMessages.general;
   };
 
-  const [messages, setMessages] = useState<Message[]>([
+  // Internal state (used only if external state not provided - backward compatibility)
+  const [internalMessages, internalSetMessages] = useState<Message[]>([
     {
       role: "assistant",
       content: getInitialMessage()
     }
   ]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [internalInput, internalSetInput] = useState("");
+  const [internalIsLoading, internalSetIsLoading] = useState(false);
+  const [internalSessionId] = useState(() => `session_${Date.now()}`);
+  const [internalUserId] = useState(() => `user_${Math.random().toString(36).substr(2, 9)}`);
+
+  // Use external state if provided, otherwise use internal state
+  const messages = externalMessages !== undefined ? externalMessages : internalMessages;
+  const setMessages = externalSetMessages || internalSetMessages;
+  const input = externalInput !== undefined ? externalInput : internalInput;
+  const setInput = externalSetInput || internalSetInput;
+  const isLoading = externalIsLoading !== undefined ? externalIsLoading : internalIsLoading;
+  const setIsLoading = externalSetIsLoading || internalSetIsLoading;
+  const sessionId = externalSessionId || internalSessionId;
+  const userId = externalUserId || internalUserId;
+
   const [shiftClickPoints, setShiftClickPoints] = useState<ShiftClickPoint[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [sessionId] = useState(() => `session_${Date.now()}`);
-  const [userId] = useState(() => `user_${Math.random().toString(36).substr(2, 9)}`);
   const shiftClickManager = ShiftClickSelectionManager.getInstance();
 
   const scrollToBottom = () => {
@@ -204,7 +234,7 @@ export function ChatPanel({
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
-        <h3 className="font-semibold">AI Assistant</h3>
+        <h3 className="font-semibold">Thought Catalyst</h3>
         <Button
           variant="ghost"
           size="icon"

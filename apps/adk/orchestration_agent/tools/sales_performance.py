@@ -111,13 +111,14 @@ def analyze_sales_performance(
         # Get dashboard data
         data = service.get_dashboard_data(filters)
 
-        # Extract components
-        kpis = data.get('kpis', {})
-        product_performance = data.get('productPerformance', [])
-        region_performance = data.get('regionPerformance', [])
-        sales_trends = data.get('salesTrends', [])
-        category_performance = data.get('categoryPerformance', [])
-        top_customers = data.get('topCustomers', [])
+        # Extract components - data structure: { kpiMetrics: {...}, mainData: {...} }
+        kpis = data.get('kpiMetrics', {})
+        main_data = data.get('mainData', {})
+        product_performance = main_data.get('productPerformance', [])
+        region_performance = main_data.get('regionPerformance', [])
+        sales_trends = main_data.get('salesTrends', [])
+        category_performance = main_data.get('categoryPerformance', [])
+        top_customers = main_data.get('topCustomers', [])
 
         # Format the results
         result = f"""# Sales Performance Analysis Report
@@ -174,10 +175,38 @@ def analyze_sales_performance(
 3. **Customer Retention**: Engage with top customers for retention
 4. **Category Optimization**: Review category performance for optimization opportunities
 
-## Data Consistency Note
+---
 
-This analysis uses the same data source as the Sales Performance Dashboard,
-ensuring complete consistency between agent responses and dashboard visualizations.
+## Visualization Data (Machine-Readable)
+
+```json
+"""
+        # Add visualization metadata for enterprise-iq canvas
+        viz_data = {
+            "toolname": "sales-performance",
+            "componentName": "overview",  # Can be: kpis, overview, timeSeries, distribution
+            "body": {
+                "dateFrom": filters.get('dateRange', {}).get('startDate') or filters.get('dateFrom'),
+                "dateTo": filters.get('dateRange', {}).get('endDate') or filters.get('dateTo'),
+            }
+        }
+
+        # Add other filters to metadata
+        if region:
+            viz_data["body"]["regions"] = [region]
+        if category:
+            viz_data["body"]["categories"] = [category]
+        if product:
+            viz_data["body"]["products"] = [product]
+
+        import json
+        result += json.dumps(viz_data, indent=2)
+        result += """
+```
+
+---
+
+**Note**: This analysis uses the same unified data source as the Sales Performance Dashboard, ensuring complete consistency between agent responses and dashboard visualizations.
 """
 
         return result

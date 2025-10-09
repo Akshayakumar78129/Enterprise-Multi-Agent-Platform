@@ -49,6 +49,9 @@ from domains.product_performance.processing_service import ProductPerformancePro
 # Import inventory domain services
 from domains.inventory_level.processing_service import InventoryLevelProcessingService
 
+# Import finance domain services
+from domains.cash_flow.processing_service import CashFlowProcessingService
+
 from customer.agent import root_agent as customer_agent
 from finance.agent import root_agent as finance_agent
 from inventory.agent import root_agent as inventory_agent
@@ -74,6 +77,9 @@ from api.routers.product_performance_router import router as product_performance
 
 # Import inventory API router
 from api.routers.inventory_level_router import router as inventory_level_router
+
+# Import cash flow API router
+from api.routers.cash_flow_router import router as cash_flow_router
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +129,7 @@ sales_forecast_service = SalesForecastProcessingService()
 revenue_analysis_service = RevenueAnalysisProcessingService()
 product_performance_service = ProductPerformanceProcessingService()
 inventory_level_service = InventoryLevelProcessingService()
+cash_flow_service = CashFlowProcessingService()
 
 app.add_middleware(
     CORSMiddleware,
@@ -157,6 +164,7 @@ app.include_router(customer_insights_router)
 app.include_router(sales_performance_router)
 app.include_router(product_performance_router)
 app.include_router(inventory_level_router)
+app.include_router(cash_flow_router)
 
 # Simple in-memory session storage for fallback
 simple_sessions: Dict[str, Dict[str, Any]] = {}

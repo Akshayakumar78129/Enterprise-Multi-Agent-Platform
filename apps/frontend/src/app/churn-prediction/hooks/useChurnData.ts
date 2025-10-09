@@ -287,6 +287,51 @@ export function useChurnData(filters: ChurnFilters) {
     return arr;
   }, [data]);
 
+  // Calculate KPI metrics from data
+  const kpiMetrics = useMemo(() => {
+    if (!data || !customers.length) return {};
+
+    const highRisk = customers.filter(c => c.riskLevel === 'High' || c.riskLevel === 'Very High').length;
+    const totalCustomers = customers.length;
+    const avgRisk = customers.reduce((sum, c) => sum + (c.riskPercentage || 0), 0) / totalCustomers;
+    const totalCLVAtRisk = customers
+      .filter(c => c.riskLevel === 'High' || c.riskLevel === 'Very High')
+      .reduce((sum, c) => sum + (c.clv || 0), 0);
+
+    return {
+      totalCustomers,
+      highRiskCount: highRisk,
+      avgRiskPercentage: avgRisk.toFixed(1),
+      totalCLVAtRisk: totalCLVAtRisk.toFixed(0)
+    };
+  }, [data, customers]);
+
+  // Generate simple insights
+  const insights = useMemo(() => {
+    if (!customers.length) return [];
+
+    const highRisk = customers.filter(c => c.riskLevel === 'High' || c.riskLevel === 'Very High');
+    const veryHighRisk = customers.filter(c => c.riskLevel === 'Very High');
+
+    const insightsList = [];
+
+    if (veryHighRisk.length > 0) {
+      insightsList.push(`${veryHighRisk.length} customers at very high churn risk require immediate attention`);
+    }
+
+    if (highRisk.length > 0) {
+      const riskPct = ((highRisk.length / customers.length) * 100).toFixed(1);
+      insightsList.push(`${highRisk.length} customers (${riskPct}%) are at high or very high churn risk`);
+    }
+
+    if (featureImportance.length > 0) {
+      const topFactor = featureImportance[0];
+      insightsList.push(`${topFactor.name} is the top factor influencing churn with ${topFactor.importance}% importance`);
+    }
+
+    return insightsList;
+  }, [customers, featureImportance]);
+
   return {
     loading,
     error,
@@ -298,6 +343,8 @@ export function useChurnData(filters: ChurnFilters) {
     riskPyramidData,
     probabilityArray,
     hasNoData,
+    insights,
+    kpiMetrics,
     client
   };
 }

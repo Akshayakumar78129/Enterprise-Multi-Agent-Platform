@@ -200,19 +200,19 @@ Please specify a date range within the available data or use the default view.
                     filters['dateTo'] = f'{year}-{end}'
                     print(f"[churn_prediction] Parsed quarter {quarter.upper()} {year}: {filters['dateFrom']} to {filters['dateTo']}")
 
-        # Default to full year 2021 if no pattern matched or "default" specified
+        # Default to 2017-2021 if no pattern matched or "default" specified (consistent with all dashboards)
         elif time_period == "default" or not time_period:
-            filters['dateFrom'] = '2021-01-01'
+            filters['dateFrom'] = '2017-01-01'
             filters['dateTo'] = '2021-12-31'
             filters['timeRange'] = 'full_year'
-            print(f"[churn_prediction] Using default date range (full 2021): {filters['dateFrom']} to {filters['dateTo']}")
+            print(f"[churn_prediction] Using default date range (2017-2021): {filters['dateFrom']} to {filters['dateTo']}")
 
         # Fallback for any unrecognized format
         else:
-            filters['dateFrom'] = '2021-01-01'
+            filters['dateFrom'] = '2017-01-01'
             filters['dateTo'] = '2021-12-31'
             filters['timeRange'] = 'full_year'
-            print(f"[churn_prediction] Unrecognized time_period '{time_period}', using default (full 2021): {filters['dateFrom']} to {filters['dateTo']}")
+            print(f"[churn_prediction] Unrecognized time_period '{time_period}', using default (2017-2021): {filters['dateFrom']} to {filters['dateTo']}")
 
     # Add segment filter if specified
     if segment_id:

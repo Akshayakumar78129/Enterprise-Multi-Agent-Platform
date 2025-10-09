@@ -7,7 +7,12 @@ interface SegmentationFilters {
   dateFrom: string;
   dateTo: string;
   customerSegments: string[];
-  valueCategories: string[];
+  valueCategories: string[,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId];
   behaviorTypes: string[];
 }
 
@@ -32,8 +37,8 @@ const SegmentationContext = createContext<SegmentationContextType | undefined>(u
 export function SegmentationProvider({ children }: { children: React.ReactNode }) {
   // Initialize filters
   const [filters, setFilters] = useState<SegmentationFilters>(() => {
-    // Use 2021 dates as default
-    const dateFrom = '2021-01-01';
+    // Use 2017-2021 dates as default (consistent with sales performance)
+    const dateFrom = '2017-01-01';
     const dateTo = '2021-12-31';
 
     // Load from localStorage if available
@@ -52,7 +57,12 @@ export function SegmentationProvider({ children }: { children: React.ReactNode }
       dateFrom: dateFrom,
       dateTo: dateTo,
       customerSegments: [],
-      valueCategories: [],
+      valueCategories: [,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId],
       behaviorTypes: []
     };
   });

@@ -202,13 +202,13 @@ The requested period is outside our available data range.
                     filters['date_from'] = f'{year}-{start}'
                     filters['date_to'] = f'{year}-{end}'
 
-        # Default to full year 2021
+        # Default to 2017-2021 (consistent with all dashboards)
         elif time_period == "default" or not time_period:
-            filters['date_from'] = '2021-01-01'
+            filters['date_from'] = '2017-01-01'
             filters['date_to'] = '2021-12-31'
         else:
             # Fallback for unrecognized format
-            filters['date_from'] = '2021-01-01'
+            filters['date_from'] = '2017-01-01'
             filters['date_to'] = '2021-12-31'
 
     if customer_segment:
@@ -237,8 +237,8 @@ The requested period is outside our available data range.
             output.append("\n## Key Metrics")
             kpis = result['kpiMetrics']
             kpi_data = {
-                'avgLTV': kpis.get('avgLTV', 0),
-                'totalLTV': kpis.get('totalLTV', 0),
+                'avgLTV': kpis.get('avgLtv', 0),  # Fixed: avgLTV → avgLtv (case)
+                'totalLTV': kpis.get('totalValue', 0),  # Fixed: totalLTV → totalValue (API uses different key)
                 'highValueCount': kpis.get('highValueCount', 0),
                 'ltvGrowth': kpis.get('ltvGrowth', 0)
             }
@@ -277,67 +277,32 @@ The requested period is outside our available data range.
             output.append(f"\n## {prediction_horizon}-Month Forecast")
             output.append(f"Based on current trends and ML predictions, the total customer lifetime value is expected to grow by approximately {kpi_data.get('ltvGrowth', 0):.1f}% over the next {prediction_horizon} months.")
 
-        # Add visualization metadata
+        # Add visualization metadata - using metadata-only approach like sales-performance
         output.append("\n## Visualization Data (Machine-Readable)")
         output.append("```json")
 
-        # Build visualization data
+        # Build filter metadata for frontend to fetch data
         viz_data = {
-            "kpiTiles": [
-                {
-                    "title": "Average LTV",
-                    "value": round(kpi_data.get('avgLTV', 0), 2),
-                    "unit": "$",
-                    "format": "currency",
-                    "color": "#10b981"
-                },
-                {
-                    "title": "Total LTV",
-                    "value": round(kpi_data.get('totalLTV', 0), 2),
-                    "unit": "$",
-                    "format": "currency",
-                    "color": "#8b5cf6"
-                },
-                {
-                    "title": "High Value",
-                    "value": kpi_data.get('highValueCount', 0),
-                    "unit": "customers",
-                    "color": "#f59e0b"
-                },
-                {
-                    "title": "LTV Growth",
-                    "value": round(kpi_data.get('ltvGrowth', 0), 1),
-                    "unit": "%",
-                    "trend": "up" if kpi_data.get('ltvGrowth', 0) > 0 else "down",
-                    "color": "#ef4444"
-                }
-            ]
+            "toolname": "customer-lifetime-value",
+            "componentName": "ltvDistribution",  # Primary component for LTV
+            "body": {}
         }
 
-        # Add LTV distribution chart data
-        if ltv_distribution:
-            viz_data["ltvDistribution"] = [
-                {
-                    "range": bucket.get('range', 'N/A'),
-                    "count": bucket.get('count', 0),
-                    "percentage": round(bucket.get('percentage', 0), 1) if 'percentage' in bucket else 0
-                }
-                for bucket in ltv_distribution
-            ]
+        # Add time period filters
+        if filters.get('dateRange'):
+            viz_data["body"]["dateFrom"] = filters['dateRange'].get('startDate')
+            viz_data["body"]["dateTo"] = filters['dateRange'].get('endDate')
+        elif filters.get('date_from'):
+            viz_data["body"]["dateFrom"] = filters.get('date_from')
+            viz_data["body"]["dateTo"] = filters.get('date_to')
 
-        # Add customer explorer data
-        if top_customers:
-            viz_data["customerExplorer"] = [
-                {
-                    "customer_id": customer.get('customer_id', 'N/A'),
-                    "customer_name": customer.get('customer_name', 'Unknown'),
-                    "predicted_ltv": round(customer.get('predicted_ltv', 0), 2),
-                    "ltv_percentile": customer.get('ltv_percentile', 'N/A'),
-                    "segment": customer.get('segment', 'N/A'),
-                    "risk_level": "low" if customer.get('predicted_ltv', 0) > 5000 else "medium"
-                }
-                for customer in top_customers[:5]
-            ]
+        # Add customer segment filter
+        if customer_segment:
+            viz_data["body"]["segment"] = customer_segment
+
+        # Add prediction horizon
+        if prediction_horizon:
+            viz_data["body"]["predictionHorizon"] = prediction_horizon
 
         import json
         output.append(json.dumps(viz_data, indent=2))

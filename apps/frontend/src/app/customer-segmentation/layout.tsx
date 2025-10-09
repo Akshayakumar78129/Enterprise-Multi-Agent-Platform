@@ -11,6 +11,14 @@ import { SegmentationProvider, useSegmentationContext } from './context';
 function SegmentationLayoutContent({ children }: { children: React.ReactNode }) {
   const {
     filters,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId,
     setFilters,
     isChatPanelOpen,
     setIsChatPanelOpen,
@@ -42,8 +50,7 @@ function SegmentationLayoutContent({ children }: { children: React.ReactNode }) 
       onClose={() => setIsChatPanelOpen(false)}
       selectedPoints={selectedPoints}
       onClearSelection={() => selectionManager.clearAll()}
-      dashboardContext="customer_segmentation"
-      additionalContext={{
+      dashboardContext="customer_segmentation"additionalContext={{
         filters: {
           dateRange: `${filters.dateFrom} to ${filters.dateTo}`,
           segmentationMethod: filters.segmentationMethod,
@@ -53,48 +60,24 @@ function SegmentationLayoutContent({ children }: { children: React.ReactNode }) 
         },
         segments: segments.length
       }}
+      messages={chatMessages}
+      setMessages={setChatMessages}
+      input={chatInput}
+      setInput={setChatInput}
+      isLoading={chatIsLoading}
+      setIsLoading={setChatIsLoading}
+      sessionId={chatSessionId}
+      userId={chatUserId}
     />
   );
-
-  // Transform segment data to match BI Panel format
-  const transformedCustomers = segments.map((customer: any) => {
-    // Determine risk level based on segment
-    let riskLevel: "Low" | "Medium" | "High" | "Very High" = "Low";
-
-    if (customer.segment_name === 'Lost' || customer.segment_name === 'At Risk') {
-      riskLevel = "Very High";
-    } else if (customer.segment_name === "Can't Lose Them" || customer.segment_name === 'Hibernating') {
-      riskLevel = "High";
-    } else if (customer.segment_name === 'New Customers' || customer.segment_name === 'Potential Loyalists') {
-      riskLevel = "Medium";
-    }
-
-    // Calculate churn probability based on days since last activity
-    let churnProbability = 0.1;
-    if (customer.days_since_last_activity > 90) {
-      churnProbability = 0.8;
-    } else if (customer.days_since_last_activity > 60) {
-      churnProbability = 0.6;
-    } else if (customer.days_since_last_activity > 30) {
-      churnProbability = 0.4;
-    }
-
-    return {
-      customer_id: customer.customer_id || customer.id,
-      name: customer.customer_name || customer.name || `Customer ${customer.customer_id}`,
-      risk_level: riskLevel,
-      churn_probability: churnProbability,
-      avg_order_value: customer.avg_order_value || 0,
-      frequency: customer.transaction_count || 0,
-      lifetime_value: customer.lifetime_value || 0
-    };
-  });
 
   const biPanelContent = (
     <BusinessIntelligencePanel
       onClose={() => setIsBusinessIntelligencePanelOpen(false)}
-      customers={transformedCustomers}
-      dashboardContext="customer_segmentation"
+      insights={insights || []}
+      kpiMetrics={{}}
+      data={{ segments }}
+      dashboardContext="segmentation"
     />
   );
 

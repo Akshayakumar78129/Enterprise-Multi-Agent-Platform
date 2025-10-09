@@ -34,6 +34,7 @@ export function useNextPurchaseData(filters: Record<string, any>) {
     recommendedProducts: data?.mainData?.recommendedProducts || {},
     timingForecast: data?.mainData?.timingForecast || {},
     kpiMetrics: data?.kpiMetrics || {},
+    insights: data?.insights || [],
     hasNoData: !data?.mainData || Object.keys(data?.mainData || {}).length === 0
   };
 }

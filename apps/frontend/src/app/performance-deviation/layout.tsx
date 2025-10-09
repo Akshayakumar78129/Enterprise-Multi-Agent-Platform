@@ -109,7 +109,15 @@ function PerformanceDeviationLayoutContent({ children }: { children: React.React
     selectionManager,
     filters,
     timeRange,
-    performanceData
+    performanceData,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId,
   } = usePerformanceDeviationContext();
 
   // Calculate high deviation count for BI trigger
@@ -144,6 +152,14 @@ function PerformanceDeviationLayoutContent({ children }: { children: React.React
           }
         }
       }}
+      messages={chatMessages}
+      setMessages={setChatMessages}
+      input={chatInput}
+      setInput={setChatInput}
+      isLoading={chatIsLoading}
+      setIsLoading={setChatIsLoading}
+      sessionId={chatSessionId}
+      userId={chatUserId}
     />
   );
 

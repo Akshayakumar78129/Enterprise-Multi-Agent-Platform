@@ -1,17 +1,14 @@
 "use client";
 
 import React from 'react';
-import {
-  DashboardGrid,
-  DashboardSection
-} from 'components/index';
+import { DashboardSection, PageLoader } from 'components/index';
 import {
   ProductKPIs,
-  ProductOverview,
-  TopProducts,
-  CategoryAnalysis,
-  ProductTrends,
-  InventoryStatus
+  ProductPerformanceOverview,
+  TopProductsTable,
+  CategoryPerformanceChart,
+  MarginAnalysisScatter,
+  PriceBandDistribution
 } from './components';
 import { useProductPerformanceContext } from './context';
 import { useProductPerformanceData } from './hooks/useProductPerformanceData';
@@ -22,18 +19,19 @@ export default function ProductPerformancePage() {
   const {
     loading,
     error,
-    productOverview,
     topProducts,
-    categoryAnalysis,
-    productTrends,
-    inventoryStatus,
+    categoryPerformance,
+    marginAnalysis,
+    priceBandDistribution,
     hasNoData,
     kpiMetrics
   } = useProductPerformanceData(filters);
 
   React.useEffect(() => {
-    setProductData({ productOverview, topProducts, categoryAnalysis });
-  }, [productOverview, topProducts, categoryAnalysis, setProductData]);
+    if (topProducts && topProducts.length > 0) {
+      setProductData({ topProducts, categoryPerformance, marginAnalysis });
+    }
+  }, [topProducts, categoryPerformance, marginAnalysis, setProductData]);
 
   if (error && !loading && hasNoData) {
     return (
@@ -51,35 +49,43 @@ export default function ProductPerformancePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <DashboardSection title="Product Performance Overview">
-        <ProductKPIs
-          metrics={kpiMetrics}
-          loading={loading}
-        />
-      </DashboardSection>
-
-      <DashboardGrid>
-        <DashboardSection title="Product Overview">
-          <ProductOverview data={productOverview} loading={loading} />
+    <PageLoader
+      isLoading={loading}
+      loaderProps={{
+        title: "Product Performance",
+      }}
+    >
+      <div className="space-y-6">
+        {/* KPIs Section */}
+        <DashboardSection title="Key Metrics">
+          <ProductKPIs metrics={kpiMetrics} loading={loading} />
         </DashboardSection>
 
+        {/* Category & Price Band - 2 Column */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CategoryPerformanceChart data={categoryPerformance} loading={loading} />
+          <PriceBandDistribution data={priceBandDistribution} loading={loading} />
+        </div>
+
+        {/* Margin Analysis & Overview - 2 Column */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <MarginAnalysisScatter data={marginAnalysis} loading={loading} />
+          <ProductPerformanceOverview
+            data={{
+              revenue: topProducts?.slice(0, 10).map(p => p.revenue) || [],
+              units: topProducts?.slice(0, 10).map(p => p.unitsSold) || [],
+              margin: topProducts?.slice(0, 10).map(p => p.marginPercent || 0) || [],
+              labels: topProducts?.slice(0, 10).map(p => p.productName) || []
+            }}
+            loading={loading}
+          />
+        </div>
+
+        {/* Top Products Table - Full Width */}
         <DashboardSection title="Top Products">
-          <TopProducts data={topProducts} loading={loading} />
+          <TopProductsTable data={topProducts} loading={loading} />
         </DashboardSection>
-
-        <DashboardSection title="Category Analysis">
-          <CategoryAnalysis data={categoryAnalysis} loading={loading} />
-        </DashboardSection>
-
-        <DashboardSection title="Inventory Status">
-          <InventoryStatus data={inventoryStatus} loading={loading} />
-        </DashboardSection>
-
-        <DashboardSection title="Product Trends" className="col-span-2">
-          <ProductTrends data={productTrends} loading={loading} />
-        </DashboardSection>
-      </DashboardGrid>
-    </div>
+      </div>
+    </PageLoader>
   );
 }

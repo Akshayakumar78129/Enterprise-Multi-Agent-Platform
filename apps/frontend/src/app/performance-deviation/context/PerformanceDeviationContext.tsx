@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
 import { SelectionManager } from '../services/SelectionManager';
+import { Message } from 'components';
 
 // Define filter types
 interface PerformanceFilters {
@@ -38,6 +39,16 @@ interface PerformanceDeviationContextType {
 
   // Time range for display
   timeRange: string;
+
+  // Chat state
+  chatMessages: Message[];
+  setChatMessages: React.Dispatch<React.SetStateAction<Message[]>>;
+  chatInput: string;
+  setChatInput: React.Dispatch<React.SetStateAction<string>>;
+  chatIsLoading: boolean;
+  setChatIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  chatSessionId: string;
+  chatUserId: string;
 }
 
 // Create context
@@ -58,6 +69,16 @@ export function PerformanceDeviationProvider({ children }: { children: React.Rea
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isBIModalOpen, setIsBIModalOpen] = useState(false);
   const [selectedKPI, setSelectedKPI] = useState<string>("daily_revenue");
+
+  // Chat state - persists across expand/collapse
+  const [chatMessages, setChatMessages] = useState<Message[]>([{
+    role: "assistant",
+    content: "Hello! I'm your AI assistant. How can I help you analyze your performance deviation data today?"
+  }]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatIsLoading, setChatIsLoading] = useState(false);
+  const [chatSessionId] = useState(() => `session_${Date.now()}`);
+  const [chatUserId] = useState(() => `user_${Math.random().toString(36).substr(2, 9)}`);
 
   // Data state
   const [performanceData, setPerformanceData] = useState<any[]>([]);
@@ -106,7 +127,15 @@ export function PerformanceDeviationProvider({ children }: { children: React.Rea
     setSelectedKPI,
     performanceData,
     setPerformanceData,
-    timeRange
+    timeRange,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId
   }), [
     filters,
     isChatOpen,
@@ -115,7 +144,12 @@ export function PerformanceDeviationProvider({ children }: { children: React.Rea
     selectionManager,
     selectedKPI,
     performanceData,
-    timeRange
+    timeRange,
+    chatMessages,
+    chatInput,
+    chatIsLoading,
+    chatSessionId,
+    chatUserId
   ]);
 
   return (

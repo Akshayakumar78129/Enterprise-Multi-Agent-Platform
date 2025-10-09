@@ -1,14 +1,19 @@
 "use client";
 
 import React from "react";
-import { SelectedPoint } from "components";
+import { SelectedPoint, Message } from "components";
 import { SelectionManager, getSelectionManager } from "./services/SelectionManager";
 
 export interface BehaviorFilters {
   timePeriod: string;
   segmentId: string | null;
   segmentIds?: string[];  // Support multiple segments
-  behaviorTypes: string[];
+  behaviorTypes: string[,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId];
   minTransactions: number;
   customerIds: string[];
   loyaltyStatus: string[];
@@ -38,20 +43,35 @@ export function useBehaviorContext(): BehaviorContextValue {
 }
 
 export function BehaviorProvider({ children }: { children: React.ReactNode }) {
-  const [selectedPoints, setSelectedPoints] = React.useState<SelectedPoint[]>([]);
+  const [selectedPoints, setSelectedPoints,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId] = React.useState<SelectedPoint[]>([]);
   const [selectionManager] = React.useState(() => getSelectionManager());
 
   // Panel state management
   const [isChatOpen, setIsChatOpen] = React.useState(false);
   const [isBIModalOpen, setIsBIModalOpen] = React.useState(false);
+  // Chat state - persists across expand/collapse
+  const [chatMessages, setChatMessages] = useState<Message[]>([{
+    role: "assistant",
+    content: "Hello! I'm your AI assistant. How can I help you analyze your customer behavior data today?"
+  }]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatIsLoading, setChatIsLoading] = useState(false);
+  const [chatSessionId] = useState(() => `session_${Date.now()}`);
+  const [chatUserId] = useState(() => `user_${Math.random().toString(36).substr(2, 9)}`);
+
 
   // Data sharing for BI panel
   const [behaviorCustomers, setBehaviorCustomers] = React.useState<any[]>([]);
 
   const [filters, setFilters] = React.useState<BehaviorFilters>(() => {
-    // Default to quarterly analysis for 2021
+    // Default to 2017-2021 (consistent with sales and product performance)
     const defaultFilters = {
-      timePeriod: "2021-01-01:2021-12-31",
+      timePeriod: "2017-01-01:2021-12-31",
       segmentId: null,
       segmentIds: [],
       behaviorTypes: ["purchase_patterns", "product_preferences", "channel_usage", "engagement_metrics"],
@@ -80,7 +100,12 @@ export function BehaviorProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem("behaviorFilters", JSON.stringify(filters));
     } catch {}
-  }, [filters]);
+  }, [filters,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId]);
 
   // Subscribe to selection manager
   React.useEffect(() => {
@@ -91,7 +116,12 @@ export function BehaviorProvider({ children }: { children: React.ReactNode }) {
     return () => {
       unsubscribe();
     };
-  }, [selectionManager]);
+  }, [selectionManager,
+      chatMessages,
+      chatInput,
+      chatIsLoading,
+      chatSessionId,
+      chatUserId]);
 
   const value = React.useMemo(
     () => ({
@@ -105,7 +135,15 @@ export function BehaviorProvider({ children }: { children: React.ReactNode }) {
       setIsBIModalOpen,
       behaviorCustomers,
       setBehaviorCustomers,
-    }),
+    ,
+      chatMessages,
+      setChatMessages,
+      chatInput,
+      setChatInput,
+      chatIsLoading,
+      setChatIsLoading,
+      chatSessionId,
+      chatUserId}),
     [filters, selectedPoints, selectionManager, isChatOpen, isBIModalOpen, behaviorCustomers]
   );
 

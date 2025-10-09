@@ -32,7 +32,7 @@ class ChurnDataService:
             ON {self.schema.TRANSACTION.refs['customer_id']} = {self.schema.CUSTOMER.refs['id']}
         LEFT JOIN {self.schema.TABLES['loyalty']} {self.schema.ALIASES['loyalty']}
             ON {self.schema.LOYALTY.refs['customer_id']} = {self.schema.CUSTOMER.refs['id']}
-        WHERE 1=1
+        WHERE {self.schema.CUSTOMER.refs['id']} > 0
         """
 
         # Apply filters using filter engine
@@ -59,7 +59,7 @@ class ChurnDataService:
             ON {self.schema.CUSTOMER.refs['id']} = {self.schema.TRANSACTION.refs['customer_id']}
         LEFT JOIN {self.schema.TABLES['loyalty']} {self.schema.ALIASES['loyalty']}
             ON {self.schema.LOYALTY.refs['customer_id']} = {self.schema.TRANSACTION.refs['customer_id']}
-        WHERE 1=1
+        WHERE {self.schema.TRANSACTION.refs['customer_id']} > 0
         """
 
         # Apply filters using filter engine
@@ -85,7 +85,7 @@ class ChurnDataService:
             ON {self.schema.CUSTOMER.refs['id']} = {self.schema.LOYALTY.refs['customer_id']}
         LEFT JOIN {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
             ON {self.schema.TRANSACTION.refs['customer_id']} = {self.schema.LOYALTY.refs['customer_id']}
-        WHERE 1=1
+        WHERE {self.schema.LOYALTY.refs['customer_id']} > 0
         """
 
         # Apply filters using filter engine

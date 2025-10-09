@@ -47,6 +47,28 @@ class CustomerInsightsService:
                 behavior_data
             )
 
+            # Extract key insights from behaviorInsights for top-level
+            top_level_insights = []
+            if behavior_insights:
+                # Extract trends as insights
+                trends = behavior_insights.get('trends', [])
+                if trends:
+                    top_level_insights.extend(trends[:3])  # Top 3 trends
+
+                # Extract patterns as insights
+                patterns = behavior_insights.get('patterns', [])
+                if patterns:
+                    top_level_insights.extend(patterns[:2])  # Top 2 patterns
+
+            # If no insights from behaviorInsights, create default ones
+            if not top_level_insights:
+                total_customers = kpi_metrics.get('totalCustomers', 0)
+                avg_engagement = kpi_metrics.get('averageEngagement', 0)
+                if total_customers > 0:
+                    top_level_insights.append(
+                        f"Analyzing {total_customers} customers with {avg_engagement}% average engagement"
+                    )
+
             return {
                 'kpiMetrics': kpi_metrics,
                 'mainData': {
@@ -54,7 +76,8 @@ class CustomerInsightsService:
                     'customerProfiles': customer_profiles,
                     'behaviorInsights': behavior_insights,
                     'recommendations': recommendations
-                }
+                },
+                'insights': top_level_insights
             }
         except Exception as e:
             print(f"[CustomerInsightsService] Error in get_dashboard_summary: {e}")
@@ -71,7 +94,8 @@ class CustomerInsightsService:
                     'customerProfiles': [],
                     'behaviorInsights': {'trends': [], 'patterns': []},
                     'recommendations': []
-                }
+                },
+                'insights': []
             }
 
     def _generate_behavior_insights(

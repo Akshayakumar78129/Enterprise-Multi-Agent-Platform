@@ -34,6 +34,7 @@ export function useRetentionPlannerData(filters: Record<string, any>) {
     customerLifecycle: data?.mainData?.customerLifecycle || {},
     retentionCampaigns: data?.mainData?.retentionCampaigns || {},
     kpiMetrics: data?.kpiMetrics || {},
+    insights: data?.insights || [],
     hasNoData: !data?.mainData || Object.keys(data?.mainData || {}).length === 0
   };
 }
