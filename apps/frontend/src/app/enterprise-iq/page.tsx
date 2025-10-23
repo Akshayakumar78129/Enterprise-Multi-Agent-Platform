@@ -120,6 +120,14 @@ const componentRegistry: any = {
     'fcf-bridge': dynamic(() => import('../cash-flow/components').then(mod => mod.FCFValueBridge)),
     'liquidity-timeline': dynamic(() => import('../cash-flow/components').then(mod => mod.LiquidityTimeline)),
     'capital-allocation': dynamic(() => import('../cash-flow/components').then(mod => mod.CapitalAllocationMatrix))
+  },
+  'ar-aging-analysis': {
+    kpis: dynamic(() => import('../ar-aging-analysis/components').then(mod => mod.ARAgingKPIs)),
+    overview: dynamic(() => import('../ar-aging-analysis/components').then(mod => mod.NPVPortfolioChart)),
+    customerMatrix: dynamic(() => import('../ar-aging-analysis/components').then(mod => mod.CustomerMatrix)),
+    forecast: dynamic(() => import('../ar-aging-analysis/components').then(mod => mod.CollectionForecast)),
+    riskHeatmap: dynamic(() => import('../ar-aging-analysis/components').then(mod => mod.RiskHeatmap)),
+    agingBreakdown: dynamic(() => import('../ar-aging-analysis/components').then(mod => mod.AgingTable))
   }
 };
 

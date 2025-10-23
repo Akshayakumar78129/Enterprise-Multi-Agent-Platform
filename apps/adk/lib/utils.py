@@ -16,8 +16,7 @@ dotenv.load_dotenv()
 from cartesia.tts import OutputFormat_Raw, TtsRequestIdSpecifier
 from deepgram import (
     DeepgramClient,
-    ClientOptionsFromEnv,
-    SpeakOptions,
+    SpeakV1Encoding,
 )
 
 COMPONENT_SCHEMA = {
@@ -209,6 +208,19 @@ COMPONENT_SCHEMA = {
                 "departments": "array",
                 "regions": "array",
                 "minAmount": "number|null"
+            }
+        },
+        "ar-aging-analysis": {
+            "components": ["kpis", "overview", "customerMatrix", "forecast", "riskHeatmap", "agingBreakdown"],
+            "parameters": {
+                "dateFrom": "date",
+                "dateTo": "date",
+                "customerSegments": "array",
+                "riskLevels": "array",
+                "minAmount": "number|null",
+                "maxAmount": "number|null",
+                "wacc": "number",
+                "regions": "array"
             }
         }
     }
@@ -770,13 +782,13 @@ async def get_audio_deepgram(text: str) -> dict:
     SPEAK_TEXT = {"text": remove_markdown_characters_fast(text)}
 
     try:
-        deepgram = DeepgramClient(api_key=os.getenv("DEEPGRAM_API_KEY", ""), config=ClientOptionsFromEnv())
+        deepgram = DeepgramClient(api_key=os.getenv("DEEPGRAM_API_KEY", ""))
 
         # Configure for MP3 output
-        options = SpeakOptions(
-            model="aura-2-thalia-en",
-            encoding="mp3",  # Specify MP3 encoding
-        )
+        options = {
+            "model": "aura-2-thalia-en",
+            "encoding": "mp3",
+        }
 
         res = await deepgram.speak.asyncrest.v("1").stream_memory(
             SPEAK_TEXT, options
