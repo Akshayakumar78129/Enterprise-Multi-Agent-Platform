@@ -18,7 +18,6 @@ export function useRegionalSalesData(filters: RegionalSalesFilters) {
         const result = await regionalSalesService.getDashboardData(filters);
         setData(result);
       } catch (err: any) {
-        console.error('Error fetching regional sales data:', err);
         setError(err.message || 'Failed to load regional sales data');
         // Set empty data on error
         setData({
@@ -92,7 +91,6 @@ export function useRegionalSalesData(filters: RegionalSalesFilters) {
       const result = await regionalSalesService.getDashboardData(filters);
       setData(result);
     } catch (err: any) {
-      console.error('Error fetching regional sales data:', err);
       setError(err.message || 'Failed to load regional sales data');
     } finally {
       setLoading(false);

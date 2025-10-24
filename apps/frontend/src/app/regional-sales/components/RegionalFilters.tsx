@@ -25,12 +25,9 @@ export function RegionalFilters({ filters, onFiltersChange, onReset }: RegionalF
     const fetchOptions = async () => {
       try {
         const options = await regionalSalesService.getFilterOptions();
-        console.log('🔍 Filter options received:', options);
-        console.log('Countries:', options.countries);
-        console.log('States:', options.states);
         setFilterOptions(options);
       } catch (error) {
-        console.error('Error fetching filter options:', error);
+        // Error fetching filter options
       }
     };
     fetchOptions();
@@ -51,10 +48,6 @@ export function RegionalFilters({ filters, onFiltersChange, onReset }: RegionalF
       .map(s => s.state);
 
     const uniqueStates = [...new Set(filteredStates)].sort();
-
-    console.log('🔍 Selected countries:', filters.countries);
-    console.log('🔍 Filtered states:', filteredStates);
-    console.log('🔍 Unique states:', uniqueStates);
 
     return uniqueStates;
   };

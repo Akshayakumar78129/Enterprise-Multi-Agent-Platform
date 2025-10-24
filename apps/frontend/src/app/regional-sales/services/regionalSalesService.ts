@@ -129,7 +129,6 @@ class RegionalSalesService {
       const response = await axios.post(`${this.baseUrl}/summary`, postFilters);
       return response.data;
     } catch (error) {
-      console.error('Error fetching regional sales data:', error);
       throw error;
     }
   }
@@ -139,7 +138,6 @@ class RegionalSalesService {
       const response = await axios.get(`${this.baseUrl}/filter-options`);
       return response.data.data;
     } catch (error) {
-      console.error('Error fetching filter options:', error);
       throw error;
     }
   }

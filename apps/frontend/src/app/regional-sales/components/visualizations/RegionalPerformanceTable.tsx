@@ -27,10 +27,6 @@ export function RegionalPerformanceTable({ data, loading }: RegionalPerformanceT
   const [sortColumn, setSortColumn] = useState<string>('totalSales');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  console.log('🔍 RegionalPerformanceTable received data:', data);
-  console.log('🔍 Data length:', data?.length);
-  console.log('🔍 First item:', data?.[0]);
-
   const columns = useMemo(() => [
     {
       key: 'region',

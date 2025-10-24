@@ -41,10 +41,6 @@ export default function RegionalSalesPage() {
   useEffect(() => {
     if (data) {
       setRegionalSalesData(data);
-      console.log('📊 Regional Sales Data:', data);
-      console.log('📊 Regional Performance:', regionalPerformance);
-      console.log('📊 Time Series:', timeSeries);
-      console.log('📊 Opportunities:', opportunities);
     }
   }, [data, setRegionalSalesData, regionalPerformance, timeSeries, opportunities]);
 
