@@ -16,10 +16,17 @@ export interface DateRangePreset {
   getRange: () => DateRange;
 }
 
+// Support both formats of presets
+export interface SimpleDateRangePreset {
+  label: string;
+  startDate: string;
+  endDate: string;
+}
+
 export interface DateRangeFilterProps {
   value: DateRange;
   onChange: (range: DateRange) => void;
-  presets?: DateRangePreset[];
+  presets?: DateRangePreset[] | SimpleDateRangePreset[];
   showPresets?: boolean;
   showCustomRange?: boolean;
   minDate?: string;
@@ -122,14 +129,40 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
   const [isCustom, setIsCustom] = useState(false);
 
   const handlePresetChange = (presetValue: string) => {
-    const preset = presets.find((p) => p.value === presetValue);
+    if (presetValue === "custom") {
+      setSelectedPreset("custom");
+      setIsCustom(true);
+      return;
+    }
+
+    // Find preset by either value or label (to support both formats)
+    const preset = presets.find((p: any) => {
+      // Check if it's the advanced format with value and getRange
+      if ('value' in p && p.value === presetValue) {
+        return true;
+      }
+      // Check if it's the simple format with label only
+      if ('label' in p && p.label === presetValue) {
+        return true;
+      }
+      return false;
+    });
+
     if (preset) {
       setSelectedPreset(presetValue);
       setIsCustom(false);
-      onChange(preset.getRange());
-    } else if (presetValue === "custom") {
-      setSelectedPreset("custom");
-      setIsCustom(true);
+
+      // Handle advanced format with getRange()
+      if ('getRange' in preset && typeof preset.getRange === 'function') {
+        onChange(preset.getRange());
+      }
+      // Handle simple format with direct startDate/endDate
+      else if ('startDate' in preset && 'endDate' in preset) {
+        onChange({
+          startDate: preset.startDate,
+          endDate: preset.endDate
+        });
+      }
     }
   };
 
@@ -148,8 +181,9 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
           value={selectedPreset}
           onChange={(e) => handlePresetChange(e.target.value)}
           options={[
-            ...presets.map((p, index) => ({
-              value: p.value,
+            ...presets.map((p: any, index) => ({
+              // Use p.value if available (advanced format), otherwise use p.label (simple format)
+              value: 'value' in p ? p.value : p.label,
               label: p.label
             })),
             ...(showCustomRange ? [{ value: "custom", label: "Custom Range" }] : []),

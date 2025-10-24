@@ -137,6 +137,30 @@ class FilterEngine:
                     where_clauses.append(f"{region_field} IN ({placeholders})")
                     params.extend(regions)
 
+        # Country filters - support both country and countries
+        countries = filters.get('countries') or filters.get('country')
+        if countries:
+            if not isinstance(countries, list):
+                countries = [countries]
+            if countries and hasattr(schema, 'CUSTOMER') and hasattr(schema.CUSTOMER, 'refs'):
+                country_field = schema.CUSTOMER.refs.get('country')
+                if country_field:
+                    placeholders = ','.join(['?' for _ in countries])
+                    where_clauses.append(f"{country_field} IN ({placeholders})")
+                    params.extend(countries)
+
+        # State filters - support both state and states
+        states = filters.get('states') or filters.get('state')
+        if states:
+            if not isinstance(states, list):
+                states = [states]
+            if states and hasattr(schema, 'CUSTOMER') and hasattr(schema.CUSTOMER, 'refs'):
+                state_field = schema.CUSTOMER.refs.get('state')
+                if state_field:
+                    placeholders = ','.join(['?' for _ in states])
+                    where_clauses.append(f"{state_field} IN ({placeholders})")
+                    params.extend(states)
+
         # Customer filters - support both customer and customers
         customers = filters.get('customers') or filters.get('customer')
         if customers:

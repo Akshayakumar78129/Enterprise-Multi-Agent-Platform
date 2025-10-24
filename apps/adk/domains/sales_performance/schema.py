@@ -3,7 +3,7 @@
 from database.base_schema import TableSchema, BaseSchema
 
 
-class SalesPerformanceSchema(BaseSchema):
+class  SalesPerformanceSchema(BaseSchema):
     """Schema definition for sales performance analysis - matching churn pattern"""
 
     # Table definitions

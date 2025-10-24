@@ -74,6 +74,7 @@ from api.routers.customer_insights_router import router as customer_insights_rou
 # Import sales API router
 from api.routers.sales_performance_router import router as sales_performance_router
 from api.routers.product_performance_router import router as product_performance_router
+from api.routers.regional_sales_analyzer_router import router as regional_sales_analyzer_router
 
 # Import inventory API router
 from api.routers.inventory_level_router import router as inventory_level_router
@@ -163,6 +164,7 @@ app.include_router(retention_planner_router)
 app.include_router(customer_insights_router)
 app.include_router(sales_performance_router)
 app.include_router(product_performance_router)
+app.include_router(regional_sales_analyzer_router)
 app.include_router(inventory_level_router)
 app.include_router(cash_flow_router)
 
