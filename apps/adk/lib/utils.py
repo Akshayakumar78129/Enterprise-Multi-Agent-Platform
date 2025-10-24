@@ -206,6 +206,19 @@ COMPONENT_SCHEMA = {
                 "regions": "array",
                 "minAmount": "number|null"
             }
+        },
+        "ar-aging-analysis": {
+            "components": ["kpis", "overview", "customerMatrix", "forecast", "riskHeatmap", "agingBreakdown"],
+            "parameters": {
+                "dateFrom": "date",
+                "dateTo": "date",
+                "customerSegments": "array",
+                "riskLevels": "array",
+                "minAmount": "number|null",
+                "maxAmount": "number|null",
+                "wacc": "number",
+                "regions": "array"
+            }
         }
     }
 }

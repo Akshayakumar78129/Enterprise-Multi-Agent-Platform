@@ -1023,6 +1023,53 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
   },
 
   // =============================
+  // AR Aging Analysis Components
+  // =============================
+  'ar-aging-analysis.kpis': (summary) => {
+    return {
+      metrics: summary.kpiMetrics || {},
+      loading: false
+    };
+  },
+
+  'ar-aging-analysis.overview': (summary) => {
+    return {
+      data: summary.mainData?.agingBuckets || [],
+      npvSummary: summary.mainData?.npvSummary || {},
+      loading: false
+    };
+  },
+
+  'ar-aging-analysis.customerMatrix': (summary) => {
+    return {
+      data: summary.mainData?.customerInsights || [],
+      loading: false
+    };
+  },
+
+  'ar-aging-analysis.forecast': (summary) => {
+    return {
+      data: summary.mainData?.collectionForecast || [],
+      loading: false
+    };
+  },
+
+  'ar-aging-analysis.riskHeatmap': (summary) => {
+    return {
+      customers: summary.mainData?.customerInsights || [],
+      agingBuckets: summary.mainData?.agingBuckets || [],
+      loading: false
+    };
+  },
+
+  'ar-aging-analysis.agingBreakdown': (summary) => {
+    return {
+      data: summary.mainData?.agingTable || [],
+      loading: false
+    };
+  },
+
+  // =============================
   // Purchase Frequency Components
   // =============================
   'purchase-frequency.histogram': (summary) => {
