@@ -4,6 +4,7 @@ import "components/src/styles.css";
 import "./globals.css";
 import { ThemeProvider } from "components/index";
 import ReduxProvider from "./providers/ReduxProvider";
+import QueryProvider from "./providers/QueryProvider";
 
 export const metadata: Metadata = {
   title: "Enterprise Dashboards",
@@ -17,12 +18,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" data-theme="soft-pastel" className="theme-soft-pastel" suppressHydrationWarning>
-      <body className="bg-background text-foreground font-sans antialiased min-h-screen" data-theme="soft-pastel">
-        <ReduxProvider>
-          <ThemeProvider defaultTheme="soft-pastel">
-            {children}
-          </ThemeProvider>
-        </ReduxProvider>
+      <body className="bg-background text-foreground font-sans antialiased min-h-screen" data-theme="soft-pastel" suppressHydrationWarning>
+        <QueryProvider>
+          <ReduxProvider>
+            <ThemeProvider defaultTheme="soft-pastel">
+              {children}
+            </ThemeProvider>
+          </ReduxProvider>
+        </QueryProvider>
       </body>
     </html>
   );

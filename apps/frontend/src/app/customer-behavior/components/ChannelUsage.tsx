@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
-import { Card, Skeleton } from "components/index";
+import { Card, Skeleton, getShiftClickManager } from "components/index";
 import { useBehaviorContext } from "../context";
 import { Chart, registerables } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
@@ -18,6 +18,7 @@ interface ChannelUsageProps {
 
 export function ChannelUsage({ data, loading }: ChannelUsageProps) {
   const { selectionManager } = useBehaviorContext();
+  const shiftClickManager = getShiftClickManager();
   const doughnutChartRef = useRef<HTMLCanvasElement>(null);
   const chartInstanceRef = useRef<Chart | null>(null);
 
@@ -173,7 +174,7 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
 
   if (loading) {
     return (
-      <Card title="Channel Usage" description="Customer interaction channels">
+      <Card>
         <Skeleton className="h-80" />
       </Card>
     );
@@ -181,7 +182,7 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
 
   if (!data || !data.channel_distribution) {
     return (
-      <Card title="Channel Usage" description="Customer interaction channels">
+      <Card>
         <div className="h-80 flex items-center justify-center text-muted-foreground">
           No channel usage data available
         </div>
@@ -192,9 +193,17 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card
-          title="Channel Distribution"
-          description="Customer channel preferences">
+        <div>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Channel Distribution</h3>
+          <p className="text-sm text-muted-foreground mb-4">Customer channel preferences</p>
+          <Card
+            onShiftClick={(event) => {
+              shiftClickManager.addPoint({
+                label: "Channel Distribution",
+                value: `Customer channel preferences`,
+                source: 'Behavior Dashboard - Channel Distribution'
+              }, event.nativeEvent);
+            }}>
           <div className="h-80 flex items-center justify-center">
             {channelData ? (
               <div className="w-64 h-64">
@@ -206,11 +215,20 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
               </div>
             )}
           </div>
-        </Card>
+          </Card>
+        </div>
 
-        <Card
-          title="Channel Performance"
-          description="Conversion and value metrics by channel">
+        <div>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Channel Performance</h3>
+          <p className="text-sm text-muted-foreground mb-4">Conversion and value metrics by channel</p>
+          <Card
+            onShiftClick={(event) => {
+              shiftClickManager.addPoint({
+                label: "Channel Performance",
+                value: `Conversion and value metrics by channel`,
+                source: 'Behavior Dashboard - Channel Performance'
+              }, event.nativeEvent);
+            }}>
           <div className="h-80 p-4">
             {channelPerformance ? (
             <Bar
@@ -254,12 +272,21 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
               </div>
             )}
           </div>
-        </Card>
+          </Card>
+        </div>
       </div>
 
-      <Card
-        title="Cross-Channel Journey"
-        description="Customer journey across channels">
+      <div>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Cross-Channel Journey</h3>
+        <p className="text-sm text-muted-foreground mb-4">Customer journey across channels</p>
+        <Card
+          onShiftClick={(event) => {
+            shiftClickManager.addPoint({
+              label: "Cross-Channel Journey",
+              value: `Customer journey across channels`,
+              source: 'Behavior Dashboard - Cross-Channel'
+            }, event.nativeEvent);
+          }}>
         <div className="space-y-4">
           {data?.cross_channel_journey && data.cross_channel_journey.length > 0 ? (
             data.cross_channel_journey.map((journey: any, idx: number) => (
@@ -307,7 +334,8 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
             </div>
           )}
         </div>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }

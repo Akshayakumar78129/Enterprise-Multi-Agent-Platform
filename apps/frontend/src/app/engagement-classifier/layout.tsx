@@ -11,22 +11,26 @@ import { EngagementClassifierProvider, useEngagementClassifierContext } from "./
 import { useEngagementClassifierData } from "./hooks/useEngagementClassifierData";
 
 function HeaderFilters() {
-  const { filters,
-    chatMessages,
-    setChatMessages,
-    chatInput,
-    setChatInput,
-    chatIsLoading,
-    setChatIsLoading,
-    chatSessionId,
-    chatUserId, setFilters } = useEngagementClassifierContext();
+  const { filters, setFilters } = useEngagementClassifierContext();
   return (
     <EngagementFilters
       filters={filters}
       onFiltersChange={setFilters}
-      onReset={() =>
-        setFilters({})
-      }
+      onReset={() => {
+        // Clear localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('engagement_classifier_filters');
+        }
+        // Reset to defaults
+        setFilters({
+          dateRange: {
+            startDate: '2017-01-01',
+            endDate: '2021-12-31'
+          },
+          engagementLevels: [],
+          loyaltyStatus: [],
+        });
+      }}
     />
   );
 }
@@ -73,15 +77,13 @@ function EngagementClassifierLayoutContent({ children }: { children: React.React
       onClose={() => setIsChatOpen(false)}
       selectedPoints={selectedPoints}
       onClearSelection={() => selectionManager.clearAll()}
-      dashboardContext="engagement_classifier"additionalContext={{
+      dashboardContext="engagement_classifier"
+      additionalContext={{
         filters: {
           engagementLevels: filters.engagementLevels?.join(", ") || "All",
           loyaltyStatus: filters.loyaltyStatus?.join(", ") || "All",
           timeRange: timeRange,
-          dateRange: {
-            startDate: filters.startDate,
-            endDate: filters.endDate
-          }
+          dateRange: `${filters.dateRange.startDate} to ${filters.dateRange.endDate}`
         }
       }}
       messages={chatMessages}

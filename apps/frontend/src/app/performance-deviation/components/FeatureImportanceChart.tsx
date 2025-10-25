@@ -4,7 +4,8 @@ import {
   ChartCard,
   useChartTooltip,
   Skeleton,
-  AIFeatureImportance
+  AIFeatureImportance,
+  getShiftClickManager
 } from 'components';
 import { CustomTooltip } from './CustomTooltip';
 
@@ -20,6 +21,7 @@ export function FeatureImportanceChart({
   loading
 }: FeatureImportanceChartProps) {
   const { tooltipData, showTooltip, hideTooltip } = useChartTooltip();
+  const shiftClickManager = getShiftClickManager();
 
   // Get feature importance data
   const importanceData = selectedKPI && data?.byKPI?.[selectedKPI]?.feature_importance
@@ -138,6 +140,13 @@ export function FeatureImportanceChart({
       <ChartCard
         title="Feature Importance"
         className="glass-card card-hover"
+        onShiftClick={(event) => {
+          shiftClickManager.addPoint({
+            label: "Feature Importance",
+            value: `Feature importance analysis`,
+            source: 'Performance Deviation - Feature Importance'
+          }, event.nativeEvent);
+        }}
       >
         <AIFeatureImportance
           data={formattedData}
@@ -152,6 +161,13 @@ export function FeatureImportanceChart({
     <ChartCard
       title="Feature Importance"
       className="glass-card card-hover"
+      onShiftClick={(event) => {
+        shiftClickManager.addPoint({
+          label: "Feature Importance",
+          value: `Feature importance analysis`,
+          source: 'Performance Deviation - Feature Importance'
+        }, event.nativeEvent);
+      }}
     >
       <div style={{ height: 350 }}>
         <BarChart

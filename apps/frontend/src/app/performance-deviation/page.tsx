@@ -7,7 +7,8 @@ import {
   Skeleton,
   ChartCard,
   InsightCard,
-  PageLoader
+  PageLoader,
+  getShiftClickManager
 } from "components";
 import { usePerformanceData } from "./hooks/usePerformanceData";
 import {
@@ -29,6 +30,7 @@ export default function PerformanceDeviationPage() {
     setPerformanceData,
     selectionManager
   } = usePerformanceDeviationContext();
+  const shiftClickManager = getShiftClickManager();
 
   const [activeInsight, setActiveInsight] = React.useState<any>(null);
   const [insightPosition, setInsightPosition] = React.useState({ x: 0, y: 0 });
@@ -136,9 +138,21 @@ export default function PerformanceDeviationPage() {
       <>
 
       {/* KPI Tiles - SHOWN AFTER FILTERS */}
-      <DashboardSection title="Key Metrics">
+      <DashboardSection>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Key Metrics</h3>
         {kpiTiles.length > 0 ? (
-          <KPIRow kpis={kpiTiles} />
+          <KPIRow
+            kpis={kpiTiles}
+            columns={6}
+            animationDelay={50}
+            onKPIShiftClick={(kpi, event) => {
+              shiftClickManager.addPoint({
+                label: kpi.title,
+                value: typeof kpi.value === 'number' ? kpi.value.toString() : kpi.value.toString(),
+                source: 'Performance KPIs'
+              }, event.nativeEvent);
+            }}
+          />
         ) : (
           <div className="text-center py-8 text-gray-500">
             No KPI data available. Please check your filters or backend connection.
@@ -157,7 +171,7 @@ export default function PerformanceDeviationPage() {
       </DashboardSection>
 
       {/* Analysis Section */}
-      <DashboardSection title="Performance Analysis">
+      <DashboardSection>
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
           <FeatureImportanceChart
             data={featureImportance}
@@ -172,7 +186,8 @@ export default function PerformanceDeviationPage() {
       </DashboardSection>
 
       {/* Deviation Patterns */}
-      <DashboardSection title="Deviation Patterns">
+      <DashboardSection>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Deviation Patterns</h3>
         <DeviationPatterns
           data={deviationPatterns}
           loading={false}
@@ -181,6 +196,7 @@ export default function PerformanceDeviationPage() {
 
       {/* Business Function Comparison */}
       <DashboardSection>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Business Function Comparison</h3>
         <BusinessComparison
           data={businessComparison}
           loading={false}
@@ -189,6 +205,7 @@ export default function PerformanceDeviationPage() {
 
       {/* External Factor Correlation */}
       <DashboardSection>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">External Factor Correlation</h3>
         <ExternalFactorCorrelation
           data={factorCorrelations}
           loading={false}
@@ -197,6 +214,7 @@ export default function PerformanceDeviationPage() {
 
       {/* Deviation Pattern Explorer */}
       <DashboardSection>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Deviation Pattern Explorer</h3>
         <DeviationPatternExplorer
           data={deviationPatterns}
           loading={false}
@@ -204,13 +222,21 @@ export default function PerformanceDeviationPage() {
       </DashboardSection>
 
       {/* AI Insights Section */}
-      <DashboardSection title="AI Insights">
+      <DashboardSection>
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
           {/* Feature Importance in ChartCard */}
-          <ChartCard
-            title="AI Feature Importance"
-            className="glass-card card-hover"
-          >
+          <div>
+            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">AI Feature Importance</h3>
+            <ChartCard
+              className="glass-card card-hover"
+              onShiftClick={(event) => {
+                shiftClickManager.addPoint({
+                  label: "AI Feature Importance",
+                  value: `Feature importance analysis`,
+                  source: 'Performance Deviation Dashboard - AI Feature Importance'
+                }, event.nativeEvent);
+              }}
+            >
             {featureImportance?.aggregated?.length > 0 ? (
               <div className="space-y-3">
                 {featureImportance.aggregated.slice(0, 8).map((feature: any, index: number) => (
@@ -233,15 +259,23 @@ export default function PerformanceDeviationPage() {
             ) : (
               <div className="text-center py-8 text-gray-500">No feature importance data available</div>
             )}
-          </ChartCard>
+            </ChartCard>
+          </div>
 
           {/* AI-Generated Insights in ChartCard */}
-          <ChartCard
-            title="AI-Generated Analysis"
-            className="glass-card card-hover"
-          >
-            {
-              <div className="space-y-4">
+          <div>
+            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">AI-Generated Analysis</h3>
+            <ChartCard
+              className="glass-card card-hover"
+              onShiftClick={(event) => {
+                shiftClickManager.addPoint({
+                  label: "AI-Generated Analysis",
+                  value: `AI insights and recommendations`,
+                  source: 'Performance Deviation Dashboard - AI Analysis'
+                }, event.nativeEvent);
+              }}
+            >
+            <div className="space-y-4">
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
                   <h4 className="font-semibold text-red-900 dark:text-red-100 mb-2">
                     Critical Performance Deviation Detected
@@ -289,8 +323,8 @@ export default function PerformanceDeviationPage() {
                   </ul>
                 </div>
               </div>
-            )}
-          </ChartCard>
+            </ChartCard>
+          </div>
         </div>
       </DashboardSection>
 
@@ -310,6 +344,7 @@ export default function PerformanceDeviationPage() {
           }}
         />
       )}
+      </>
     </PageLoader>
   );
 }

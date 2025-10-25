@@ -7,28 +7,37 @@ import dynamic from 'next/dynamic';
 // Dynamically import Plot to avoid SSR issues
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
+interface EngagementFiltersProps {
+  filters: {
+    dateRange: {
+      startDate: string;
+      endDate: string;
+    };
+    engagementLevels: string[];
+    loyaltyStatus: string[];
+    minTransactions?: number;
+    minLTVAmount?: number;
+    rfmScoreMin?: number;
+    rfmScoreMax?: number;
+  };
+  onFiltersChange: (filters: any) => void;
+  onReset: () => void;
+}
+
 export function EngagementFilters({
   filters,
   onFiltersChange,
   onReset
-}: {
-  filters: any;
-  onFiltersChange: (filters: any) => void;
-  onReset: () => void;
-}) {
+}: EngagementFiltersProps) {
   return (
     <FilterBar
       config={{
         dateRange: {
           enabled: true,
-          value: {
-            startDate: filters.startDate || "",
-            endDate: filters.endDate || ""
-          },
+          value: filters.dateRange,
           onChange: (range) => onFiltersChange({
             ...filters,
-            startDate: range.startDate,
-            endDate: range.endDate
+            dateRange: range
           }),
         },
         multiSelect: [
@@ -95,6 +104,8 @@ export function EngagementFilters({
 }
 
 export function EngagementKPIs({ metrics, loading }: { metrics: any; loading?: boolean }) {
+  const shiftClickManager = getShiftClickManager();
+
   const kpis = useMemo(() => {
     // Return empty/zero KPIs when no data
     if (!metrics) {
@@ -104,35 +115,35 @@ export function EngagementKPIs({ metrics, loading }: { metrics: any; loading?: b
           title: "Total Customers",
           value: 0,
           format: "number" as const,
-          color: "#38bdf8",
+          color: "#3b82f6", // Blue
         },
         {
           id: "highly-engaged",
           title: "Highly Engaged",
           value: 0,
           format: "number" as const,
-          color: "#22c55e",
+          color: "#10b981", // Emerald
         },
         {
           id: "at-risk",
           title: "At Risk Customers",
           value: 0,
           format: "number" as const,
-          color: "#ef4444",
+          color: "#ef4444", // Red
         },
         {
           id: "avg-engagement-score",
           title: "Avg Engagement Score",
           value: 0,
           format: "decimal" as const,
-          color: "#8b5cf6",
+          color: "#8b5cf6", // Purple
         },
         {
           id: "engagement-trend",
           title: "Engagement Trend",
           value: "N/A",
           format: "text" as const,
-          color: "#38bdf8",
+          color: "#3b82f6", // Blue
         },
       ];
     }
@@ -140,13 +151,13 @@ export function EngagementKPIs({ metrics, loading }: { metrics: any; loading?: b
     // Calculate engagement trend text
     const trendValue = metrics.engagementTrend || 0;
     let trendText = "Stable";
-    let trendColor = "#38bdf8";
+    let trendColor = "#3b82f6"; // Blue
 
     if (typeof trendValue === 'string') {
       // Handle string values like "Improving", "Declining", "Stable"
       trendText = trendValue;
-      trendColor = trendValue === 'Improving' ? "#22c55e" :
-                   trendValue === 'Declining' ? "#ef4444" : "#38bdf8";
+      trendColor = trendValue === 'Improving' ? "#10b981" : // Emerald
+                   trendValue === 'Declining' ? "#ef4444" : "#3b82f6"; // Red : Blue
     } else if (typeof trendValue === 'number') {
       // Handle numeric percentage values
       trendText = trendValue > 0
@@ -154,7 +165,7 @@ export function EngagementKPIs({ metrics, loading }: { metrics: any; loading?: b
         : trendValue < 0
         ? `${trendValue.toFixed(1)}%`
         : "Stable";
-      trendColor = trendValue > 0 ? "#22c55e" : trendValue < 0 ? "#ef4444" : "#38bdf8";
+      trendColor = trendValue > 0 ? "#10b981" : trendValue < 0 ? "#ef4444" : "#3b82f6"; // Emerald : Red : Blue
     }
 
     return [
@@ -163,28 +174,28 @@ export function EngagementKPIs({ metrics, loading }: { metrics: any; loading?: b
         title: "Total Customers",
         value: metrics.totalCustomers || 0,
         format: "number" as const,
-        color: "#38bdf8",
+        color: "#3b82f6", // Blue
       },
       {
         id: "highly-engaged",
         title: "Highly Engaged",
         value: metrics.highlyEngaged || 0,
         format: "number" as const,
-        color: "#22c55e",
+        color: "#10b981", // Emerald
       },
       {
         id: "at-risk",
         title: "At Risk Customers",
         value: metrics.atRiskCount || 0,
         format: "number" as const,
-        color: "#ef4444",
+        color: "#ef4444", // Red
       },
       {
         id: "avg-engagement-score",
         title: "Avg Engagement Score",
         value: (metrics.avgEngagementScore || 0),
         format: "decimal" as const,
-        color: "#8b5cf6",
+        color: "#8b5cf6", // Purple
       },
       {
         id: "engagement-trend",
@@ -206,7 +217,20 @@ export function EngagementKPIs({ metrics, loading }: { metrics: any; loading?: b
     );
   }
 
-  return <KPIRow kpis={kpis} columns={5} animationDelay={50} />;
+  return (
+    <KPIRow
+      kpis={kpis}
+      columns={5}
+      animationDelay={50}
+      onKPIShiftClick={(kpi, event) => {
+        shiftClickManager.addPoint({
+          label: kpi.title,
+          value: typeof kpi.value === 'number' ? kpi.value.toString() : kpi.value.toString(),
+          source: 'Engagement KPIs'
+        }, event.nativeEvent);
+      }}
+    />
+  );
 }
 
 export function EngagementPyramid({ data, loading, onLevelClick }: {
@@ -224,16 +248,16 @@ export function EngagementPyramid({ data, loading, onLevelClick }: {
     let color;
     switch (item.engagement_level) {
       case 'High':
-        color = '#86efac'; // soft green
+        color = '#10b981'; // Emerald
         break;
       case 'Medium':
-        color = '#fbbf24'; // soft amber
+        color = '#f59e0b'; // Amber
         break;
       case 'Low':
-        color = '#fca5a5'; // soft red
+        color = '#ef4444'; // Red
         break;
       default:
-        color = '#94a3b8'; // soft gray
+        color = '#64748b'; // Slate gray
     }
 
     return {
@@ -368,8 +392,8 @@ export function EngagementTimeline({ data, loading, onPeriodClick }: {
         x: periods,
         y: high,
         fill: 'tonexty',
-        fillcolor: 'rgba(134, 239, 172, 0.6)', // soft green
-        line: { color: '#86efac', width: 2 },
+        fillcolor: 'rgba(16, 185, 129, 0.6)', // Emerald
+        line: { color: '#10b981', width: 2 },
         mode: 'lines',
         name: 'High Engagement',
         type: 'scatter',
@@ -379,8 +403,8 @@ export function EngagementTimeline({ data, loading, onPeriodClick }: {
         x: periods,
         y: medium,
         fill: 'tonexty',
-        fillcolor: 'rgba(251, 191, 36, 0.6)', // soft amber
-        line: { color: '#fbbf24', width: 2 },
+        fillcolor: 'rgba(245, 158, 11, 0.6)', // Amber
+        line: { color: '#f59e0b', width: 2 },
         mode: 'lines',
         name: 'Medium Engagement',
         type: 'scatter',
@@ -390,8 +414,8 @@ export function EngagementTimeline({ data, loading, onPeriodClick }: {
         x: periods,
         y: low,
         fill: 'tonexty',
-        fillcolor: 'rgba(252, 165, 165, 0.6)', // soft red
-        line: { color: '#fca5a5', width: 2 },
+        fillcolor: 'rgba(239, 68, 68, 0.6)', // Red
+        line: { color: '#ef4444', width: 2 },
         mode: 'lines',
         name: 'Low Engagement',
         type: 'scatter',
@@ -405,27 +429,27 @@ export function EngagementTimeline({ data, loading, onPeriodClick }: {
       {
         x: periods,
         y: high,
-        line: { color: '#86efac', width: 3 }, // soft green
+        line: { color: '#10b981', width: 3 }, // Emerald
         mode: 'lines+markers',
-        marker: { size: 8, color: '#86efac' },
+        marker: { size: 8, color: '#10b981' },
         name: 'High Engagement',
         type: 'scatter'
       },
       {
         x: periods,
         y: medium,
-        line: { color: '#fbbf24', width: 3 }, // soft amber
+        line: { color: '#f59e0b', width: 3 }, // Amber
         mode: 'lines+markers',
-        marker: { size: 8, color: '#fbbf24' },
+        marker: { size: 8, color: '#f59e0b' },
         name: 'Medium Engagement',
         type: 'scatter'
       },
       {
         x: periods,
         y: low,
-        line: { color: '#fca5a5', width: 3 }, // soft red
+        line: { color: '#ef4444', width: 3 }, // Red
         mode: 'lines+markers',
-        marker: { size: 8, color: '#fca5a5' },
+        marker: { size: 8, color: '#ef4444' },
         name: 'Low Engagement',
         type: 'scatter'
       }
@@ -478,7 +502,7 @@ export function EngagementTimeline({ data, loading, onPeriodClick }: {
   const config = {
     displayModeBar: false,
     responsive: true,
-    staticPlot: true // Disable zoom and pan
+    staticPlot: false // Enable click interactions for shift-click
   };
 
   if (periods.length === 0) {
@@ -533,11 +557,23 @@ export function EngagementTimeline({ data, loading, onPeriodClick }: {
 
       {/* Summary Statistics */}
       <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-        <div style={{ textAlign: 'center' }}>
+        <div
+          style={{ textAlign: 'center', cursor: 'pointer' }}
+          onClick={(e) => {
+            if (e.shiftKey) {
+              const total = high.reduce((sum, val) => sum + val, 0);
+              shiftClickManager.addPoint({
+                label: 'High Engagement Total',
+                value: `${total.toLocaleString()} customers`,
+                source: 'Engagement Timeline Summary'
+              }, e.nativeEvent);
+            }
+          }}
+        >
           <div style={{
             fontSize: '20px',
             fontWeight: '600',
-            color: '#86efac', // soft green
+            color: '#10b981', // Emerald
             marginBottom: '4px'
           }}>
             {high.reduce((sum, val) => sum + val, 0).toLocaleString()}
@@ -546,11 +582,23 @@ export function EngagementTimeline({ data, loading, onPeriodClick }: {
             High Engagement Total
           </div>
         </div>
-        <div style={{ textAlign: 'center' }}>
+        <div
+          style={{ textAlign: 'center', cursor: 'pointer' }}
+          onClick={(e) => {
+            if (e.shiftKey) {
+              const total = medium.reduce((sum, val) => sum + val, 0);
+              shiftClickManager.addPoint({
+                label: 'Medium Engagement Total',
+                value: `${total.toLocaleString()} customers`,
+                source: 'Engagement Timeline Summary'
+              }, e.nativeEvent);
+            }
+          }}
+        >
           <div style={{
             fontSize: '20px',
             fontWeight: '600',
-            color: '#fbbf24', // soft amber
+            color: '#f59e0b', // Amber
             marginBottom: '4px'
           }}>
             {medium.reduce((sum, val) => sum + val, 0).toLocaleString()}
@@ -559,11 +607,23 @@ export function EngagementTimeline({ data, loading, onPeriodClick }: {
             Medium Engagement Total
           </div>
         </div>
-        <div style={{ textAlign: 'center' }}>
+        <div
+          style={{ textAlign: 'center', cursor: 'pointer' }}
+          onClick={(e) => {
+            if (e.shiftKey) {
+              const total = low.reduce((sum, val) => sum + val, 0);
+              shiftClickManager.addPoint({
+                label: 'Low Engagement Total',
+                value: `${total.toLocaleString()} customers`,
+                source: 'Engagement Timeline Summary'
+              }, e.nativeEvent);
+            }
+          }}
+        >
           <div style={{
             fontSize: '20px',
             fontWeight: '600',
-            color: '#fca5a5', // soft red
+            color: '#ef4444', // Red
             marginBottom: '4px'
           }}>
             {low.reduce((sum, val) => sum + val, 0).toLocaleString()}
@@ -1029,3 +1089,6 @@ export function EngagementTrends({ data, loading }: { data: any; loading?: boole
     </Card>
   );
 }
+// Additional Search Components
+export { CustomerSearchAnalytics } from './CustomerSearchAnalytics';
+export { CustomerDetailModal } from './CustomerDetailModal';

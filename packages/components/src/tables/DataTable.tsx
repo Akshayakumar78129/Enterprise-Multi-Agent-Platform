@@ -16,7 +16,7 @@ export interface Column<T> {
 export interface DataTableProps<T> {
   data: T[];
   columns: Column<T>[];
-  onRowClick?: (row: T) => void;
+  onRowClick?: (row: T, event?: React.MouseEvent<HTMLTableRowElement>) => void;
   onRowSelect?: (selectedRows: T[]) => void;
   selectable?: boolean;
   searchable?: boolean;
@@ -211,7 +211,7 @@ export function DataTable<T extends { id?: string | number }>({
                   className={`border-b border-border/50 hover:bg-background/50 transition-colors ${
                     onRowClick ? "cursor-pointer" : ""
                   }`}
-                  onClick={() => onRowClick?.(row)}
+                  onClick={(event) => onRowClick?.(row, event)}
                 >
                   {selectable && (
                     <td className="p-4">

@@ -50,13 +50,13 @@ function SegmentationLayoutContent({ children }: { children: React.ReactNode }) 
       onClose={() => setIsChatPanelOpen(false)}
       selectedPoints={selectedPoints}
       onClearSelection={() => selectionManager.clearAll()}
-      dashboardContext="customer_segmentation"additionalContext={{
+      dashboardContext="customer_segmentation"
+      additionalContext={{
         filters: {
-          dateRange: `${filters.dateFrom} to ${filters.dateTo}`,
-          segmentationMethod: filters.segmentationMethod,
-          numSegments: filters.numSegments,
-          customerTypes: filters.customerTypes?.join(", ") || "All",
-          regions: filters.regions?.join(", ") || "All"
+          dateRange: `${filters.dateRange.startDate} to ${filters.dateRange.endDate}`,
+          customerSegments: filters.customerSegments?.join(", ") || "All",
+          valueCategories: filters.valueCategories?.join(", ") || "All",
+          behaviorTypes: filters.behaviorTypes?.join(", ") || "All"
         },
         segments: segments.length
       }}

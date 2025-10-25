@@ -51,28 +51,34 @@ export default function RetentionPlannerPage() {
 
   return (
     <div className="space-y-6">
-      <DashboardSection title="Customer Retention Planning Overview">
+      <DashboardSection>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Customer Retention Planning Overview</h3>
         <RetentionKPIs metrics={kpiMetrics} loading={loading} />
       </DashboardSection>
 
       <DashboardGrid>
-        <DashboardSection title="Retention Strategies" description="Recommended retention strategies">
+        <DashboardSection>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Retention Strategies</h3>
           <RetentionStrategies data={retentionStrategies} loading={loading} />
         </DashboardSection>
 
-        <DashboardSection title="Churn Risk Analysis" description="Customers at risk of churning">
+        <DashboardSection>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Churn Risk Analysis</h3>
           <ChurnRiskAnalysis data={churnRiskAnalysis} loading={loading} />
         </DashboardSection>
 
-        <DashboardSection title="Customer Lifecycle" description="Customer lifecycle stages">
+        <DashboardSection>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Customer Lifecycle</h3>
           <CustomerLifecycle data={customerLifecycle} loading={loading} />
         </DashboardSection>
 
-        <DashboardSection title="Retention Campaigns" description="Active and planned retention campaigns">
+        <DashboardSection>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Retention Campaigns</h3>
           <RetentionCampaigns data={retentionCampaigns} loading={loading} />
         </DashboardSection>
 
-        <DashboardSection title="ROI Projections" description="Expected ROI from retention efforts" className="col-span-2">
+        <DashboardSection className="col-span-2">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">ROI Projections</h3>
           <ROIProjections data={retentionStrategies} loading={loading} />
         </DashboardSection>
       </DashboardGrid>

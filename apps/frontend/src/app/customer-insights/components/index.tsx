@@ -1,7 +1,17 @@
 // Customer Insights dashboard components
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from 'components/ui/card';
-import { Skeleton } from 'components/ui/skeleton';
+import { Card, Skeleton } from 'components/index';
+
+// Placeholder sub-components for Card (to be properly implemented later)
+const CardContent = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <div className={className}>{children}</div>
+);
+const CardHeader = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <div className={className}>{children}</div>
+);
+const CardTitle = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <h3 className={className}>{children}</h3>
+);
 
 export function InsightKPIs({ metrics, loading }: { metrics: any; loading?: boolean }) {
   if (loading) {

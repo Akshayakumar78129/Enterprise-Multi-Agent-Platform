@@ -1,14 +1,5 @@
 {
     "spawnableComponents": {
-        "purchase-frequency (dictionary)": {
-            "components (str)": "Type of visualization to create (eg: histogram, heatmap, quadrant, regularity, treemap)",
-            "parameters (dictionary)": {
-                "dateRange (dictionary)": {
-                    "start (str)": "start data of the data in YYYY-MM-DD format (eg:2020-01-01)",
-                    "end (str)": "end data of the data in YYYY-MM-DD format (eg:2021-12-31)"
-                }
-            }
-        },
         "product-performance (dictionary)": {
             "components (str)": "Type of visualization to create (eg: salesExplorer, marginAnalysis, priceBandDistribution, growthMatrix)",
             "parameters (dictionary)": {

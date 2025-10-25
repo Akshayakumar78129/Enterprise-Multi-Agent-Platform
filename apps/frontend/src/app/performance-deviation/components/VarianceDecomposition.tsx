@@ -2,7 +2,8 @@ import React, { useMemo } from 'react';
 import {
   ChartCard,
   Skeleton,
-  Badge
+  Badge,
+  getShiftClickManager
 } from 'components';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
@@ -24,6 +25,7 @@ export function VarianceDecomposition({
   data,
   loading
 }: VarianceDecompositionProps) {
+  const shiftClickManager = getShiftClickManager();
   const components = data?.components || [];
 
   // Transform data for pie chart - MUST be before any conditional returns
@@ -68,6 +70,13 @@ export function VarianceDecomposition({
     <ChartCard
       title="Variance Decomposition"
       className="glass-card card-hover"
+      onShiftClick={(event) => {
+        shiftClickManager.addPoint({
+          label: "Variance Decomposition",
+          value: `Variance component analysis`,
+          source: 'Performance Deviation - Variance'
+        }, event.nativeEvent);
+      }}
     >
       <div style={{ height: 300 }}>
         <ResponsiveContainer width="100%" height="100%">

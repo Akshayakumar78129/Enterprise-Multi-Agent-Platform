@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Card, getShiftClickManager } from 'components/index';
+import { DataTable, Skeleton, getShiftClickManager } from 'components/index';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
 interface TopCustomersProps {
@@ -12,105 +12,128 @@ interface TopCustomersProps {
 
 export function TopCustomers({ data = [], loading = false, onCustomerSelect }: TopCustomersProps) {
   const shiftClickManager = getShiftClickManager();
-  if (loading) {
-    return (
-      <Card className="p-6">
-        <div className="space-y-4">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="animate-pulse">
-              <div className="h-12 bg-muted rounded"></div>
-            </div>
-          ))}
-        </div>
-      </Card>
-    );
-  }
 
-  if (!data || data.length === 0) {
-    return (
-      <Card className="p-6">
-        <div className="text-center text-muted-foreground py-8">
-          No customer data available
+  // Normalize data to consistent format
+  const rows = (data || []).map((customer, index) => {
+    const name = customer.name || customer.customer_name || `Customer ${customer.customer_id || index + 1}`;
+    const id = customer.id || customer.customer_id || index;
+    const ltv = customer.ltv || customer.lifetime_value || 0;
+    const transactions = customer.transactions || customer.transaction_count || 0;
+    const avgOrder = customer.avgOrder || customer.avg_order_value || 0;
+    const segment = customer.segment || customer.customerType || 'Standard';
+    const trend = customer.trend || 0;
+
+    return {
+      id,
+      name,
+      customerId: id,
+      ltv,
+      transactions,
+      avgOrder,
+      segment,
+      trend,
+      rawData: customer
+    };
+  });
+
+  const tableColumns = [
+    {
+      id: "name",
+      header: "Customer",
+      accessor: "name" as const,
+      sortable: true,
+    },
+    {
+      id: "customerId",
+      header: "ID",
+      accessor: "customerId" as const,
+      sortable: true,
+      render: (value: string | number) => (
+        <span className="text-muted-foreground">{value}</span>
+      ),
+    },
+    {
+      id: "ltv",
+      header: "LTV",
+      accessor: "ltv" as const,
+      sortable: true,
+      render: (value: number) => (
+        <span className="font-medium text-primary">${value.toLocaleString()}</span>
+      ),
+    },
+    {
+      id: "transactions",
+      header: "Transactions",
+      accessor: "transactions" as const,
+      sortable: true,
+    },
+    {
+      id: "avgOrder",
+      header: "Avg Order",
+      accessor: "avgOrder" as const,
+      sortable: true,
+      render: (value: number) => `$${value.toLocaleString()}`,
+    },
+    {
+      id: "segment",
+      header: "Segment",
+      accessor: "segment" as const,
+      sortable: true,
+      render: (value: string) => (
+        <span className="px-2 py-1 rounded-full text-xs bg-primary/20 text-primary">
+          {value}
+        </span>
+      ),
+    },
+    {
+      id: "trend",
+      header: "Trend",
+      accessor: "trend" as const,
+      sortable: true,
+      render: (value: number) => (
+        <div className="flex items-center justify-end gap-1">
+          {value > 0 ? (
+            <>
+              <TrendingUp className="h-4 w-4 text-success" />
+              <span className="text-success">+{value}%</span>
+            </>
+          ) : (
+            <>
+              <TrendingDown className="h-4 w-4 text-error" />
+              <span className="text-error">{value}%</span>
+            </>
+          )}
         </div>
-      </Card>
-    );
+      ),
+    },
+  ];
+
+  if (loading) {
+    return <Skeleton height={400} className="animate-pulse" />;
   }
 
   return (
-    <Card className="p-6">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Customer</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">ID</th>
-              <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">LTV</th>
-              <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Transactions</th>
-              <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Avg Order</th>
-              <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Segment</th>
-              <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Trend</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.slice(0, 10).map((customer, index) => (
-              <tr
-                key={customer.id || customer.customer_id || index}
-                className="border-b border-border hover:bg-muted/50 cursor-pointer transition-colors"
-                onClick={(e) => {
-                  if (e.shiftKey) {
-                    // Shift+click: Add to global shift+click selection
-                    const customerName = customer.name || customer.customer_name || `Customer ${customer.customer_id}`;
-                    const ltv = customer.ltv || customer.lifetime_value || 0;
-                    shiftClickManager.addPoint({
-                      label: `Customer: ${customerName}`,
-                      value: `LTV: $${ltv.toLocaleString()}, Segment: ${customer.segment || 'Standard'}`,
-                      source: 'Top Customers'
-                    }, e.nativeEvent);
-                  } else if (onCustomerSelect) {
-                    onCustomerSelect(customer);
-                  }
-                }}
-              >
-                <td className="py-3 px-4 text-sm font-medium">
-                  {customer.name || customer.customer_name || `Customer ${customer.customer_id}`}
-                </td>
-                <td className="py-3 px-4 text-sm text-muted-foreground">
-                  {customer.id || customer.customer_id}
-                </td>
-                <td className="py-3 px-4 text-sm text-right font-medium text-primary">
-                  ${(customer.ltv || customer.lifetime_value || 0).toLocaleString()}
-                </td>
-                <td className="py-3 px-4 text-sm text-right">
-                  {customer.transactions || customer.transaction_count || 0}
-                </td>
-                <td className="py-3 px-4 text-sm text-right">
-                  ${(customer.avgOrder || customer.avg_order_value || 0).toLocaleString()}
-                </td>
-                <td className="py-3 px-4 text-sm text-right">
-                  <span className="px-2 py-1 rounded-full text-xs bg-primary/20 text-primary">
-                    {customer.segment || customer.customerType || 'Standard'}
-                  </span>
-                </td>
-                <td className="py-3 px-4 text-sm text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    {(customer.trend || 0) > 0 ? (
-                      <>
-                        <TrendingUp className="h-4 w-4 text-green-500" />
-                        <span className="text-green-500">+{customer.trend || 0}%</span>
-                      </>
-                    ) : (
-                      <>
-                        <TrendingDown className="h-4 w-4 text-red-500" />
-                        <span className="text-red-500">{customer.trend || 0}%</span>
-                      </>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Card>
+    <div className="responsive-table">
+      <DataTable
+        data={rows}
+        columns={tableColumns}
+        searchable
+        selectable={false}
+        pageSize={10}
+        onRowClick={(row, event) => {
+          if (event?.shiftKey) {
+            // Shift+click: Add to global shift+click selection
+            shiftClickManager.addPoint({
+              label: `Customer: ${row.name}`,
+              value: `LTV: $${row.ltv.toLocaleString()}, Segment: ${row.segment}`,
+              source: 'Top Customers'
+            }, event.nativeEvent);
+          } else if (onCustomerSelect) {
+            // Regular click: Execute provided handler
+            onCustomerSelect(row.rawData);
+          }
+        }}
+      />
+    </div>
   );
 }

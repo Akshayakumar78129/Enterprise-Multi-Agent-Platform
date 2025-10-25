@@ -5,3 +5,4 @@ export { LtvTrends } from './LtvTrends';
 export { TopCustomers } from './TopCustomers';
 export { PredictionAccuracy } from './PredictionAccuracy';
 export { ValueContributionAnalysis } from './ValueContributionAnalysis';
+export { LtvFilters } from './LtvFilters';

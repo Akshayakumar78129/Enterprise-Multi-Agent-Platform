@@ -26,8 +26,10 @@ function getDashboardClient(dashboardType: string) {
 }
 
 interface AnomalyFilters {
-  dateFrom: string;
-  dateTo: string;
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
   severityLevels: number[];
   segments: string[];
   regions: string[];
@@ -91,9 +93,10 @@ export function useAnomalyData(filters: AnomalyFilters) {
         setLoading(true);
         setError(null);
 
+        // Map frontend dateRange to backend dateFrom/dateTo
         const filterParams: Record<string, any> = {
-          dateFrom: filters.dateFrom,
-          dateTo: filters.dateTo,
+          dateFrom: filters.dateRange.startDate,
+          dateTo: filters.dateRange.endDate,
           severityLevels: filters.severityLevels.length > 0 ? filters.severityLevels : undefined,
           segments: filters.segments.length > 0 ? filters.segments : undefined,
           regions: filters.regions.length > 0 ? filters.regions : undefined,

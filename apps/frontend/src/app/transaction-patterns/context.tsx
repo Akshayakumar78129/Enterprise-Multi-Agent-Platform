@@ -4,9 +4,19 @@ import React, { createContext, useContext, useState } from 'react';
 import { SelectedPoint, Message } from "components";
 import { SelectionManager, getSelectionManager } from "./services/SelectionManager";
 
+export interface TransactionPatternsFilters {
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
+  paymentMethods: string[];
+  segments: string[];
+  productCategories: string[];
+}
+
 interface TransactionPatternsContextType {
-  filters: Record<string, any>;
-  setFilters: (filters: Record<string, any>) => void;
+  filters: TransactionPatternsFilters;
+  setFilters: (filters: TransactionPatternsFilters) => void;
   patternData: any;
   setPatternData: (data: any) => void;
   isChatOpen: boolean;
@@ -15,17 +25,20 @@ interface TransactionPatternsContextType {
   setIsBIModalOpen: (open: boolean) => void;
   selectedPoints: SelectedPoint[];
   selectionManager: SelectionManager;
+  chatMessages: Message[];
+  setChatMessages: (messages: Message[]) => void;
+  chatInput: string;
+  setChatInput: (input: string) => void;
+  chatIsLoading: boolean;
+  setChatIsLoading: (loading: boolean) => void;
+  chatSessionId: string;
+  chatUserId: string;
 }
 
 const TransactionPatternsContext = createContext<TransactionPatternsContextType | undefined>(undefined);
 
 export function TransactionPatternsProvider({ children }: { children: React.ReactNode }) {
-  const [filters, setFilters,
-      chatMessages,
-      chatInput,
-      chatIsLoading,
-      chatSessionId,
-      chatUserId] = useState<Record<string, any>>({
+  const [filters, setFilters] = useState<TransactionPatternsFilters>({
     dateRange: {
       startDate: "2017-01-01",
       endDate: "2021-12-31",
@@ -39,6 +52,7 @@ export function TransactionPatternsProvider({ children }: { children: React.Reac
   const [isBIModalOpen, setIsBIModalOpen] = useState(false);
   // Chat state - persists across expand/collapse
   const [chatMessages, setChatMessages] = useState<Message[]>([{
+    id: "1",
     role: "assistant",
     content: "Hello! I'm your AI assistant. How can I help you analyze your transaction patterns data today?"
   }]);
@@ -56,12 +70,7 @@ export function TransactionPatternsProvider({ children }: { children: React.Reac
       setSelectedPoints(points);
     });
     return unsubscribe;
-  }, [selectionManager,
-      chatMessages,
-      chatInput,
-      chatIsLoading,
-      chatSessionId,
-      chatUserId]);
+  }, [selectionManager]);
 
   return (
     <TransactionPatternsContext.Provider
@@ -75,7 +84,15 @@ export function TransactionPatternsProvider({ children }: { children: React.Reac
         isBIModalOpen,
         setIsBIModalOpen,
         selectedPoints,
-        selectionManager
+        selectionManager,
+        chatMessages,
+        setChatMessages,
+        chatInput,
+        setChatInput,
+        chatIsLoading,
+        setChatIsLoading,
+        chatSessionId,
+        chatUserId
       }}
     >
       {children}

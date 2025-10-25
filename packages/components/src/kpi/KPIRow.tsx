@@ -10,6 +10,7 @@ export interface KPIRowProps {
   columns?: 1 | 2 | 3 | 4 | 5 | 6;
   animationDelay?: number;
   onKPIClick?: (kpi: KPIData, event: React.MouseEvent) => void;
+  onKPIShiftClick?: (kpi: KPIData, event: React.MouseEvent) => void;
   className?: string;
 }
 
@@ -18,6 +19,7 @@ export const KPIRow: React.FC<KPIRowProps> = ({
   columns = 4,
   animationDelay = 100,
   onKPIClick,
+  onKPIShiftClick,
   className = "",
 }) => {
   // Use CSS grid with auto-fit to allow wrapping when cards get too narrow
@@ -40,6 +42,7 @@ export const KPIRow: React.FC<KPIRowProps> = ({
             {...kpi}
             delay={index * animationDelay}
             onClick={onKPIClick ? (e) => onKPIClick(kpi, e) : kpi.onClick}
+            onShiftClick={onKPIShiftClick ? (e) => onKPIShiftClick(kpi, e) : kpi.onShiftClick}
           />
         </div>
       ))}

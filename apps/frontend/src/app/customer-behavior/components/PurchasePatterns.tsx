@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Card, BarChart, Skeleton } from "components/index";
+import { Card, BarChart, Skeleton, getShiftClickManager } from "components/index";
 import { useBehaviorContext } from "../context";
 import { Line } from "react-chartjs-2";
 
@@ -109,10 +109,11 @@ interface PurchasePatternsProps {
 
 export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
   const { selectionManager } = useBehaviorContext();
+  const shiftClickManager = getShiftClickManager();
 
   if (loading) {
     return (
-      <Card title="Purchase Patterns" description="Customer buying behavior over time">
+      <Card>
         <Skeleton className="h-80" />
       </Card>
     );
@@ -208,9 +209,17 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card
-          title="Purchase Timeline"
-          description="Purchase trends over time">
+        <div>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Purchase Timeline</h3>
+          <p className="text-sm text-muted-foreground mb-4">Purchase trends over time</p>
+          <Card
+            onShiftClick={(event) => {
+              shiftClickManager.addPoint({
+                label: "Purchase Timeline",
+                value: `Purchase trends over time`,
+                source: 'Behavior Dashboard - Purchase Timeline'
+              }, event.nativeEvent);
+            }}>
           <div className="h-80 p-4">
             {timeSeriesData ? (
             <Line
@@ -281,11 +290,20 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
               </div>
             )}
           </div>
-        </Card>
+          </Card>
+        </div>
 
-        <Card
-          title="Purchase Pattern Analysis"
-          description="Multi-dimensional pattern overview">
+        <div>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Purchase Pattern Analysis</h3>
+          <p className="text-sm text-muted-foreground mb-4">Multi-dimensional pattern overview</p>
+          <Card
+            onShiftClick={(event) => {
+              shiftClickManager.addPoint({
+                label: "Purchase Pattern Analysis",
+                value: `Multi-dimensional pattern overview`,
+                source: 'Behavior Dashboard - Pattern Analysis'
+              }, event.nativeEvent);
+            }}>
           <div className="h-80 flex items-center justify-center">
             {radarData.length > 0 ? (
               <RadarChart
@@ -299,13 +317,22 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
               </div>
             )}
           </div>
-        </Card>
+          </Card>
+        </div>
       </div>
 
       {frequencyData && (
-        <Card
-          title="Purchase Frequency Distribution"
-          description="Customer distribution by purchase frequency">
+        <div>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Purchase Frequency Distribution</h3>
+          <p className="text-sm text-muted-foreground mb-4">Customer distribution by purchase frequency</p>
+          <Card
+            onShiftClick={(event) => {
+              shiftClickManager.addPoint({
+                label: "Purchase Frequency Distribution",
+                value: `Customer distribution by purchase frequency`,
+                source: 'Behavior Dashboard - Frequency'
+              }, event.nativeEvent);
+            }}>
           <div className="h-64">
             <BarChart
               data={frequencyData}
@@ -334,7 +361,8 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
               }}
             />
           </div>
-        </Card>
+          </Card>
+        </div>
       )}
     </div>
   );

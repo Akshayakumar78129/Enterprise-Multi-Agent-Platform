@@ -3,12 +3,7 @@
 import React, { createContext, useContext, useState, useMemo } from 'react';
 
 class SelectionManager {
-  private listeners: ((points: any[]) => void)[,
-      chatMessages,
-      chatInput,
-      chatIsLoading,
-      chatSessionId,
-      chatUserId] = [];
+  private listeners: ((points: any[]) => void)[] = [];
   private selectedPoints: any[] = [];
 
   subscribe(listener: (points: any[]) => void) {
@@ -24,12 +19,7 @@ class SelectionManager {
   }
 
   clearAll() {
-    this.setSelection([,
-      chatMessages,
-      chatInput,
-      chatIsLoading,
-      chatSessionId,
-      chatUserId]);
+    this.setSelection([]);
   }
 
   getSelection() {
@@ -41,12 +31,7 @@ interface RetentionPlannerContextType {
   filters: Record<string, any>;
   setFilters: (filters: Record<string, any>) => void;
   retentionData: any[];
-  setRetentionData: (data: any[,
-      chatMessages,
-      chatInput,
-      chatIsLoading,
-      chatSessionId,
-      chatUserId]) => void;
+  setRetentionData: (data: any[]) => void;
   isChatPanelOpen: boolean;
   setIsChatPanelOpen: (open: boolean) => void;
   isBusinessIntelligencePanelOpen: boolean;

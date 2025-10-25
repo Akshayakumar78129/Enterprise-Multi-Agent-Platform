@@ -1,43 +1,136 @@
 "use client";
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { SelectionManager, getSelectionManager } from './services/SelectionManager';
+import { Message } from "components";
+
+interface CustomerLtvFilters {
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
+  regions: string[];
+  customerTypes: string[];
+  minValue?: number;
+  maxValue?: number;
+}
 
 interface CustomerLtvContextType {
+  // Filters
+  filters: CustomerLtvFilters;
+  setFilters: (filters: CustomerLtvFilters) => void;
+
+  // Selection
   selectedSegment: string | null;
   setSelectedSegment: (segment: string | null) => void;
   selectedTimeRange: string;
   setSelectedTimeRange: (range: string) => void;
   selectedCustomer: any | null;
   setSelectedCustomer: (customer: any | null) => void;
+
+  // Panels
   isChatPanelOpen: boolean;
   setIsChatPanelOpen: (open: boolean) => void;
   isBusinessIntelligencePanelOpen: boolean;
   setIsBusinessIntelligencePanelOpen: (open: boolean) => void;
+
+  // Data
   selectionManager: SelectionManager;
   customers: any[];
-  setCustomers: (customers: any[,
-      chatMessages,
-      chatInput,
-      chatIsLoading,
-      chatSessionId,
-      chatUserId]) => void;
+  setCustomers: (customers: any[]) => void;
+  insights: string[];
+  setInsights: (insights: string[]) => void;
+
+  // Chat
+  chatMessages: Message[];
+  setChatMessages: (messages: Message[]) => void;
+  chatInput: string;
+  setChatInput: (input: string) => void;
+  chatIsLoading: boolean;
+  setChatIsLoading: (loading: boolean) => void;
+  chatSessionId: string;
+  chatUserId: string;
 }
 
 const CustomerLtvContext = createContext<CustomerLtvContextType | undefined>(undefined);
 
 export function CustomerLtvProvider({ children }: { children: React.ReactNode }) {
+  // Initialize filters from localStorage or defaults
+  const [filters, setFiltersState] = useState<CustomerLtvFilters>(() => {
+    const defaultFilters = {
+      dateRange: {
+        startDate: '2017-01-01',
+        endDate: '2021-12-31'
+      },
+      regions: [],
+      customerTypes: [],
+    };
+
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('ltv_filters');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+
+          // Migration: Convert old date_from/date_to to new dateRange format
+          if (parsed.date_from && parsed.date_to) {
+            return {
+              dateRange: {
+                startDate: parsed.date_from,
+                endDate: parsed.date_to
+              },
+              regions: parsed.regions || [],
+              customerTypes: parsed.customerTypes || [],
+              minValue: parsed.minValue,
+              maxValue: parsed.maxValue
+            };
+          }
+
+          return parsed;
+        } catch {
+          // Invalid JSON, use defaults
+        }
+      }
+    }
+    return defaultFilters;
+  });
+
+  // Persist filters to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ltv_filters', JSON.stringify(filters));
+    }
+  }, [filters]);
+
+  const setFilters = (newFilters: CustomerLtvFilters) => {
+    setFiltersState(newFilters);
+  };
+
   const [selectedSegment, setSelectedSegment] = useState<string | null>(null);
   const [selectedTimeRange, setSelectedTimeRange] = useState('12m');
   const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
   const [isBusinessIntelligencePanelOpen, setIsBusinessIntelligencePanelOpen] = useState(false);
   const [customers, setCustomers] = useState<any[]>([]);
+  const [insights, setInsights] = useState<string[]>([]);
   const [selectionManager] = useState(() => getSelectionManager());
+
+  // Chat state management
+  const [chatMessages, setChatMessages] = useState<Message[]>([{
+    id: "1",
+    role: "assistant",
+    content: "Hello! I'm here to help you analyze customer lifetime value. What would you like to know?"
+  }]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatIsLoading, setChatIsLoading] = useState(false);
+  const [chatSessionId] = useState(() => `session_${Date.now()}`);
+  const [chatUserId] = useState(() => `user_${Math.random().toString(36).substr(2, 9)}`);
 
   return (
     <CustomerLtvContext.Provider
       value={{
+        filters,
+        setFilters,
         selectedSegment,
         setSelectedSegment,
         selectedTimeRange,
@@ -50,7 +143,17 @@ export function CustomerLtvProvider({ children }: { children: React.ReactNode })
         setIsBusinessIntelligencePanelOpen,
         selectionManager,
         customers,
-        setCustomers
+        setCustomers,
+        insights,
+        setInsights,
+        chatMessages,
+        setChatMessages,
+        chatInput,
+        setChatInput,
+        chatIsLoading,
+        setChatIsLoading,
+        chatSessionId,
+        chatUserId
       }}
     >
       {children}

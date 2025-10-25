@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import {
   ChartCard,
   Skeleton,
-  Badge
+  Badge,
+  getShiftClickManager
 } from 'components';
 import {
   ScatterChart,
@@ -34,6 +35,7 @@ export function DeviationPatternExplorer({
   data,
   loading
 }: DeviationPatternExplorerProps) {
+  const shiftClickManager = getShiftClickManager();
   const [selectedPattern, setSelectedPattern] = useState<string>('all');
 
   // Process pattern data - MUST be before conditional returns
@@ -66,7 +68,7 @@ export function DeviationPatternExplorer({
   // Loading state - AFTER all hooks
   if (loading) {
     return (
-      <ChartCard title="Deviation Pattern Explorer" className="h-96">
+      <ChartCard className="h-96">
         <Skeleton className="h-full" />
       </ChartCard>
     );
@@ -108,8 +110,13 @@ export function DeviationPatternExplorer({
 
   return (
     <ChartCard
-      title="Deviation Pattern Explorer"
-      description="Interactive exploration of deviation patterns across time"
+      onShiftClick={(event) => {
+        shiftClickManager.addPoint({
+          label: "Deviation Pattern Explorer",
+          value: `Interactive exploration of deviation patterns across time`,
+          source: 'Performance Deviation - Pattern Explorer'
+        }, event.nativeEvent);
+      }}
       action={
         <select
           value={selectedPattern}

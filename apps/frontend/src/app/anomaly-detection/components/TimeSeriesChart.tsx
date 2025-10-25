@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Card, Skeleton } from 'components/index';
+import { Card, Skeleton, getShiftClickManager } from 'components/index';
 import { Line } from 'react-chartjs-2';
 import { useAnomalyContext } from '../context';
 
@@ -19,9 +19,10 @@ interface TimeSeriesChartProps {
 
 export function TimeSeriesChart({ data, loading }: TimeSeriesChartProps) {
   const { selectionManager } = useAnomalyContext();
+  const shiftClickManager = getShiftClickManager();
   if (loading) {
     return (
-      <Card title="Anomaly Trend" className="h-96">
+      <Card className="h-96">
         <Skeleton className="h-full" />
       </Card>
     );
@@ -34,7 +35,7 @@ export function TimeSeriesChart({ data, loading }: TimeSeriesChartProps) {
   // Show no data message if empty
   if (!hasData) {
     return (
-      <Card title="Anomaly Trend" className="h-96">
+      <Card className="h-96">
         <div className="h-full flex items-center justify-center text-muted-foreground">
           <div className="text-center">
             <p className="text-lg">No data available</p>
@@ -134,8 +135,13 @@ export function TimeSeriesChart({ data, loading }: TimeSeriesChartProps) {
 
   return (
     <Card
-      title="Anomaly Trend"
-      description="Time series view of detected anomalies"
+      onShiftClick={(event) => {
+        shiftClickManager.addPoint({
+          label: "Anomaly Trend",
+          value: `Time series view of detected anomalies`,
+          source: 'Anomaly Dashboard - Time Series'
+        }, event.nativeEvent);
+      }}
     >
       <div className="h-80 p-4">
         <Line data={chartData} options={options} />

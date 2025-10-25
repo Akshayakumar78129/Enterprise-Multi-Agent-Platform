@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Card, Skeleton } from 'components/index';
+import { Card, Skeleton, getShiftClickManager } from 'components/index';
 import { useAnomalyContext } from '../context';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
@@ -23,6 +23,7 @@ export function FeatureContributionPlot({
   onFeatureSelect
 }: FeatureContributionPlotProps) {
   const { selectionManager } = useAnomalyContext();
+  const shiftClickManager = getShiftClickManager();
   const [selectedXFeature, setSelectedXFeature] = useState('anomaly_score');
   const [selectedYFeature, setSelectedYFeature] = useState('transaction_count');
   const [selectedPoints, setSelectedPoints] = useState<number[]>([]);
@@ -145,7 +146,7 @@ export function FeatureContributionPlot({
 
   if (loading) {
     return (
-      <Card title="Feature Contribution Analysis" description="Interactive scatter plot of anomaly features">
+      <Card>
         <Skeleton className="h-96" />
       </Card>
     );
@@ -153,8 +154,13 @@ export function FeatureContributionPlot({
 
   return (
     <Card
-      title="Feature Contribution Analysis"
-      description="Interactive scatter plot showing relationships between anomaly features"
+      onShiftClick={(event) => {
+        shiftClickManager.addPoint({
+          label: "Feature Contribution Analysis",
+          value: `Interactive scatter plot showing relationships between anomaly features`,
+          source: 'Anomaly Dashboard - Feature Plot'
+        }, event.nativeEvent);
+      }}
     >
       {/* Feature Selectors */}
       <div className="flex gap-4 mb-4 p-4">

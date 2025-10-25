@@ -156,7 +156,7 @@ export function SegmentMetricComparison({ data = [], loading = false }: SegmentM
   return (
     <Card className="p-6">
       <div className="mb-6">
-        <h3 className="text-lg font-semibold mb-4">Segment Metric Comparison</h3>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Segment Metric Comparison</h3>
 
         {/* Controls */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">

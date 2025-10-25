@@ -4,14 +4,16 @@ import React from 'react';
 import {
   DashboardSection,
   ChartCard,
-  PageLoader
+  PageLoader,
+  getShiftClickManager
 } from 'components/index';
 import {
   EngagementKPIs,
   EngagementPyramid,
   EngagementTimeline,
   OpportunityFinder,
-  CustomerClassification
+  CustomerClassification,
+  CustomerSearchAnalytics
 } from './components';
 import { useEngagementClassifierContext } from './context';
 import { useEngagementClassifierData } from './hooks/useEngagementClassifierData';
@@ -22,26 +24,29 @@ export default function EngagementClassifierPage() {
     selectionManager,
     setEngagementData
   } = useEngagementClassifierContext();
+  const shiftClickManager = getShiftClickManager();
 
   const {
     loading,
     error,
+    isFetching,
     engagementDistribution,
     customerClassification,
     engagementScore,
     actionableInsights,
     engagementTimeline,
     hasNoData,
-    kpiMetrics
+    kpiMetrics,
+    customers
   } = useEngagementClassifierData(filters);
 
-  // Update context with data when available
+  // Update context with data when available (using memoized array from hook)
   React.useEffect(() => {
     if (engagementDistribution && Array.isArray(engagementDistribution)) {
       // Pass the actual distribution data instead of creating fake individual records
       setEngagementData(engagementDistribution);
     }
-  }, [JSON.stringify(engagementDistribution)]);
+  }, [engagementDistribution, setEngagementData]);
 
   const handleLevelClick = (level: string) => {
     selectionManager.addPoint({
@@ -83,55 +88,108 @@ export default function EngagementClassifierPage() {
       }}
     >
       <>
+      {/* Background refetch indicator */}
+      {isFetching && !loading && (
+        <div className="absolute top-4 right-4 z-10">
+          <div className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm flex items-center gap-2">
+            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            Updating...
+          </div>
+        </div>
+      )}
+
       <div id="key-metrics" />
-      <DashboardSection title="Key Metrics">
+      <DashboardSection>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Key Metrics</h3>
         <EngagementKPIs metrics={kpiMetrics} loading={false} />
       </DashboardSection>
 
       <div id="engagement-analysis" />
-      <DashboardSection title="Engagement Analysis">
+      <DashboardSection>
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
-          <ChartCard
-            title="Engagement Distribution Pyramid"
-            className="glass-card card-hover"
-          >
-            <EngagementPyramid
-              data={engagementDistribution}
-              loading={false}
-              onLevelClick={handleLevelClick}
-            />
-          </ChartCard>
+          <div>
+            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Engagement Distribution Pyramid</h3>
+            <ChartCard
+              className="glass-card card-hover"
+              onShiftClick={(event) => {
+                shiftClickManager.addPoint({
+                  label: "Engagement Distribution Pyramid",
+                  value: `Customer engagement level distribution`,
+                  source: 'Engagement Dashboard - Pyramid'
+                }, event.nativeEvent);
+              }}
+            >
+              <EngagementPyramid
+                data={engagementDistribution}
+                loading={false}
+                onLevelClick={handleLevelClick}
+              />
+            </ChartCard>
+          </div>
 
-          <ChartCard
-            title="Engagement Activity Timeline"
-            className="glass-card card-hover"
-          >
-            <EngagementTimeline
-              data={engagementTimeline}
-              loading={false}
-              onPeriodClick={handlePeriodClick}
-            />
-          </ChartCard>
+          <div>
+            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Engagement Activity Timeline</h3>
+            <ChartCard
+              className="glass-card card-hover"
+              onShiftClick={(event) => {
+                shiftClickManager.addPoint({
+                  label: "Engagement Activity Timeline",
+                  value: `Engagement trends over time`,
+                  source: 'Engagement Dashboard - Timeline'
+                }, event.nativeEvent);
+              }}
+            >
+              <EngagementTimeline
+                data={engagementTimeline}
+                loading={false}
+                onPeriodClick={handlePeriodClick}
+              />
+            </ChartCard>
+          </div>
         </div>
       </DashboardSection>
 
       <div id="customer-insights" />
-      <DashboardSection title="Customer Insights">
-        <ChartCard
-          title="RFM Classification"
-          className="glass-card card-hover"
-        >
-          <CustomerClassification data={customerClassification} loading={false} />
-        </ChartCard>
+      <DashboardSection>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Customer Insights</h3>
+        <div>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">RFM Classification</h3>
+          <ChartCard
+            className="glass-card card-hover"
+            onShiftClick={(event) => {
+              shiftClickManager.addPoint({
+                label: "RFM Classification",
+                value: `Customer RFM segmentation analysis`,
+                source: 'Engagement Dashboard - RFM'
+              }, event.nativeEvent);
+            }}
+          >
+            <CustomerClassification data={customerClassification} loading={false} />
+          </ChartCard>
+        </div>
       </DashboardSection>
 
       <div id="re-engagement" />
-      <DashboardSection title="Re-engagement Opportunities">
+      <DashboardSection>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Re-engagement Opportunities</h3>
         <ChartCard
           className="glass-card card-hover"
+          onShiftClick={(event) => {
+            shiftClickManager.addPoint({
+              label: "Re-engagement Opportunities",
+              value: `Actionable customer re-engagement insights`,
+              source: 'Engagement Dashboard - Opportunities'
+            }, event.nativeEvent);
+          }}
         >
           <OpportunityFinder data={actionableInsights} loading={false} />
         </ChartCard>
+      </DashboardSection>
+
+      <div id="customer-details" />
+      <DashboardSection>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Customer Details</h3>
+        <CustomerSearchAnalytics />
       </DashboardSection>
 
       </>

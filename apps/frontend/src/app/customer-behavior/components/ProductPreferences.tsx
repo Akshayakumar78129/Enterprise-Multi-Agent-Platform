@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, Skeleton } from "components/index";
+import { Card, Skeleton, getShiftClickManager } from "components/index";
 import { useBehaviorContext } from "../context";
 import dynamic from 'next/dynamic';
 import { Bar } from "react-chartjs-2";
@@ -16,6 +16,7 @@ interface ProductPreferencesProps {
 
 export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
   const { selectionManager } = useBehaviorContext();
+  const shiftClickManager = getShiftClickManager();
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -24,7 +25,7 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
 
   if (loading) {
     return (
-      <Card title="Product Preferences" description="Customer product choices and categories">
+      <Card>
         <Skeleton className="h-80" />
       </Card>
     );
@@ -34,7 +35,7 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
 
   if (!data || topCategories.length === 0) {
     return (
-      <Card title="Product Preferences" description="Customer product choices and categories" className="glass-card">
+      <Card className="glass-card">
         <div className="h-80 flex items-center justify-center text-muted-foreground">
           <div className="text-center">
             <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -128,9 +129,17 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card
-          title="Category Distribution"
-          description="Top product categories by sales">
+        <div>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Category Distribution</h3>
+          <p className="text-sm text-muted-foreground mb-4">Top product categories by sales</p>
+          <Card
+            onShiftClick={(event) => {
+              shiftClickManager.addPoint({
+                label: "Category Distribution",
+                value: `Top product categories by sales`,
+                source: 'Behavior Dashboard - Category Distribution'
+              }, event.nativeEvent);
+            }}>
           <div className="h-80 p-4">
             <Bar
               data={categoryData}
@@ -175,11 +184,20 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
               }}
             />
           </div>
-        </Card>
+          </Card>
+        </div>
 
-        <Card
-          title="Category Treemap"
-          description="Hierarchical view of product categories">
+        <div>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Category Treemap</h3>
+          <p className="text-sm text-muted-foreground mb-4">Hierarchical view of product categories</p>
+          <Card
+            onShiftClick={(event) => {
+              shiftClickManager.addPoint({
+                label: "Category Treemap",
+                value: `Hierarchical view of product categories`,
+                source: 'Behavior Dashboard - Treemap'
+              }, event.nativeEvent);
+            }}>
           <div className="h-80">
             {isClient && treemapData.length > 0 ? (
               <Plot
@@ -214,13 +232,22 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
               </div>
             )}
           </div>
-        </Card>
+          </Card>
+        </div>
       </div>
 
       {productData && (
-        <Card
-          title="Top Products"
-          description="Best selling products">
+        <div>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Top Products</h3>
+          <p className="text-sm text-muted-foreground mb-4">Best selling products</p>
+          <Card
+            onShiftClick={(event) => {
+              shiftClickManager.addPoint({
+                label: "Top Products",
+                value: `Best selling products`,
+                source: 'Behavior Dashboard - Top Products'
+              }, event.nativeEvent);
+            }}>
           <div className="h-64 p-4">
             <Bar
               data={productData}
@@ -245,7 +272,8 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
               }}
             />
           </div>
-        </Card>
+          </Card>
+        </div>
       )}
     </div>
   );

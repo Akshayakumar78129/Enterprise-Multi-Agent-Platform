@@ -1,1 +1,0 @@
-"""Sales forecast domain package"""

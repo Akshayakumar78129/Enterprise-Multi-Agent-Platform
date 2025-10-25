@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Card, LineChart, Skeleton, RiskPyramid } from "components/index";
+import { Card, LineChart, Skeleton, RiskPyramid, getShiftClickManager } from "components/index";
 import { useBehaviorContext } from "../context";
 import { Bar } from "react-chartjs-2";
 
@@ -12,10 +12,11 @@ interface EngagementMetricsProps {
 
 export function EngagementMetrics({ data, loading }: EngagementMetricsProps) {
   const { selectionManager } = useBehaviorContext();
+  const shiftClickManager = getShiftClickManager();
 
   if (loading) {
     return (
-      <Card title="Engagement Metrics" description="Customer engagement analysis">
+      <Card>
         <Skeleton className="h-80" />
       </Card>
     );
@@ -23,7 +24,7 @@ export function EngagementMetrics({ data, loading }: EngagementMetricsProps) {
 
   if (!data) {
     return (
-      <Card title="Engagement Metrics" description="Customer engagement analysis">
+      <Card>
         <div className="h-80 flex items-center justify-center text-muted-foreground">
           No engagement data available
         </div>
@@ -111,9 +112,17 @@ export function EngagementMetrics({ data, loading }: EngagementMetricsProps) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card
-          title="Engagement Channels"
-          description="Multi-channel engagement levels">
+        <div>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Engagement Channels</h3>
+          <p className="text-sm text-muted-foreground mb-4">Multi-channel engagement levels</p>
+          <Card
+            onShiftClick={(event) => {
+              shiftClickManager.addPoint({
+                label: "Engagement Channels",
+                value: `Multi-channel engagement analysis`,
+                source: 'Behavior Dashboard - Engagement'
+              }, event.nativeEvent);
+            }}>
           <div className="h-80 p-4">
             {radarData ? (
               <Bar
@@ -155,11 +164,20 @@ export function EngagementMetrics({ data, loading }: EngagementMetricsProps) {
               </div>
             )}
           </div>
-        </Card>
+          </Card>
+        </div>
 
-        <Card
-          title="Engagement Quadrants"
-          description="Customer engagement distribution">
+        <div>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Engagement Quadrants</h3>
+          <p className="text-sm text-muted-foreground mb-4">Customer engagement distribution</p>
+          <Card
+            onShiftClick={(event) => {
+              shiftClickManager.addPoint({
+                label: "Engagement Quadrants",
+                value: `Customer engagement distribution`,
+                source: 'Behavior Dashboard - Engagement Quadrants'
+              }, event.nativeEvent);
+            }}>
           <div className="h-80 p-4">
             {engagementQuadrants.length > 0 ? (
             <div className="h-full flex flex-col gap-3">
@@ -204,13 +222,22 @@ export function EngagementMetrics({ data, loading }: EngagementMetricsProps) {
               </div>
             )}
           </div>
-      </Card>
-    </div>
+          </Card>
+        </div>
+      </div>
 
       {trendData && (
-        <Card
-          title="Engagement Trend"
-          description="Engagement metrics over time">
+        <div>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Engagement Trend</h3>
+          <p className="text-sm text-muted-foreground mb-4">Engagement metrics over time</p>
+          <Card
+            onShiftClick={(event) => {
+              shiftClickManager.addPoint({
+                label: "Engagement Trend",
+                value: `Engagement metrics over time`,
+                source: 'Behavior Dashboard - Engagement Trend'
+              }, event.nativeEvent);
+            }}>
           <div className="h-80">
             <LineChart
               data={trendData}
@@ -254,7 +281,8 @@ export function EngagementMetrics({ data, loading }: EngagementMetricsProps) {
               }}
             />
           </div>
-        </Card>
+          </Card>
+        </div>
       )}
     </div>
   );

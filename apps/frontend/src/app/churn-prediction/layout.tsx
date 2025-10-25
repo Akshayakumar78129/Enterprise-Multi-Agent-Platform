@@ -15,18 +15,23 @@ function HeaderFilters() {
     <ChurnFilters
       filters={filters}
       onFiltersChange={setFilters}
-      onReset={() =>
+      onReset={() => {
+        // Clear localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('churnFilters');
+          localStorage.removeItem('churnTimeRange');
+        }
+        // Reset to defaults
         setFilters({
           dateRange: {
-            // Use full year 2021 data (Jan 1 - Dec 31, 2021)
-            startDate: "2021-01-01",
+            startDate: "2017-01-01",
             endDate: "2021-12-31",
           },
           riskLevels: [],
           segments: [],
           productCategories: [],
-        })
-      }
+        });
+      }}
     />
   );
 }
@@ -49,7 +54,9 @@ function ChurnLayoutContent({ children }: { children: React.ReactNode }) {
     chatSessionId,
     chatUserId,
     timeRange,
-    churnCustomers
+    churnCustomers,
+    insights,
+    kpiMetrics
   } = useChurnContext();
 
   // Calculate high risk customers for BI trigger
@@ -95,8 +102,8 @@ function ChurnLayoutContent({ children }: { children: React.ReactNode }) {
   const biPanelContent = (
     <BusinessIntelligencePanel
       onClose={() => setIsBIModalOpen(false)}
-      insights={[]} // Will be populated when page passes data
-      kpiMetrics={{}}
+      insights={insights}
+      kpiMetrics={kpiMetrics}
       data={{ customers: churnCustomers }}
       dashboardContext="churn"
       customers={churnCustomers} // Legacy support

@@ -22,13 +22,25 @@ def predict_next_purchase(
     Predict next purchase timing and products using ML models.
 
     Args:
-        time_period: Analysis period for historical data
+        time_period: Analysis period for historical data. Supports multiple formats:
+            - "default" or empty: Full dataset (2017-2021)
+            - Year only: "2021" → 2021-01-01 to 2021-12-31
+            - Quarter: "Q1 2021" or "2021 Q1" → Q1 date range
+            - Date range with colon: "2017-01-01:2021-12-31"
+            - Date range with " to ": "2017-01-01 to 2021-12-31"
+            - Relative periods: "last_30_days", "last_90_days", "last_year"
         customer_id: Specific customer to predict for (optional)
         include_product_recommendations: Whether to include product recommendations
         confidence_threshold: Minimum confidence for predictions (0-1)
 
     Returns:
         Formatted next purchase predictions as a string.
+
+    Examples:
+        >>> predict_next_purchase("2021")  # Analyze 2021 only
+        >>> predict_next_purchase("Q1 2021")  # Analyze Q1 2021
+        >>> predict_next_purchase("2017-01-01:2021-12-31")  # Full range
+        >>> predict_next_purchase("last_90_days")  # Last 90 days
     """
 
     # Initialize the sync service
@@ -37,14 +49,95 @@ def predict_next_purchase(
     # Build filters
     filters = {}
 
-    # Parse time period
-    if time_period == "default":
-        filters['date_from'] = '2021-01-01'
-        filters['date_to'] = '2021-12-31'
+    # Data availability validation
+    data_start_date = datetime(2017, 1, 1)
+    data_end_date = datetime(2021, 12, 31)
+
+    # Parse time period with comprehensive format support
+    # Check for year only (e.g., "2017", "2018", etc.)
+    if time_period and time_period.isdigit() and len(time_period) == 4:
+        year = int(time_period)
+
+        # Validate year is within data range
+        if year < 2017 or year > 2021:
+            return f"""# Data Availability Error
+
+The requested year {year} is outside the available data range.
+
+**Available Data Range**: 2017-01-01 to 2021-12-31
+
+Please specify a year between 2017 and 2021, or use the default view.
+"""
+
+        filters['dateFrom'] = f'{year}-01-01'
+        filters['dateTo'] = f'{year}-12-31'
+        print(f"[next_purchase] Parsed year {year} to date range: {filters['dateFrom']} to {filters['dateTo']}")
+
+    # Check for date range with colon separator (e.g., "2017-01-01:2021-12-31")
     elif ':' in time_period:
-        dates = time_period.split(':')
-        filters['date_from'] = dates[0]
-        filters['date_to'] = dates[1]
+        parts = time_period.split(':')
+        if len(parts) == 2:
+            filters['dateFrom'] = parts[0].strip()
+            filters['dateTo'] = parts[1].strip()
+            print(f"[next_purchase] Parsed date range: {filters['dateFrom']} to {filters['dateTo']}")
+
+    # Check for date range with " to " separator (e.g., "2017-01-01 to 2021-12-31")
+    elif ' to ' in time_period.lower():
+        parts = time_period.lower().split(' to ')
+        if len(parts) == 2:
+            filters['dateFrom'] = parts[0].strip()
+            filters['dateTo'] = parts[1].strip()
+            print(f"[next_purchase] Parsed date range: {filters['dateFrom']} to {filters['dateTo']}")
+
+    # Check for quarter format (e.g., "Q1 2017", "2017 Q1")
+    elif 'q' in time_period.lower():
+        import re
+        match = re.search(r'(q[1-4])\s*(\d{4})|(\d{4})\s*(q[1-4])', time_period.lower())
+        if match:
+            groups = match.groups()
+            quarter = groups[0] or groups[3]
+            year = groups[1] or groups[2]
+
+            quarter_ranges = {
+                'q1': ('01-01', '03-31'),
+                'q2': ('04-01', '06-30'),
+                'q3': ('07-01', '09-30'),
+                'q4': ('10-01', '12-31')
+            }
+
+            if quarter in quarter_ranges:
+                start, end = quarter_ranges[quarter]
+                filters['dateFrom'] = f'{year}-{start}'
+                filters['dateTo'] = f'{year}-{end}'
+                print(f"[next_purchase] Parsed quarter {quarter.upper()} {year}: {filters['dateFrom']} to {filters['dateTo']}")
+
+    # Check for relative periods
+    elif time_period.lower() in ['last_30_days', 'last_90_days', 'last_180_days', 'last_year']:
+        # Calculate relative date from data_end_date (2021-12-31)
+        if time_period.lower() == 'last_30_days':
+            start_date = data_end_date - timedelta(days=30)
+        elif time_period.lower() == 'last_90_days':
+            start_date = data_end_date - timedelta(days=90)
+        elif time_period.lower() == 'last_180_days':
+            start_date = data_end_date - timedelta(days=180)
+        elif time_period.lower() == 'last_year':
+            start_date = data_end_date - timedelta(days=365)
+
+        filters['dateFrom'] = start_date.strftime('%Y-%m-%d')
+        filters['dateTo'] = data_end_date.strftime('%Y-%m-%d')
+        print(f"[next_purchase] Parsed relative period '{time_period}': {filters['dateFrom']} to {filters['dateTo']}")
+
+    # Default to 2017-2021 if no pattern matched or "default" specified
+    elif time_period == "default" or not time_period:
+        filters['dateFrom'] = '2017-01-01'
+        filters['dateTo'] = '2021-12-31'
+        print(f"[next_purchase] Using default date range (2017-2021): {filters['dateFrom']} to {filters['dateTo']}")
+
+    # Fallback for any unrecognized format
+    else:
+        filters['dateFrom'] = '2017-01-01'
+        filters['dateTo'] = '2021-12-31'
+        print(f"[next_purchase] Unrecognized time_period '{time_period}', using default (2017-2021): {filters['dateFrom']} to {filters['dateTo']}")
 
     if customer_id:
         filters['customer_ids'] = [customer_id]

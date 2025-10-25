@@ -5,7 +5,8 @@ import {
   DashboardGrid,
   DashboardSection,
   Card,
-  PageLoader
+  PageLoader,
+  getShiftClickManager
 } from 'components/index';
 import { Bar } from 'react-chartjs-2';
 import {
@@ -20,6 +21,7 @@ import { useAnomalyData } from './hooks/useAnomalyData';
 
 export default function AnomalyDetectionPage() {
   const { filters, setAnomalyCustomers } = useAnomalyContext();
+  const shiftClickManager = getShiftClickManager();
   const [selectedCustomer, setSelectedCustomer] = React.useState<any>(null);
 
   const {
@@ -102,26 +104,34 @@ export default function AnomalyDetectionPage() {
       }}
     >
       {/* KPI Section */}
-      <DashboardSection title="Key Metrics">
+      <DashboardSection>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Key Metrics</h3>
         <AnomalyKPIs kpiMetrics={kpiMetrics} loading={false} />
       </DashboardSection>
 
       {/* Time Series and Severity Analysis */}
-      <DashboardSection title="Anomaly Trends">
+      <DashboardSection>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-          <TimeSeriesChart
-            data={timeSeriesAnomalies}
-            loading={false}
-          />
-          <SeverityDistribution
-            data={severityDistribution}
-            loading={false}
-          />
+          <div>
+            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Anomaly Trend</h3>
+            <TimeSeriesChart
+              data={timeSeriesAnomalies}
+              loading={false}
+            />
+          </div>
+          <div>
+            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Severity Distribution</h3>
+            <SeverityDistribution
+              data={severityDistribution}
+              loading={false}
+            />
+          </div>
         </div>
       </DashboardSection>
 
       {/* Feature Analysis Section */}
-      <DashboardSection title="Feature Analysis">
+      <DashboardSection>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Feature Contribution Analysis</h3>
         <FeatureContributionPlot
           anomalies={customerAnomalies}
           featureContributions={featureContribution || []}
@@ -132,13 +142,21 @@ export default function AnomalyDetectionPage() {
       </DashboardSection>
 
       {/* Distribution Analysis */}
-      <DashboardSection title="Distribution Analysis">
+      <DashboardSection>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
           {/* Segment Distribution */}
-          <Card
-            title="Segment Distribution"
-            description="Anomalies by customer segment"
-          >
+          <div>
+            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Segment Distribution</h3>
+            <p className="text-sm text-muted-foreground mb-4">Anomalies by customer segment</p>
+            <Card
+              onShiftClick={(event) => {
+                shiftClickManager.addPoint({
+                  label: "Segment Distribution",
+                  value: `Anomalies by customer segment`,
+                  source: 'Anomaly Dashboard - Segment Distribution'
+                }, event.nativeEvent);
+              }}
+            >
             <div className="h-80 p-4">
               <Bar
                 data={segmentChartData}
@@ -171,13 +189,22 @@ export default function AnomalyDetectionPage() {
                 }}
               />
             </div>
-          </Card>
+            </Card>
+          </div>
 
           {/* Region Distribution */}
-          <Card
-            title="Regional Distribution"
-            description="Geographic anomaly distribution"
-          >
+          <div>
+            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Regional Distribution</h3>
+            <p className="text-sm text-muted-foreground mb-4">Geographic anomaly distribution</p>
+            <Card
+              onShiftClick={(event) => {
+                shiftClickManager.addPoint({
+                  label: "Regional Distribution",
+                  value: `Geographic anomaly distribution`,
+                  source: 'Anomaly Dashboard - Regional Distribution'
+                }, event.nativeEvent);
+              }}
+            >
             <div className="h-80 p-4">
               <Bar
                 data={regionChartData}
@@ -212,12 +239,14 @@ export default function AnomalyDetectionPage() {
                 }}
               />
             </div>
-          </Card>
+            </Card>
+          </div>
         </div>
       </DashboardSection>
 
       {/* Customer Details Table */}
-      <DashboardSection title="Anomaly Details">
+      <DashboardSection>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Anomaly Details</h3>
         <CustomerAnomaliesTable
           data={customerAnomalies}
           loading={false}
@@ -227,11 +256,20 @@ export default function AnomalyDetectionPage() {
 
       {/* Selected Customer Details Panel */}
       {selectedCustomer && (
-        <DashboardSection title="Selected Customer Details">
-          <Card>
+        <DashboardSection>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Selected Customer Details</h3>
+          <Card
+            onShiftClick={(event) => {
+              shiftClickManager.addPoint({
+                label: "Selected Customer Details",
+                value: `Customer details panel`,
+                source: 'Anomaly Dashboard - Customer Details'
+              }, event.nativeEvent);
+            }}
+          >
             <div className="p-6">
               <div className="flex justify-between items-start mb-4">
-                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
                   <span className="text-2xl">🔍</span>
                   {selectedCustomer.customer_name || selectedCustomer.customerName || `Customer ${selectedCustomer.customer_id || selectedCustomer.customerId}`}
                 </h3>

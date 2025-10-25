@@ -27,7 +27,7 @@ def predict_churn_risk(
 
     Args:
         time_period: Analysis period - MUST be one of:
-            - "default" - Uses full year 2021 (default if not specified)
+            - "default" - Uses full data range 2017-2021 (default if not specified)
             - "last_30_days" - Last 30 days from current date
             - "last_90_days" - Last 90 days from current date
             - "last_180_days" - Last 180 days from current date
@@ -41,7 +41,7 @@ def predict_churn_risk(
             - "churn risk for Q4 2021" → time_period="Q4 2021"
             - "churn risk from Jan to March 2019" → time_period="2019-01-01:2019-03-31"
             - "analyze churn for last 30 days" → time_period="last_30_days"
-            - "churn risk" (no date specified) → time_period="default"
+            - "churn risk" (no date specified) → time_period="default" (uses 2017-2021)
 
         segment_id: Optional customer segment to analyze
         include_visualization: Whether to include visualizations (not implemented for consistency)
@@ -91,13 +91,13 @@ The requested time period (last 30 days from {current_date.strftime('%Y-%m-%d')}
 
 To view churn risk data, please:
 - Specify a date range within 2017-2021
-- Use the default view (full year 2021)
+- Use the default view (full range 2017-2021)
 - Query specific historical periods
 
 Example valid queries:
-- "Show churn risk" (defaults to full 2021)
-- "Churn risk for June 2021"
-- "Churn risk from 2021-01-01 to 2021-03-31"
+- "Show churn risk" (defaults to full range 2017-2021)
+- "Churn risk for 2020"
+- "Churn risk from 2020-01-01 to 2021-12-31"
 """
     elif time_period == "last_90_days":
         # Calculate from actual current date

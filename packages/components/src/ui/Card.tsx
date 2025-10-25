@@ -5,14 +5,25 @@ type CardProps = {
   children: React.ReactNode;
   className?: string;
   variant?: "default" | "outlined" | "elevated";
+  onClick?: () => void;
+  onShiftClick?: (event: React.MouseEvent) => void;
 };
 
 export const Card = ({
   title,
   children,
   className = "",
-  variant = "default"
+  variant = "default",
+  onClick,
+  onShiftClick
 }: CardProps) => {
+  const handleClick = (event: React.MouseEvent) => {
+    if (event.shiftKey && onShiftClick) {
+      onShiftClick(event);
+    } else if (onClick) {
+      onClick();
+    }
+  };
   const variants = {
     default: "bg-surface border border-border",
     outlined: "bg-transparent border-2 border-accent/20",
@@ -21,7 +32,8 @@ export const Card = ({
 
   return (
     <div
-      className={`rounded-2xl p-6 ${variants[variant]} ${className}`}
+      className={`rounded-2xl p-6 ${variants[variant]} ${className} ${(onClick || onShiftClick) ? 'cursor-pointer' : ''}`}
+      onClick={handleClick}
     >
       {title && (
         <h2 className="text-xl font-semibold mb-4 text-accent">{title}</h2>

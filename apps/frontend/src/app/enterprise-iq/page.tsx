@@ -11,7 +11,8 @@ import { addComponent, replaceComponentByType } from '@/store/slices/canvasSlice
 import {
   ConversationalCanvas,
   RobotCharacter,
-  QueryInput
+  QueryInput,
+  ChatHistoryPanel
 } from './components';
 
 // Import new configuration modules
@@ -19,6 +20,7 @@ import { getToolApiConfig } from './config/toolApiRegistry';
 import { normalizeMetadata } from './config/normalizeMetadata';
 import { summaryClient } from './services/summaryClient';
 import { mapSummaryToProps } from './config/componentPropMappers';
+import { formatErrorForDisplay } from './utils/errorMessages';
 
 interface RobotState {
   state: 'idle' | 'thinking' | 'speaking' | 'pointing' | 'error';
@@ -42,10 +44,6 @@ const Z_INDEX = {
 
 // Component registry with available components - moved outside component to prevent re-creation
 const componentRegistry: any = {
-  'purchase-frequency': {
-    histogram: dynamic(() => import('./components/Visualizations/FrequencyHistogram')),
-    heatmap: dynamic(() => import('./components/Visualizations/IntervalHeatmap')),
-  },
   'customer-segmentation': {
     // Use the histogram as fallback for missing components
     distributionMap: dynamic(() => import('./components/Visualizations/FrequencyHistogram')),
@@ -100,6 +98,45 @@ const componentRegistry: any = {
     segmentAnalysis: dynamic(() => import('../customer-lifetime-value/components').then(mod => mod.SegmentAnalysis)),
     ltvTrends: dynamic(() => import('../customer-lifetime-value/components').then(mod => mod.LtvTrends)),
     valueContribution: dynamic(() => import('../customer-lifetime-value/components').then(mod => mod.ValueContributionAnalysis))
+  },
+  'engagement-classifier': {
+    // Full names
+    kpiTiles: dynamic(() => import('../engagement-classifier/components').then(mod => mod.EngagementKPIs)),
+    engagementPyramid: dynamic(() => import('../engagement-classifier/components').then(mod => mod.EngagementPyramid)),
+    engagementTimeline: dynamic(() => import('../engagement-classifier/components').then(mod => mod.EngagementTimeline)),
+    opportunityFinder: dynamic(() => import('../engagement-classifier/components').then(mod => mod.OpportunityFinder)),
+    customerClassification: dynamic(() => import('../engagement-classifier/components').then(mod => mod.CustomerClassification)),
+    engagementDistribution: dynamic(() => import('../engagement-classifier/components').then(mod => mod.EngagementDistribution)),
+    engagementScore: dynamic(() => import('../engagement-classifier/components').then(mod => mod.EngagementScore)),
+    actionableInsights: dynamic(() => import('../engagement-classifier/components').then(mod => mod.ActionableInsights)),
+    engagementTrends: dynamic(() => import('../engagement-classifier/components').then(mod => mod.EngagementTrends)),
+    customerSearchAnalytics: dynamic(() => import('../engagement-classifier/components').then(mod => mod.CustomerSearchAnalytics)),
+    // Short aliases for agent compatibility
+    kpis: dynamic(() => import('../engagement-classifier/components').then(mod => mod.EngagementKPIs)),
+    pyramid: dynamic(() => import('../engagement-classifier/components').then(mod => mod.EngagementPyramid)),
+    timeline: dynamic(() => import('../engagement-classifier/components').then(mod => mod.EngagementTimeline)),
+    opportunities: dynamic(() => import('../engagement-classifier/components').then(mod => mod.OpportunityFinder)),
+    classification: dynamic(() => import('../engagement-classifier/components').then(mod => mod.CustomerClassification)),
+    distribution: dynamic(() => import('../engagement-classifier/components').then(mod => mod.EngagementDistribution)),
+    score: dynamic(() => import('../engagement-classifier/components').then(mod => mod.EngagementScore)),
+    insights: dynamic(() => import('../engagement-classifier/components').then(mod => mod.ActionableInsights)),
+    trends: dynamic(() => import('../engagement-classifier/components').then(mod => mod.EngagementTrends)),
+    search: dynamic(() => import('../engagement-classifier/components').then(mod => mod.CustomerSearchAnalytics))
+  },
+  'next-purchase': {
+    // Full names
+    kpiTiles: dynamic(() => import('../next-purchase/components').then(mod => mod.PredictionKPIs)),
+    predictions: dynamic(() => import('../next-purchase/components').then(mod => mod.NextPurchasePredictions)),
+    probability: dynamic(() => import('../next-purchase/components').then(mod => mod.PurchaseProbability)),
+    timing: dynamic(() => import('../next-purchase/components').then(mod => mod.TimingForecast)),
+    products: dynamic(() => import('../next-purchase/components').then(mod => mod.RecommendedProducts)),
+    affinity: dynamic(() => import('../next-purchase/components').then(mod => mod.ProductAffinityNetwork)),
+    confidence: dynamic(() => import('../next-purchase/components').then(mod => mod.PredictionConfidenceMatrix)),
+    // Short aliases for agent compatibility
+    kpis: dynamic(() => import('../next-purchase/components').then(mod => mod.PredictionKPIs)),
+    customerJourney: dynamic(() => import('../next-purchase/components').then(mod => mod.NextPurchasePredictions)),
+    affinityNetwork: dynamic(() => import('../next-purchase/components').then(mod => mod.ProductAffinityNetwork)),
+    confidenceMatrix: dynamic(() => import('../next-purchase/components').then(mod => mod.PredictionConfidenceMatrix))
   },
   'product-performance': {
     kpis: dynamic(() => import('../product-performance/components').then(mod => mod.ProductKPIs)),
@@ -747,6 +784,8 @@ export default function EnterpriseIQPage() {
 
         if (summaryResponse.error) {
           console.error(`Failed to fetch summary for ${toolname}:`, summaryResponse.error);
+          // Show user-friendly error message
+          setErrorWithAutoClear(summaryResponse.error, 8000);
           // Fallback: try spawning with metadata
           const componentId = await spawnComponent(componentType, body || {});
           if (componentId) {
@@ -781,6 +820,10 @@ export default function EnterpriseIQPage() {
         }
       } catch (error) {
         console.error(`Failed to spawn component ${componentType}:`, error);
+        const errorObj = error instanceof Error ? error : new Error('Component rendering failed');
+        const friendlyError = formatErrorForDisplay(errorObj);
+        setErrorWithAutoClear(`Unable to display ${componentName}: ${friendlyError}`, 6000);
+
         // Fallback: try spawning with original body
         try {
           const componentId = await spawnComponent(componentType, body || {});
@@ -969,19 +1012,16 @@ export default function EnterpriseIQPage() {
       }
     } catch (err) {
       console.error('Query error:', err);
-      const errorMsg = err instanceof Error ? err.message : 'Sorry, I encountered an error processing your request.';
+      const errorObj = err instanceof Error ? err : new Error('Sorry, I encountered an error processing your request.');
+      const friendlyErrorMsg = formatErrorForDisplay(errorObj);
 
-      // Only show network/critical errors, not visualization loading issues
-      if (errorMsg.includes('network') || errorMsg.includes('Network') || errorMsg.includes('fetch') || errorMsg.includes('500') || errorMsg.includes('404')) {
-        setErrorWithAutoClear(errorMsg);
-      } else {
-        console.error('Request error:', errorMsg);
-      }
+      // Show user-friendly error message
+      setErrorWithAutoClear(friendlyErrorMsg, 8000);
 
       setRobotState(prev => ({
         ...prev,
         state: 'error',
-        message: errorMsg
+        message: friendlyErrorMsg
       }));
     } finally {
       // Clean up SSE reader
@@ -1178,6 +1218,9 @@ export default function EnterpriseIQPage() {
             </div>
           </div>
         )}
+
+      {/* Chat History Panel - Floating conversation history */}
+      <ChatHistoryPanel />
     </DashboardLayout>
   );
 }

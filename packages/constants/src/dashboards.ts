@@ -54,7 +54,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'next-purchase-predictor',
     name: 'Next Purchase Predictor',
-    path: '/next-purchase-predictor',
+    path: '/next-purchase',
     domain: 'customer',
     description: 'Predict when customers will make their next purchase',
     icon: '🛒',
@@ -89,6 +89,16 @@ export const DASHBOARDS: Dashboard[] = [
     description: 'Detect anomalies in customer behavior',
     icon: '⚠️',
     features: ['kpi', 'filters', 'charts', 'table', 'realtime'],
+    status: 'development',
+  },
+  {
+    id: 'performance-deviation',
+    name: 'Performance Deviation',
+    path: '/performance-deviation',
+    domain: 'customer',
+    description: 'Analyze and detect performance deviations in customer metrics',
+    icon: '📊',
+    features: ['kpi', 'filters', 'charts', 'table'],
     status: 'development',
   },
   {

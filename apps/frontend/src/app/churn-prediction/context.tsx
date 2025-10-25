@@ -31,6 +31,10 @@ type ChurnContextValue = {
   // Data sharing for BI panel
   churnCustomers: any[];
   setChurnCustomers: React.Dispatch<React.SetStateAction<any[]>>;
+  insights: string[];
+  setInsights: React.Dispatch<React.SetStateAction<string[]>>;
+  kpiMetrics: any;
+  setKpiMetrics: React.Dispatch<React.SetStateAction<any>>;
   // Chat state
   chatMessages: Message[];
   setChatMessages: React.Dispatch<React.SetStateAction<Message[]>>;
@@ -70,6 +74,8 @@ export function ChurnProvider({ children }: { children: React.ReactNode }) {
 
   // Data sharing for BI panel
   const [churnCustomers, setChurnCustomers] = React.useState<any[]>([]);
+  const [insights, setInsights] = React.useState<string[]>([]);
+  const [kpiMetrics, setKpiMetrics] = React.useState<any>({});
 
   const [timeRange, setTimeRange] = React.useState<TimeRange>(() => {
     if (typeof window === "undefined") return "30d";
@@ -77,8 +83,8 @@ export function ChurnProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [filters, setFilters] = React.useState<ChurnFilters>(() => {
-    // Default to full year 2021 (complete data for comprehensive analysis)
-    const defaultStartDate = "2021-01-01";
+    // Default to full data range 2017-2021 (complete data for comprehensive analysis)
+    const defaultStartDate = "2017-01-01";
     const defaultEndDate = "2021-12-31";
 
     const defaultFilters = {
@@ -97,7 +103,14 @@ export function ChurnProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem("churnFilters");
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Keep the saved dateRange values
+
+        // Migration: Update old 2021-only date range to full 2017-2021 range
+        if (parsed.dateRange?.startDate === "2021-01-01") {
+          parsed.dateRange.startDate = "2017-01-01";
+          // Save the migrated value back to localStorage
+          localStorage.setItem("churnFilters", JSON.stringify(parsed));
+        }
+
         return parsed;
       }
       return defaultFilters;
@@ -159,6 +172,10 @@ export function ChurnProvider({ children }: { children: React.ReactNode }) {
       setIsBIModalOpen,
       churnCustomers,
       setChurnCustomers,
+      insights,
+      setInsights,
+      kpiMetrics,
+      setKpiMetrics,
       chatMessages,
       setChatMessages,
       chatInput,
@@ -168,7 +185,7 @@ export function ChurnProvider({ children }: { children: React.ReactNode }) {
       chatSessionId,
       chatUserId,
     }),
-    [filters, memoizedSetFilters, timeRange, memoizedSetTimeRange, selectedPoints, selectionManager, isChatOpen, isBIModalOpen, churnCustomers, chatMessages, chatInput, chatIsLoading, chatSessionId, chatUserId]
+    [filters, memoizedSetFilters, timeRange, memoizedSetTimeRange, selectedPoints, selectionManager, isChatOpen, isBIModalOpen, churnCustomers, insights, kpiMetrics, chatMessages, chatInput, chatIsLoading, chatSessionId, chatUserId]
   );
 
   return <ChurnContext.Provider value={value}>{children}</ChurnContext.Provider>;

@@ -40,4 +40,4 @@ agentops
 google-genai
 cartesia
 groq
-deepgram-sdk
+deepgram-sdk<4.0.0  # Pin to v3.x for API compatibility

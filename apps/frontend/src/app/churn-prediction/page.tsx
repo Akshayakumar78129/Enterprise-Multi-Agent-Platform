@@ -7,7 +7,8 @@ import {
   InsightCard,
   PageLoader,
   type InsightData,
-  type ChurnCustomer
+  type ChurnCustomer,
+  getShiftClickManager
 } from "components/index"
 import {
   ChurnKPIs,
@@ -26,7 +27,8 @@ import {
 } from "./utils/insightGenerator";
 
 export default function ChurnPredictionPage() {
-  const { filters, setFilters, timeRange, setTimeRange, selectedPoints, selectionManager, setChurnCustomers } = useChurnContext();
+  const { filters, setFilters, timeRange, setTimeRange, selectedPoints, selectionManager, setChurnCustomers, setInsights, setKpiMetrics } = useChurnContext();
+  const shiftClickManager = getShiftClickManager();
   const [activeInsight, setActiveInsight] = useState<InsightData | null>(null);
   const [insightPosition, setInsightPosition] = useState<{ x: number; y: number } | undefined>();
 
@@ -38,7 +40,8 @@ export default function ChurnPredictionPage() {
     riskTrends,
     riskPyramidData,
     probabilityArray,
-
+    insights,
+    kpiMetrics
   } = useChurnData(filters);
 
   // Helper function to show insight card
@@ -67,6 +70,12 @@ export default function ChurnPredictionPage() {
     setChurnCustomers(churnCustomers);
   }, [churnCustomers, setChurnCustomers]);
 
+  // Update context when insights and kpiMetrics change
+  useEffect(() => {
+    setInsights(insights || []);
+    setKpiMetrics(kpiMetrics || {});
+  }, [insights, kpiMetrics, setInsights, setKpiMetrics]);
+
   return (
     <PageLoader
       isLoading={loading}
@@ -75,12 +84,13 @@ export default function ChurnPredictionPage() {
       }}
     >
       <div id="key-metrics" />
-      <DashboardSection title="Key Metrics">
+      <DashboardSection>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Key Metrics</h3>
         <ChurnKPIs data={data} loading={false} />
       </DashboardSection>
 
       <div id="risk-analysis" />
-      <DashboardSection title="Risk Analysis">
+      <DashboardSection>
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
           <ChurnRiskAnalysis
             riskPyramidData={riskPyramidData}
@@ -119,7 +129,7 @@ export default function ChurnPredictionPage() {
       </DashboardSection>
 
       <div id="ai-insights" />
-      <DashboardSection title="AI Insights">
+      <DashboardSection>
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
           <ChurnAIInsights
             featureImportance={featureImportance}
@@ -130,10 +140,17 @@ export default function ChurnPredictionPage() {
       </DashboardSection>
 
       <div id="risk-trends" />
-      <DashboardSection title="Risk Trends">
+      <DashboardSection>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Risk Trends Over Time</h3>
         <ChartCard
-          title="Risk Trends Over Time"
           className="glass-card card-hover"
+          onShiftClick={(event) => {
+            shiftClickManager.addPoint({
+              label: "Risk Trends Over Time",
+              value: `Churn risk trends visualization`,
+              source: 'Churn Dashboard - Risk Trends'
+            }, event.nativeEvent);
+          }}
         >
           <RiskTrendsOverTime
             data={riskTrends}
@@ -160,7 +177,8 @@ export default function ChurnPredictionPage() {
         </ChartCard>
       </DashboardSection>
 
-      <DashboardSection title="Customer Risk Details">
+      <DashboardSection>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Customer Risk Details</h3>
         <ChurnCustomerTable
           data={data?.customerStats || []}
           loading={loading}

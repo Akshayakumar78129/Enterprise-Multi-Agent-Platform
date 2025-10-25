@@ -367,7 +367,7 @@ export function BusinessIntelligencePanel({
         </p>
         <div className="space-y-2">
           {recommendations.map((insight, idx) => (
-            <div key={idx} className="p-3 rounded-lg border bg-card space-y-2">
+            <div key={idx} className="p-3 rounded-lg border bg-card">
               <div className="flex items-start gap-2">
                 <div className="mt-0.5">
                   {insight.type === 'critical' ? (
@@ -379,14 +379,6 @@ export function BusinessIntelligencePanel({
                 <div className="flex-1">
                   <p className="text-xs leading-relaxed">{insight.message}</p>
                 </div>
-              </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" className="h-6 px-2 text-xs flex-1">
-                  View Details
-                </Button>
-                <Button size="sm" className="h-6 px-2 text-xs flex-1">
-                  Take Action
-                </Button>
               </div>
             </div>
           ))}

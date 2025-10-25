@@ -7,7 +7,8 @@ import {
   DashboardSection,
   ChartCard,
   KPIRow,
-  AnimatedKPITile
+  AnimatedKPITile,
+  getShiftClickManager
 } from 'components';
 
 interface LoadingProps {
@@ -22,6 +23,8 @@ export { AmountDistribution } from './AmountDistribution';
 export { ProductMatrix } from './ProductMatrix';
 
 export function PatternKPIs({ metrics, loading }: { metrics: any; loading?: boolean }) {
+  const shiftClickManager = getShiftClickManager();
+
   if (loading) {
     return (
       <KPIRow
@@ -80,13 +83,26 @@ export function PatternKPIs({ metrics, loading }: { metrics: any; loading?: bool
     }
   ];
 
-  return <KPIRow kpis={kpis} />;
+  return (
+    <KPIRow
+      kpis={kpis}
+      columns={4}
+      animationDelay={50}
+      onKPIShiftClick={(kpi, event) => {
+        shiftClickManager.addPoint({
+          label: kpi.title,
+          value: typeof kpi.value === 'number' ? kpi.value.toString() : kpi.value.toString(),
+          source: 'Pattern KPIs'
+        }, event.nativeEvent);
+      }}
+    />
+  );
 }
 
 export function TemporalPatterns({ data, loading }: { data: any; loading?: boolean }) {
   if (loading) return <Skeleton className="h-64 w-full" />;
   return (
-    <Card title="Temporal Patterns">
+    <Card>
       <div>Transaction timing patterns visualization</div>
     </Card>
   );
@@ -95,7 +111,7 @@ export function TemporalPatterns({ data, loading }: { data: any; loading?: boole
 export function ProductCombinations({ data, loading }: { data: any; loading?: boolean }) {
   if (loading) return <Skeleton className="h-64 w-full" />;
   return (
-    <Card title="Product Combinations">
+    <Card>
       <div>Frequently bought together analysis</div>
     </Card>
   );
@@ -104,7 +120,7 @@ export function ProductCombinations({ data, loading }: { data: any; loading?: bo
 export function AnomalyDetection({ data, loading }: { data: any; loading?: boolean }) {
   if (loading) return <Skeleton className="h-64 w-full" />;
   return (
-    <Card title="Anomaly Detection">
+    <Card>
       <div>Unusual transaction patterns</div>
     </Card>
   );
@@ -113,7 +129,7 @@ export function AnomalyDetection({ data, loading }: { data: any; loading?: boole
 export function PaymentMethods({ data, loading }: { data: any; loading?: boolean }) {
   if (loading) return <Skeleton className="h-64 w-full" />;
   return (
-    <Card title="Payment Methods">
+    <Card>
       <div>Payment method distribution</div>
     </Card>
   );
@@ -122,7 +138,7 @@ export function PaymentMethods({ data, loading }: { data: any; loading?: boolean
 export function PatternTrends({ data, loading }: { data: any; loading?: boolean }) {
   if (loading) return <Skeleton className="h-64 w-full" />;
   return (
-    <Card title="Pattern Trends">
+    <Card>
       <div>Transaction pattern trends over time</div>
     </Card>
   );

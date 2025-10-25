@@ -25,7 +25,7 @@ def classify_customer_engagement(
 
     Args:
         time_period: Analysis period - MUST be one of:
-            - "default" - Uses full year 2021 (default if not specified)
+            - "default" - Uses full data range 2017-2021 (default if not specified)
             - "last_30_days" - Last 30 days from current date
             - "last_90_days" - Last 90 days from current date
             - "last_180_days" - Last 180 days from current date
@@ -55,8 +55,8 @@ def classify_customer_engagement(
     # Build filters
     filters = {}
 
-    # Define data availability range (2018-2021)
-    DATA_START = datetime(2018, 1, 1)
+    # Define data availability range (2017-2021)
+    DATA_START = datetime(2017, 1, 1)
     DATA_END = datetime(2021, 12, 31)
     current_date = datetime.now()
 
@@ -71,7 +71,7 @@ def classify_customer_engagement(
 
 The requested time period (last 30 days from {current_date.strftime('%Y-%m-%d')}) is beyond our available data range.
 
-**Available Data Range**: 2018-01-01 to 2021-12-31
+**Available Data Range**: 2017-01-01 to 2021-12-31
 
 To view engagement data, please:
 - Specify a date range within 2018-2021
@@ -97,7 +97,7 @@ Example valid queries:
 
 The requested time period (last 90 days from {current_date.strftime('%Y-%m-%d')}) is beyond our available data range.
 
-**Available Data Range**: 2018-01-01 to 2021-12-31
+**Available Data Range**: 2017-01-01 to 2021-12-31
 
 Please specify a date range within the available data or use the default view.
 </output>
@@ -115,7 +115,7 @@ Please specify a date range within the available data or use the default view.
 
 The requested time period (last 180 days from {current_date.strftime('%Y-%m-%d')}) is beyond our available data range.
 
-**Available Data Range**: 2018-01-01 to 2021-12-31
+**Available Data Range**: 2017-01-01 to 2021-12-31
 
 Please specify a date range within the available data or use the default view.
 </output>
@@ -133,7 +133,7 @@ Please specify a date range within the available data or use the default view.
 
 The requested time period (last year from {current_date.strftime('%Y-%m-%d')}) is beyond our available data range.
 
-**Available Data Range**: 2018-01-01 to 2021-12-31
+**Available Data Range**: 2017-01-01 to 2021-12-31
 
 Please specify a date range within the available data or use the default view.
 </output>
@@ -146,7 +146,7 @@ Please specify a date range within the available data or use the default view.
         # Check for year only (e.g., "2018", "2019", "2020", "2021")
         if time_period and time_period.isdigit() and len(time_period) == 4:
             year = int(time_period)
-            if year < 2018 or year > 2021:
+            if year < 2017 or year > 2021:
                 return f"""<output>
 # Customer Engagement Classification
 
@@ -154,9 +154,9 @@ Please specify a date range within the available data or use the default view.
 
 The requested year ({year}) is outside our available data range.
 
-**Available Data Range**: 2018-01-01 to 2021-12-31
+**Available Data Range**: 2017-01-01 to 2021-12-31
 
-Please specify a year between 2018 and 2021.
+Please specify a year between 2017 and 2021.
 </output>
 <is_visualisation>false</is_visualisation>"""
             filters['date_from'] = f'{year}-01-01'
@@ -177,7 +177,7 @@ Please specify a year between 2018 and 2021.
                 quarter = groups[0] or groups[3]
                 year = int(groups[1] or groups[2])
 
-                if year < 2018 or year > 2021:
+                if year < 2017 or year > 2021:
                     return f"""<output>
 # Customer Engagement Classification
 
@@ -185,7 +185,7 @@ Please specify a year between 2018 and 2021.
 
 The requested period is outside our available data range.
 
-**Available Data Range**: 2018-01-01 to 2021-12-31
+**Available Data Range**: 2017-01-01 to 2021-12-31
 </output>
 <is_visualisation>false</is_visualisation>"""
 
@@ -201,13 +201,13 @@ The requested period is outside our available data range.
                     filters['date_from'] = f'{year}-{start}'
                     filters['date_to'] = f'{year}-{end}'
 
-        # Default to full year 2021
+        # Default to full data range 2017-2021
         elif time_period == "default" or not time_period:
-            filters['date_from'] = '2021-01-01'
+            filters['date_from'] = '2017-01-01'
             filters['date_to'] = '2021-12-31'
         else:
-            # Fallback for unrecognized format
-            filters['date_from'] = '2021-01-01'
+            # Fallback for unrecognized format - use full data range
+            filters['date_from'] = '2017-01-01'
             filters['date_to'] = '2021-12-31'
 
     filters['engagement_threshold'] = engagement_threshold

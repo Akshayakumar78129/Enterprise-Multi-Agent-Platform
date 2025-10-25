@@ -61,14 +61,23 @@ class CustomerLtvService:
                 customers_df, transactions_df, loyalty_df, ml_results
             )
 
-            # Generate insights
+            # Generate rule-based insights (fast, always present)
             insights = self._generate_insights(ml_results, kpis)
+
+            # Generate AI-powered insights (optional, with graceful fallback)
+            ai_insights = self._generate_ai_insights(ml_results, kpis, filters)
 
             return {
                 'kpiMetrics': kpis,
                 'mainData': visualizations,
                 'mlResults': ml_results,
-                'insights': insights,
+                'insights': insights,  # Rule-based (backward compatible)
+                'ai_insights': ai_insights,  # AI-powered (new)
+                'insights_metadata': {
+                    'rule_based_count': len(insights),
+                    'ai_insights_count': len(ai_insights),
+                    'insights_version': 'hybrid_v1'
+                },
                 'metadata': {
                     'analysisDate': datetime.now().isoformat(),
                     'totalCustomers': len(customers_df),
@@ -415,7 +424,7 @@ class CustomerLtvService:
         return metrics
 
     def _generate_insights(self, ml_results: Dict, kpis: Dict) -> List[str]:
-        """Generate insights based on ML results and KPIs"""
+        """Generate enhanced insights with actionable value maximization strategies"""
 
         insights = []
 
@@ -430,10 +439,51 @@ class CustomerLtvService:
                 insights.append(f"Segment {highest_value_segment['segment_id']} has the highest average revenue at ${highest_value_segment['avg_revenue']:.2f}")
 
         elif 'customer_ltv' == 'customer_ltv':
-            if kpis.get('avgLTV', 0) > 0:
-                insights.append(f"Average customer lifetime value is ${kpis['avgLTV']:.2f}")
-            if kpis.get('highValueCount', 0) > 0:
-                insights.append(f"{kpis['highValueCount']} customers are classified as high-value (top 25%)")
+            avg_ltv = kpis.get('avgLTV', 0)
+            total_customers = kpis.get('totalCustomers', 0)
+            high_value_count = kpis.get('highValueCount', 0)
+            total_ltv = kpis.get('totalLTV', 0)
+
+            if avg_ltv > 0 and total_customers > 0:
+                insights.append(
+                    f"PORTFOLIO VALUE: Average customer lifetime value is ${avg_ltv:,.2f} across {total_customers:,} customers (${total_ltv:,.0f} total portfolio value). "
+                    f"**Action:** Focus on increasing LTV by 15-20% through: (1) Reduce time-to-value for new customers, "
+                    f"(2) Launch cross-sell campaigns to increase product adoption, (3) Implement loyalty rewards for repeat purchases. "
+                    f"Target impact: ${total_ltv * 0.15:,.0f} additional revenue over 12 months."
+                )
+
+            if high_value_count > 0 and total_customers > 0:
+                high_value_pct = (high_value_count / total_customers * 100)
+                high_value_contribution = kpis.get('highValueTotalLTV', 0)
+                contribution_pct = (high_value_contribution / total_ltv * 100) if total_ltv > 0 else 0
+
+                insights.append(
+                    f"VIP CUSTOMERS: {high_value_count:,} customers ({high_value_pct:.1f}%) drive ${high_value_contribution:,.0f} ({contribution_pct:.1f}%) of total value. "
+                    f"**Action:** Establish white-glove VIP program with dedicated success managers, quarterly business reviews, and early feature access. "
+                    f"Retention priority: >95% for this segment. Cost of losing one VIP: ${high_value_contribution/high_value_count if high_value_count > 0 else 0:,.0f} average."
+                )
+
+            # Mid-tier expansion opportunity
+            medium_value_count = total_customers - high_value_count
+            if medium_value_count > 0:
+                avg_medium_value = ((total_ltv - kpis.get('highValueTotalLTV', 0)) / medium_value_count) if medium_value_count > 0 else 0
+                upgrade_potential = (avg_ltv * 1.5 - avg_medium_value) * medium_value_count
+
+                if upgrade_potential > 0:
+                    insights.append(
+                        f"GROWTH OPPORTUNITY: {medium_value_count:,} mid-tier customers show ${upgrade_potential:,.0f} expansion potential to reach top quartile. "
+                        f"**Action:** Create upgrade path with: (1) Personalized upsell recommendations, (2) Feature education campaigns, "
+                        f"(3) Usage-based incentives. Target: Move 20% to high-value tier. Expected revenue gain: ${upgrade_potential * 0.20:,.0f}."
+                    )
+
+            # LTV distribution insights
+            ltv_std = kpis.get('ltvStdDev', 0)
+            if ltv_std > avg_ltv * 0.8:
+                insights.append(
+                    f"VALUE DISTRIBUTION: High LTV variance (${ltv_std:,.0f} std dev) indicates uneven value realization. "
+                    f"**Action:** Analyze success patterns of top 10% customers and replicate across base. "
+                    f"Standardize onboarding and success playbooks. Goal: Reduce variance by 25% while lifting floor value by 30%."
+                )
 
         elif 'customer_ltv' == 'engagement_classifier':
             if kpis.get('highlyEngaged', 0) > 0:
@@ -441,15 +491,128 @@ class CustomerLtvService:
             if kpis.get('atRiskCount', 0) > 0:
                 insights.append(f"{kpis['atRiskCount']} customers are at risk and need attention")
 
-        # Add general insights
+        # Add strategic LTV maximization playbook
+        if len(insights) > 0:
+            insights.append(
+                f"LTV MAXIMIZATION PLAYBOOK: (1) Reduce churn in top 2 quartiles (protect high value), "
+                f"(2) Increase purchase frequency through automated re-engagement, "
+                f"(3) Expand wallet share via cross-sell programs, (4) Optimize pricing for value-based tiers. "
+                f"Measure monthly LTV trends and cohort performance. 90-day goal: 15% LTV increase across all segments."
+            )
+
+        # Add general insights if nothing specific was generated
         if not insights:
             insights = [
-                "Analysis completed successfully",
-                f"Processed data for {kpis.get('totalCustomers', 0)} customers",
-                "ML model predictions are available for decision making"
+                "LTV analysis completed successfully",
+                f"Processed lifetime value data for {kpis.get('totalCustomers', 0):,} customers",
+                "ML-powered LTV predictions ready for value optimization and retention strategies"
             ]
 
         return insights
+
+    def _generate_ai_insights(self, ml_results: Dict, kpis: Dict, filters: Dict) -> List[str]:
+        """Generate AI-powered strategic insights using Gemini
+
+        This complements rule-based insights with creative, strategic analysis.
+        Uses dashboard-specific prompts for LTV optimization strategies.
+
+        Args:
+            ml_results: ML analysis results with customer LTV data
+            kpis: KPI metrics from dashboard
+            filters: Applied filters for context
+
+        Returns:
+            List of AI-generated insight strings (empty list on error)
+        """
+        try:
+            # Import at method level for error isolation
+            from lib.ai_insights_generator import generate_ai_insights
+
+            # Extract customer LTV data
+            customer_stats = ml_results.get('customers', [])
+            total_customers = len(customer_stats)
+
+            if total_customers == 0:
+                return []
+
+            # Calculate LTV metrics
+            ltv_values = [c.get('predictedLTV', 0) for c in customer_stats]
+            ltv_values_sorted = sorted(ltv_values, reverse=True)
+
+            avg_ltv = sum(ltv_values) / total_customers if total_customers > 0 else 0
+            total_ltv = sum(ltv_values)
+
+            # Calculate quartiles
+            q3_idx = int(total_customers * 0.25)
+            q2_idx = int(total_customers * 0.50)
+            q1_idx = int(total_customers * 0.75)
+
+            top_quartile_ltv = sum(ltv_values_sorted[:q3_idx]) / q3_idx if q3_idx > 0 else 0
+            median_ltv = ltv_values_sorted[q2_idx] if q2_idx < len(ltv_values_sorted) else 0
+            bottom_quartile_ltv = sum(ltv_values_sorted[q1_idx:]) / (total_customers - q1_idx) if q1_idx < total_customers else 0
+
+            # Calculate standard deviation
+            ltv_mean = avg_ltv
+            ltv_variance = sum((x - ltv_mean) ** 2 for x in ltv_values) / total_customers if total_customers > 0 else 0
+            ltv_std = ltv_variance ** 0.5
+
+            # Identify high-value customers (top 20% by LTV)
+            high_value_threshold_idx = int(total_customers * 0.2)
+            high_value_customers = customer_stats[:high_value_threshold_idx]
+            high_value_count = len(high_value_customers)
+            high_value_pct = (high_value_count / total_customers * 100) if total_customers > 0 else 0
+            high_value_total = sum(c.get('predictedLTV', 0) for c in high_value_customers)
+            high_value_contribution_pct = (high_value_total / total_ltv * 100) if total_ltv > 0 else 0
+
+            # Analyze value drivers (frequency, recency, monetary)
+            avg_frequency = sum(c.get('frequency', 0) for c in customer_stats) / total_customers if total_customers > 0 else 0
+            avg_recency = sum(c.get('recency', 0) for c in customer_stats) / total_customers if total_customers > 0 else 0
+            avg_monetary = sum(c.get('monetary', 0) for c in customer_stats) / total_customers if total_customers > 0 else 0
+
+            value_drivers = (
+                f"- Purchase Frequency: {avg_frequency:.1f} transactions/customer\n"
+                f"- Average Recency: {avg_recency:.0f} days since last purchase\n"
+                f"- Average Monetary: ${avg_monetary:,.0f} per transaction"
+            )
+
+            # Build context for AI
+            kpis_dict = {
+                'total_customers': total_customers,
+                'avg_ltv': avg_ltv,
+                'total_ltv': total_ltv,
+                'high_value_count': high_value_count,
+                'high_value_pct': high_value_pct,
+                'high_value_total': high_value_total,
+                'high_value_contribution_pct': high_value_contribution_pct,
+                'top_quartile_ltv': top_quartile_ltv,
+                'median_ltv': median_ltv,
+                'bottom_quartile_ltv': bottom_quartile_ltv,
+                'ltv_std': ltv_std
+            }
+
+            data_summary = {
+                'value_drivers': value_drivers,
+                'avg_frequency': avg_frequency,
+                'avg_recency': avg_recency,
+                'avg_monetary': avg_monetary
+            }
+
+            # Generate AI insights
+            ai_insights = generate_ai_insights(
+                dashboard_type='customer_ltv',
+                kpis=kpis_dict,
+                data_summary=data_summary,
+                filters=filters
+            )
+
+            return ai_insights
+
+        except ImportError:
+            print("[CustomerLTVService] AI insights module not available, skipping AI insights")
+            return []
+        except Exception as e:
+            print(f"[CustomerLTVService] Error generating AI insights: {e}")
+            return []  # Graceful fallback
 
     def _parse_date_filters(self, filters: Dict) -> Dict:
         """Parse and validate date filters"""
@@ -461,7 +624,7 @@ class CustomerLtvService:
             try:
                 parsed['date_from'] = pd.to_datetime(parsed['date_from']).strftime('%Y-%m-%d')
             except:
-                parsed['date_from'] = '2021-01-01'  # Default to 2021 start
+                parsed['date_from'] = '2017-01-01'  # Default to 2017 start
 
         if 'date_to' in parsed:
             try:
@@ -580,37 +743,8 @@ class CustomerLtvService:
         if customers_df.empty or transactions_df.empty:
             return []
 
-        # Merge customer and transaction data
-        if 'customer_type' in customers_df.columns:
-            merged = transactions_df.merge(
-                customers_df[['customer_id', 'customer_type']],
-                on='customer_id',
-                how='left'
-            )
-
-            # Group by customer type and calculate LTV metrics
-            segment_stats = merged.groupby('customer_type').agg({
-                'net_sales_amount': ['sum', 'mean'],
-                'customer_id': 'nunique'
-            }).reset_index()
-
-            segments = []
-            for _, row in segment_stats.iterrows():
-                segment_name = row[('customer_type', '')]
-                total_ltv = float(row[('net_sales_amount', 'sum')])
-                customer_count = int(row[('customer_id', 'nunique')])
-                avg_ltv = total_ltv / customer_count if customer_count > 0 else 0
-
-                segments.append({
-                    'segment': segment_name if segment_name else 'Unknown',
-                    'totalLtv': total_ltv,
-                    'avgLtv': avg_ltv,
-                    'count': customer_count
-                })
-
-            return segments
-
-        # If no customer type, create segments based on LTV quantiles
+        # Always use quartile-based segmentation for better visualization
+        # (customer_type column typically has only "business" which isn't useful for analysis)
         customer_ltv = transactions_df.groupby('customer_id')['net_sales_amount'].sum().reset_index()
         customer_ltv.columns = ['customer_id', 'ltv']
 

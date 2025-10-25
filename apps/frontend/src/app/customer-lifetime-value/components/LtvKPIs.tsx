@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { KPICard, AnimatedKPITile } from 'components/index';
+import { KPICard, AnimatedKPITile, getShiftClickManager } from 'components/index';
 import { TrendingUp, DollarSign, Users, Activity, Target } from 'lucide-react';
 
 interface LtvKPIsProps {
@@ -19,6 +19,7 @@ interface LtvKPIsProps {
 }
 
 export function LtvKPIs({ metrics = {}, loading = false, onTileClick }: LtvKPIsProps) {
+  const shiftClickManager = getShiftClickManager();
   const kpis = [
     {
       title: 'Average LTV',
@@ -26,28 +27,28 @@ export function LtvKPIs({ metrics = {}, loading = false, onTileClick }: LtvKPIsP
       subtitle: 'Per customer',
       icon: DollarSign,
       trend: metrics.ltvGrowth || 0,
-      color: '#8b5cf6' as const
+      color: '#3b82f6' as const // Blue
     },
     {
       title: 'Median LTV',
       value: metrics.medianLtv ? `$${metrics.medianLtv.toLocaleString()}` : '$0',
       subtitle: 'Mid-point value',
       icon: Target,
-      color: '#e8d4e6' as const
+      color: '#10b981' as const // Emerald
     },
     {
       title: 'Total Value',
       value: metrics.totalValue ? `$${(metrics.totalValue / 1000000).toFixed(1)}M` : '$0',
       subtitle: 'All customers',
       icon: TrendingUp,
-      color: '#8b5cf6' as const
+      color: '#f59e0b' as const // Amber
     },
     {
       title: 'High Value',
       value: metrics.highValueCount?.toLocaleString() || '0',
       subtitle: 'Premium customers',
       icon: Users,
-      color: '#e8d4e6' as const
+      color: '#ec4899' as const // Pink
     },
     {
       title: 'Model Accuracy',
@@ -55,7 +56,7 @@ export function LtvKPIs({ metrics = {}, loading = false, onTileClick }: LtvKPIsP
       subtitle: 'Prediction confidence',
       icon: Activity,
       progress: metrics.predictionAccuracy || 0,
-      color: '#8b5cf6' as const
+      color: '#8b5cf6' as const // Purple
     }
   ];
 
@@ -80,6 +81,13 @@ export function LtvKPIs({ metrics = {}, loading = false, onTileClick }: LtvKPIsP
           key={index}
           {...kpi}
           delay={index * 100}
+          onShiftClick={(event) => {
+            shiftClickManager.addPoint({
+              label: kpi.title,
+              value: kpi.value,
+              source: 'LTV KPIs'
+            }, event.nativeEvent);
+          }}
         />
       ))}
     </div>

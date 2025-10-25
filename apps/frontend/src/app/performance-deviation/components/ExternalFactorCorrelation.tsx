@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import {
   ChartCard,
-  Skeleton
+  Skeleton,
+  getShiftClickManager
 } from 'components';
 import {
   BarChart,
@@ -30,6 +31,7 @@ export function ExternalFactorCorrelation({
   data,
   loading
 }: ExternalFactorCorrelationProps) {
+  const shiftClickManager = getShiftClickManager();
   // Transform correlation data for bar chart
   const chartData = useMemo(() => {
     const series = data?.series || {};
@@ -92,7 +94,7 @@ export function ExternalFactorCorrelation({
   // Loading state - AFTER all hooks
   if (loading) {
     return (
-      <ChartCard title="External Factor Correlation" className="h-96">
+      <ChartCard className="h-96">
         <Skeleton className="h-full" />
       </ChartCard>
     );
@@ -100,8 +102,13 @@ export function ExternalFactorCorrelation({
 
   return (
     <ChartCard
-      title="External Factor Correlation"
-      description="Correlation coefficients between KPIs and external factors"
+      onShiftClick={(event) => {
+        shiftClickManager.addPoint({
+          label: "External Factor Correlation",
+          value: `Correlation coefficients between KPIs and external factors`,
+          source: 'Performance Deviation - External Factors'
+        }, event.nativeEvent);
+      }}
     >
       <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">
