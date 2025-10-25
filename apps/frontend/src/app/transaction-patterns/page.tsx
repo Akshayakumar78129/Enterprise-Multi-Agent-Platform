@@ -4,7 +4,8 @@ import React from 'react';
 import {
   DashboardSection,
   PageLoader,
-  ChartCard
+  ChartCard,
+  getShiftClickManager
 } from 'components/index';
 import {
   PatternKPIs,
@@ -18,6 +19,7 @@ import { useTransactionPatternsData } from './hooks/useTransactionPatternsData';
 
 export default function TransactionPatternsPage() {
   const { filters, setPatternData } = useTransactionPatternsContext();
+  const shiftClickManager = getShiftClickManager();
 
   const {
     loading,
@@ -59,69 +61,106 @@ export default function TransactionPatternsPage() {
     >
       <div className="space-y-6">
         {/* KPI Section */}
-        <DashboardSection title="Key Metrics">
+        <DashboardSection>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Key Metrics</h3>
           <PatternKPIs metrics={kpiMetrics} loading={false} />
         </DashboardSection>
 
         {/* Main Visualizations */}
-        <DashboardSection title="Transaction Analysis">
+        <DashboardSection>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
             {/* Temporal Heatmap */}
-            <ChartCard
-              title="Temporal Transaction Patterns"
-            >
-              <TemporalHeatmap
-                data={temporalPatterns?.heatmapData || []}
-                loading={false}
-                onCellClick={(day, hour, event) => {
-                  console.log('Heatmap cell clicked:', { day, hour });
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Temporal Transaction Patterns</h3>
+              <ChartCard
+                onShiftClick={(event) => {
+                  shiftClickManager.addPoint({
+                    label: "Temporal Transaction Patterns",
+                    value: `Transaction patterns by day and hour`,
+                    source: 'Transaction Patterns Dashboard - Heatmap'
+                  }, event.nativeEvent);
                 }}
-              />
-            </ChartCard>
+              >
+                <TemporalHeatmap
+                  data={temporalPatterns?.heatmapData || []}
+                  loading={false}
+                  onCellClick={(day, hour, event) => {
+                    console.log('Heatmap cell clicked:', { day, hour });
+                  }}
+                />
+              </ChartCard>
+            </div>
 
             {/* Dual Axis Time Series */}
-            <ChartCard
-              title="Transaction Volume & Value Trends"
-            >
-              <DualAxisTimeSeries
-                data={temporalPatterns?.timeSeries || []}
-                loading={false}
-                onDataPointClick={(dataPoint, event) => {
-                  console.log('Time series point clicked:', dataPoint);
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Transaction Volume & Value Trends</h3>
+              <ChartCard
+                onShiftClick={(event) => {
+                  shiftClickManager.addPoint({
+                    label: "Transaction Volume & Value Trends",
+                    value: `Transaction volume and value over time`,
+                    source: 'Transaction Patterns Dashboard - Time Series'
+                  }, event.nativeEvent);
                 }}
-              />
-            </ChartCard>
+              >
+                <DualAxisTimeSeries
+                  data={temporalPatterns?.timeSeries || []}
+                  loading={false}
+                  onDataPointClick={(dataPoint, event) => {
+                    console.log('Time series point clicked:', dataPoint);
+                  }}
+                />
+              </ChartCard>
+            </div>
           </div>
         </DashboardSection>
 
         {/* Product and Amount Analysis */}
-        <DashboardSection title="Product & Amount Analysis">
+        <DashboardSection>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
             {/* Product Performance Matrix */}
-            <ChartCard
-              title="Product Performance Matrix"
-            >
-              <ProductMatrix
-                data={productCombinations?.products || []}
-                loading={false}
-                onProductClick={(product, event) => {
-                  console.log('Product clicked:', product);
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Product Performance Matrix</h3>
+              <ChartCard
+                onShiftClick={(event) => {
+                  shiftClickManager.addPoint({
+                    label: "Product Performance Matrix",
+                    value: `Product sales performance analysis`,
+                    source: 'Transaction Patterns Dashboard - Product Matrix'
+                  }, event.nativeEvent);
                 }}
-              />
-            </ChartCard>
+              >
+                <ProductMatrix
+                  data={productCombinations?.products || []}
+                  loading={false}
+                  onProductClick={(product, event) => {
+                    console.log('Product clicked:', product);
+                  }}
+                />
+              </ChartCard>
+            </div>
 
             {/* Amount Distribution */}
-            <ChartCard
-              title="Transaction Amount Distribution"
-            >
-              <AmountDistribution
-                data={anomalyDetection?.amountDistribution || []}
-                loading={false}
-                onBinClick={(bin, event) => {
-                  console.log('Distribution bin clicked:', bin);
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Transaction Amount Distribution</h3>
+              <ChartCard
+                onShiftClick={(event) => {
+                  shiftClickManager.addPoint({
+                    label: "Transaction Amount Distribution",
+                    value: `Distribution of transaction amounts`,
+                    source: 'Transaction Patterns Dashboard - Amount Distribution'
+                  }, event.nativeEvent);
                 }}
-              />
-            </ChartCard>
+              >
+                <AmountDistribution
+                  data={anomalyDetection?.amountDistribution || []}
+                  loading={false}
+                  onBinClick={(bin, event) => {
+                    console.log('Distribution bin clicked:', bin);
+                  }}
+                />
+              </ChartCard>
+            </div>
           </div>
         </DashboardSection>
       </div>

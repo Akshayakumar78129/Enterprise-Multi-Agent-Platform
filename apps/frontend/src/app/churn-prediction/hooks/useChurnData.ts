@@ -1,28 +1,25 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 
-function getDashboardClient(dashboardType: string) {
+async function fetchChurnSummary(filterParams: Record<string, any>) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
-  return {
-    fetchSummary: async (params: any, options?: RequestInit) => {
-      const response = await fetch(
-        `${apiUrl}/${dashboardType}/summary`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(params || {}),
-          ...options
-        }
-      );
-      if (!response.ok) {
-        throw new Error(`Failed to fetch ${dashboardType} summary: ${response.statusText}`);
-      }
-
-      return response.json();
+  const response = await fetch(
+    `${apiUrl}/churn/summary`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(filterParams),
     }
-  };
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch churn summary: ${response.statusText}`);
+  }
+
+  return response.json();
 }
 
 interface ChurnFilters {
@@ -37,17 +34,6 @@ interface ChurnFilters {
 }
 
 export function useChurnData(filters: ChurnFilters) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
-  const lastGoodDataRef = useRef<any>(null);
-  const [featureImportance, setFeatureImportance] = useState<any[]>([]);
-  const [segmentComparison, setSegmentComparison] = useState<any[]>([]);
-  const [riskTrends, setRiskTrends] = useState<any[]>([]);
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [hasNoData, setHasNoData] = useState(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
-
   // Map frontend segment labels to backend values
   const segmentMap: Record<string, string> = {
     'Enterprise': 'High-Value',
@@ -64,7 +50,41 @@ export function useChurnData(filters: ChurnFilters) {
     'Small': 'Startup'
   };
 
-  const client = useMemo(() => getDashboardClient("churn"), []);
+  // Build filter params
+  const filterParams = useMemo(() => {
+    const params: Record<string, any> = {
+      riskLevels: filters.riskLevels.length > 0 ? filters.riskLevels : undefined,
+      segments: filters.segments.length > 0 ? filters.segments.map(s => segmentMap[s] || s) : undefined,
+      productCategories: filters.productCategories && filters.productCategories.length > 0 ? filters.productCategories : undefined,
+    };
+
+    // Always use dateRange
+    if (filters.dateRange.startDate && filters.dateRange.endDate) {
+      params.dateFrom = filters.dateRange.startDate;
+      params.dateTo = filters.dateRange.endDate;
+    } else {
+      // Default to full data range 2017-2021
+      params.dateFrom = "2017-01-01";
+      params.dateTo = "2021-12-31";
+    }
+
+    return params;
+  }, [filters, segmentMap]);
+
+  // Use React Query for data fetching with caching
+  const {
+    data: rawData,
+    isLoading: loading,
+    error: queryError,
+    isFetching
+  } = useQuery({
+    queryKey: ['churn-prediction', filterParams],
+    queryFn: () => fetchChurnSummary(filterParams),
+    staleTime: 5 * 60 * 1000, // 5 minutes (matches backend cache)
+  });
+
+  const error = queryError ? (queryError instanceof Error ? queryError.message : "Failed to fetch data") : null;
+
   function normalizeSummary(summary: any) {
     const s = summary || {};
 
@@ -99,143 +119,65 @@ export function useChurnData(filters: ChurnFilters) {
     customerStats: [],
   }), []);
 
-  useEffect(() => {
-    let isMounted = true;
+  // Normalize and process data
+  const data = useMemo(() => {
+    if (!rawData) return emptyData;
+    return normalizeSummary(rawData);
+  }, [rawData, emptyData]);
 
-    // Abort previous request if exists (switching to latest)
-    if (abortControllerRef.current) abortControllerRef.current.abort('Filter changed');
+  const hasNoData = useMemo(() => {
+    return !data.customerStats || data.customerStats.length === 0;
+  }, [data]);
 
-    // Create new AbortController for this request
-    const ac = new AbortController();
-    abortControllerRef.current = ac;
+  // Process feature importance
+  const featureImportance = useMemo(() => {
+    return (data.featureImportance || []).map((f: any) => ({
+      name: f.name ?? f.factor ?? "Feature",
+      importance: Number(f.importance ?? 0),
+      impact: Number(f.impact ?? f.importance ?? 0),
+      icon: f.icon,
+      color: f.color,
+    }));
+  }, [data]);
 
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const filterParams: Record<string, any> = {
-          riskLevels: filters.riskLevels.length > 0 ? filters.riskLevels : undefined,
-          segments: filters.segments.length > 0 ? filters.segments.map(s => segmentMap[s] || s) : undefined,
-          productCategories: filters.productCategories && filters.productCategories.length > 0 ? filters.productCategories : undefined,
+  // Process segment comparison
+  const segmentComparison = useMemo(() => {
+    const riskLevels = ["Very High", "High", "Medium", "Low"] as const;
+    return (data.segmentRisk || []).flatMap((seg: any) => {
+      return riskLevels.map((level) => {
+        const key = level.toLowerCase().replace(" ", "_");
+        return {
+          segment: segmentDisplayMap[seg.segment] || seg.segment,
+          riskLevel: level,
+          count: Number(seg[key] ?? 0),
+          percentage: 0,
         };
+      });
+    });
+  }, [data, segmentDisplayMap]);
 
-        // Always use dateRange - no timeRange fallback
-        if (filters.dateRange.startDate && filters.dateRange.endDate) {
-          filterParams.dateFrom = filters.dateRange.startDate;
-          filterParams.dateTo = filters.dateRange.endDate;
-        } else {
-          // If no dates are set (shouldn't happen with new defaults), use full year 2021
-          filterParams.dateFrom = "2021-01-01";
-          filterParams.dateTo = "2021-12-31";
-        }
+  // Process risk trends
+  const riskTrends = useMemo(() => {
+    return (data.monthlyRisk || []).map((m: any) => ({
+      date: m.month,
+      low: Number(m.low_risk ?? m.low ?? 0),
+      medium: Number(m.medium_risk ?? m.medium ?? 0),
+      high: Number(m.high_risk ?? m.high ?? 0),
+      veryHigh: Number(m.very_high_risk ?? m.veryHigh ?? 0),
+    }));
+  }, [data]);
 
-        console.log('[useChurnData] Fetching with params:', filterParams);
-        const summaryResponse = await client.fetchSummary(filterParams, { signal: ac.signal } as any) as any;
-        console.log('[useChurnData] Response received:', summaryResponse);
-        const effective = summaryResponse ? normalizeSummary(summaryResponse) : emptyData;
-
-        const isEmpty = !effective.customerStats || effective.customerStats.length === 0;
-        setHasNoData(isEmpty);
-
-        setData(effective);
-        lastGoodDataRef.current = effective;
-
-        setFeatureImportance(((effective as any).featureImportance || []).map((f: any) => ({
-          name: f.name ?? f.factor ?? "Feature",
-          importance: Number(f.importance ?? 0),
-          impact: Number(f.impact ?? f.importance ?? 0),
-          icon: f.icon,
-          color: f.color,
-        })));
-
-        const riskLevels = ["Very High", "High", "Medium", "Low"] as const;
-        const segMatrix = ((effective as any).segmentRisk || []).flatMap((seg: any) => {
-          return riskLevels.map((level) => {
-            const key = level.toLowerCase().replace(" ", "_");
-            return {
-              segment: segmentDisplayMap[seg.segment] || seg.segment, // Map to frontend display names
-              riskLevel: level,
-              count: Number(seg[key] ?? 0),
-              percentage: 0,
-            };
-          });
-        });
-        setSegmentComparison(segMatrix);
-
-        setRiskTrends(((effective as any).monthlyRisk || []).map((m: any) => ({
-          date: m.month,
-          low: Number(m.low_risk ?? m.low ?? 0),
-          medium: Number(m.medium_risk ?? m.medium ?? 0),
-          high: Number(m.high_risk ?? m.high ?? 0),
-          veryHigh: Number(m.very_high_risk ?? m.veryHigh ?? 0),
-        })));
-
-        setCustomers(((effective as any).customerStats || []).map((c: any, index: number) => ({
-          id: String(c.id ?? c.customer_id ?? index),
-          name: c.name ?? c.customer_name ?? `Customer ${index + 1}`,
-          customerId: Number(c.customerId ?? c.customer_id ?? index),
-          clv: Number(c.clv ?? c.lifetime_sales ?? 0),
-          riskLevel: c.riskLevel ?? c.risk_level ?? "Low",
-          riskPercentage: c.riskPercentage ?? Math.round((c.churn_probability ?? 0) * 100),
-        })));
-      } catch (err: any) {
-        // Check if it's an abort error (various forms)
-        const isAbortError =
-          err?.name === "AbortError" ||
-          err?.code === 20 ||
-          err?.message === "Filter changed" ||
-          err?.message === "Cleanup" ||
-          err?.message?.includes("abort") ||
-          err?.message?.includes("cancelled") ||
-          err?.message?.includes("The user aborted a request");
-
-        if (isAbortError) {
-          // Don't log or change state on expected aborts - request was cancelled
-          console.log("[useChurnData] Request cancelled (expected behavior on unmount or filter change)");
-          return;
-        }
-
-        // Only log real errors
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        if (!errorMessage.includes("Cleanup") && !errorMessage.includes("abort")) {
-          console.error("Error fetching churn data:", err);
-        }
-
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : "Failed to fetch data");
-          if (lastGoodDataRef.current) {
-            const stable = lastGoodDataRef.current;
-            setData(stable);
-            setHasNoData(!stable.customerStats || stable.customerStats.length === 0);
-          } else {
-            setData(emptyData);
-            setFeatureImportance([]);
-            setSegmentComparison([]);
-            setRiskTrends([]);
-            setCustomers([]);
-            setHasNoData(true);
-          }
-        }
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    // Fetch immediately (no debounce) so logs are visible and data loads reliably
-    fetchData();
-
-    return () => {
-      isMounted = false;
-      // Abort in-flight request on cleanup - only use 'Component unmounted' when truly unmounting
-      if (abortControllerRef.current) {
-        // This cleanup runs on dependency changes AND unmounting
-        // We check isMounted to differentiate (though it's set to false above)
-        abortControllerRef.current.abort('Cleanup');
-      }
-      abortControllerRef.current = null;
-    };
-  }, [filters, client]);
+  // Process customers
+  const customers = useMemo(() => {
+    return (data.customerStats || []).map((c: any, index: number) => ({
+      id: String(c.id ?? c.customer_id ?? index),
+      name: c.name ?? c.customer_name ?? `Customer ${index + 1}`,
+      customerId: Number(c.customerId ?? c.customer_id ?? index),
+      clv: Number(c.clv ?? c.lifetime_sales ?? 0),
+      riskLevel: c.riskLevel ?? c.risk_level ?? "Low",
+      riskPercentage: c.riskPercentage ?? Math.round((c.churn_probability ?? 0) * 100),
+    }));
+  }, [data]);
 
   const riskPyramidData = useMemo(() => {
     if (!data?.segmentRisk || data.segmentRisk.length === 0) {
@@ -306,31 +248,11 @@ export function useChurnData(filters: ChurnFilters) {
     };
   }, [data, customers]);
 
-  // Generate simple insights
+  // Use unified insights from backend (combines rule-based + AI insights)
   const insights = useMemo(() => {
-    if (!customers.length) return [];
-
-    const highRisk = customers.filter(c => c.riskLevel === 'High' || c.riskLevel === 'Very High');
-    const veryHighRisk = customers.filter(c => c.riskLevel === 'Very High');
-
-    const insightsList = [];
-
-    if (veryHighRisk.length > 0) {
-      insightsList.push(`${veryHighRisk.length} customers at very high churn risk require immediate attention`);
-    }
-
-    if (highRisk.length > 0) {
-      const riskPct = ((highRisk.length / customers.length) * 100).toFixed(1);
-      insightsList.push(`${highRisk.length} customers (${riskPct}%) are at high or very high churn risk`);
-    }
-
-    if (featureImportance.length > 0) {
-      const topFactor = featureImportance[0];
-      insightsList.push(`${topFactor.name} is the top factor influencing churn with ${topFactor.importance}% importance`);
-    }
-
-    return insightsList;
-  }, [customers, featureImportance]);
+    // Backend now returns unified insights array (rule-based + AI combined)
+    return rawData?.insights || [];
+  }, [rawData]);
 
   return {
     loading,
@@ -345,6 +267,6 @@ export function useChurnData(filters: ChurnFilters) {
     hasNoData,
     insights,
     kpiMetrics,
-    client
+    isFetching, // Additional flag to show background refetching
   };
 }

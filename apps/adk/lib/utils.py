@@ -18,16 +18,6 @@ from deepgram import DeepgramClient
 
 COMPONENT_SCHEMA = {
     "spawnableComponents": {
-        "purchase-frequency": {
-            "components": ["histogram", "heatmap", "quadrant", "regularity", "treemap"],
-            "parameters": {
-                "start_date": "date",
-                "end_date": "date",
-                "segment": "string|null",
-                "frequency_threshold": "number|null",
-                "monetary_threshold": "number|null"
-            }
-        },
         "product-performance": {
             "components": ["kpis", "overview", "topProducts", "categoryAnalysis", "marginAnalysis", "priceBands"],
             "parameters": {
@@ -124,7 +114,7 @@ COMPONENT_SCHEMA = {
             }
         },
         "next-purchase": {
-            "components": ["kpiTiles", "confidenceMatrix", "customerJourney", "affinityNetwork"],
+            "components": ["kpis", "predictions", "probability", "timing", "products", "affinity", "confidence"],
             "parameters": {
                 "start_date": "date",
                 "end_date": "date",

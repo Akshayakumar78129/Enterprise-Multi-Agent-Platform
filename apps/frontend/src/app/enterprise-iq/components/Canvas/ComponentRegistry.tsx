@@ -6,36 +6,33 @@ import { Search, ChevronRight, ChevronDown, Package } from 'lucide-react';
 
 // Component Registry with dynamic imports - using available components
 const componentRegistry: Record<string, Record<string, () => Promise<any>>> = {
-  'purchase-frequency': {
-    histogram: () => import('../Visualizations/FrequencyHistogram'),
-    heatmap: () => import('../Visualizations/IntervalHeatmap'),
-    timeline: () => import('../Visualizations/FrequencyHistogram'), // Using histogram as placeholder
-    distribution: () => import('../Visualizations/FrequencyHistogram')
-  },
-  'revenue-analysis': {
-    chart: () => import('../Visualizations/FrequencyHistogram'),
-    breakdown: () => import('../Visualizations/IntervalHeatmap'),
-    forecast: () => import('../Visualizations/FrequencyHistogram'),
-    comparison: () => import('../Visualizations/IntervalHeatmap')
-  },
   'customer-segmentation': {
-    matrix: () => import('../Visualizations/IntervalHeatmap'),
-    distribution: () => import('../Visualizations/FrequencyHistogram'),
-    distributionMap: () => import('../Visualizations/FrequencyHistogram'),
-    profileCards: () => import('../Visualizations/FrequencyHistogram'),
-    metricComparison: () => import('components/index').then(mod => ({ default: mod.SegmentComparisonMatrix })),
+    distributionMap: () => import('../../../customer-segmentation/components').then(mod => ({ default: mod.SegmentDistributionMap })),
+    profileCards: () => import('../../../customer-segmentation/components').then(mod => ({ default: mod.SegmentProfileCards })),
+    metricComparison: () => import('../../../customer-segmentation/components').then(mod => ({ default: mod.SegmentMetricComparison })),
     kpiTiles: () => import('components/index').then(mod => ({ default: mod.KPITiles })),
+    distribution: () => import('../Visualizations/FrequencyHistogram'),
+    matrix: () => import('../Visualizations/IntervalHeatmap'),
     flow: () => import('../Visualizations/FrequencyHistogram'),
     analysis: () => import('../Visualizations/IntervalHeatmap')
   },
   'customer-lifetime-value': {
+    // Full names
     kpiTiles: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.LtvKPIs })),
     ltvDistribution: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.LtvDistribution })),
     customerExplorer: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.TopCustomers })),
     predictionAccuracy: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.PredictionAccuracy })),
     segmentAnalysis: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.SegmentAnalysis })),
     ltvTrends: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.LtvTrends })),
-    valueContribution: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.ValueContributionAnalysis }))
+    valueContribution: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.ValueContributionAnalysis })),
+    // Short aliases for agent compatibility
+    kpis: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.LtvKPIs })),
+    distribution: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.LtvDistribution })),
+    customers: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.TopCustomers })),
+    accuracy: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.PredictionAccuracy })),
+    segments: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.SegmentAnalysis })),
+    trends: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.LtvTrends })),
+    contribution: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.ValueContributionAnalysis }))
   },
   'churn-prediction': {
     riskPyramid: () => import('components/index').then(mod => ({ default: mod.RiskPyramid })),
@@ -47,6 +44,32 @@ const componentRegistry: Record<string, Record<string, () => Promise<any>>> = {
     churnAnalysis: () => import('../../../churn-prediction/components/ChurnRiskAnalysis').then(mod => ({
       default: mod.ChurnRiskAnalysis
     }))
+  },
+  'engagement-classifier': {
+    // Full names
+    kpiTiles: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementKPIs })),
+    engagementPyramid: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementPyramid })),
+    engagementTimeline: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementTimeline })),
+    opportunityFinder: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.OpportunityFinder })),
+    customerClassification: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.CustomerClassification })),
+    engagementDistribution: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementDistribution })),
+    engagementScore: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementScore })),
+    actionableInsights: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.ActionableInsights })),
+    engagementTrends: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementTrends })),
+    customerSearchAnalytics: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.CustomerSearchAnalytics })),
+    customerDetailModal: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.CustomerDetailModal })),
+    // Short aliases for agent compatibility
+    kpis: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementKPIs })),
+    pyramid: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementPyramid })),
+    timeline: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementTimeline })),
+    opportunities: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.OpportunityFinder })),
+    classification: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.CustomerClassification })),
+    distribution: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementDistribution })),
+    score: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementScore })),
+    insights: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.ActionableInsights })),
+    trends: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementTrends })),
+    search: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.CustomerSearchAnalytics })),
+    detailModal: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.CustomerDetailModal }))
   },
   'visualization': {
     barchart: () => import('components/index').then(mod => ({ default: mod.BarChart })),

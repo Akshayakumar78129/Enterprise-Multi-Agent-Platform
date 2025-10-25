@@ -24,17 +24,25 @@ function HeaderFilters() {
     <BehaviorFilters
       filters={filters}
       onFiltersChange={setFilters}
-      onReset={() =>
+      onReset={() => {
+        // Clear localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('behaviorFilters');
+        }
+        // Reset to defaults
         setFilters({
-          timePeriod: "2021-01-01:2021-12-31",
+          dateRange: {
+            startDate: "2017-01-01",
+            endDate: "2021-12-31"
+          },
           segmentId: null,
           segmentIds: [],
           behaviorTypes: ["purchase_patterns", "product_preferences", "channel_usage", "engagement_metrics"],
           minTransactions: 2,
           customerIds: [],
           loyaltyStatus: [],
-        })
-      }
+        });
+      }}
     />
   );
 }
@@ -80,9 +88,10 @@ function BehaviorLayoutContent({ children }: { children: React.ReactNode }) {
       onClose={() => setIsChatOpen(false)}
       selectedPoints={selectedPoints}
       onClearSelection={() => selectionManager.clearAll()}
-      dashboardContext="customer_behavior"additionalContext={{
+      dashboardContext="customer_behavior"
+      additionalContext={{
         filters: {
-          timePeriod: filters.timePeriod,
+          dateRange: `${filters.dateRange.startDate} to ${filters.dateRange.endDate}`,
           segmentId: filters.segmentId || "All",
           behaviorTypes: filters.behaviorTypes.join(", ") || "All",
           minTransactions: filters.minTransactions,

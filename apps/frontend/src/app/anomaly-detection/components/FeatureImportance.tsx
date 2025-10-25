@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Card, Skeleton } from 'components/index';
+import { Card, Skeleton, getShiftClickManager } from 'components/index';
 import { Bar } from 'react-chartjs-2';
 import { useAnomalyContext } from '../context';
 
@@ -19,9 +19,10 @@ interface FeatureImportanceProps {
 
 export function FeatureImportance({ data, loading }: FeatureImportanceProps) {
   const { selectionManager } = useAnomalyContext();
+  const shiftClickManager = getShiftClickManager();
   if (loading) {
     return (
-      <Card title="Feature Importance" className="glass-card">
+      <Card className="glass-card">
         <Skeleton className="h-80" />
       </Card>
     );
@@ -132,9 +133,14 @@ export function FeatureImportance({ data, loading }: FeatureImportanceProps) {
 
   return (
     <Card
-      title="Feature Importance"
-      description="Features contributing most to anomaly detection"
       className="glass-card"
+      onShiftClick={(event) => {
+        shiftClickManager.addPoint({
+          label: "Feature Importance",
+          value: `Features contributing most to anomaly detection`,
+          source: 'Anomaly Dashboard - Feature Importance'
+        }, event.nativeEvent);
+      }}
     >
       <div className="h-80 p-4">
         <Bar data={chartData} options={options} />

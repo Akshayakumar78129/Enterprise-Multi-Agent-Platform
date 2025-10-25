@@ -50,7 +50,10 @@ function getDashboardClient(dashboardType: string) {
 }
 
 interface BehaviorFilters {
-  timePeriod: string;
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
   segmentId: string | null;
   segmentIds?: string[];  // Support multiple segments
   behaviorTypes: string[];
@@ -148,21 +151,10 @@ export function useBehaviorData(filters: BehaviorFilters) {
         setLoading(true);
         setError(null);
 
-        // Parse time period into dateFrom and dateTo
-        let dateFrom, dateTo;
-        if (filters.timePeriod && filters.timePeriod.includes(':')) {
-          const [from, to] = filters.timePeriod.split(':');
-          dateFrom = from;
-          dateTo = to;
-        } else {
-          // Default to 2021 data
-          dateFrom = '2021-01-01';
-          dateTo = '2021-12-31';
-        }
-
+        // Map frontend dateRange to backend dateFrom/dateTo
         const filterParams: Record<string, any> = {
-          dateFrom: dateFrom || '2021-01-01',
-          dateTo: dateTo || '2021-12-31',
+          dateFrom: filters.dateRange.startDate,
+          dateTo: filters.dateRange.endDate,
           segment_id: filters.segmentId ? parseInt(filters.segmentId) : null,
           segment_ids: filters.segmentIds && filters.segmentIds.length > 0 ? filters.segmentIds : undefined,
           behavior_types: filters.behaviorTypes.length > 0 ? filters.behaviorTypes : ["purchase_patterns", "product_preferences", "channel_usage", "engagement_metrics"],

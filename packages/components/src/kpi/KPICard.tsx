@@ -14,6 +14,7 @@ export interface KPICardProps {
   animate?: boolean;
   delay?: number;
   onClick?: (event: React.MouseEvent) => void;
+  onShiftClick?: (event: React.MouseEvent) => void;
   className?: string;
 }
 
@@ -29,6 +30,7 @@ export const KPICard: React.FC<KPICardProps> = ({
   animate = true,
   delay = 0,
   onClick,
+  onShiftClick,
   className = "",
 }) => {
   const [isHovered, setIsHovered] = useState(false);
@@ -94,17 +96,25 @@ export const KPICard: React.FC<KPICardProps> = ({
 
     switch (format) {
       case "currency":
+        // Use compact notation for better readability (e.g., $30M instead of $30,054,281)
         return new Intl.NumberFormat("en-US", {
           style: "currency",
           currency: "USD",
+          notation: "compact",
+          compactDisplay: "short",
           minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
+          maximumFractionDigits: 1,
         }).format(numValue);
       case "percentage":
         return `${numValue.toFixed(1)}%`;
       case "number":
       default:
-        return new Intl.NumberFormat("en-US").format(numValue);
+        // Use compact notation for large numbers (e.g., 150K instead of 150,000)
+        return new Intl.NumberFormat("en-US", {
+          notation: "compact",
+          compactDisplay: "short",
+          maximumFractionDigits: 1,
+        }).format(numValue);
     }
   };
 
@@ -148,9 +158,17 @@ export const KPICard: React.FC<KPICardProps> = ({
 
   const displayValue = typeof value === "number" && animate ? formatValue(animatedValue) : formatValue(value);
 
+  const handleClick = (event: React.MouseEvent) => {
+    if (event.shiftKey && onShiftClick) {
+      onShiftClick(event);
+    } else if (onClick) {
+      onClick(event);
+    }
+  };
+
   return (
     <div
-      onClick={onClick}
+      onClick={handleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`
@@ -158,7 +176,7 @@ export const KPICard: React.FC<KPICardProps> = ({
         glass-card
         transition-all duration-300 ease-out
         min-w-0
-        ${onClick ? "cursor-pointer" : ""}
+        ${onClick || onShiftClick ? "cursor-pointer" : ""}
         ${isHovered ? "transform -translate-y-1" : ""}
         ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
         ${className}

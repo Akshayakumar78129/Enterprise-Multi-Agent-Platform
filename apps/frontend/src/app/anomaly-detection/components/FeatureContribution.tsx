@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Card, Skeleton } from 'components/index';
+import { Card, Skeleton, getShiftClickManager } from 'components/index';
 import { useAnomalyContext } from '../context';
 import { Bar } from 'react-chartjs-2';
 
@@ -12,10 +12,11 @@ interface FeatureContributionProps {
 
 export function FeatureContribution({ data, loading }: FeatureContributionProps) {
   const { selectionManager } = useAnomalyContext();
+  const shiftClickManager = getShiftClickManager();
 
   if (loading) {
     return (
-      <Card title="Feature Contribution Analysis" description="Individual feature contributions to anomaly scores">
+      <Card>
         <Skeleton className="h-80" />
       </Card>
     );
@@ -113,8 +114,13 @@ export function FeatureContribution({ data, loading }: FeatureContributionProps)
 
   return (
     <Card
-      title="Feature Contribution Analysis"
-      description="Individual feature contributions to anomaly scores"
+      onShiftClick={(event) => {
+        shiftClickManager.addPoint({
+          label: "Feature Contribution Analysis",
+          value: `Individual feature contributions to anomaly scores`,
+          source: 'Anomaly Dashboard - Feature Contribution'
+        }, event.nativeEvent);
+      }}
     >
       <div className="h-80 p-4">
         <Bar data={chartData} options={options} />

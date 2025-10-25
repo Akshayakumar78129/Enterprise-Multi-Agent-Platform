@@ -24,17 +24,24 @@ function HeaderFilters() {
     <AnomalyFilters
       filters={filters}
       onFiltersChange={setFilters}
-      onReset={() =>
+      onReset={() => {
+        // Clear localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('anomalyFilters');
+        }
+        // Reset to defaults
         setFilters({
-          dateFrom: "2021-01-01",
-          dateTo: "2021-12-31",
+          dateRange: {
+            startDate: "2017-01-01",
+            endDate: "2021-12-31"
+          },
           severityLevels: [],
           segments: [],
           regions: [],
           contamination: 0.1,
           search: "",
-        })
-      }
+        });
+      }}
     />
   );
 }
@@ -80,15 +87,13 @@ function AnomalyLayoutContent({ children }: { children: React.ReactNode }) {
       onClose={() => setIsChatOpen(false)}
       selectedPoints={selectedPoints}
       onClearSelection={() => selectionManager.clearAll()}
-      dashboardContext="anomaly_detection"additionalContext={{
+      dashboardContext="anomaly_detection"
+      additionalContext={{
         filters: {
           severityLevels: filters.severityLevels.join(", ") || "All",
           segments: filters.segments.join(", ") || "All",
           regions: filters.regions.join(", ") || "All",
-          dateRange: {
-            startDate: filters.dateFrom,
-            endDate: filters.dateTo
-          },
+          dateRange: `${filters.dateRange.startDate} to ${filters.dateRange.endDate}`,
           contamination: filters.contamination
         }
       }}

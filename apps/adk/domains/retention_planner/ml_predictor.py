@@ -201,3 +201,121 @@ class RetentionPlannerMLPredictor:
             'feature_importance': [],
             'at_risk': []
         }
+
+    def _perform_general_analysis(self, X_scaled: np.ndarray, df: pd.DataFrame) -> Dict:
+        """Perform general analysis when no specific model type is selected"""
+
+        # Perform basic clustering for segmentation
+        optimal_k = self._find_optimal_clusters(X_scaled)
+        kmeans = KMeans(n_clusters=optimal_k, random_state=42, n_init=10)
+        df['segment'] = kmeans.fit_predict(X_scaled)
+
+        # Get features_df for analysis
+        features_df = self._prepare_features(df)
+
+        # Analyze segments
+        segments = self._analyze_segments(df, features_df)
+
+        # Get feature importance
+        feature_importance = self._get_feature_importance(features_df)
+
+        # Get segment distribution
+        segment_distribution = self._get_segment_distribution(df)
+
+        return {
+            'segments': segments,
+            'feature_importance': feature_importance,
+            'segment_distribution': segment_distribution,
+            'segment_characteristics': self._get_segment_characteristics(df, features_df),
+            'predictions': [],  # Not applicable for general analysis
+            'metrics': {
+                'num_segments': optimal_k,
+                'total_samples': len(df)
+            },
+            'distribution': segment_distribution
+        }
+
+    def _perform_clustering(self, X_scaled: np.ndarray, df: pd.DataFrame) -> Dict:
+        """Perform clustering analysis"""
+
+        # Find optimal number of clusters
+        optimal_k = self._find_optimal_clusters(X_scaled)
+
+        # Perform clustering
+        kmeans = KMeans(n_clusters=optimal_k, random_state=42, n_init=10)
+        df['segment'] = kmeans.fit_predict(X_scaled)
+
+        # Get features_df for analysis
+        features_df = self._prepare_features(df)
+
+        # Analyze segments
+        segments = self._analyze_segments(df, features_df)
+
+        return {
+            'segments': segments,
+            'feature_importance': self._get_feature_importance(features_df),
+            'segment_distribution': self._get_segment_distribution(df),
+            'segment_characteristics': self._get_segment_characteristics(df, features_df)
+        }
+
+    def _perform_classification(self, X_scaled: np.ndarray, df: pd.DataFrame) -> Dict:
+        """Perform classification analysis"""
+
+        if not self.is_trained or self.model is None:
+            return self._get_empty_classification()
+
+        # Make predictions
+        predictions = self.model.predict(X_scaled)
+        probabilities = self.model.predict_proba(X_scaled)
+
+        # Get features_df for importance
+        features_df = self._prepare_features(df)
+
+        # Create classifications list
+        classifications = []
+        for i, (pred, proba) in enumerate(zip(predictions, probabilities)):
+            classifications.append({
+                'index': i,
+                'prediction': int(pred),
+                'confidence': float(max(proba)),
+                'probabilities': proba.tolist()
+            })
+
+        return {
+            'classifications': classifications,
+            'distribution': {str(k): int(v) for k, v in zip(*np.unique(predictions, return_counts=True))},
+            'feature_importance': self._get_feature_importance(features_df),
+            'at_risk': [c for c in classifications if c['prediction'] == 1]
+        }
+
+    def _perform_regression(self, X_scaled: np.ndarray, df: pd.DataFrame) -> Dict:
+        """Perform regression analysis"""
+
+        if not self.is_trained or self.model is None:
+            return self._get_empty_predictions()
+
+        # Make predictions
+        predictions = self.model.predict(X_scaled)
+
+        # Get features_df for importance
+        features_df = self._prepare_features(df)
+
+        # Create predictions list
+        prediction_list = []
+        for i, pred in enumerate(predictions):
+            prediction_list.append({
+                'index': i,
+                'prediction': float(pred)
+            })
+
+        return {
+            'predictions': prediction_list,
+            'feature_importance': self._get_feature_importance(features_df),
+            'distribution': {},
+            'metrics': {
+                'mean_prediction': float(np.mean(predictions)),
+                'std_prediction': float(np.std(predictions)),
+                'min_prediction': float(np.min(predictions)),
+                'max_prediction': float(np.max(predictions))
+            }
+        }

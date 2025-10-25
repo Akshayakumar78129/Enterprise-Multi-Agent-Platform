@@ -119,3 +119,23 @@ class NextPurchaseDataService:
         # Apply filters using filter engine
         query, params = self.filter_engine.apply_filters(sql, filters, self.schema)
         return await self.db.query(query, params)
+
+    async def get_customer_purchases(self, customer_id: int, limit: int = 20) -> List[Dict]:
+        """Get customer's purchase history/timeline for journey visualization"""
+
+        sql = f"""
+        SELECT
+            {self.schema.TRANSACTION.refs['date']} AS date,
+            {self.schema.TRANSACTION.refs['item_number']} AS category,
+            {self.schema.TRANSACTION.refs['net_amount']} AS amount,
+            {self.schema.TRANSACTION.refs['txn_id']} AS txn_id
+        FROM {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
+        WHERE {self.schema.TRANSACTION.refs['customer_id']} = ?
+            AND {self.schema.TRANSACTION.refs['net_amount']} IS NOT NULL
+        ORDER BY {self.schema.TRANSACTION.refs['date']} DESC
+        LIMIT ?
+        """
+
+        result = await self.db.query(sql, [customer_id, limit])
+        # Return the rows directly as a list
+        return result.get('rows', result.get('data', []))

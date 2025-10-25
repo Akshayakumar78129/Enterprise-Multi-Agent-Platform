@@ -64,13 +64,6 @@ export const toolApiRegistry: Record<string, ToolApiConfig> = {
     description: 'Inventory holding costs and optimization'
   },
 
-  // Purchase Frequency Dashboard
-  'purchase-frequency': {
-    endpoint: '/api/purchase-frequency/summary',
-    method: 'POST',
-    description: 'Customer purchase frequency patterns and analysis'
-  },
-
   // Transaction Patterns Dashboard
   'transaction-patterns': {
     endpoint: '/api/transaction-patterns/summary',

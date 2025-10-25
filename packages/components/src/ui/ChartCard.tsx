@@ -13,6 +13,7 @@ export interface ChartCardProps {
   actions?: React.ReactNode;
   className?: string;
   onClick?: () => void;
+  onShiftClick?: (event: React.MouseEvent) => void;
 }
 
 export const ChartCard: React.FC<ChartCardProps> = ({
@@ -25,7 +26,15 @@ export const ChartCard: React.FC<ChartCardProps> = ({
   actions,
   className = "",
   onClick,
+  onShiftClick,
 }) => {
+  const handleClick = (event: React.MouseEvent) => {
+    if (event.shiftKey && onShiftClick) {
+      onShiftClick(event);
+    } else if (onClick) {
+      onClick();
+    }
+  };
   // Variant styles
   const variantStyles = {
     default: "bg-background/95 border-border/50",
@@ -84,10 +93,10 @@ export const ChartCard: React.FC<ChartCardProps> = ({
         "hover:shadow-lg hover:border-primary/30",
         variantStyles[variant],
         paddingStyles[variant],
-        onClick && "cursor-pointer",
+        (onClick || onShiftClick) && "cursor-pointer",
         className
       )}
-      onClick={onClick}
+      onClick={handleClick}
     >
       {/* Header section */}
       {(title || subtitle || actions) && (

@@ -11,6 +11,8 @@ export { ChartTooltip, useChartTooltip } from "./ui/ChartTooltip";
 export type { ChartTooltipProps, TooltipItem } from "./ui/ChartTooltip";
 export { ThemeSwitcher } from "./ui/ThemeSwitcher";
 export { FloatingActionButtons } from "./ui/FloatingActionButtons";
+export { EmptyState } from "./ui/EmptyState";
+export type { EmptyStateProps } from "./ui/EmptyState";
 
 // Loading Components
 export { DashboardLoader, SkeletonLoader, PageLoader } from "./loading/DashboardLoader";

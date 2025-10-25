@@ -1,17 +1,15 @@
 "use client";
 
 import React, { createContext, useContext, useState } from 'react';
+import { Message } from 'components';
 
 interface EngagementFilters {
-  startDate?: string;
-  endDate?: string;
-  engagementLevels?: string[];
-  loyaltyStatus?: string[,
-      chatMessages,
-      chatInput,
-      chatIsLoading,
-      chatSessionId,
-      chatUserId];
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
+  engagementLevels: string[];
+  loyaltyStatus: string[];
   minTransactions?: number;
   minLTVAmount?: number;
   rfmScoreMin?: number;
@@ -35,12 +33,69 @@ interface EngagementClassifierContextType {
     hasPoint: (point: any) => boolean;
   };
   timeRange: string;
+  // Chat state
+  chatMessages: Message[];
+  setChatMessages: (messages: Message[]) => void;
+  chatInput: string;
+  setChatInput: (input: string) => void;
+  chatIsLoading: boolean;
+  setChatIsLoading: (loading: boolean) => void;
+  chatSessionId: string;
+  chatUserId: string;
 }
 
 const EngagementClassifierContext = createContext<EngagementClassifierContextType | undefined>(undefined);
 
 export function EngagementClassifierProvider({ children }: { children: React.ReactNode }) {
-  const [filters, setFilters] = useState<EngagementFilters>({});
+  // Initialize filters with localStorage persistence and migration logic
+  const [filters, setFiltersState] = useState<EngagementFilters>(() => {
+    const defaultFilters = {
+      dateRange: {
+        startDate: '2017-01-01',
+        endDate: '2021-12-31'
+      },
+      engagementLevels: [],
+      loyaltyStatus: [],
+    };
+
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('engagement_classifier_filters');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+
+          // Migration: Convert old startDate/endDate to new dateRange format
+          if (parsed.startDate && parsed.endDate) {
+            return {
+              ...defaultFilters,
+              ...parsed,
+              dateRange: {
+                startDate: parsed.startDate,
+                endDate: parsed.endDate
+              },
+              startDate: undefined,
+              endDate: undefined
+            };
+          }
+
+          return { ...defaultFilters, ...parsed };
+        } catch {
+          // Invalid JSON, use defaults
+        }
+      }
+    }
+
+    return defaultFilters;
+  });
+
+  // Persist filters to localStorage on change
+  const setFilters = (newFilters: EngagementFilters) => {
+    setFiltersState(newFilters);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('engagement_classifier_filters', JSON.stringify(newFilters));
+    }
+  };
+
   const [engagementData, setEngagementData] = useState<any[]>([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isBIModalOpen, setIsBIModalOpen] = useState(false);
@@ -56,20 +111,13 @@ export function EngagementClassifierProvider({ children }: { children: React.Rea
 
   const [selectedPoints, setSelectedPoints] = useState<any[]>([]);
 
-  const timeRange = filters.startDate && filters.endDate
-    ? `${filters.startDate} to ${filters.endDate}`
-    : "All time";
+  const timeRange = `${filters.dateRange.startDate} to ${filters.dateRange.endDate}`;
 
   const selectionManager = {
     addPoint: (point: any) => {
       setSelectedPoints(prev => {
         if (!prev.find(p => p.id === point.id)) {
-          return [...prev, point,
-      chatMessages,
-      chatInput,
-      chatIsLoading,
-      chatSessionId,
-      chatUserId];
+          return [...prev, point];
         }
         return prev;
       });
@@ -99,6 +147,15 @@ export function EngagementClassifierProvider({ children }: { children: React.Rea
         selectedPoints,
         selectionManager,
         timeRange,
+        // Chat state
+        chatMessages,
+        setChatMessages,
+        chatInput,
+        setChatInput,
+        chatIsLoading,
+        setChatIsLoading,
+        chatSessionId,
+        chatUserId,
       }}
     >
       {children}
@@ -109,7 +166,16 @@ export function EngagementClassifierProvider({ children }: { children: React.Rea
 export function useEngagementClassifierContext() {
   const context = useContext(EngagementClassifierContext);
   if (context === undefined) {
-    throw new Error('useEngagementClassifierContext must be used within a EngagementClassifierProvider');
+    // Return a safe default when used outside the provider (e.g., in Enterprise-IQ spawned components)
+    console.warn('useEngagementClassifierContext used outside EngagementClassifierProvider - using defaults');
+    return {
+      filters: { dateRange: { startDate: '', endDate: '' }, engagementLevels: [], loyaltyStatus: [], minTransactions: 0, minLTVAmount: 0, rfmScoreMin: 0, rfmScoreMax: 10 },
+      setFilters: () => {},
+      selectedPoints: [],
+      selectionManager: { addPoint: () => {}, removePoint: () => {}, clearSelection: () => {}, getSelection: () => [], hasSelection: () => false, getSelectionForPrompt: () => '' },
+      engagementData: [],
+      setEngagementData: () => {}
+    };
   }
   return context;
 }

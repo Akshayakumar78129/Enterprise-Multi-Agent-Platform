@@ -18,7 +18,7 @@ export function SeverityDistribution({ data, loading }: SeverityDistributionProp
   const shiftClickManager = getShiftClickManager();
   if (loading) {
     return (
-      <Card title="Severity Distribution" className="h-96">
+      <Card className="h-96">
         <Skeleton className="h-full" />
       </Card>
     );
@@ -29,7 +29,15 @@ export function SeverityDistribution({ data, loading }: SeverityDistributionProp
   const maxCount = Math.max(...data.map(d => d.count), 1);
 
   return (
-    <Card title="Severity Distribution" description="Anomaly distribution by severity level">
+    <Card
+      onShiftClick={(event) => {
+        shiftClickManager.addPoint({
+          label: "Severity Distribution",
+          value: `Anomaly distribution by severity level`,
+          source: 'Anomaly Dashboard - Severity'
+        }, event.nativeEvent);
+      }}
+    >
       <div className="space-y-3">
         {reversedData.map((item) => (
           <div key={item.severity_level} className="space-y-2">

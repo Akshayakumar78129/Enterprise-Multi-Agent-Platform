@@ -34,42 +34,60 @@ export function ChurnRiskAnalysis({
 
   return (
     <>
-      <ChartCard
-        title="Risk Distribution Pyramid"
-        className="glass-card card-hover"
-      >
-        <RiskPyramid
-          data={riskPyramidData}
-          onShiftClick={(level, event) => {
-            // Shift+click: Add to global shift+click selection
+      <div>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Risk Distribution Pyramid</h3>
+        <ChartCard
+          className="glass-card card-hover"
+          onShiftClick={(event) => {
             shiftClickManager.addPoint({
-              label: `Risk: ${level.level}`,
-              value: `${level.count} customers (${level.percentage.toFixed(1)}%)`,
-              source: 'Churn Risk Pyramid'
+              label: "Risk Distribution Pyramid",
+              value: `Customer risk distribution visualization`,
+              source: 'Churn Dashboard - Risk Pyramid'
             }, event.nativeEvent);
           }}
-        />
-      </ChartCard>
-      <ChartCard
-        title="Churn Probability Distribution"
-        className="glass-card card-hover"
-      >
-        <ProbabilityHistogram
-          data={probabilityData}
-          bins={30}
-          color="#8ba6ff"
-          onBarClick={(bin, event) => {
-            if (event?.shiftKey && bin) {
+        >
+          <RiskPyramid
+            data={riskPyramidData}
+            onShiftClick={(level, event) => {
               // Shift+click: Add to global shift+click selection
               shiftClickManager.addPoint({
-                label: `Probability: ${bin.label || `${bin.range[0]}-${bin.range[1]}%`}`,
-                value: `${bin.count} customers`,
-                source: "Churn Probability Histogram"
+                label: `Risk: ${level.level}`,
+                value: `${level.count} customers (${level.percentage.toFixed(1)}%)`,
+                source: 'Churn Risk Pyramid'
               }, event.nativeEvent);
-            }
+            }}
+          />
+        </ChartCard>
+      </div>
+      <div>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Churn Probability Distribution</h3>
+        <ChartCard
+          className="glass-card card-hover"
+          onShiftClick={(event) => {
+            shiftClickManager.addPoint({
+              label: "Churn Probability Distribution",
+              value: `Churn probability histogram`,
+              source: 'Churn Dashboard - Probability'
+            }, event.nativeEvent);
           }}
-        />
-      </ChartCard>
+        >
+          <ProbabilityHistogram
+            data={probabilityData}
+            bins={30}
+            color="#8ba6ff"
+            onBarClick={(bin, event) => {
+              if (event?.shiftKey && bin) {
+                // Shift+click: Add to global shift+click selection
+                shiftClickManager.addPoint({
+                  label: `Probability: ${bin.label || `${bin.range[0]}-${bin.range[1]}%`}`,
+                  value: `${bin.count} customers`,
+                  source: "Churn Probability Histogram"
+                }, event.nativeEvent);
+              }
+            }}
+          />
+        </ChartCard>
+      </div>
     </>
   );
 }

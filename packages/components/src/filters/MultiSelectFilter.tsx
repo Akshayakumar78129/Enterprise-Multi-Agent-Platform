@@ -66,7 +66,7 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
   };
 
   return (
-    <div ref={dropdownRef} className={`relative z-10 ${className}`}>
+    <div ref={dropdownRef} className={`relative ${className}`}>
       {label && (
         <label className="block text-sm font-medium text-foreground mb-2">
           {label}
@@ -130,7 +130,7 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-surface border border-border rounded-lg shadow-neo max-h-48 overflow-y-auto min-w-[180px] left-0 top-full">
+        <div className="absolute z-[100] w-full mt-1 bg-surface border border-border rounded-lg shadow-neo max-h-48 overflow-y-auto min-w-[180px] left-0 top-full">
           {/* Select All / Clear All */}
           <div className="flex justify-between p-2 border-b border-border">
             <button

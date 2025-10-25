@@ -11,16 +11,26 @@ import { useCustomerLtvData } from './hooks/useCustomerLtvData';
 
 function LtvLayoutContent({ children }: { children: React.ReactNode }) {
   const {
+    filters,
     selectedCustomer,
     isChatPanelOpen,
     setIsChatPanelOpen,
     isBusinessIntelligencePanelOpen,
     setIsBusinessIntelligencePanelOpen,
     selectionManager,
-    customers
+    customers,
+    insights,
+    chatMessages,
+    setChatMessages,
+    chatInput,
+    setChatInput,
+    chatIsLoading,
+    setChatIsLoading,
+    chatSessionId,
+    chatUserId
   } = useCustomerLtvContext();
 
-  const { insights, kpiMetrics } = useCustomerLtvData({});
+  const { kpiMetrics } = useCustomerLtvData(filters);
 
   // Get selected points from selection manager
   const [selectedPoints, setSelectedPoints] = React.useState<any[]>([]);
@@ -43,7 +53,13 @@ function LtvLayoutContent({ children }: { children: React.ReactNode }) {
       onClose={() => setIsChatPanelOpen(false)}
       selectedPoints={selectedPoints}
       onClearSelection={() => selectionManager.clearAll()}
-      dashboardContext="customer_ltv"additionalContext={{
+      dashboardContext="customer_ltv"
+      additionalContext={{
+        filters: {
+          dateRange: `${filters.dateRange.startDate} to ${filters.dateRange.endDate}`,
+          regions: filters.regions?.join(", ") || "All",
+          customerTypes: filters.customerTypes?.join(", ") || "All"
+        },
         selectedCustomer: selectedCustomer,
         totalCustomers: customers.length
       }}

@@ -16,12 +16,7 @@ interface CustomerInsightsContextType {
   filters: InsightsFilters;
   setFilters: (filters: InsightsFilters) => void;
   insightData: any[];
-  setInsightData: (data: any[,
-      chatMessages,
-      chatInput,
-      chatIsLoading,
-      chatSessionId,
-      chatUserId]) => void;
+  setInsightData: (data: any[]) => void;
   customers: any[];
   setCustomers: (customers: any[]) => void;
   selectionManager: SelectionManager;

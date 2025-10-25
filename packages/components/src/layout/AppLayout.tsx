@@ -51,6 +51,9 @@ export function AppLayout({
   // State for expanded panels
   const [expandedPanel, setExpandedPanel] = useState<'chat' | 'bi' | null>(null);
 
+  // State for navigation drawer
+  const [isNavigationOpen, setIsNavigationOpen] = useState(false);
+
   // Reset to default 75/25 split when panels close
   useEffect(() => {
     if (!isPanelOpen) {
@@ -122,6 +125,7 @@ export function AppLayout({
         <DashboardNavigation
           currentPath={currentPath}
           onNavigate={handleNavigate}
+          onNavigationChange={setIsNavigationOpen}
         />
       )}
 
@@ -156,6 +160,8 @@ export function AppLayout({
               hasSelectedPoints={hasSelectedPoints}
               highRiskCount={highRiskCount}
               mainContentWidth={mainPanelSplit}
+              isAnyPanelExpanded={expandedPanel !== null}
+              isNavigationOpen={isNavigationOpen}
             />
           </div>
 

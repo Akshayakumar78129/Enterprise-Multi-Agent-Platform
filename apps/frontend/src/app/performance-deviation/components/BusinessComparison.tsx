@@ -3,7 +3,8 @@ import {
   ChartCard,
   Skeleton,
   ChartTooltip,
-  useChartTooltip
+  useChartTooltip,
+  getShiftClickManager
 } from 'components';
 import {
   Radar,
@@ -32,6 +33,7 @@ export function BusinessComparison({
   loading
 }: BusinessComparisonProps) {
   const { tooltipData, handleMouseMove, handleMouseLeave } = useChartTooltip();
+  const shiftClickManager = getShiftClickManager();
 
   const radarData = data?.radar || {};
 
@@ -62,7 +64,7 @@ export function BusinessComparison({
   // Loading state - AFTER all hooks
   if (loading) {
     return (
-      <ChartCard title="Business Function Comparison" className="h-96">
+      <ChartCard className="h-96">
         <Skeleton className="h-full" />
       </ChartCard>
     );
@@ -94,8 +96,13 @@ export function BusinessComparison({
 
   return (
     <ChartCard
-      title="Business Function Comparison"
-      description="Comparative analysis across business dimensions"
+      onShiftClick={(event) => {
+        shiftClickManager.addPoint({
+          label: "Business Function Comparison",
+          value: `Comparative analysis across business dimensions`,
+          source: 'Performance Deviation - Business Comparison'
+        }, event.nativeEvent);
+      }}
     >
       <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">

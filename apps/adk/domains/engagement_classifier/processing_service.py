@@ -30,6 +30,12 @@ class EngagementClassifierService:
         """Get complete engagement classifier dashboard summary with all data"""
 
         try:
+            # Set default dates if not provided (2017-2021 to match other dashboards)
+            if 'startDate' not in filters or not filters.get('startDate'):
+                filters['startDate'] = '2017-01-01'
+            if 'endDate' not in filters or not filters.get('endDate'):
+                filters['endDate'] = '2021-12-31'
+
             logger.info(f"Getting Engagement Classifier summary with filters: {filters}")
 
             # Get all data in parallel
@@ -146,6 +152,12 @@ class EngagementClassifierService:
     async def get_engagement_distribution(self, filters: Dict = {}) -> Dict:
         """Get engagement level distribution for pyramid visualization"""
         try:
+            # Set default dates if not provided
+            if 'startDate' not in filters or not filters.get('startDate'):
+                filters['startDate'] = '2017-01-01'
+            if 'endDate' not in filters or not filters.get('endDate'):
+                filters['endDate'] = '2021-12-31'
+
             result = await self.data_service.get_engagement_distribution(filters)
             return {
                 "success": True,
@@ -159,6 +171,12 @@ class EngagementClassifierService:
     async def get_rfm_analysis(self, filters: Dict = {}) -> Dict:
         """Get RFM analysis data"""
         try:
+            # Set default dates if not provided
+            if 'startDate' not in filters or not filters.get('startDate'):
+                filters['startDate'] = '2017-01-01'
+            if 'endDate' not in filters or not filters.get('endDate'):
+                filters['endDate'] = '2021-12-31'
+
             result = await self.data_service.get_rfm_analysis(filters)
             return {
                 "success": True,
@@ -172,6 +190,12 @@ class EngagementClassifierService:
     async def get_reengagement_opportunities(self, filters: Dict = {}) -> Dict:
         """Get reengagement opportunities"""
         try:
+            # Set default dates if not provided
+            if 'startDate' not in filters or not filters.get('startDate'):
+                filters['startDate'] = '2017-01-01'
+            if 'endDate' not in filters or not filters.get('endDate'):
+                filters['endDate'] = '2021-12-31'
+
             result = await self.data_service.get_reengagement_opportunities(filters)
             return {
                 "success": True,
@@ -185,6 +209,12 @@ class EngagementClassifierService:
     async def get_engagement_timeline(self, filters: Dict = {}) -> Dict:
         """Get engagement timeline data"""
         try:
+            # Set default dates if not provided
+            if 'startDate' not in filters or not filters.get('startDate'):
+                filters['startDate'] = '2017-01-01'
+            if 'endDate' not in filters or not filters.get('endDate'):
+                filters['endDate'] = '2021-12-31'
+
             result = await self.data_service.get_engagement_timeline(filters)
             return {
                 "success": True,

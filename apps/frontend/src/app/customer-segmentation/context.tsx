@@ -2,17 +2,15 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { SelectionManager } from './services/SelectionManager';
+import { Message } from 'components';
 
 interface SegmentationFilters {
-  dateFrom: string;
-  dateTo: string;
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
   customerSegments: string[];
-  valueCategories: string[,
-      chatMessages,
-      chatInput,
-      chatIsLoading,
-      chatSessionId,
-      chatUserId];
+  valueCategories: string[];
   behaviorTypes: string[];
 }
 
@@ -30,6 +28,15 @@ interface SegmentationContextType {
   setSegments: (segments: any[]) => void;
   insights: string[];
   setInsights: (insights: string[]) => void;
+  // Chat state
+  chatMessages: Message[];
+  setChatMessages: React.Dispatch<React.SetStateAction<Message[]>>;
+  chatInput: string;
+  setChatInput: React.Dispatch<React.SetStateAction<string>>;
+  chatIsLoading: boolean;
+  setChatIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  chatSessionId: string;
+  chatUserId: string;
 }
 
 const SegmentationContext = createContext<SegmentationContextType | undefined>(undefined);
@@ -37,34 +44,45 @@ const SegmentationContext = createContext<SegmentationContextType | undefined>(u
 export function SegmentationProvider({ children }: { children: React.ReactNode }) {
   // Initialize filters
   const [filters, setFilters] = useState<SegmentationFilters>(() => {
-    // Use 2017-2021 dates as default (consistent with sales performance)
-    const dateFrom = '2017-01-01';
-    const dateTo = '2021-12-31';
+    // Default date range
+    const defaultFilters = {
+      dateRange: {
+        startDate: '2017-01-01',
+        endDate: '2021-12-31'
+      },
+      customerSegments: [],
+      valueCategories: [],
+      behaviorTypes: []
+    };
 
     // Load from localStorage if available
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('segmentation_filters');
       if (saved) {
         try {
-          return JSON.parse(saved);
+          const parsed = JSON.parse(saved);
+
+          // Migration: Convert old dateFrom/dateTo to new dateRange format
+          if (parsed.dateFrom && parsed.dateTo) {
+            return {
+              dateRange: {
+                startDate: parsed.dateFrom,
+                endDate: parsed.dateTo
+              },
+              customerSegments: parsed.customerSegments || [],
+              valueCategories: parsed.valueCategories || [],
+              behaviorTypes: parsed.behaviorTypes || []
+            };
+          }
+
+          return parsed;
         } catch (e) {
           console.error('Failed to load saved filters:', e);
         }
       }
     }
 
-    return {
-      dateFrom: dateFrom,
-      dateTo: dateTo,
-      customerSegments: [],
-      valueCategories: [,
-      chatMessages,
-      chatInput,
-      chatIsLoading,
-      chatSessionId,
-      chatUserId],
-      behaviorTypes: []
-    };
+    return defaultFilters;
   });
 
   const [selectedSegment, setSelectedSegment] = useState<string | null>(null);
@@ -72,6 +90,16 @@ export function SegmentationProvider({ children }: { children: React.ReactNode }
   const [insights, setInsights] = useState<string[]>([]);
   const [isBusinessIntelligencePanelOpen, setIsBusinessIntelligencePanelOpen] = useState(false);
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
+
+  // Chat state - persists across expand/collapse
+  const [chatMessages, setChatMessages] = useState<Message[]>([{
+    role: "assistant",
+    content: "Hello! I'm your AI assistant. How can I help you analyze your customer segmentation data today?"
+  }]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatIsLoading, setChatIsLoading] = useState(false);
+  const [chatSessionId] = useState(() => `session_${Date.now()}`);
+  const [chatUserId] = useState(() => `user_${Math.random().toString(36).substr(2, 9)}`);
 
   // Initialize selection manager
   const selectionManager = React.useMemo(() => new SelectionManager(), []);
@@ -98,7 +126,15 @@ export function SegmentationProvider({ children }: { children: React.ReactNode }
         segments,
         setSegments,
         insights,
-        setInsights
+        setInsights,
+        chatMessages,
+        setChatMessages,
+        chatInput,
+        setChatInput,
+        chatIsLoading,
+        setChatIsLoading,
+        chatSessionId,
+        chatUserId
       }}
     >
       {children}

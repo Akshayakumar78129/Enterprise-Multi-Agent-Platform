@@ -24,7 +24,6 @@ from orchestration_agent.tools.performance_deviation import analyze_performance_
 from orchestration_agent.tools.next_purchase import predict_next_purchase
 from orchestration_agent.tools.transaction_patterns import analyze_transaction_patterns
 from orchestration_agent.tools.anomaly_detection import detect_anomalies
-from orchestration_agent.tools.purchase_frequency import analyze_purchase_frequency
 from orchestration_agent.tools.engagement_classifier import classify_customer_engagement
 from orchestration_agent.tools.retention_planner import plan_retention_strategy
 from orchestration_agent.tools.sales_performance import analyze_sales_performance as analyze_sales_performance_adk
@@ -133,8 +132,8 @@ customer_agent = Agent(
         instruction=CUSTOMER_INSTR,
         output_key="agent_output",
         # Crucial for delegation: Clear description of capability
-        description="Handles customer analytics and insights including segmentation, behavior analysis, lifetime value prediction, churn risk prediction, performance deviations, next likely purchases, transaction patterns, anomaly detection, purchase frequency analysis, engagement classification, and retention action planning",
-        tools=[analyze_customer_behavior, identify_customer_segments, predict_customer_ltv, predict_churn_risk, analyze_performance_deviations, predict_next_purchase, analyze_transaction_patterns, detect_anomalies, analyze_purchase_frequency, classify_customer_engagement, plan_retention_strategy]
+        description="Handles customer analytics and insights including segmentation, behavior analysis, lifetime value prediction, churn risk prediction, performance deviations, next likely purchases, transaction patterns, anomaly detection, engagement classification, and retention action planning",
+        tools=[analyze_customer_behavior, identify_customer_segments, predict_customer_ltv, predict_churn_risk, analyze_performance_deviations, predict_next_purchase, analyze_transaction_patterns, detect_anomalies, classify_customer_engagement, plan_retention_strategy]
  )
 
 # customer_output_agent = SequentialAgent(

@@ -4,8 +4,10 @@ import React from 'react';
 import { FilterBar } from 'components/index';
 
 interface AnomalyFilters {
-  dateFrom: string;
-  dateTo: string;
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
   severityLevels: number[];
   segments: string[];
   regions: string[];
@@ -27,15 +29,11 @@ export function AnomalyFilters({
   const filterConfig = {
     dateRange: {
       enabled: true,
-      value: {
-        startDate: filters.dateFrom,
-        endDate: filters.dateTo
-      },
+      value: filters.dateRange,
       onChange: (range) => {
         onFiltersChange({
           ...filters,
-          dateFrom: range.startDate,
-          dateTo: range.endDate
+          dateRange: range
         });
       }
     },

@@ -24,18 +24,22 @@ function HeaderFilters() {
     <TransactionFilters
       filters={filters}
       onFiltersChange={setFilters}
-      onReset={() =>
+      onReset={() => {
+        // Clear localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('transactionFilters');
+        }
+        // Reset to defaults
         setFilters({
           dateRange: {
-            // Default to full year 2021 data
-            startDate: "2021-01-01",
+            startDate: "2017-01-01",
             endDate: "2021-12-31",
           },
           paymentMethods: [],
           segments: [],
           productCategories: []
-        })
-      }
+        });
+      }}
     />
   );
 }
@@ -79,7 +83,8 @@ function TransactionPatternsLayoutContent({ children }: { children: React.ReactN
       onClose={() => setIsChatOpen(false)}
       selectedPoints={selectedPoints}
       onClearSelection={() => selectionManager.clearAll()}
-      dashboardContext="transaction_patterns"additionalContext={{
+      dashboardContext="transaction_patterns"
+      additionalContext={{
         filters: {
           paymentMethods: filters.paymentMethods?.join(", ") || "All",
           segments: filters.segments?.join(", ") || "All",

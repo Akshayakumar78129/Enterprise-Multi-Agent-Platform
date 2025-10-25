@@ -12,6 +12,8 @@ interface FloatingActionButtonsProps {
   hasSelectedPoints?: boolean;
   highRiskCount?: number;
   mainContentWidth?: number; // Width percentage of main content area
+  isAnyPanelExpanded?: boolean; // Hide buttons when any panel is in expanded mode
+  isNavigationOpen?: boolean; // Hide buttons when navigation drawer is open
 }
 
 export function FloatingActionButtons({
@@ -21,7 +23,9 @@ export function FloatingActionButtons({
   isBIOpen,
   hasSelectedPoints = false,
   highRiskCount = 0,
-  mainContentWidth = 100
+  mainContentWidth = 100,
+  isAnyPanelExpanded = false,
+  isNavigationOpen = false
 }: FloatingActionButtonsProps) {
   // Prevent hydration mismatch by only rendering on client
   const [isMounted, setIsMounted] = useState(false);
@@ -42,9 +46,17 @@ export function FloatingActionButtons({
     return null;
   }
 
+  // Hide all buttons when any panel is in expanded mode
+  if (isAnyPanelExpanded) {
+    return null;
+  }
+
   return (
     <div
-      className="fixed bottom-6 z-[60] flex flex-col items-end gap-3"
+      className={cn(
+        "fixed bottom-6 z-[60] flex flex-col items-end gap-3 transition-all duration-300",
+        isNavigationOpen && "opacity-30 blur-sm pointer-events-none"
+      )}
       style={{ right: rightPosition }}
     >
       {/* AI Bot Button - Show only when chat is closed */}

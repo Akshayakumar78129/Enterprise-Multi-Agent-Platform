@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { DASHBOARDS, DASHBOARD_DOMAINS } from "constants/dashboards";
 import { Button } from "../ui/Button";
 
@@ -8,16 +8,23 @@ interface DashboardNavigationProps {
   currentPath: string;
   onNavigate: (path: string) => void;
   className?: string;
+  onNavigationChange?: (isOpen: boolean) => void;
 }
 
 export const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
   currentPath,
   onNavigate,
   className = "",
+  onNavigationChange,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Notify parent when navigation state changes
+  useEffect(() => {
+    onNavigationChange?.(isOpen);
+  }, [isOpen, onNavigationChange]);
 
   const filteredDashboards = DASHBOARDS.filter(dashboard => {
     const matchesDomain = !selectedDomain || dashboard.domain === selectedDomain;
@@ -79,6 +86,21 @@ export const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
               </div>
 
               {/* Domain Filters removed as per request */}
+
+              {/* Home Button - Only show when not on Enterprise-IQ */}
+              {currentPath !== '/enterprise-iq' && (
+                <div className="mb-6">
+                  <button
+                    onClick={() => {
+                      onNavigate('/enterprise-iq');
+                      setIsOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface text-foreground transition-colors font-medium"
+                  >
+                    Home
+                  </button>
+                </div>
+              )}
 
               {/* Dashboard List */}
               <div className="space-y-6">

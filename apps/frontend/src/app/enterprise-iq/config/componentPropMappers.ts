@@ -644,35 +644,30 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
   // Customer Segmentation Components
   // =============================
   'customer-segmentation.distributionMap': (summary) => {
-    const segments = summary.mainData?.segmentDistribution || [];
+    // SegmentDistributionMap expects Customer[] data
+    const segmentData = summary.mainData?.segmentData || [];
     return {
-      labels: segments.map(s => s.segment_name || s.segmentName || s.name),
-      datasets: [{
-        label: 'Customer Count',
-        data: segments.map(s => s.customer_count || s.customerCount || s.count),
-        backgroundColor: segments.map(s => s.color || '#8b5cf6')
-      }],
+      data: segmentData,
+      selectedSegments: [],
+      width: 760,
+      height: 500,
       loading: false
     };
   },
 
   'customer-segmentation.profileCards': (summary) => {
-    const segments = summary.mainData?.segmentDistribution || [];
+    // SegmentProfileCards expects segmentDistribution and segmentComparison
     return {
-      labels: segments.map(s => s.segment_name || s.segmentName || s.name),
-      datasets: [{
-        label: 'Average Value',
-        data: segments.map(s => s.avg_lifetime_value || s.avgValue || 0),
-        backgroundColor: segments.map(s => s.color || '#8b5cf6')
-      }],
+      segmentDistribution: summary.mainData?.segmentDistribution || [],
+      segmentComparison: summary.mainData?.segmentComparison || [],
       loading: false
     };
   },
 
   'customer-segmentation.metricComparison': (summary) => {
+    // SegmentMetricComparison expects data array of segments
     return {
-      segments: summary.mainData?.segmentComparison || summary.mainData?.segmentDistribution || [],
-      metrics: summary.kpiMetrics,
+      data: summary.mainData?.segmentDistribution || [],
       loading: false
     };
   },
@@ -782,30 +777,84 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
   // =============================
   'engagement-classifier.kpiTiles': (summary) => {
     return {
-      metrics: summary.kpi_metrics || summary.metrics || [],
-      summary: summary
+      metrics: summary.kpiMetrics || summary.data?.kpis || {},
+      loading: false
     };
   },
 
   'engagement-classifier.pyramid': (summary) => {
-    // Similar to risk pyramid but for engagement levels
     return {
-      data: summary.engagement_distribution || summary.engagement_levels || [],
-      title: "Engagement Distribution"
+      data: summary.engagementDistribution || summary.data?.distribution || [],
+      loading: false
     };
   },
 
   'engagement-classifier.timeline': (summary) => {
     return {
-      data: summary.engagement_timeline || summary.timeline_data || [],
-      labels: summary.time_labels
+      data: summary.data?.timeline || summary.timeline || [],
+      loading: false
     };
   },
 
   'engagement-classifier.opportunityFinder': (summary) => {
     return {
-      opportunities: summary.opportunities || summary.engagement_opportunities || [],
-      segments: summary.segments
+      data: summary.data?.opportunities || summary.opportunities || [],
+      loading: false
+    };
+  },
+
+  'engagement-classifier.customerClassification': (summary) => {
+    return {
+      data: summary.customerClassification || summary.data?.rfm_analysis || [],
+      loading: false
+    };
+  },
+
+  'engagement-classifier.engagementDistribution': (summary) => {
+    return {
+      data: summary.engagementDistribution || summary.data?.distribution || [],
+      loading: false
+    };
+  },
+
+  'engagement-classifier.engagementScore': (summary) => {
+    return {
+      data: summary.engagementScore || {
+        current: summary.data?.kpis?.avg_engagement_score || 0,
+        previous: summary.data?.kpis?.prev_engagement_score || 0,
+        trend: summary.data?.kpis?.engagement_trend === 'Improving' ? 'up' : 'down'
+      },
+      loading: false
+    };
+  },
+
+  'engagement-classifier.actionableInsights': (summary) => {
+    return {
+      data: summary.actionableInsights || summary.data?.opportunities || [],
+      loading: false
+    };
+  },
+
+  'engagement-classifier.engagementTrends': (summary) => {
+    return {
+      data: summary.data?.timeline || summary.timeline || [],
+      loading: false
+    };
+  },
+
+  'engagement-classifier.customerSearchAnalytics': (summary) => {
+    return {
+      onCustomerSelect: (customer: any) => console.log('Customer selected:', customer)
+    };
+  },
+
+  'engagement-classifier.customerDetailModal': (summary) => {
+    return {
+      isOpen: false,
+      onClose: () => {},
+      customers: summary.customers || [],
+      engagementLevel: null,
+      title: 'Customer Details'
     };
   },
 
@@ -893,6 +942,56 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
   },
 
   'customer-lifetime-value.valueContribution': (summary) => {
+    return {
+      data: summary.mainData?.valueContribution || [],
+      loading: false
+    };
+  },
+
+  // Short aliases for LTV components (agent compatibility)
+  'customer-lifetime-value.kpis': (summary) => {
+    return {
+      metrics: summary.kpiMetrics || {},
+      loading: false
+    };
+  },
+
+  'customer-lifetime-value.distribution': (summary) => {
+    return {
+      data: summary.mainData?.ltvDistribution || [],
+      loading: false
+    };
+  },
+
+  'customer-lifetime-value.customers': (summary) => {
+    return {
+      data: summary.mainData?.topCustomers || [],
+      loading: false
+    };
+  },
+
+  'customer-lifetime-value.accuracy': (summary) => {
+    return {
+      data: summary.mainData?.predictionData || [],
+      loading: false
+    };
+  },
+
+  'customer-lifetime-value.segments': (summary) => {
+    return {
+      data: summary.mainData?.segmentAnalysis || [],
+      loading: false
+    };
+  },
+
+  'customer-lifetime-value.trends': (summary) => {
+    return {
+      data: summary.mainData?.ltvTrends || [],
+      loading: false
+    };
+  },
+
+  'customer-lifetime-value.contribution': (summary) => {
     return {
       data: summary.mainData?.valueContribution || [],
       loading: false
@@ -1070,24 +1169,6 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
   },
 
   // =============================
-  // Purchase Frequency Components
-  // =============================
-  'purchase-frequency.histogram': (summary) => {
-    return {
-      data: summary.frequency_distribution || summary.histogram || [],
-      labels: summary.labels
-    };
-  },
-
-  'purchase-frequency.heatmap': (summary) => {
-    return {
-      data: summary.heatmap_data || summary.frequency_heatmap || [],
-      xAxis: summary.x_labels,
-      yAxis: summary.y_labels
-    };
-  },
-
-  // =============================
   // Inventory Components
   // =============================
   'inventory-level-analyzer.healthMatrix': (summary) => {
@@ -1180,6 +1261,86 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
       data: summary.heatmap || summary.matrix || summary.data || [],
       xAxis: summary.x_labels || summary.xAxis,
       yAxis: summary.y_labels || summary.yAxis
+    };
+  },
+
+  // ============================================================================
+  // NEXT PURCHASE PREDICTOR MAPPERS
+  // ============================================================================
+  'next-purchase.kpiTiles': (summary) => {
+    return {
+      metrics: summary.kpiMetrics || {},
+      loading: false
+    };
+  },
+
+  'next-purchase.kpis': (summary) => {
+    return {
+      metrics: summary.kpiMetrics || {},
+      loading: false
+    };
+  },
+
+  'next-purchase.predictions': (summary) => {
+    return {
+      data: summary.mainData?.predictions || [],
+      loading: false
+    };
+  },
+
+  'next-purchase.customerJourney': (summary) => {
+    return {
+      data: summary.mainData?.predictions || [],
+      loading: false
+    };
+  },
+
+  'next-purchase.probability': (summary) => {
+    return {
+      data: summary.mainData?.probabilityDistribution || {},
+      loading: false
+    };
+  },
+
+  'next-purchase.timing': (summary) => {
+    return {
+      data: summary.mainData?.timingForecast || [],
+      loading: false
+    };
+  },
+
+  'next-purchase.products': (summary) => {
+    return {
+      data: summary.mainData?.recommendedProducts || [],
+      loading: false
+    };
+  },
+
+  'next-purchase.affinity': (summary) => {
+    return {
+      data: summary.mainData?.affinityNetwork || { nodes: [], links: [] },
+      loading: false
+    };
+  },
+
+  'next-purchase.affinityNetwork': (summary) => {
+    return {
+      data: summary.mainData?.affinityNetwork || { nodes: [], links: [] },
+      loading: false
+    };
+  },
+
+  'next-purchase.confidence': (summary) => {
+    return {
+      data: summary.mainData?.confidenceMatrix || { matrix: [], products: [], segments: [] },
+      loading: false
+    };
+  },
+
+  'next-purchase.confidenceMatrix': (summary) => {
+    return {
+      data: summary.mainData?.confidenceMatrix || { matrix: [], products: [], segments: [] },
+      loading: false
     };
   }
 };

@@ -2,6 +2,7 @@ import os
 import json
 import re
 import asyncio
+import hashlib
 from datetime import datetime
 from typing import Optional, Any, Dict, Union
 from uuid import uuid4
@@ -33,7 +34,6 @@ from domains.customer_behavior.processing_service import CustomerBehaviorProcess
 from domains.customer_segmentation.processing_service import CustomerSegmentationService
 # Import additional customer dashboard services
 from domains.customer_ltv.processing_service import CustomerLtvService
-from domains.purchase_frequency.processing_service import PurchaseFrequencyService
 from domains.transaction_patterns.processing_service import TransactionPatternsService
 from domains.engagement_classifier.processing_service import EngagementClassifierService
 from domains.next_purchase.processing_service import NextPurchaseService
@@ -42,8 +42,6 @@ from domains.customer_insights.processing_service import CustomerInsightsService
 
 # Import sales domain services
 from domains.sales_performance.processing_service import SalesPerformanceProcessingService
-from domains.sales_forecast.processing_service import SalesForecastProcessingService
-from domains.revenue_analysis.processing_service import RevenueAnalysisProcessingService
 from domains.product_performance.processing_service import ProductPerformanceProcessingService
 
 # Import inventory domain services
@@ -65,7 +63,6 @@ from api.routers.anomaly_router import router as anomaly_router
 from api.routers.customer_behavior_router import router as customer_behavior_router
 from api.routers.segmentation_router import router as segmentation_router
 from api.routers.customer_ltv_router import router as customer_ltv_router
-from api.routers.purchase_frequency_router import router as purchase_frequency_router
 from api.routers.transaction_patterns_router import router as transaction_patterns_router
 from api.routers.engagement_classifier_router import router as engagement_classifier_router
 from api.routers.next_purchase_router import router as next_purchase_router
@@ -121,15 +118,12 @@ anomaly_service = AnomalyProcessingService()
 customer_behavior_service = CustomerBehaviorProcessingService()
 segmentation_service = CustomerSegmentationService()
 customer_ltv_service = CustomerLtvService()
-purchase_frequency_service = PurchaseFrequencyService()
 transaction_patterns_service = TransactionPatternsService()
 engagement_classifier_service = EngagementClassifierService()
 next_purchase_service = NextPurchaseService()
 retention_planner_service = RetentionPlannerService()
 customer_insights_service = CustomerInsightsService()
 sales_performance_service = SalesPerformanceProcessingService()
-sales_forecast_service = SalesForecastProcessingService()
-revenue_analysis_service = RevenueAnalysisProcessingService()
 product_performance_service = ProductPerformanceProcessingService()
 inventory_level_service = InventoryLevelProcessingService()
 cash_flow_service = CashFlowProcessingService()
@@ -159,7 +153,6 @@ async def get_ltv_data_legacy(filters: dict = {}):
     """Legacy endpoint for older frontend compatibility"""
     from api.routers.customer_ltv_router import get_ltv_data
     return await get_ltv_data(filters)
-app.include_router(purchase_frequency_router)
 app.include_router(transaction_patterns_router)
 app.include_router(engagement_classifier_router)
 app.include_router(next_purchase_router)
@@ -205,15 +198,12 @@ async def startup_event():
     app.state.customer_behavior_service = customer_behavior_service
     app.state.segmentation_service = segmentation_service
     app.state.customer_ltv_service = customer_ltv_service
-    app.state.purchase_frequency_service = purchase_frequency_service
     app.state.transaction_patterns_service = transaction_patterns_service
     app.state.engagement_classifier_service = engagement_classifier_service
     app.state.next_purchase_service = next_purchase_service
     app.state.retention_planner_service = retention_planner_service
     app.state.customer_insights_service = customer_insights_service
     app.state.sales_performance_service = sales_performance_service
-    app.state.sales_forecast_service = sales_forecast_service
-    app.state.revenue_analysis_service = revenue_analysis_service
     app.state.product_performance_service = product_performance_service
     app.state.ar_aging_service = ar_aging_service
 
@@ -297,19 +287,13 @@ async def run_agent(req: Union[SimpleQueryRequest, AgentRunRequest]) -> Streamin
             # Ensure the user's actual query is passed, not default ADK messages
             new_message = Content(parts=[{"text": req.user_query}], role="user")
 
-            # Create a fresh session for each query to avoid ADK default messages
-            # This ensures the user's actual query is processed
-            unique_session_id = f"{req.session_id}_{uuid4()}"
-            session = await memory_session_service.create_session(
-                app_name=req.app_name,
-                user_id=req.user_id,
-                session_id=unique_session_id
-            )
-
-            # Convert to internal format for processing
-            app_name = req.app_name
+            # Use the client's session_id to maintain conversation continuity
+            # This allows the agent to remember previous context
+            # IMPORTANT: Use the agent's name, not the request app_name
+            # The Runner internally uses agent.name for session lookups
+            app_name = "orchestration_agent"  # root_agent.name from orchestration_agent/agent.py
             user_id = req.user_id
-            session_id = unique_session_id  # Use unique session to avoid ADK default messages
+            session_id = req.session_id  # Use original session_id for conversation memory
             streaming = True  # Always stream for frontend
         else:
             # Handle original AgentRunRequest format
@@ -336,6 +320,37 @@ async def run_agent(req: Union[SimpleQueryRequest, AgentRunRequest]) -> Streamin
 
         async def event_generator():
             try:
+                # Log all session parameters for debugging
+                logger.info(f"[SESSION-DEBUG] app_name={app_name}, user_id={user_id}, session_id={session_id}")
+
+                # Ensure session exists before running agent (maintain conversation memory)
+                # Get session (returns None if not found, does not raise exception)
+                session = await memory_session_service.get_session(
+                    app_name=app_name,
+                    user_id=user_id,
+                    session_id=session_id
+                )
+
+                if session is None:
+                    # Session doesn't exist, create it
+                    logger.info(f"[SESSION] Creating new session: {session_id} with app_name={app_name}")
+                    session = await memory_session_service.create_session(
+                        app_name=app_name,
+                        user_id=user_id,
+                        session_id=session_id
+                    )
+                    logger.info(f"[SESSION] Created session: {session}")
+                else:
+                    logger.info(f"[SESSION] Retrieved existing session: {session_id}")
+
+                # Final verification - fail fast if still None
+                if session is None:
+                    error_msg = f"Failed to create/retrieve session: {session_id}"
+                    logger.error(f"[SESSION-ERROR] {error_msg}")
+                    raise ValueError(error_msg)
+
+                logger.info(f"[SESSION-OK] Session ready: {session_id} with app_name={app_name}")
+
                 stream_mode = StreamingMode.SSE if streaming else StreamingMode.NONE
                 # Create a new runner for each request to avoid session persistence issues
                 runner = Runner(agent=root_agent, app_name=app_name, session_service=memory_session_service)
@@ -346,8 +361,9 @@ async def run_agent(req: Union[SimpleQueryRequest, AgentRunRequest]) -> Streamin
                 last_author = None
                 current_partial_text = ""  # Track partial text across events
                 visualisation = None  # Track if visualization was generated
+                sent_response_hashes = set()  # Track sent responses to prevent duplicates
 
-                # Force clear any previous conversation history to ensure fresh context
+                # Run agent with maintained conversation context
                 async for event in runner.run_async(
                     user_id=user_id,
                     session_id=session_id,
@@ -377,6 +393,23 @@ async def run_agent(req: Union[SimpleQueryRequest, AgentRunRequest]) -> Streamin
                                         is_vis = is_vis_match.group(1).strip().lower() == 'true'
 
                                         if response_text:
+                                            # Calculate hash to check for duplicates
+                                            response_hash = hashlib.md5(response_text.encode()).hexdigest()
+
+                                            # Skip if we've already sent this exact response
+                                            if response_hash in sent_response_hashes:
+                                                print(f"[DEDUP] Skipping duplicate response (hash: {response_hash[:8]}...)")
+                                                # Clear the matched portion to avoid reprocessing
+                                                end_pos = current_partial_text.find('</is_visualisation>')
+                                                if end_pos != -1:
+                                                    current_partial_text = current_partial_text[end_pos + len('</is_visualisation>'):]
+                                                else:
+                                                    current_partial_text = ""
+                                                continue
+
+                                            # Mark this response as sent
+                                            sent_response_hashes.add(response_hash)
+
                                             # Always accumulate text chunks
                                             print(f"📝 Accumulating chunk {len(response_text)} chars")
                                             if not accumulated_text:
@@ -443,8 +476,16 @@ async def run_agent(req: Union[SimpleQueryRequest, AgentRunRequest]) -> Streamin
                                                 except Exception as vis_err:
                                                     logger.error(f"Visualization generation failed: {vis_err}")
 
-                                        # Clear partial text after processing complete response
-                                        current_partial_text = ""
+                                            # Clear the matched portion from current_partial_text to prevent re-matching
+                                            # Find the end position of </is_visualisation> tag
+                                            end_pos = current_partial_text.find('</is_visualisation>')
+                                            if end_pos != -1:
+                                                # Remove everything up to and including the closing tag
+                                                current_partial_text = current_partial_text[end_pos + len('</is_visualisation>'):]
+                                                print(f"[BUFFER] Cleared processed chunk, remaining buffer: {len(current_partial_text)} chars")
+                                            else:
+                                                # Fallback: clear everything if tag not found
+                                                current_partial_text = ""
 
                 # After the loop completes, generate audio for complete text and handle fallback
                 if accumulated_text:

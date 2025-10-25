@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Card, BarChart, Skeleton } from "components/index";
+import { Card, BarChart, Skeleton, getShiftClickManager } from "components/index";
 import { useBehaviorContext } from "../context";
 
 interface CustomerSegmentsProps {
@@ -11,10 +11,11 @@ interface CustomerSegmentsProps {
 
 export function CustomerSegments({ data, loading }: CustomerSegmentsProps) {
   const { selectionManager } = useBehaviorContext();
+  const shiftClickManager = getShiftClickManager();
 
   if (loading) {
     return (
-      <Card title="Customer Segments" description="Behavioral segmentation analysis">
+      <Card>
         <Skeleton className="h-96" />
       </Card>
     );
@@ -22,7 +23,7 @@ export function CustomerSegments({ data, loading }: CustomerSegmentsProps) {
 
   if (!data || data.length === 0) {
     return (
-      <Card title="Customer Segments" description="Behavioral segmentation analysis">
+      <Card>
         <div className="h-96 flex items-center justify-center text-muted-foreground">
           No segment data available
         </div>
@@ -67,8 +68,13 @@ export function CustomerSegments({ data, loading }: CustomerSegmentsProps) {
   return (
     <>
       <Card
-        title="Segment Distribution"
-        description="Customer distribution across behavioral segments"
+        onShiftClick={(event) => {
+          shiftClickManager.addPoint({
+            label: "Segment Distribution",
+            value: `Customer distribution across behavioral segments`,
+            source: 'Behavior Dashboard - Segments'
+          }, event.nativeEvent);
+        }}
       >
         <div className="h-96">
           <BarChart
@@ -113,9 +119,14 @@ export function CustomerSegments({ data, loading }: CustomerSegmentsProps) {
       </Card>
 
       <Card
-        title="Segment Details"
-        description="Key metrics by customer segment"
         className="mt-6"
+        onShiftClick={(event) => {
+          shiftClickManager.addPoint({
+            label: "Segment Details",
+            value: `Key metrics by customer segment`,
+            source: 'Behavior Dashboard - Segment Details'
+          }, event.nativeEvent);
+        }}
       >
         <div className="overflow-x-auto">
           <table className="w-full">

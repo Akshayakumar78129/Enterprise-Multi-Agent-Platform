@@ -26,7 +26,7 @@ def calculate_customer_lifetime_value(
 
     Args:
         time_period: Analysis period - MUST be one of:
-            - "default" - Uses full year 2021 (default if not specified)
+            - "default" - Uses full data range 2017-2021 (default if not specified)
             - "last_30_days" - Last 30 days from current date
             - "last_90_days" - Last 90 days from current date
             - "last_180_days" - Last 180 days from current date
@@ -40,7 +40,7 @@ def calculate_customer_lifetime_value(
             - "LTV for Q4 2021" → time_period="Q4 2021"
             - "lifetime value from Jan to March 2021" → time_period="2021-01-01:2021-03-31"
             - "calculate LTV for last 30 days" → time_period="last_30_days"
-            - "customer lifetime value" (no date specified) → time_period="default"
+            - "customer lifetime value" (no date specified) → time_period="default" (uses 2017-2021)
 
         prediction_horizon: Months to predict into the future
         customer_segment: Optional segment to analyze
@@ -76,11 +76,11 @@ The requested time period (last 30 days from {current_date.strftime('%Y-%m-%d')}
 
 To view LTV data, please:
 - Specify a date range within 2018-2021
-- Use the default view (full year 2021)
+- Use the default view (full range 2017-2021)
 - Query specific historical periods
 
 Example valid queries:
-- "Calculate customer lifetime value" (defaults to full 2021)
+- "Calculate customer lifetime value" (defaults to 2017-2021)
 - "LTV for June 2021"
 - "Lifetime value from 2021-01-01 to 2021-03-31"
 </output>

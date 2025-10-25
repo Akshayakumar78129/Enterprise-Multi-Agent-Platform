@@ -170,7 +170,7 @@ export function PerformanceExplorer({
   return (
     <div className="relative">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Performance Explorer</h3>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground">Performance Explorer</h3>
         <select
           value={selectedKPI}
           onChange={(e) => onKPISelect(e.target.value)}

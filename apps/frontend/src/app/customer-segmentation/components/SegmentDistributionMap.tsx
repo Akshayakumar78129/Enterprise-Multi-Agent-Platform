@@ -263,7 +263,7 @@ export const SegmentDistributionMap: React.FC<SegmentDistributionMapProps> = ({
       }}>
         <div className="flex justify-between items-center">
           <div>
-            <h3 className="text-lg font-semibold m-0" style={{ color: '#8b5cf6' }}>
+            <h3 className="text-base sm:text-lg font-semibold text-foreground">
               Segment Distribution Map
             </h3>
             <div className="text-xs mt-1" style={{ color: '#a78bfa' }}>

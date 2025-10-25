@@ -231,7 +231,7 @@ export function SegmentProfileCards({
                   >
                     {getSegmentIcon(segment.segment_name)}
                   </div>
-                  <h3 className="text-lg font-semibold" style={{ color: '#5a4a5c' }}>
+                  <h3 className="text-base sm:text-lg font-semibold text-foreground">
                     {segment.segment_name}
                   </h3>
                 </div>

@@ -91,8 +91,11 @@ class CustomerSegmentationService:
                 'segmentationQuality': self._calculate_segmentation_quality(ml_results)
             }
 
-            # Generate insights
+            # Generate rule-based insights (fast, always present)
             insights = self._generate_insights(ml_results, kpis)
+
+            # Generate AI-powered insights (optional, with graceful fallback)
+            ai_insights = self._generate_ai_insights(ml_results, kpis, filters)
 
             # Include customer data for BI Panel
             customers_list = []
@@ -103,7 +106,13 @@ class CustomerSegmentationService:
                 'kpiMetrics': kpis,
                 'mainData': visualizations,
                 'mlResults': ml_results,
-                'insights': insights,
+                'insights': insights,  # Rule-based (backward compatible)
+                'ai_insights': ai_insights,  # AI-powered (new)
+                'insights_metadata': {
+                    'rule_based_count': len(insights),
+                    'ai_insights_count': len(ai_insights),
+                    'insights_version': 'hybrid_v1'
+                },
                 'customers': customers_list,  # Add customers for BI Panel
                 'metadata': {
                     'analysisDate': datetime.now().isoformat(),
@@ -889,19 +898,62 @@ class CustomerSegmentationService:
         return metrics
 
     def _generate_insights(self, ml_results: Dict, kpis: Dict) -> List[str]:
-        """Generate insights based on ML results and KPIs"""
+        """Generate enhanced insights with actionable recommendations"""
 
         insights = []
 
         # Generate insights based on dashboard type
         if 'customer_segmentation' == 'customer_segmentation':
             segments = ml_results.get('segments', [])
-            if segments:
+            if segments and len(segments) > 0:
+                # Largest segment insights
                 largest_segment = max(segments, key=lambda x: x['size'])
-                insights.append(f"Largest customer segment contains {largest_segment['size']} customers ({largest_segment['percentage']:.1f}% of total)")
+                segment_name = largest_segment.get('segment_name', largest_segment.get('segment_id', 'Unknown'))
+                segment_size = largest_segment['size']
+                segment_pct = largest_segment['percentage']
 
+                insights.append(
+                    f"DOMINANT SEGMENT: {segment_name} represents {segment_pct:.1f}% of customer base ({segment_size:,} customers). "
+                    f"**Action:** Tailor primary marketing campaigns and product features to this segment's needs. "
+                    f"Analyze their behavior patterns to inform product roadmap. Expected impact: 15-20% increase in engagement."
+                )
+
+                # Highest value segment
                 highest_value_segment = max(segments, key=lambda x: x['avg_revenue'])
-                insights.append(f"Segment {highest_value_segment['segment_id']} has the highest average revenue at ${highest_value_segment['avg_revenue']:.2f}")
+                value_seg_name = highest_value_segment.get('segment_name', highest_value_segment.get('segment_id', 'Unknown'))
+                avg_revenue = highest_value_segment['avg_revenue']
+                value_seg_size = highest_value_segment.get('size', 0)
+
+                insights.append(
+                    f"HIGH-VALUE SEGMENT: {value_seg_name} generates ${avg_revenue:,.2f} average revenue per customer ({value_seg_size} customers). "
+                    f"**Action:** Implement VIP program with dedicated account management, exclusive features, and priority support. "
+                    f"Create upsell/cross-sell campaigns targeting similar characteristics. Potential revenue uplift: ${avg_revenue * value_seg_size * 0.25:,.0f} annually."
+                )
+
+                # Segment diversity insight
+                if len(segments) >= 3:
+                    total_revenue = sum(s['avg_revenue'] * s['size'] for s in segments)
+                    revenue_concentration = (highest_value_segment['avg_revenue'] * highest_value_segment['size']) / total_revenue if total_revenue > 0 else 0
+
+                    if revenue_concentration > 0.5:
+                        insights.append(
+                            f"REVENUE CONCENTRATION: {revenue_concentration*100:.1f}% of revenue from {value_seg_name} segment creates dependency risk. "
+                            f"**Action:** Develop growth strategies for underperforming segments. Launch targeted campaigns to upgrade customers from lower-value segments. "
+                            f"Diversification goal: Reduce concentration to <40% over 6 months."
+                        )
+
+                # Growth opportunity segments
+                low_engagement_segments = [s for s in segments if s['avg_revenue'] < (kpis.get('avgRevenue', 0) * 0.7) and s['size'] > (kpis.get('totalCustomers', 0) * 0.1)]
+                if low_engagement_segments:
+                    opp_segment = low_engagement_segments[0]
+                    opp_name = opp_segment.get('segment_name', opp_segment.get('segment_id', 'Unknown'))
+                    potential_uplift = (kpis.get('avgRevenue', 0) - opp_segment['avg_revenue']) * opp_segment['size']
+
+                    insights.append(
+                        f"GROWTH OPPORTUNITY: {opp_name} segment ({opp_segment['size']:,} customers) shows ${potential_uplift:,.0f} revenue expansion potential. "
+                        f"**Action:** Launch engagement campaign with personalized product recommendations and limited-time offers. "
+                        f"Analyze barriers to purchase and address through targeted content. Expected conversion lift: 30-35%."
+                    )
 
         elif 'customer_segmentation' == 'customer_ltv':
             if kpis.get('avgLTV', 0) > 0:
@@ -915,15 +967,114 @@ class CustomerSegmentationService:
             if kpis.get('atRiskCount', 0) > 0:
                 insights.append(f"{kpis['atRiskCount']} customers are at risk and need attention")
 
-        # Add general insights
+        # Add strategic recommendations
+        if len(insights) > 0:
+            total_customers = kpis.get('totalCustomers', 0)
+            insights.append(
+                f"STRATEGIC ACTIONS: Continuously monitor segment performance and migration patterns. "
+                f"Re-segment quarterly to identify emerging customer groups. Measure campaign effectiveness by segment. "
+                f"Goal: Increase average segment value by 20% and reduce churn in bottom segments by 25% over next quarter."
+            )
+
+        # Add general insights if nothing specific was generated
         if not insights:
             insights = [
-                "Analysis completed successfully",
-                f"Processed data for {kpis.get('totalCustomers', 0)} customers",
-                "ML model predictions are available for decision making"
+                "INFO: Segmentation analysis completed successfully",
+                f"INFO: Processed data for {kpis.get('totalCustomers', 0):,} customers across all segments",
+                "INFO: ML-powered segmentation ready for targeted marketing and personalization strategies"
             ]
 
         return insights
+
+    def _generate_ai_insights(self, ml_results: Dict, kpis: Dict, filters: Dict) -> List[str]:
+        """Generate AI-powered insights using Gemini (hybrid approach)
+
+        This supplements rule-based insights with creative AI analysis.
+        Failures gracefully fall back to empty list without breaking the response.
+        """
+        try:
+            # Import here to avoid breaking if module not available
+            from lib.ai_insights_generator import generate_ai_insights
+
+            segments = ml_results.get('segments', [])
+            if not segments:
+                return []
+
+            # Calculate key metrics
+            total_customers = kpis.get('totalCustomers', 0)
+            segment_count = len(segments)
+
+            # Find largest segment
+            largest_segment = max(segments, key=lambda x: x.get('size', 0))
+            largest_segment_name = largest_segment.get('segment_name', largest_segment.get('segment_id', 'Unknown'))
+            largest_segment_size = largest_segment.get('size', 0)
+            largest_segment_pct = largest_segment.get('percentage', 0)
+
+            # Find highest value segment
+            highest_value_segment = max(segments, key=lambda x: x.get('avg_revenue', 0))
+            highest_value_name = highest_value_segment.get('segment_name', highest_value_segment.get('segment_id', 'Unknown'))
+            avg_segment_revenue = highest_value_segment.get('avg_revenue', 0)
+
+            # Calculate revenue concentration
+            total_revenue = sum(s.get('avg_revenue', 0) * s.get('size', 0) for s in segments)
+            top_segment_revenue = highest_value_segment.get('avg_revenue', 0) * highest_value_segment.get('size', 0)
+            revenue_concentration_pct = (top_segment_revenue / total_revenue * 100) if total_revenue > 0 else 0
+
+            # Build segment breakdown
+            segment_breakdown = ""
+            for seg in segments[:5]:  # Top 5 segments
+                seg_name = seg.get('segment_name', seg.get('segment_id', 'Unknown'))
+                seg_size = seg.get('size', 0)
+                seg_revenue = seg.get('avg_revenue', 0)
+                segment_breakdown += f"- {seg_name}: {seg_size:,} customers, ${seg_revenue:,.0f} avg revenue\n"
+
+            # Find growth opportunity segments
+            avg_revenue = sum(s.get('avg_revenue', 0) for s in segments) / len(segments) if segments else 0
+            low_engagement = [s for s in segments if s.get('avg_revenue', 0) < avg_revenue * 0.7]
+            growth_segments = ", ".join([s.get('segment_name', s.get('segment_id', 'Unknown')) for s in low_engagement[:3]])
+
+            # Get time period from filters
+            time_period = f"{filters.get('dateFrom', 'N/A')} to {filters.get('dateTo', 'N/A')}"
+
+            # Prepare KPIs for prompt
+            ai_kpis = {
+                'total_customers': total_customers,
+                'segment_count': segment_count,
+                'largest_segment_name': largest_segment_name,
+                'largest_segment_size': largest_segment_size,
+                'largest_segment_pct': largest_segment_pct,
+                'highest_value_segment': highest_value_name,
+                'avg_segment_revenue': avg_segment_revenue,
+                'revenue_concentration_pct': revenue_concentration_pct,
+                'avg_revenue': avg_revenue,
+                'min_revenue': min(s.get('avg_revenue', 0) for s in segments) if segments else 0,
+                'max_revenue': max(s.get('avg_revenue', 0) for s in segments) if segments else 0,
+                'growth_segments': growth_segments,
+                'time_period': time_period
+            }
+
+            # Prepare data summary
+            data_summary = {
+                'segment_breakdown': segment_breakdown
+            }
+
+            # Generate AI insights
+            ai_insights = generate_ai_insights(
+                dashboard_type='customer_segmentation',
+                kpis=ai_kpis,
+                data_summary=data_summary,
+                filters=filters
+            )
+
+            print(f"[CustomerSegmentationService] Generated {len(ai_insights)} AI insights")
+            return ai_insights
+
+        except ImportError as e:
+            print(f"[CustomerSegmentationService] AI insights module not available: {e}")
+            return []
+        except Exception as e:
+            print(f"[CustomerSegmentationService] Error generating AI insights: {e}")
+            return []  # Graceful fallback - don't break the response
 
     def _parse_date_filters(self, filters: Dict) -> Dict:
         """Parse and validate date filters"""

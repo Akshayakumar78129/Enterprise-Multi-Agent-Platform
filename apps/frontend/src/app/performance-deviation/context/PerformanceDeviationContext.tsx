@@ -6,8 +6,10 @@ import { Message } from 'components';
 
 // Define filter types
 interface PerformanceFilters {
-  dateFrom: string;
-  dateTo: string;
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
   businessFunctions: string[];
   significanceThreshold: number;
   productCategories: string[];
@@ -58,8 +60,10 @@ const PerformanceDeviationContext = createContext<PerformanceDeviationContextTyp
 export function PerformanceDeviationProvider({ children }: { children: React.ReactNode }) {
   // Filter state
   const [filters, setFilters] = useState<PerformanceFilters>({
-    dateFrom: "2021-01-01",
-    dateTo: "2021-12-31",
+    dateRange: {
+      startDate: "2017-01-01",
+      endDate: "2021-12-31"
+    },
     businessFunctions: ['sales', 'customer', 'finance'],
     significanceThreshold: 0.05,
     productCategories: []
@@ -103,16 +107,16 @@ export function PerformanceDeviationProvider({ children }: { children: React.Rea
 
   // Compute time range for display
   const timeRange = useMemo(() => {
-    const start = new Date(filters.dateFrom);
-    const end = new Date(filters.dateTo);
+    const start = new Date(filters.dateRange.startDate);
+    const end = new Date(filters.dateRange.endDate);
     const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
 
     if (diffDays <= 31) return "Last 30 Days";
     if (diffDays <= 90) return "Last 90 Days";
     if (diffDays <= 180) return "Last 180 Days";
     if (diffDays <= 365) return "Last Year";
-    return `${filters.dateFrom} to ${filters.dateTo}`;
-  }, [filters.dateFrom, filters.dateTo]);
+    return `${filters.dateRange.startDate} to ${filters.dateRange.endDate}`;
+  }, [filters.dateRange]);
 
   const contextValue = useMemo(() => ({
     filters,

@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Card } from 'components/index';
+import { Card, getShiftClickManager } from 'components/index';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -32,6 +32,8 @@ interface LtvTrendsProps {
 }
 
 export function LtvTrends({ data = {}, loading = false }: LtvTrendsProps) {
+  const shiftClickManager = getShiftClickManager();
+
   // Handle both array and object formats
   const isArray = Array.isArray(data);
 
@@ -45,32 +47,35 @@ export function LtvTrends({ data = {}, loading = false }: LtvTrendsProps) {
         data: isArray
           ? data.map(d => d.avgLtv || d.value || 0)
           : (data.avgLtv || []),
-        borderColor: '#8b5cf6',
-        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+        borderColor: 'rgb(59, 130, 246)',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
         tension: 0.4,
-        fill: true
+        fill: true,
+        borderWidth: 3
       },
       {
         label: 'New Customer LTV',
         data: isArray
           ? data.map(d => d.newCustomerLtv || 0)
           : (data.newCustomerLtv || []),
-        borderColor: '#e8d4e6',
-        backgroundColor: 'rgba(232, 212, 230, 0.1)',
+        borderColor: 'rgb(16, 185, 129)',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
         tension: 0.4,
         fill: true,
-        borderDash: [5, 5]
+        borderDash: [5, 5],
+        borderWidth: 2
       },
       {
         label: 'Existing Customer LTV',
         data: isArray
           ? data.map(d => d.existingCustomerLtv || 0)
           : (data.existingCustomerLtv || []),
-        borderColor: '#c084fc',
-        backgroundColor: 'rgba(192, 132, 252, 0.1)',
+        borderColor: 'rgb(245, 158, 11)',
+        backgroundColor: 'rgba(245, 158, 11, 0.1)',
         tension: 0.4,
         fill: true,
-        borderDash: [2, 2]
+        borderDash: [2, 2],
+        borderWidth: 2
       }
     ]
   };
@@ -89,13 +94,7 @@ export function LtvTrends({ data = {}, loading = false }: LtvTrendsProps) {
         }
       },
       title: {
-        display: true,
-        text: 'LTV Trends Over Time',
-        color: '#e5e5e5',
-        font: {
-          size: 14,
-          weight: 500 as const
-        }
+        display: false
       },
       tooltip: {
         mode: 'index' as const,
@@ -141,7 +140,16 @@ export function LtvTrends({ data = {}, loading = false }: LtvTrendsProps) {
   }
 
   return (
-    <Card className="p-6">
+    <Card
+      className="p-6"
+      onShiftClick={(event) => {
+        shiftClickManager.addPoint({
+          label: "LTV Trends",
+          value: `LTV trends over time`,
+          source: 'LTV Dashboard - Trends'
+        }, event.nativeEvent);
+      }}
+    >
       <div className="h-96">
         <Line data={chartData} options={options} />
       </div>

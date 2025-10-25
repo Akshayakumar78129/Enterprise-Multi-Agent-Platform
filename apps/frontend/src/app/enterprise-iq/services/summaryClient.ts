@@ -4,6 +4,7 @@
  */
 
 import { NormalizedMetadata, metadataToQueryParams } from '../config/normalizeMetadata';
+import { formatErrorForDisplay } from '../utils/errorMessages';
 
 export interface SummaryClientOptions {
   cache?: boolean;
@@ -73,7 +74,7 @@ export async function summaryClient<T = any>(
 ): Promise<SummaryResponse<T>> {
   const {
     cache = true,
-    timeout = 30000,
+    timeout = 90000, // 90 seconds for AI/ML operations
     retries = 2,
     retryDelay = 1000
   } = options;
@@ -102,15 +103,15 @@ export async function summaryClient<T = any>(
     }
   }
 
-  // Prepare request
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-
   let lastError: Error | null = null;
   let attempt = 0;
 
   // Retry logic
   while (attempt <= retries) {
+    // Create new AbortController for each attempt
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
     try {
       console.log(`[SummaryClient] Fetching ${fullEndpoint} (attempt ${attempt + 1}/${retries + 1})`);
 
@@ -156,6 +157,7 @@ export async function summaryClient<T = any>(
       };
 
     } catch (error) {
+      clearTimeout(timeoutId);
       lastError = error as Error;
       console.error(`[SummaryClient] Attempt ${attempt + 1} failed:`, error);
 
@@ -167,13 +169,12 @@ export async function summaryClient<T = any>(
     }
   }
 
-  clearTimeout(timeoutId);
-
   // All retries failed
   console.error(`[SummaryClient] All attempts failed for ${fullEndpoint}`);
+  const friendlyError = lastError ? formatErrorForDisplay(lastError) : 'Unable to fetch data. Please try again.';
   return {
     data: null as any,
-    error: lastError?.message || 'Failed to fetch summary data'
+    error: friendlyError
   };
 }
 

@@ -91,18 +91,18 @@ class InventoryLevelProcessingService:
             # Get low stock items
             low_stock = await self.data_service.get_low_stock_items(filters)
             if low_stock:
-                alerts.append(f"⚠️ {len(low_stock)} items below minimum stock level")
+                alerts.append(f"ALERT: {len(low_stock)} items below minimum stock level")
 
             # Get KPIs for additional alerts
             kpis = await self.data_service.get_inventory_kpis(filters)
 
             # Check turnover rate
             if kpis.get('stockTurnover', 0) < 4:
-                alerts.append("📊 Low stock turnover rate detected")
+                alerts.append("INFO: Low stock turnover rate detected")
 
             # Check days on hand
             if kpis.get('averageDaysOnHand', 0) > 60:
-                alerts.append("📦 High average days on hand - review slow-moving items")
+                alerts.append("WARNING: High average days on hand - review slow-moving items")
 
             return alerts[:5]  # Limit to 5 alerts
 
@@ -121,20 +121,20 @@ class InventoryLevelProcessingService:
 
             # Generate insights based on data
             if kpis.get('stockTurnover', 0) > 12:
-                insights.append("✅ Excellent inventory turnover indicates efficient stock management")
+                insights.append("SUCCESS: Excellent inventory turnover indicates efficient stock management")
 
             if kpis.get('totalInventoryValue', 0) > 0:
-                insights.append(f"💰 Total inventory value: ${kpis['totalInventoryValue']:,.2f}")
+                insights.append(f"INVENTORY VALUE: Total inventory value: ${kpis['totalInventoryValue']:,.2f}")
 
             # Top performing items
             if stock_levels:
                 top_item = stock_levels[0]
-                insights.append(f"🏆 Top item: {top_item['itemName']} with ${top_item['stockValue']:,.2f} in stock")
+                insights.append(f"TOP PERFORMER: Top item: {top_item['itemName']} with ${top_item['stockValue']:,.2f} in stock")
 
             # Stock status distribution
             normal_count = sum(1 for sl in stock_levels if sl['status'] == 'normal')
             if normal_count > len(stock_levels) * 0.7:
-                insights.append(f"📈 {normal_count}/{len(stock_levels)} items at optimal stock levels")
+                insights.append(f"STOCK HEALTH: {normal_count}/{len(stock_levels)} items at optimal stock levels")
 
             return insights[:5]  # Limit to 5 insights
 

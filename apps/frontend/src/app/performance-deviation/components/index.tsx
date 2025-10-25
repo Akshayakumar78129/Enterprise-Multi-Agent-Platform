@@ -6,3 +6,4 @@ export { BusinessComparison } from './BusinessComparison';
 export { ExternalFactorCorrelation } from './ExternalFactorCorrelation';
 export { DeviationPatternExplorer } from './DeviationPatternExplorer';
 export { PerformanceBIPanel } from './PerformanceBIPanel';
+export { DeviationFilters } from './DeviationFilters';

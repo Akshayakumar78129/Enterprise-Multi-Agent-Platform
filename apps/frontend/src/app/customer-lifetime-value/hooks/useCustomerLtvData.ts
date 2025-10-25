@@ -1,43 +1,64 @@
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { customerLtvService } from '../services/customerLtvService';
 
-export function useCustomerLtvData(filters: Record<string, any>) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>({});
+export interface CustomerLtvFilters {
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
+  regions?: string[];
+  customerTypes?: string[];
+  minValue?: number;
+  maxValue?: number;
+}
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
+export function useCustomerLtvData(filters: CustomerLtvFilters) {
+  // Memoize filter params - map frontend dateRange to backend date_from/date_to
+  const filterParams = useMemo(() => ({
+    date_from: filters.dateRange.startDate,
+    date_to: filters.dateRange.endDate,
+    regions: filters.regions && filters.regions.length > 0 ? filters.regions : undefined,
+    customerTypes: filters.customerTypes && filters.customerTypes.length > 0 ? filters.customerTypes : undefined,
+    minValue: filters.minValue,
+    maxValue: filters.maxValue,
+  }), [filters.dateRange.startDate, filters.dateRange.endDate, filters.regions, filters.customerTypes, filters.minValue, filters.maxValue]);
 
-      try {
-        // Use filters directly as they already match backend format
-        const response = await customerLtvService.getDashboardSummary(filters);
-        setData(response);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch data');
-        // Set default empty data on error
-        setData({});
-      } finally {
-        setLoading(false);
-      }
-    };
+  const {
+    data: rawData,
+    isLoading: loading,
+    error: queryError,
+    isFetching,
+  } = useQuery({
+    queryKey: ['customer-lifetime-value', filterParams],
+    queryFn: () => customerLtvService.getDashboardSummary(filterParams),
+    staleTime: 5 * 60 * 1000, // 5 minutes - matches backend cache TTL
+  });
 
-    fetchData();
-  }, [filters]);
+  const error = queryError instanceof Error ? queryError.message : null;
+
+  // Memoize data arrays to prevent unnecessary re-renders
+  const ltvDistribution = useMemo(() => rawData?.mainData?.ltvDistribution || [], [rawData?.mainData?.ltvDistribution]);
+  const segmentAnalysis = useMemo(() => rawData?.mainData?.segmentAnalysis || [], [rawData?.mainData?.segmentAnalysis]);
+  const ltvTrends = useMemo(() => rawData?.mainData?.ltvTrends || [], [rawData?.mainData?.ltvTrends]);
+  const topCustomers = useMemo(() => rawData?.mainData?.topCustomers || [], [rawData?.mainData?.topCustomers]);
+  const predictionData = useMemo(() => rawData?.mainData?.predictionData || [], [rawData?.mainData?.predictionData]);
+  const valueContribution = useMemo(() => rawData?.mainData?.valueContribution || [], [rawData?.mainData?.valueContribution]);
+  const kpiMetrics = useMemo(() => rawData?.kpiMetrics || {}, [rawData?.kpiMetrics]);
+  const insights = useMemo(() => rawData?.insights || [], [rawData?.insights]);
 
   return {
     loading,
     error,
-    ltvDistribution: data?.mainData?.ltvDistribution || [],
-    segmentAnalysis: data?.mainData?.segmentAnalysis || [],
-    ltvTrends: data?.mainData?.ltvTrends || [],
-    topCustomers: data?.mainData?.topCustomers || [],
-    predictionData: data?.mainData?.predictionData || [],
-    valueContribution: data?.mainData?.valueContribution || [],
-    kpiMetrics: data?.kpiMetrics || {},
-    insights: data?.insights || [],
-    hasNoData: !data?.mainData || Object.keys(data?.mainData || {}).length === 0
+    isFetching,
+    ltvDistribution,
+    segmentAnalysis,
+    ltvTrends,
+    topCustomers,
+    predictionData,
+    valueContribution,
+    kpiMetrics,
+    insights,
+    hasNoData: !rawData?.mainData || Object.keys(rawData?.mainData || {}).length === 0
   };
 }

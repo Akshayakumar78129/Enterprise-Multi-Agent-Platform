@@ -4,7 +4,10 @@ import React from "react";
 import { FilterBar } from "components/index";
 
 interface BehaviorFilters {
-  timePeriod: string;
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
   segmentId: string | null;
   segmentIds?: string[];  // Support multiple segments
   behaviorTypes: string[];
@@ -57,29 +60,16 @@ export function BehaviorFilters({
   onFiltersChange,
   onReset
 }: BehaviorFiltersProps) {
-  // Parse time period to get start and end dates
-  const [startDate, endDate] = filters.timePeriod.split(':');
-
   const filterConfig = {
     dateRange: {
       enabled: true,
-      value: {
-        startDate: startDate || '2021-01-01',
-        endDate: endDate || '2021-12-31'
-      },
+      value: filters.dateRange,
       onChange: (range) => {
         onFiltersChange({
           ...filters,
-          timePeriod: `${range.startDate}:${range.endDate}`
+          dateRange: range
         });
-      },
-      presets: TIME_PRESETS.map(preset => ({
-        label: preset.label,
-        getValue: () => {
-          const [start, end] = preset.value.split(':');
-          return { startDate: start, endDate: end };
-        }
-      }))
+      }
     },
     multiSelect: [
       {

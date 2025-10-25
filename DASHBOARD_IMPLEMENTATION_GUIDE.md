@@ -85,7 +85,91 @@ Transform API response structure to component props format.
 }
 ```
 
-#### 4. Sync Processing Service
+#### 4. KPI Card Standards (Churn Prediction Reference)
+**Problem**: Inconsistent KPI card styling, sizing, and formatting across dashboards creates poor UX.
+
+**Solution**: All dashboards use shared `KPIRow` and `KPICard` components with standardized configuration.
+
+**Reference Implementation** (Churn Prediction):
+```typescript
+// apps/frontend/src/app/churn-prediction/components/ChurnKPIs.tsx
+export function ChurnKPIs({ data, loading }: ChurnKPIsProps) {
+  const kpis = useMemo(() => {
+    return [
+      {
+        id: "overall-churn-risk",
+        title: "Overall Churn Risk",
+        value: overallRisk,
+        format: "percentage" as const,
+        color: "#38bdf8",
+      },
+      {
+        id: "critical-risk-customers",
+        title: "At Risk Customers",
+        value: atRiskCount,
+        format: "number" as const,
+        color: "#ef4444",
+      },
+      {
+        id: "revenue-at-risk",
+        title: "Revenue at Risk",
+        value: revenueAtRisk,
+        format: "currency" as const,
+        color: "#f59e0b",
+      },
+      // ... more KPIs
+    ];
+  }, [data]);
+
+  return <KPIRow kpis={kpis} columns={5} animationDelay={50} />;
+}
+```
+
+**Shared Components** (`packages/components/src/kpi/`):
+- `KPIRow.tsx` - Grid layout manager with responsive columns
+- `KPICard.tsx` - Individual KPI card with animations and formatting
+
+**Standard KPI Structure**:
+```typescript
+interface KPIData {
+  id: string;                    // Unique identifier
+  title: string;                 // Card header
+  value: string | number;        // Metric value
+  format: "number" | "currency" | "percentage" | "text";
+  color?: string;                // Accent color (hex)
+  subtitle?: string;             // Optional subtext
+  trend?: number;                // Optional trend value
+  trendDirection?: "up" | "down" | "neutral";
+}
+```
+
+**Styling Standards**:
+- **Grid**: `minmax(200px, 1fr)` - Equal width cards, responsive wrapping
+- **Min Height**: Cards auto-adjust based on content
+- **Title**: `text-sm font-medium text-muted`
+- **Value**: `text-2xl sm:text-3xl font-bold text-foreground`
+- **Format Options**:
+  - `currency`: Compact notation (e.g., "$30M" instead of "$30,054,281")
+  - `number`: Compact notation (e.g., "150K" instead of "150,000")
+  - `percentage`: Fixed 1 decimal (e.g., "15.5%")
+  - `text`: Plain string display
+- **Animation**: Number count-up with easing, staggered delay
+- **Card Style**: Glass-card with gradient background overlay
+- **Hover**: Subtle lift effect (`-translate-y-1`)
+
+**Usage in All Dashboards**:
+```typescript
+<KPIRow kpis={kpis} columns={5} animationDelay={50} />
+```
+
+**Benefits**:
+- ✅ Uniform card width, height, and spacing across all dashboards
+- ✅ Consistent title and metric styling
+- ✅ Standardized number formatting (compact notation)
+- ✅ Smooth animations with controlled delay
+- ✅ Single source of truth for styling updates
+
+#### 5. Sync Processing Service
 Wrapper pattern for async database operations in agent tools.
 
 ```python
@@ -103,6 +187,85 @@ class ProductPerformanceProcessingService:
         """Sync wrapper for agent tool"""
         return self._run_async(self._get_product_performance_data, filters)
 ```
+
+#### 6. Navigation State Management
+**Problem**: When navigation drawer opens with blur overlay, floating action buttons (FABs) remain accessible due to higher z-index, causing UX inconsistency.
+
+**Solution**: Lift navigation state to AppLayout and apply blur/disabled state to FABs when navigation is open.
+
+**Z-Index Hierarchy**:
+```
+z-[60]  → Floating Action Buttons (blurred when navigation open)
+z-[55]  → Expanded panels (full-screen mode)
+z-50    → Navigation drawer + Side panels
+z-40    → Navigation overlay (blur backdrop) + Dashboard header
+z-1     → Main content
+```
+
+**Implementation Pattern**:
+
+```typescript
+// 1. DashboardNavigation.tsx - Notify parent of state changes
+export const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
+  onNavigationChange,  // ← New callback prop
+  ...
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Notify parent when navigation state changes
+  useEffect(() => {
+    onNavigationChange?.(isOpen);
+  }, [isOpen, onNavigationChange]);
+
+  return (
+    <>
+      {isOpen && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40" />
+      )}
+      <div className="fixed left-0 top-0 h-full w-80 bg-surface z-50">
+        {/* Navigation content */}
+      </div>
+    </>
+  );
+};
+
+// 2. AppLayout.tsx - Manage navigation state
+export function AppLayout({ ... }: AppLayoutProps) {
+  const [isNavigationOpen, setIsNavigationOpen] = useState(false);
+
+  return (
+    <>
+      <DashboardNavigation onNavigationChange={setIsNavigationOpen} />
+      <FloatingActionButtons isNavigationOpen={isNavigationOpen} />
+    </>
+  );
+}
+
+// 3. FloatingActionButtons.tsx - Blur and disable when navigation open
+export function FloatingActionButtons({
+  isNavigationOpen = false,
+  ...
+}: FloatingActionButtonsProps) {
+  return (
+    <div
+      className={cn(
+        "fixed bottom-6 z-[60] flex flex-col items-end gap-3 transition-all duration-300",
+        isNavigationOpen && "opacity-30 blur-sm pointer-events-none"
+      )}
+      style={{ right: rightPosition }}
+    >
+      {/* FABs render here */}
+    </div>
+  );
+}
+```
+
+**Behavior**:
+- ✅ Navigation opens → Overlay blurs content (z-40)
+- ✅ Navigation drawer visible (z-50)
+- ✅ FABs blurred out and non-interactive (opacity-30 blur-sm pointer-events-none)
+- ✅ User can only interact with navigation or close overlay
+- ✅ Navigation closes → FABs return to normal state
 
 ---
 
@@ -223,6 +386,1129 @@ COMPONENT_SCHEMA = {
 - ✅ Define all parameter types
 - ✅ Match frontend component names exactly
 
+#### Step 1.3: Implement Hybrid Insights Generation
+
+**Overview**: Combine fast rule-based insights with AI-powered strategic analysis using Google Gemini. This hybrid approach provides both deterministic insights (always present, no API cost) and creative strategic recommendations (optional, API-based).
+
+**Architecture**:
+```
+Rule-Based Insights (Python)         AI Insights (Gemini)
+      ↓                                     ↓
+  Fast, Deterministic          +    Creative, Strategic
+  No API Cost                       ~$0.0004 per request
+  Always Present                    Graceful Fallback
+      ↓                                     ↓
+                    Combined Response
+                    {
+                      insights: [...],      // Rule-based
+                      ai_insights: [...],   // AI-powered
+                      insights_metadata: {...}
+                    }
+```
+
+##### Step 1.3.1: Create AI Insights Generator Module
+
+**File**: `apps/adk/lib/ai_insights_generator.py` (create if not exists)
+
+```python
+"""AI-powered insights generator using Google Gemini
+
+This module provides centralized AI insights generation for all dashboards,
+combining fast rule-based insights with creative Gemini-powered analysis.
+"""
+
+import os
+import time
+from typing import Dict, List, Optional, Any
+from functools import lru_cache
+import google.generativeai as genai
+
+# Configure Gemini API
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+
+
+def generate_ai_insights(
+    dashboard_type: str,
+    kpis: Dict[str, Any],
+    data_summary: Dict[str, Any],
+    filters: Optional[Dict[str, Any]] = None
+) -> List[str]:
+    """Generate AI-powered insights using Gemini 2.0 Flash
+
+    Args:
+        dashboard_type: Type of dashboard (e.g., 'churn_prediction', 'customer_ltv')
+        kpis: Key performance indicators from the dashboard
+        data_summary: Summary of data for context (top segments, trends, etc.)
+        filters: Applied filters for context
+
+    Returns:
+        List of AI-generated insight strings, or empty list on error
+
+    Example:
+        >>> insights = generate_ai_insights(
+        ...     dashboard_type='churn_prediction',
+        ...     kpis={'totalCustomers': 1234, 'highRiskCount': 156},
+        ...     data_summary={'revenue_at_risk': 1250000, 'top_factor': 'Transaction Frequency'}
+        ... )
+    """
+    if not GEMINI_API_KEY:
+        print("[AI Insights] GEMINI_API_KEY not set, skipping AI insights generation")
+        return []
+
+    try:
+        start_time = time.time()
+
+        # Build the prompt
+        prompt = _build_insight_prompt(dashboard_type, kpis, data_summary, filters)
+
+        # Generate using Gemini
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.types.GenerationConfig(
+                temperature=0.7,  # Balance creativity and consistency
+                max_output_tokens=1500,  # ~300 words for 3-5 insights
+                top_p=0.9
+            )
+        )
+
+        # Parse response
+        insights = _parse_ai_response(response.text)
+
+        generation_time = (time.time() - start_time) * 1000  # Convert to ms
+        print(f"[AI Insights] Generated {len(insights)} insights for {dashboard_type} in {generation_time:.0f}ms")
+
+        return insights
+
+    except Exception as e:
+        print(f"[AI Insights] Error generating insights for {dashboard_type}: {e}")
+        return []  # Graceful fallback
+
+
+def _build_insight_prompt(
+    dashboard_type: str,
+    kpis: Dict[str, Any],
+    data_summary: Dict[str, Any],
+    filters: Optional[Dict[str, Any]]
+) -> str:
+    """Build dashboard-specific prompt for Gemini
+
+    This imports the appropriate prompt template and formats it with data.
+    """
+    try:
+        from lib.insight_prompts import get_prompt_template
+
+        # Get dashboard-specific template
+        template = get_prompt_template(dashboard_type)
+
+        # Format with actual data
+        prompt = template.format(
+            kpis=kpis,
+            data_summary=data_summary,
+            filters=filters or {},
+            **kpis,  # Unpack KPIs for direct access
+            **data_summary  # Unpack summary for direct access
+        )
+
+        return prompt
+
+    except Exception as e:
+        print(f"[AI Insights] Error building prompt: {e}")
+        # Fallback to generic prompt
+        return _build_generic_prompt(dashboard_type, kpis, data_summary)
+
+
+def _build_generic_prompt(
+    dashboard_type: str,
+    kpis: Dict[str, Any],
+    data_summary: Dict[str, Any]
+) -> str:
+    """Fallback generic prompt if template not found"""
+
+    # Format KPIs for display
+    kpis_text = "\\n".join([f"- {k}: {v}" for k, v in kpis.items()])
+
+    # Format data summary
+    summary_text = "\\n".join([f"- {k}: {v}" for k, v in data_summary.items()])
+
+    return f\"\"\"You are a senior business analyst reviewing {dashboard_type.replace('_', ' ')} data.
+
+CONTEXT:
+Dashboard: {dashboard_type.replace('_', ' ').title()}
+
+Key Metrics:
+{kpis_text}
+
+Data Summary:
+{summary_text}
+
+INSTRUCTIONS:
+Generate 3-5 strategic, actionable insights that:
+1. Explain WHY this matters for business outcomes
+2. Provide SPECIFIC action items (not generic advice)
+3. Include expected outcomes, ROI, or success metrics
+4. Consider segment/category-specific strategies where relevant
+5. Prioritize by urgency using: CRITICAL | HIGH | MODERATE | INFO
+
+FORMAT:
+- One insight per line
+- 2-3 sentences each
+- Start with text priority label (CRITICAL:, HIGH:, MODERATE:, INFO:)
+- NO EMOJIS - use text labels only for professional appearance
+- Include "**Action:**" for actionable items
+- Be specific with numbers and timelines
+
+EXAMPLE:
+CRITICAL: High-value segment shows 30% risk rate (2x normal), indicating potential competitive pressure. **Action:** Conduct win-loss interviews with 10 churned accounts within 2 weeks to identify gaps. Expected outcome: 15-20% risk reduction through targeted interventions.
+\"\"\"
+
+
+def _parse_ai_response(response_text: str) -> List[str]:
+    """Parse Gemini response into list of insight strings
+
+    Args:
+        response_text: Raw text response from Gemini
+
+    Returns:
+        List of cleaned insight strings
+    """
+    if not response_text:
+        return []
+
+    # Split by newlines and filter empty lines
+    lines = [line.strip() for line in response_text.split('\\n') if line.strip()]
+
+    # Filter for lines that look like insights (start with text priority labels or bullets)
+    insights = []
+    for line in lines:
+        # Check if line starts with text priority labels (NO EMOJIS)
+        if (line.startswith('CRITICAL:') or line.startswith('HIGH:') or
+            line.startswith('MODERATE:') or line.startswith('INFO:') or
+            line.startswith('HIGH-VALUE:') or line.startswith('GROWTH OPP:') or
+            line.startswith('RISK:') or line.startswith('STRATEGIC:') or
+            line.startswith('VIP PRIORITY:') or line.startswith('EXPANSION:') or
+            line.startswith('ACCELERATION:') or line.startswith('SCALE:') or
+            line.startswith('- ') or line.startswith('* ')):
+
+            # Remove bullet points if present
+            cleaned = line.lstrip('- *').strip()
+            if cleaned and len(cleaned) > 20:  # Must be substantial
+                insights.append(cleaned)
+
+    # If no priority-prefixed insights found, take substantial lines with Action:
+    if not insights:
+        insights = [line for line in lines if len(line) > 50 and '**Action:**' in line]
+
+    return insights[:5]  # Limit to 5 insights max
+```
+
+##### Step 1.3.2: Create Dashboard-Specific Prompt Templates
+
+**File**: `apps/adk/lib/insight_prompts.py` (create if not exists)
+
+```python
+"""Dashboard-specific prompt templates for AI insights generation
+
+Each dashboard has a customized prompt that provides context and instructions
+for Gemini to generate strategic, actionable insights.
+"""
+
+from typing import Dict
+
+
+def get_prompt_template(dashboard_type: str) -> str:
+    """Get the appropriate prompt template for a dashboard type
+
+    Args:
+        dashboard_type: Dashboard identifier (e.g., 'churn_prediction', 'customer_ltv')
+
+    Returns:
+        Formatted prompt template string
+
+    Raises:
+        KeyError: If dashboard_type not found (caller should handle)
+    """
+    templates = {
+        'churn_prediction': CHURN_PREDICTION_PROMPT,
+        'churn': CHURN_PREDICTION_PROMPT,  # Alias
+        'customer_segmentation': CUSTOMER_SEGMENTATION_PROMPT,
+        'customer_ltv': CUSTOMER_LTV_PROMPT,
+        'ltv': CUSTOMER_LTV_PROMPT,  # Alias
+        'product_performance': PRODUCT_PERFORMANCE_PROMPT,
+        'sales_performance': SALES_PERFORMANCE_PROMPT,
+    }
+
+    if dashboard_type not in templates:
+        raise KeyError(f"No prompt template found for dashboard: {dashboard_type}")
+
+    return templates[dashboard_type]
+
+
+# ============================================================================
+# CHURN PREDICTION PROMPT
+# ============================================================================
+
+CHURN_PREDICTION_PROMPT = \"\"\"You are a senior customer success analyst reviewing churn risk data for strategic decision-making.
+
+CONTEXT:
+- Dashboard: Churn Prediction Analysis
+- Total Customers: {total_customers:,}
+- High Risk Count: {high_risk_count} customers ({high_risk_pct:.1f}%)
+- Revenue at Risk: ${revenue_at_risk:,.0f}
+- Top Churn Factor: {top_factor} ({factor_importance:.1f}% importance)
+
+INSTRUCTIONS:
+As a strategic advisor, generate 3-5 insights that go beyond the numbers. Focus on:
+1. **Root Cause Analysis**: WHY are specific segments/cohorts at higher risk?
+2. **Strategic Implications**: What does this mean for growth, revenue, and market position?
+3. **Tactical Actions**: SPECIFIC interventions with timelines and expected ROI
+4. **Predictive Patterns**: Early warning signs and proactive measures
+5. **Segment Strategy**: Differentiated approaches for different customer types
+
+PRIORITY LEVELS:
+- CRITICAL: Immediate action required (revenue impact >$500k or >20% of segment at risk)
+- HIGH: Action needed within 7 days (significant revenue exposure)
+- MODERATE: Monitor and plan intervention (trend concern)
+- INFO: Strategic context or longer-term consideration
+
+FORMAT REQUIREMENTS:
+- One insight per line
+- 2-3 sentences each
+- Start with text priority label (CRITICAL:, HIGH:, MODERATE:, INFO:) - NO EMOJIS
+- Include "**Action:**" section with specific steps
+- Add expected outcomes with numbers (e.g., "Expected: 25% churn reduction, $200k revenue protected")
+- Reference specific segments or customer groups
+- Include timelines (24h, 7 days, Q2, etc.)
+
+EXAMPLE:
+🚨 CRITICAL: Enterprise segment's 35% high-risk rate (2.5x higher than SMB) combined with 65% transaction frequency importance suggests pricing-value misalignment. **Action:** Within 48 hours, launch executive outreach to top 10 at-risk Enterprise accounts, conduct value assessment calls, and prepare customized retention offers up to 15% discount. Expected: 40-50% retention rate, $450k revenue protected.
+
+AVOID:
+- Generic advice like "improve customer service"
+- Stating obvious facts without interpretation
+- Recommendations without business impact metrics
+- Vague timelines like "soon" or "eventually"
+
+Generate your insights now:\"\"\"
+
+
+# Add more prompt templates for other dashboards following the same pattern...
+# CUSTOMER_SEGMENTATION_PROMPT = ...
+# CUSTOMER_LTV_PROMPT = ...
+# PRODUCT_PERFORMANCE_PROMPT = ...
+# SALES_PERFORMANCE_PROMPT = ...
+```
+
+**Key Template Design Principles**:
+- ✅ Include dashboard-specific context (KPIs, metrics, data summary)
+- ✅ Define clear output format with emoji priority indicators
+- ✅ Request actionable recommendations with timelines and ROI
+- ✅ Provide examples of desired output
+- ✅ List things to avoid (generic advice, obvious facts)
+- ✅ Use format strings for dynamic data insertion
+
+##### Step 1.3.3: Update Processing Service with Hybrid Insights
+
+**File**: `apps/adk/domains/{dashboard_name}/processing_service.py`
+
+Add the AI insights generation method to your processing service:
+
+```python
+from typing import Dict, List
+
+class DashboardProcessingService:
+
+    def get_dashboard_summary(self, filters: Dict) -> Dict:
+        """Generate dashboard summary with hybrid insights"""
+
+        # ... existing code to fetch and process data ...
+
+        # Generate rule-based insights (fast, always present)
+        insights = self._generate_insights(data, kpis)
+
+        # Generate AI-powered insights (optional, with graceful fallback)
+        ai_insights = self._generate_ai_insights(data, kpis, filters)
+
+        return {
+            'kpiMetrics': kpis,
+            'mainData': visualizations,
+            'insights': insights,  # Rule-based (backward compatible)
+            'ai_insights': ai_insights,  # AI-powered (new)
+            'insights_metadata': {
+                'rule_based_count': len(insights),
+                'ai_insights_count': len(ai_insights),
+                'insights_version': 'hybrid_v1'
+            },
+            'metadata': {
+                'timestamp': datetime.now().isoformat(),
+                'filters_applied': filters
+            }
+        }
+
+    def _generate_insights(self, data: Dict, kpis: Dict) -> List[str]:
+        """Generate rule-based insights (fast, deterministic)
+
+        These insights are always present and provide immediate value without API calls.
+        Focus on data-driven observations with actionable recommendations.
+
+        Returns:
+            List of formatted insight strings with priority indicators
+        """
+        insights = []
+
+        # Example: High-value customer risk insight
+        high_risk_count = kpis.get('highRiskCount', 0)
+        if high_risk_count > 0:
+            total = kpis.get('totalCustomers', 1)
+            risk_pct = (high_risk_count / total * 100)
+            revenue_at_risk = kpis.get('revenueAtRisk', 0)
+
+            if risk_pct > 20:
+                insights.append(
+                    f"🚨 CRITICAL: {high_risk_count} high-risk customers ({risk_pct:.1f}% of base) "
+                    f"represent ${revenue_at_risk:,.0f} in potential revenue loss. "
+                    f"**Action:** Launch immediate retention campaign targeting top 20% by LTV. "
+                    f"Deploy personalized outreach within 48h. "
+                    f"Expected: 30-40% retention rate, ${revenue_at_risk * 0.35:,.0f} protected."
+                )
+            elif risk_pct > 10:
+                insights.append(
+                    f"HIGH: {high_risk_count} customers at churn risk represent {risk_pct:.1f}% of base. "
+                    f"**Action:** Implement automated re-engagement campaign within 7 days. "
+                    f"Expected: 25% risk reduction."
+                )
+
+        # Add more rule-based insights...
+
+        # Always provide a fallback insight if nothing specific was generated
+        if not insights:
+            insights = [
+                f"INFO: Dashboard analysis completed for {kpis.get('totalCustomers', 0):,} customers",
+                "INFO: Review segment performance and trends for optimization opportunities"
+            ]
+
+        return insights
+
+    def _generate_ai_insights(self, data: Dict, kpis: Dict, filters: Dict) -> List[str]:
+        """Generate AI-powered strategic insights using Gemini
+
+        This complements rule-based insights with creative, strategic analysis.
+        Uses dashboard-specific prompts for consistent, actionable recommendations.
+
+        Args:
+            data: Full data results from analysis
+            kpis: KPI metrics from dashboard
+            filters: Applied filters for context
+
+        Returns:
+            List of AI-generated insight strings (empty list on error)
+        """
+        try:
+            # Import at method level for error isolation
+            from lib.ai_insights_generator import generate_ai_insights
+
+            # Calculate additional metrics for AI context
+            # ... dashboard-specific metric calculations ...
+
+            # Example for churn dashboard:
+            total_customers = len(data.get('customers', []))
+            high_risk_count = sum(1 for c in data.get('customers', []) if c.get('churnRisk', 0) > 0.7)
+            revenue_at_risk = sum(c.get('ltv', 0) for c in data.get('customers', []) if c.get('churnRisk', 0) > 0.7)
+
+            # Build context for AI
+            kpis_dict = {
+                'total_customers': total_customers,
+                'high_risk_count': high_risk_count,
+                'high_risk_pct': (high_risk_count / total_customers * 100) if total_customers > 0 else 0,
+                'revenue_at_risk': revenue_at_risk,
+                # ... more metrics ...
+            }
+
+            data_summary = {
+                'top_factor': 'Transaction Frequency',  # Example
+                'factor_importance': 65.0,  # Example
+                # ... more summary data ...
+            }
+
+            # Generate AI insights
+            ai_insights = generate_ai_insights(
+                dashboard_type='churn_prediction',  # Match your dashboard type
+                kpis=kpis_dict,
+                data_summary=data_summary,
+                filters=filters
+            )
+
+            return ai_insights
+
+        except ImportError:
+            print("[ProcessingService] AI insights module not available, skipping AI insights")
+            return []
+        except Exception as e:
+            print(f"[ProcessingService] Error generating AI insights: {e}")
+            return []  # Graceful fallback
+```
+
+**Key Implementation Points**:
+- ✅ **Import at method level**: Prevents module import errors from breaking entire service
+- ✅ **Graceful fallbacks**: Always return empty list on error, never crash
+- ✅ **Separate fields**: `insights` (rule-based) and `ai_insights` (AI) for backward compatibility
+- ✅ **Metadata tracking**: Track counts and version for monitoring
+- ✅ **Non-blocking**: AI generation won't interfere with SSE streaming
+- ✅ **Dashboard-specific metrics**: Calculate relevant context for each dashboard type
+
+##### Step 1.3.4: Install Required Dependencies
+
+**File**: `apps/adk/requirements.txt`
+
+Add Gemini SDK if not already present:
+
+```txt
+google-generativeai>=0.3.0
+```
+
+Install:
+```bash
+cd apps/adk
+pip install -r requirements.txt
+```
+
+##### Step 1.3.5: Environment Configuration
+
+**File**: `.env` (root directory)
+
+Add Gemini API key:
+
+```env
+GEMINI_API_KEY=your_api_key_here
+```
+
+**Get API Key**:
+1. Visit https://makersuite.google.com/app/apikey
+2. Create new API key
+3. Add to `.env` file
+
+**Cost Estimate**:
+- Model: Gemini 2.0 Flash
+- Cost: ~$0.0004 per dashboard load (1500 tokens output)
+- Monthly estimate: ~$12 for 30,000 dashboard views
+
+##### Step 1.3.6: Testing Hybrid Insights
+
+**Test 1: AI Module Availability**
+
+```bash
+cd apps/adk
+python -c "
+from lib.ai_insights_generator import generate_ai_insights
+import os
+
+# Check API key
+if os.getenv('GEMINI_API_KEY'):
+    print('✅ GEMINI_API_KEY is set')
+else:
+    print('❌ GEMINI_API_KEY not set')
+
+# Test generation
+insights = generate_ai_insights(
+    dashboard_type='churn_prediction',
+    kpis={'total_customers': 1000, 'high_risk_count': 150},
+    data_summary={'revenue_at_risk': 500000, 'top_factor': 'Test'}
+)
+
+print(f'Generated {len(insights)} AI insights:')
+for i, insight in enumerate(insights, 1):
+    print(f'{i}. {insight[:100]}...')
+"
+```
+
+**Expected Output**:
+```
+✅ GEMINI_API_KEY is set
+[AI Insights] Generated 4 insights for churn_prediction in 1234ms
+Generated 4 AI insights:
+1. CRITICAL: 15% churn risk concentration indicates immediate revenue threat...
+2. HIGH: Transaction frequency correlation suggests engagement...
+3. MODERATE: Segment analysis reveals...
+4. INFO: Long-term trend shows...
+```
+
+**Test 2: Processing Service Integration**
+
+```python
+from domains.churn_prediction.processing_service import ChurnProcessingService
+
+service = ChurnProcessingService()
+result = service.get_dashboard_summary({
+    'dateFrom': '2017-01-01',
+    'dateTo': '2021-12-31'
+})
+
+print(f"✅ Rule-based insights: {len(result['insights'])}")
+print(f"✅ AI insights: {len(result['ai_insights'])}")
+print(f"✅ Metadata: {result['insights_metadata']}")
+
+# Verify both insight types
+assert 'insights' in result
+assert 'ai_insights' in result
+assert 'insights_metadata' in result
+print("✅ All tests passed!")
+```
+
+**Test 3: Error Handling**
+
+```python
+# Test without API key
+import os
+os.environ.pop('GEMINI_API_KEY', None)
+
+result = service.get_dashboard_summary({
+    'dateFrom': '2017-01-01',
+    'dateTo': '2021-12-31'
+})
+
+# Should have rule-based insights but empty AI insights
+assert len(result['insights']) > 0
+assert len(result['ai_insights']) == 0
+print("✅ Graceful fallback works correctly")
+```
+
+##### Step 1.3.7: Best Practices for Prompt Engineering
+
+**1. Context-Rich Prompts**:
+```python
+# ✅ Good: Specific context
+PROMPT = \"\"\"You are analyzing {dashboard_type} for a {company_size} company.
+
+Current State:
+- Total Customers: {total_customers:,}
+- High Risk: {high_risk_count} ({high_risk_pct:.1f}%)
+- Revenue Impact: ${revenue_at_risk:,.0f}
+\"\"\"
+
+# ❌ Bad: Generic context
+PROMPT = "Analyze this dashboard data and provide insights."
+```
+
+**2. Structured Output Format**:
+```python
+# ✅ Good: Clear format requirements
+\"\"\"
+FORMAT:
+- Start with text priority label: CRITICAL: | HIGH: | MODERATE: | INFO:
+- NO EMOJIS - text labels only for professional appearance
+- 2-3 sentences per insight
+- Include "**Action:**" section
+- Add expected outcomes with numbers
+\"\"\"
+
+# ❌ Bad: No format specification
+\"\"\"Generate some insights about the data.\"\"\"
+```
+
+**3. Examples in Prompt**:
+```python
+# ✅ Good: Show desired output
+\"\"\"
+EXAMPLE:
+🚨 CRITICAL: Enterprise segment's 35% high-risk rate suggests pricing misalignment.
+**Action:** Within 48h, launch executive outreach to top 10 at-risk accounts.
+Expected: 40-50% retention, $450k protected.
+\"\"\"
+
+# ❌ Bad: No examples
+\"\"\"Generate insights in a good format.\"\"\"
+```
+
+**4. Dashboard-Specific Templates**:
+```python
+# ✅ Good: Tailored to dashboard
+CHURN_PROMPT = \"\"\"Focus on retention strategies and customer risk...\"\"\"
+LTV_PROMPT = \"\"\"Focus on value expansion and tier progression...\"\"\"
+SALES_PROMPT = \"\"\"Focus on performance gaps and pipeline quality...\"\"\"
+
+# ❌ Bad: One generic prompt for all
+GENERIC_PROMPT = \"\"\"Analyze the data and provide insights.\"\"\"
+```
+
+##### Step 1.3.8: Monitoring and Optimization
+
+**Add Logging**:
+
+```python
+import time
+import logging
+
+logger = logging.getLogger(__name__)
+
+def generate_ai_insights(...):
+    start = time.time()
+
+    try:
+        insights = ...
+        duration = (time.time() - start) * 1000
+
+        logger.info(
+            f"AI Insights: {dashboard_type} | "
+            f"Generated: {len(insights)} | "
+            f"Duration: {duration:.0f}ms | "
+            f"Success: True"
+        )
+
+        return insights
+    except Exception as e:
+        duration = (time.time() - start) * 1000
+        logger.error(
+            f"AI Insights: {dashboard_type} | "
+            f"Duration: {duration:.0f}ms | "
+            f"Success: False | "
+            f"Error: {str(e)}"
+        )
+        return []
+```
+
+**Metrics to Track**:
+- ✅ Generation success rate
+- ✅ Average generation time
+- ✅ API costs per dashboard
+- ✅ Insight quality scores (manual review)
+- ✅ User engagement with AI insights
+
+#### Step 1.3.9: Performance Optimization - Async AI Insights
+
+**CRITICAL**: AI insights generation MUST NOT block the main dashboard endpoint. This section defines the required architecture for optimal performance.
+
+**Problem**: AI insights generation (1-2 seconds via Gemini API) can significantly slow down dashboard load times if implemented incorrectly.
+
+**Solution**: Separate caching for AI insights with async generation.
+
+##### Architecture Pattern
+
+```
+User Request → get_dashboard_summary() → Fast Response (< 500ms)
+                       ↓
+              Rule-based insights (< 50ms)
+                       +
+              AI insights (cached separately, 30min TTL)
+                       ↓
+              Combined unified insights array
+```
+
+**Key Principles**:
+1. **Separate Cache**: AI insights cached independently with longer TTL (30 min vs 5 min for data)
+2. **Non-blocking**: Use `asyncio.to_thread()` to run AI generation in thread pool
+3. **Unified Output**: Single `insights` array combining rule-based + AI (NOT separate arrays)
+4. **Graceful Degradation**: Return rule-based insights if AI generation fails
+
+##### Implementation
+
+**File**: `apps/adk/domains/{dashboard_name}/processing_service.py`
+
+**Step 1: Add Async AI Insights Method**
+
+```python
+@cache_dashboard_endpoint(dashboard_type='{dashboard_name}_ai_insights', ttl=1800)
+async def _get_cached_ai_insights(
+    self,
+    filters: Dict,
+    # ... data parameters needed for AI context
+) -> List[str]:
+    """Get AI insights from cache or generate async (non-blocking)
+
+    Cached separately with longer TTL (30 min) since AI insights are less filter-dependent.
+    Uses asyncio.to_thread() to run blocking AI generation in thread pool.
+
+    Returns:
+        List of AI-generated insight strings (empty on error)
+    """
+    try:
+        # Run AI generation in thread pool to avoid blocking event loop
+        ai_insights = await asyncio.to_thread(
+            self._generate_ai_insights,
+            # ... pass data parameters
+        )
+        return ai_insights
+    except Exception as e:
+        print(f"[{self.__class__.__name__}] Error in _get_cached_ai_insights: {e}")
+        return []  # Graceful fallback
+```
+
+**Step 2: Update Main Summary Method**
+
+```python
+@cache_dashboard_endpoint(dashboard_type='{dashboard_name}', ttl=300)
+async def get_dashboard_summary(self, filters: Dict) -> Dict:
+    """Main dashboard endpoint - combines SQL and ML"""
+    try:
+        # Get all data metrics in parallel
+        # ... data fetching code ...
+
+        # Generate rule-based insights (fast, < 50ms)
+        rule_based_insights = self._generate_insights(
+            # ... data parameters
+        )
+
+        # Get AI insights from separate cache (non-blocking, async)
+        ai_insights = await self._get_cached_ai_insights(
+            filters,
+            # ... data parameters
+        )
+
+        # ✅ COMBINE into single unified insights array
+        combined_insights = rule_based_insights + ai_insights
+
+        # ✅ Return unified insights in single field
+        return {
+            # ... other data fields ...
+            "insights": combined_insights,  # UNIFIED: rule-based + AI
+            "insights_metadata": {
+                "total_count": len(combined_insights),
+                "rule_based_count": len(rule_based_insights),
+                "ai_count": len(ai_insights),
+                "insights_version": "unified_v2"
+            }
+        }
+    except Exception as e:
+        # ... error handling ...
+```
+
+##### What NOT to Do
+
+❌ **WRONG - AI blocking main endpoint**:
+```python
+@cache_dashboard_endpoint(dashboard_type='dashboard', ttl=300)
+async def get_dashboard_summary(self, filters: Dict) -> Dict:
+    # ...
+    ai_insights = self._generate_ai_insights(...)  # BLOCKS for 1-2 seconds!
+    return {"insights": insights, "ai_insights": ai_insights}  # WRONG: separate arrays
+```
+
+❌ **WRONG - Synchronous AI in async method**:
+```python
+def _generate_ai_insights(self, ...):  # NOT async
+    # Makes blocking API call to Gemini
+    response = model.generate_content(...)  # BLOCKS event loop!
+```
+
+❌ **WRONG - Separate insights arrays**:
+```python
+return {
+    "insights": rule_based_insights,
+    "ai_insights": ai_insights  # Don't split them!
+}
+```
+
+##### Performance Metrics
+
+**Expected Performance**:
+
+| Metric | Before Optimization | After Optimization | Improvement |
+|--------|-------------------|-------------------|-------------|
+| First load (cache miss) | 2000-3000ms | 400-600ms | **5x faster** |
+| Cached load (cache hit) | 200-300ms | 200-300ms | Same |
+| AI insights availability | Blocking | Async/Cached | Non-blocking |
+
+**Success Criteria**:
+- ✅ Dashboard loads in < 500ms with cache
+- ✅ AI insights do NOT block main endpoint
+- ✅ Single unified `insights` array returned
+- ✅ Metadata tracks insight sources (rule-based vs AI counts)
+- ✅ Graceful degradation if AI fails
+
+##### Frontend Integration
+
+**File**: `apps/frontend/src/app/{dashboard-name}/hooks/use{Dashboard}Data.ts`
+
+```typescript
+// ✅ CORRECT: Use unified insights from backend
+const insights = useMemo(() => {
+  // Backend returns combined rule-based + AI insights
+  return rawData?.insights || [];
+}, [rawData]);
+
+// ❌ WRONG: Don't generate insights in frontend
+const insights = useMemo(() => {
+  // Calculating insights here duplicates backend work
+  return calculateInsights(data);
+}, [data]);
+```
+
+**Why This Matters**:
+- Frontend gets one consistent source of insights
+- No need to handle merging logic in frontend
+- Backend controls insight generation and caching strategy
+- Easier to update insight logic (only in one place)
+
+##### Cache Configuration
+
+**AI Insights Cache**:
+- **Dashboard Type**: `{dashboard_name}_ai_insights`
+- **TTL**: 1800 seconds (30 minutes)
+- **Rationale**: AI insights are less dependent on specific filter values and more expensive to generate
+
+**Main Data Cache**:
+- **Dashboard Type**: `{dashboard_name}`
+- **TTL**: 300 seconds (5 minutes)
+- **Rationale**: Data updates more frequently and depends heavily on filters
+
+##### Testing
+
+**Test 1: Verify Non-blocking**
+```bash
+# First request (cache miss) should still be fast
+time curl -X POST http://localhost:8000/api/{dashboard}/summary
+
+# Expected: < 600ms (not 2000ms+)
+```
+
+**Test 2: Verify Unified Insights**
+```bash
+# Response should have single insights array
+curl -X POST http://localhost:8000/api/{dashboard}/summary | jq '.insights'
+
+# Should return: ["Insight 1", "Insight 2", "AI Insight 1", ...]
+# NOT: separate .insights and .ai_insights fields
+```
+
+**Test 3: Verify Metadata**
+```bash
+# Check insights metadata
+curl -X POST http://localhost:8000/api/{dashboard}/summary | jq '.insights_metadata'
+
+# Should return:
+# {
+#   "total_count": 7,
+#   "rule_based_count": 4,
+#   "ai_count": 3,
+#   "insights_version": "unified_v2"
+# }
+```
+
+##### Migration Guide
+
+If updating existing dashboard from old pattern:
+
+**Backend Changes**:
+1. Add `_get_cached_ai_insights()` method with separate cache
+2. Use `asyncio.to_thread()` for AI generation
+3. Combine insights arrays before returning
+4. Remove separate `ai_insights` field from response
+5. Update `insights_version` to "unified_v2"
+
+**Frontend Changes**:
+1. Update hook to use `rawData?.insights` directly
+2. Remove local insight generation logic
+3. Update components expecting separate arrays
+
+**Example Migration**:
+```python
+# BEFORE
+return {
+    "insights": rule_based,
+    "ai_insights": ai_insights
+}
+
+# AFTER
+return {
+    "insights": rule_based + ai_insights,
+    "insights_metadata": {...}
+}
+```
+
+#### Step 1.4: Implement Backend Caching
+
+**Overview**: Add caching to all processing service methods to reduce database load and improve response times. The centralized caching system ensures consistent behavior across all dashboards.
+
+**Architecture**:
+```
+Request → Check Cache → Cache Hit? → Return Cached Data
+                    ↓
+                 Cache Miss
+                    ↓
+            Execute Query
+                    ↓
+         Store in Cache (with TTL)
+                    ↓
+           Return Fresh Data
+```
+
+##### Step 1.4.1: Verify Centralized Cache Module Exists
+
+**File**: `apps/adk/domains/common/dashboard_cache.py`
+
+This module should already exist with:
+- `generate_dashboard_cache_key()` - Creates unique cache keys based on dashboard_type + endpoint + filters
+- `cache_dashboard_endpoint()` - Decorator for both async and sync functions
+- `DashboardCacheManager` - Global cache manager
+
+**Verify cache key generation is filter-safe**:
+```python
+# The cache key includes normalized filters in MD5 hash
+# Different filter combinations create different cache entries
+# Example: dateFrom=2021-01-01 creates different key than dateFrom=2021-06-01
+```
+
+##### Step 1.4.2: Add Cache Decorators to Processing Service Methods
+
+**File**: `apps/adk/domains/{dashboard_name}/processing_service.py`
+
+Add the `@cache_dashboard_endpoint` decorator to all data-fetching methods:
+
+```python
+from domains.common.dashboard_cache import cache_dashboard_endpoint
+
+class DashboardProcessingService:
+
+    @cache_dashboard_endpoint(dashboard_type='your_dashboard', ttl=300)
+    async def get_dashboard_summary(self, filters: Dict) -> Dict:
+        """Main dashboard endpoint with caching (5 min TTL)"""
+        # ... existing code ...
+
+    @cache_dashboard_endpoint(dashboard_type='your_dashboard', ttl=300)
+    async def get_detailed_data(self, filters: Dict) -> List[Dict]:
+        """Detailed data endpoint with caching"""
+        # ... existing code ...
+
+    @cache_dashboard_endpoint(dashboard_type='your_dashboard', ttl=300)
+    async def get_segment_analysis(self, filters: Dict) -> List[Dict]:
+        """Segment analysis with caching"""
+        # ... existing code ...
+```
+
+**TTL Guidelines by Dashboard Type**:
+```python
+# Churn Prediction, Customer LTV, Segmentation: 5 min (300s)
+ttl=300
+
+# Sales Performance, Product Performance: 3 min (180s)
+ttl=180
+
+# Inventory, Stock Levels: 2 min (120s)
+ttl=120
+
+# Financial Metrics, Cash Flow: 10 min (600s)
+ttl=600
+```
+
+##### Step 1.4.3: Methods to Cache
+
+Cache these method types in your processing service:
+
+1. **Main Summary Endpoint**:
+   ```python
+   @cache_dashboard_endpoint(dashboard_type='your_dashboard', ttl=300)
+   async def get_dashboard_summary(self, filters: Dict) -> Dict:
+   ```
+
+2. **Detailed Analysis Methods**:
+   ```python
+   @cache_dashboard_endpoint(dashboard_type='your_dashboard', ttl=300)
+   async def get_customer_stats(self, filters: Dict) -> List[Dict]:
+
+   @cache_dashboard_endpoint(dashboard_type='your_dashboard', ttl=300)
+   async def get_segment_risk(self, filters: Dict) -> List[Dict]:
+
+   @cache_dashboard_endpoint(dashboard_type='your_dashboard', ttl=300)
+   async def get_monthly_trends(self, filters: Dict) -> List[Dict]:
+   ```
+
+3. **Feature/Metric Calculations**:
+   ```python
+   @cache_dashboard_endpoint(dashboard_type='your_dashboard', ttl=300)
+   async def get_feature_importance(self, filters: Dict) -> List[Dict]:
+
+   @cache_dashboard_endpoint(dashboard_type='your_dashboard', ttl=300)
+   async def get_probability_distribution(self, filters: Dict) -> List[Dict]:
+   ```
+
+**Do NOT cache**:
+- Helper methods that don't touch the database
+- Methods that generate insights (rule-based or AI)
+- Internal transformation methods (prefix with `_`)
+
+##### Step 1.4.4: Verify Cache Behavior
+
+**Test 1: Cache Key Uniqueness**
+```python
+# Different filters should create different cache keys
+from domains.common.dashboard_cache import generate_dashboard_cache_key
+
+key1 = generate_dashboard_cache_key('churn', 'summary', {'dateFrom': '2021-01-01', 'dateTo': '2021-12-31'})
+key2 = generate_dashboard_cache_key('churn', 'summary', {'dateFrom': '2021-06-01', 'dateTo': '2021-12-31'})
+
+assert key1 != key2, "Different filters must create different cache keys"
+print("✅ Cache keys are unique per filter combination")
+```
+
+**Test 2: Cache Hit/Miss**
+```python
+from domains.your_dashboard.processing_service import YourProcessingService
+import time
+
+service = YourProcessingService()
+filters = {'dateFrom': '2021-01-01', 'dateTo': '2021-12-31'}
+
+# First call - cache miss (slower)
+start = time.time()
+result1 = await service.get_dashboard_summary(filters)
+time1 = (time.time() - start) * 1000
+
+# Second call - cache hit (faster)
+start = time.time()
+result2 = await service.get_dashboard_summary(filters)
+time2 = (time.time() - start) * 1000
+
+print(f"First call (cache miss): {time1:.0f}ms")
+print(f"Second call (cache hit): {time2:.0f}ms")
+print(f"Speedup: {time1/time2:.1f}x faster")
+
+assert time2 < time1 * 0.5, "Cached call should be at least 2x faster"
+print("✅ Caching is working correctly")
+```
+
+**Test 3: Cache Response Metadata**
+```python
+# Cached responses include metadata
+result = await service.get_dashboard_summary(filters)
+
+# Check for cache metadata in response (if implemented)
+if '_cached' in result.get('metadata', {}):
+    print(f"✅ Cache hit: {result['metadata']['_cached']}")
+    print(f"   Cache key: {result['metadata'].get('_cache_key', 'N/A')}")
+```
+
+##### Step 1.4.5: Cache Management (Optional)
+
+**Clear cache for specific dashboard**:
+```python
+from domains.common.dashboard_cache import DashboardCacheManager
+
+cache_manager = DashboardCacheManager()
+
+# Clear all cache for a dashboard type
+cache_manager.clear_dashboard_cache('churn')
+
+# Clear specific endpoint
+cache_manager.clear_endpoint_cache('churn', 'summary')
+
+# Clear all cache
+cache_manager.clear_all()
+
+# Get cache stats
+stats = cache_manager.get_stats()
+print(f"Cache entries: {stats['total_entries']}")
+print(f"Hit rate: {stats['hit_rate']:.1f}%")
+```
+
+**Key Points**:
+- ✅ **Filter-aware**: Different filter combinations create different cache entries
+- ✅ **Automatic**: Decorator handles all cache logic
+- ✅ **TTL-based**: Cache expires after configured time
+- ✅ **Centralized**: Same system across all dashboards
+- ✅ **Non-blocking**: Cache operations don't slow down requests
+- ✅ **Safe**: Cache failures don't break functionality
+
 ---
 
 ### Phase 2: Frontend Visualization Components (4-6 hours)
@@ -244,7 +1530,8 @@ export function DashboardKPIs({ metrics, loading }: { metrics: any; loading?: bo
   const kpis = [
     {
       title: 'Total Revenue',
-      value: metrics?.totalRevenue ? `$${(metrics.totalRevenue / 1000000).toFixed(1)}M` : '$0',
+      value: metrics?.totalRevenue || 0,  // Pass raw number, KPICard will format as $30.1M
+      format: 'currency' as const,
       subtitle: 'All time',
       icon: DollarSign,
       trend: metrics?.revenueGrowth || 0,
@@ -252,7 +1539,8 @@ export function DashboardKPIs({ metrics, loading }: { metrics: any; loading?: bo
     },
     {
       title: 'Total Units',
-      value: metrics?.totalUnits?.toLocaleString() || '0',
+      value: metrics?.totalUnits || 0,  // Pass raw number, KPICard will format as 150K
+      format: 'number' as const,
       subtitle: 'Units sold',
       icon: Package,
       color: '#10b981' as const
@@ -507,6 +1795,163 @@ export function PerformanceChart({ data = {}, loading = false }: PerformanceChar
 }
 ```
 
+##### 2.1.4: KPI Formatting Best Practices
+
+**Number Display Format**: Use compact notation for better readability.
+
+The `KPICard` component automatically formats large numbers using compact notation:
+
+**Formatting Behavior**:
+- **Currency**: `$30.1M` instead of `$30,054,281`
+- **Numbers**: `150K` instead of `150,000`
+- **Percentage**: `85.3%` (unchanged, no compact needed)
+- **Text**: Displayed as-is
+
+**✅ CORRECT Implementation**:
+```typescript
+// Pass raw numeric values, let KPICard format automatically
+const kpis = [
+  {
+    id: "revenue-at-risk",
+    title: "Revenue at Risk",
+    value: 30054281,  // Raw number
+    format: "currency" as const,
+    color: "#f59e0b",
+  },
+  {
+    id: "at-risk-customers",
+    title: "At Risk Customers",
+    value: 156000,  // Raw number
+    format: "number" as const,
+    color: "#ef4444",
+  },
+  {
+    id: "churn-rate",
+    title: "Churn Rate",
+    value: 15.3,  // Raw percentage
+    format: "percentage" as const,
+    color: "#38bdf8",
+  },
+  {
+    id: "risk-status",
+    title: "Risk Status",
+    value: "High",  // Text value
+    format: "text" as const,
+    color: "#ef4444",
+  }
+];
+
+// Display will show:
+// Revenue at Risk: $30.1M
+// At Risk Customers: 156K
+// Churn Rate: 15.3%
+// Risk Status: High
+```
+
+**❌ WRONG - Manual Formatting**:
+```typescript
+// DON'T manually format numbers - let KPICard handle it
+const kpis = [
+  {
+    value: `$${(30054281 / 1000000).toFixed(1)}M`,  // ❌ DON'T DO THIS
+    format: "text",  // ❌ Wrong format type
+  },
+  {
+    value: `${(156000 / 1000).toFixed(0)}K`,  // ❌ DON'T DO THIS
+    format: "text",
+  }
+];
+```
+
+**Why Use Compact Notation**:
+- ✅ **Readability**: Easier to scan at a glance
+- ✅ **Space-efficient**: Fits better in KPI tiles
+- ✅ **Professional**: Industry-standard format
+- ✅ **Consistent**: Automatic formatting across all dashboards
+- ✅ **Localization**: `Intl.NumberFormat` handles i18n automatically
+
+**Number Scaling Examples**:
+
+| Raw Value | Currency Format | Number Format |
+|-----------|----------------|---------------|
+| 500 | $500 | 500 |
+| 1,234 | $1.2K | 1.2K |
+| 30,054 | $30.1K | 30.1K |
+| 456,789 | $457K | 457K |
+| 1,234,567 | $1.2M | 1.2M |
+| 30,054,281 | **$30.1M** | 30.1M |
+| 1,234,567,890 | $1.2B | 1.2B |
+
+**Precision Control**:
+- Values < 1,000: Show full number (e.g., 456)
+- Values ≥ 1,000: Show compact with 1 decimal (e.g., 1.2K)
+- This provides good balance between precision and readability
+
+**When to Use Text Format**:
+Use `format: "text"` only for non-numeric displays:
+- Statuses: "Active", "Pending", "Critical"
+- Categories: "High Risk", "Medium Priority"
+- Custom formatted values: "45 ↑ 12 ↓" (Risk Transitions)
+- Dates: "Last updated: 2 hours ago"
+
+**Dashboard-Specific Examples**:
+
+```typescript
+// Churn Prediction
+{
+  title: "Revenue at Risk",
+  value: 30054281,        // → $30.1M
+  format: "currency"
+}
+
+// Customer LTV
+{
+  title: "Total Portfolio Value",
+  value: 125000000,       // → $125M
+  format: "currency"
+}
+
+// Sales Performance
+{
+  title: "Annual Revenue",
+  value: 2500000,         // → $2.5M
+  format: "currency"
+}
+
+// Product Performance
+{
+  title: "Units Sold",
+  value: 456789,          // → 457K
+  format: "number"
+}
+```
+
+**Testing KPI Formatting**:
+```typescript
+// Test with various magnitudes to verify formatting
+const testValues = [
+  { value: 123, expected: "123" },           // No compact
+  { value: 1234, expected: "1.2K" },
+  { value: 12345, expected: "12.3K" },
+  { value: 123456, expected: "123K" },
+  { value: 1234567, expected: "1.2M" },
+  { value: 12345678, expected: "12.3M" },
+  { value: 123456789, expected: "123M" },
+  { value: 1234567890, expected: "1.2B" },
+];
+```
+
+**Edge Cases Handled Automatically**:
+- **Small numbers** (< 1,000): Display full value
+- **Negative numbers**: -$30.1M (correct formatting)
+- **Zero**: $0 or 0
+- **Decimals**: Rounded appropriately (1.23M → 1.2M)
+
+**Performance**:
+- `Intl.NumberFormat` with compact notation is highly optimized
+- No measurable performance impact vs standard formatting
+- Built-in browser API with excellent cross-browser support
+
 #### Step 2.2: Export All Components
 
 ```typescript
@@ -529,6 +1974,356 @@ export {
   ScatterChart
 } from './visualizations';
 ```
+
+#### Step 2.7: Implement Frontend Caching with React Query
+
+**Overview**: Add client-side caching to reduce unnecessary API calls and improve dashboard performance. React Query provides a stale-while-revalidate caching strategy that matches the backend cache TTL.
+
+**Benefits**:
+- ✅ **Instant loading**: Stale data shown immediately while fresh data fetches in background
+- ✅ **Reduced API calls**: Same filter combination uses cache instead of re-fetching
+- ✅ **Automatic refetching**: Handles window focus, network reconnection, and intervals
+- ✅ **Request deduplication**: Multiple components requesting same data trigger single API call
+- ✅ **Cache synchronization**: QueryKey includes filters for unique cache entries
+
+##### Step 2.7.1: Install React Query
+
+**File**: `apps/frontend/package.json`
+
+```json
+{
+  "dependencies": {
+    "@tanstack/react-query": "^5.59.0",
+    // ... other dependencies
+  }
+}
+```
+
+**Install**:
+```bash
+cd apps/frontend
+pnpm install
+```
+
+##### Step 2.7.2: Create Query Provider
+
+**File**: `apps/frontend/src/app/providers/QueryProvider.tsx` (create new file)
+
+```typescript
+'use client';
+
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactNode, useState } from 'react';
+
+export default function QueryProvider({ children }: { children: ReactNode }) {
+  // Create QueryClient instance with stale-while-revalidate strategy
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            // Cache data for 5 minutes (matching backend TTL)
+            staleTime: 5 * 60 * 1000,
+            // Keep data in cache for 10 minutes
+            gcTime: 10 * 60 * 1000,
+            // Retry failed queries once
+            retry: 1,
+            // Don't refetch on window focus (user can manually refresh)
+            refetchOnWindowFocus: false,
+          },
+        },
+      })
+  );
+
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+}
+```
+
+**Key Configuration**:
+- `staleTime: 5 * 60 * 1000` - Data considered fresh for 5 minutes (matches backend cache)
+- `gcTime: 10 * 60 * 1000` - Keep unused data in cache for 10 minutes
+- `retry: 1` - Retry failed requests once before showing error
+- `refetchOnWindowFocus: false` - Don't refetch when user switches tabs
+
+##### Step 2.7.3: Add Provider to Root Layout
+
+**File**: `apps/frontend/src/app/layout.tsx`
+
+```typescript
+import type { Metadata } from "next";
+import "components/src/styles.css";
+import "./globals.css";
+import { ThemeProvider } from "components/index";
+import ReduxProvider from "./providers/ReduxProvider";
+import QueryProvider from "./providers/QueryProvider";  // Add import
+
+export const metadata: Metadata = {
+  title: "Enterprise Dashboards",
+  description: "Multi-dashboard enterprise analytics platform",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en" data-theme="soft-pastel" className="theme-soft-pastel" suppressHydrationWarning>
+      <body className="bg-background text-foreground font-sans antialiased min-h-screen" data-theme="soft-pastel" suppressHydrationWarning>
+        <QueryProvider>  {/* Wrap with QueryProvider */}
+          <ReduxProvider>
+            <ThemeProvider defaultTheme="soft-pastel">
+              {children}
+            </ThemeProvider>
+          </ReduxProvider>
+        </QueryProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+##### Step 2.7.4: Refactor Data Hook with React Query
+
+**Original Pattern** (without caching):
+```typescript
+// hooks/useDashboardData.ts - OLD
+export function useDashboardData(filters: DashboardFilters) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      try {
+        const response = await fetch('/api/dashboard/summary', {
+          method: 'POST',
+          body: JSON.stringify(filters)
+        });
+        const result = await response.json();
+        setData(result);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [filters]);
+
+  return { data, loading, error };
+}
+```
+
+**React Query Pattern** (with caching):
+```typescript
+// hooks/useDashboardData.ts - NEW
+import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
+
+async function fetchDashboardSummary(filterParams: Record<string, any>) {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
+  const response = await fetch(`${apiUrl}/your-dashboard/summary`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filterParams),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch summary: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export function useDashboardData(filters: DashboardFilters) {
+  // Build filter params
+  const filterParams = useMemo(() => ({
+    dateFrom: filters.dateRange.startDate,
+    dateTo: filters.dateRange.endDate,
+    categories: filters.categories.length > 0 ? filters.categories : undefined,
+    products: filters.products.length > 0 ? filters.products : undefined,
+    // ... other filters
+  }), [filters]);
+
+  // Use React Query with unique cache key per filter combination
+  const {
+    data: rawData,
+    isLoading: loading,
+    error: queryError,
+    isFetching,
+  } = useQuery({
+    queryKey: ['dashboard-name', filterParams],  // Unique key per filter set
+    queryFn: () => fetchDashboardSummary(filterParams),
+    staleTime: 5 * 60 * 1000,  // 5 minutes (matches backend cache)
+  });
+
+  const error = queryError ? (queryError instanceof Error ? queryError.message : "Failed to fetch data") : null;
+
+  // Process and transform data
+  const processedData = useMemo(() => {
+    if (!rawData) return null;
+    // ... data transformation logic
+    return transformedData;
+  }, [rawData]);
+
+  return {
+    data: processedData,
+    loading,
+    error,
+    isFetching,  // Shows if background refetch is happening
+  };
+}
+```
+
+**Key Points**:
+- ✅ **queryKey includes filters**: Different filters create different cache entries
+- ✅ **Automatic caching**: React Query handles cache storage and retrieval
+- ✅ **Background refetching**: `isFetching` indicates stale data being updated
+- ✅ **Request deduplication**: Multiple calls with same queryKey share result
+
+##### Step 2.7.5: Update Component to Use isFetching
+
+Show background refetch indicator to users:
+
+```typescript
+// page.tsx
+export default function DashboardPage() {
+  const { filters } = useDashboardContext();
+  const { data, loading, error, isFetching } = useDashboardData(filters);
+
+  return (
+    <div className="relative">
+      {/* Background refetch indicator */}
+      {isFetching && !loading && (
+        <div className="absolute top-4 right-4 z-10">
+          <div className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm flex items-center gap-2">
+            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            Updating...
+          </div>
+        </div>
+      )}
+
+      {/* ... rest of dashboard */}
+    </div>
+  );
+}
+```
+
+##### Step 2.7.6: Testing Frontend Caching
+
+**Test 1: Verify Cache Behavior in DevTools**
+
+1. Open dashboard and open DevTools Network tab
+2. Apply filters and load data (should see API call)
+3. Change view/tab and come back (no new API call - using cache)
+4. Wait 5 minutes and interact (background refetch starts)
+5. Apply same filters again (cache hit, no API call)
+6. Apply different filters (cache miss, new API call)
+
+**Expected Behavior**:
+```
+Initial Load:        API Call  ✅ (cache miss)
+Same filters:        No Call   ✅ (cache hit)
+Different filters:   API Call  ✅ (new cache entry)
+After 5 min stale:   Background Refetch ✅ (stale-while-revalidate)
+```
+
+**Test 2: Verify Multiple Components Share Cache**
+
+```typescript
+// Component A
+function ComponentA() {
+  const { data } = useDashboardData(filters);
+  // Uses cache
+}
+
+// Component B
+function ComponentB() {
+  const { data } = useDashboardData(filters);
+  // Shares cache with Component A, no duplicate API call
+}
+```
+
+**Test 3: Performance Comparison**
+
+```typescript
+// Without caching: Every filter change = API call
+Filter Change 1: 450ms API call
+Filter Change 2: 420ms API call
+Filter Change 3: 480ms API call
+
+// With caching: Repeated filters = instant
+Filter Change 1: 450ms API call (cache miss)
+Filter Change 2: <5ms cache hit ⚡
+Filter Change 1: <5ms cache hit ⚡
+```
+
+##### Step 2.7.7: Advanced: Manual Cache Invalidation
+
+Invalidate cache when user performs actions:
+
+```typescript
+import { useQueryClient } from '@tanstack/react-query';
+
+function DashboardActions() {
+  const queryClient = useQueryClient();
+
+  const handleRefresh = () => {
+    // Invalidate specific dashboard cache
+    queryClient.invalidateQueries({ queryKey: ['dashboard-name'] });
+  };
+
+  const handleClearCache = () => {
+    // Clear all cache
+    queryClient.clear();
+  };
+
+  return (
+    <button onClick={handleRefresh}>
+      Refresh Data
+    </button>
+  );
+}
+```
+
+##### Step 2.7.8: Troubleshooting
+
+**Issue**: Cache not working, API called every time
+
+**Fix**: Check queryKey is stable (use useMemo for filter params):
+```typescript
+// ❌ Wrong: Creates new object every render
+const { data } = useQuery({
+  queryKey: ['dashboard', { filters }],  // Object identity changes
+  ...
+});
+
+// ✅ Correct: Stable object with useMemo
+const filterParams = useMemo(() => ({ ...filters }), [filters]);
+const { data } = useQuery({
+  queryKey: ['dashboard', filterParams],
+  ...
+});
+```
+
+**Issue**: Stale data shown for too long
+
+**Fix**: Reduce staleTime or enable refetchOnWindowFocus:
+```typescript
+staleTime: 2 * 60 * 1000,  // 2 minutes instead of 5
+refetchOnWindowFocus: true,  // Refetch when user switches back to tab
+```
+
+**Key Points**:
+- ✅ **Two-layer caching**: Backend (5 min) + Frontend (5 min) = Fast experience
+- ✅ **Filter-aware**: queryKey includes all filters for unique cache entries
+- ✅ **Automatic**: No manual cache management needed
+- ✅ **Background updates**: Stale data shown while fresh data fetches
+- ✅ **Request deduplication**: Single API call for multiple components
+- ✅ **Consistent TTL**: Frontend staleTime matches backend cache TTL
 
 ---
 
@@ -859,6 +2654,188 @@ export default function DashboardPage() {
 }
 ```
 
+#### Step 4.3: Navigation State Management (Already Implemented)
+
+**Purpose**: Ensure floating action buttons (FABs) are blurred and disabled when navigation drawer is open to maintain consistent overlay behavior.
+
+**Files Modified** (shared components - affects all dashboards automatically):
+- `packages/components/src/layout/DashboardNavigation.tsx`
+- `packages/components/src/layout/AppLayout.tsx`
+- `packages/components/src/ui/FloatingActionButtons.tsx`
+
+**Implementation Details**:
+
+1. **DashboardNavigation.tsx** - Added callback to notify parent of state changes
+```typescript
+interface DashboardNavigationProps {
+  onNavigationChange?: (isOpen: boolean) => void; // ← New prop
+}
+
+export const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
+  onNavigationChange,
+  ...
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Notify parent when navigation state changes
+  useEffect(() => {
+    onNavigationChange?.(isOpen);
+  }, [isOpen, onNavigationChange]);
+};
+```
+
+2. **AppLayout.tsx** - Manages navigation state and passes to FABs
+```typescript
+export function AppLayout({ ... }: AppLayoutProps) {
+  const [isNavigationOpen, setIsNavigationOpen] = useState(false);
+
+  return (
+    <>
+      <DashboardNavigation
+        onNavigationChange={setIsNavigationOpen}
+      />
+      <FloatingActionButtons
+        isNavigationOpen={isNavigationOpen}
+      />
+    </>
+  );
+}
+```
+
+3. **FloatingActionButtons.tsx** - Blurs and disables when navigation is open
+```typescript
+interface FloatingActionButtonsProps {
+  isNavigationOpen?: boolean; // ← New prop
+}
+
+export function FloatingActionButtons({
+  isNavigationOpen = false,
+  ...
+}) {
+  return (
+    <div
+      className={cn(
+        "fixed bottom-6 z-[60] flex flex-col items-end gap-3 transition-all duration-300",
+        isNavigationOpen && "opacity-30 blur-sm pointer-events-none"
+      )}
+      style={{ right: rightPosition }}
+    >
+      {/* FABs render here */}
+    </div>
+  );
+}
+```
+
+**Expected Behavior**:
+- ✅ Navigation opens → Blur overlay covers content → FABs blurred out (opacity-30 blur-sm)
+- ✅ FABs are non-interactive (pointer-events-none) when navigation is open
+- ✅ Navigation closes → FABs return to normal state
+- ✅ Works automatically for all 8 customer dashboards (shared components)
+- ✅ Consistent UX - FABs remain visible but disabled like dashboard content
+
+**No Action Required**: This pattern is already implemented in the shared components. All dashboards using `AppLayout` automatically inherit this behavior.
+
+---
+
+#### Step 4.4: Date Range Filter Standardization (Churn Prediction Reference)
+
+**Purpose**: Standardize time period filtering across all 8 customer dashboards using Churn Prediction's DateRangeFilter implementation.
+
+**Reference Implementation** (Churn Prediction):
+
+**Frontend Filter Component** (`apps/frontend/src/app/churn-prediction/components/ChurnFilters.tsx`):
+```typescript
+export function ChurnFilters({ filters, onFiltersChange, onReset }: ChurnFiltersProps) {
+  return (
+    <FilterBar
+      config={{
+        dateRange: {
+          enabled: true,
+          value: filters.dateRange,  // { startDate: "YYYY-MM-DD", endDate: "YYYY-MM-DD" }
+          onChange: (range) => onFiltersChange({ ...filters, dateRange: range }),
+        },
+        multiSelect: [
+          // ... other filters
+        ],
+      }}
+      onReset={onReset}
+    />
+  );
+}
+```
+
+**Standard DateRange Interface**:
+```typescript
+interface DateRange {
+  startDate: string;  // Format: "YYYY-MM-DD"
+  endDate: string;    // Format: "YYYY-MM-DD"
+}
+```
+
+**Shared Component** (`packages/components/src/filters/DateRangeFilter.tsx`):
+- **Presets**: Last 7/30/90 Days, This Month, Last Month, This Year, Custom Range
+- **Format**: ISO date strings (YYYY-MM-DD)
+- **UX**: Dropdown select for presets, expandable custom date picker
+- **Validation**: Start date cannot exceed end date
+- **Persistence**: Saved to localStorage via context
+
+**Default Date Range**:
+```typescript
+// Default to full dataset range: 2017-01-01 to 2021-12-31
+const defaultFilters = {
+  dateRange: {
+    startDate: "2017-01-01",
+    endDate: "2021-12-31"
+  },
+  // ... other filters
+};
+```
+
+**Backend Parameter Mapping**:
+```python
+# Frontend sends: { dateRange: { startDate: "2017-01-01", endDate: "2021-12-31" } }
+# Backend receives: { dateFrom: "2017-01-01", dateTo: "2021-12-31" }
+
+def get_dashboard_data(self, filters: Dict[str, Any] = {}) -> Dict:
+    # Extract date range from filters
+    date_from = filters.get('dateFrom', '2017-01-01')
+    date_to = filters.get('dateTo', '2021-12-31')
+
+    # Use in SQL queries
+    query = """
+        SELECT * FROM customers
+        WHERE order_date BETWEEN :date_from AND :date_to
+    """
+    # ...
+```
+
+**Context Interface Update**:
+```typescript
+// All 8 dashboards should have this in their context interface
+interface DashboardFilters {
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
+  // ... other filters specific to dashboard
+}
+```
+
+**Implementation Checklist for Each Dashboard**:
+- [ ] Filter component uses `<FilterBar config={{ dateRange: { enabled: true } }} />`
+- [ ] Context interface includes `dateRange: { startDate, endDate }`
+- [ ] Default values set to 2017-01-01 through 2021-12-31
+- [ ] Backend processing service handles `dateFrom` and `dateTo` parameters
+- [ ] SQL queries use date range filtering
+- [ ] Data hook passes `dateRange` to API correctly
+
+**Benefits**:
+- ✅ Consistent UX across all 8 customer dashboards
+- ✅ Same date presets and custom range picker
+- ✅ Uniform date format (YYYY-MM-DD)
+- ✅ Consistent default range (2017-2021 dataset)
+- ✅ Single shared component for maintenance
+
 ---
 
 ### Phase 5: Testing & Validation (2-3 hours)
@@ -1120,6 +3097,17 @@ const defaultFilters = {
 - [ ] COMPONENT_SCHEMA updated with all components
 - [ ] Default time period: 2017-2021
 - [ ] Processing service handles all filters correctly
+- [ ] **Caching**: All data-fetching methods have `@cache_dashboard_endpoint` decorators
+- [ ] **Caching**: TTL configured appropriately for dashboard type
+- [ ] **Caching**: Cache key generation includes filters for uniqueness
+- [ ] **Hybrid Insights**: Both rule-based and AI insights implemented
+- [ ] **Hybrid Insights**: Graceful fallback when AI unavailable
+- [ ] **Performance**: AI insights do NOT block main endpoint (use separate cache)
+- [ ] **Performance**: AI insights cached separately with 30-min TTL
+- [ ] **Performance**: AI generation uses `asyncio.to_thread()` for non-blocking execution
+- [ ] **Insights**: Single unified `insights` array returned (NOT separate arrays)
+- [ ] **Insights**: Metadata tracks insight sources (rule_based_count, ai_count, total_count)
+- [ ] **Insights**: insights_version set to "unified_v2"
 
 ### Frontend Components
 - [ ] All visualization components created (4-6 components)
@@ -1128,6 +3116,11 @@ const defaultFilters = {
 - [ ] Tables have sorting and searching
 - [ ] All components have loading states
 - [ ] All components have empty states
+- [ ] **Caching**: React Query installed and configured
+- [ ] **Caching**: QueryProvider added to root layout
+- [ ] **Caching**: Data hooks refactored to use `useQuery`
+- [ ] **Caching**: queryKey includes all filters for unique cache entries
+- [ ] **Caching**: staleTime matches backend cache TTL (5 min)
 
 ### Enterprise-IQ Integration
 - [ ] All components added to componentRegistry
@@ -1142,6 +3135,7 @@ const defaultFilters = {
 - [ ] localStorage persistence works
 - [ ] SelectionManager integrated
 - [ ] Panel states (isChatOpen, isBIModalOpen)
+- [ ] **Navigation State**: FABs blurred and disabled when navigation drawer is open (automatic via AppLayout)
 
 ### Testing
 - [ ] Backend tool test passes
@@ -1152,6 +3146,581 @@ const defaultFilters = {
 - [ ] Table sorting/searching works
 - [ ] Chat spawns graphs correctly
 - [ ] Data consistency verified (dashboard = chat)
+- [ ] **Caching**: Backend cache hit/miss behavior verified
+- [ ] **Caching**: Different filters create different cache entries
+- [ ] **Caching**: Frontend cache working (Network tab shows reduced API calls)
+- [ ] **Caching**: Background refetch working after staleTime expires
+- [ ] **Insights**: Both rule-based and AI insights display correctly
+- [ ] **Performance**: Dashboard loads in < 500ms with cache hit
+- [ ] **Performance**: Dashboard loads in < 600ms with cache miss (AI async)
+- [ ] **Performance**: AI insights appear without blocking main data load
+- [ ] **Insights**: Response has single `insights` array (no separate `ai_insights`)
+- [ ] **Insights**: insights_metadata present with correct counts
+- [ ] **Navigation**: FABs blurred (opacity-30 blur-sm) when navigation drawer opens
+- [ ] **Navigation**: FABs are non-interactive (pointer-events-none) when navigation is open
+- [ ] **Navigation**: FABs return to normal state when navigation drawer closes
+- [ ] **Navigation**: Only navigation and overlay are interactive when drawer is open
+
+---
+
+## Dashboard Standardization Patterns (2025 Update)
+
+### Overview
+
+This section documents the standardization patterns implemented across all 8 customer dashboards to ensure consistency in user experience, code architecture, and functionality.
+
+**Affected Dashboards:**
+1. Churn Prediction
+2. Customer Segmentation
+3. Customer Lifetime Value
+4. Customer Behavior
+5. Anomaly Detection
+6. Engagement Classifier
+7. Transaction Patterns
+8. Performance Deviation
+
+---
+
+### 1. Navigation: Home Button Pattern
+
+**Location:** `packages/components/src/layout/DashboardNavigation.tsx`
+
+**Implementation:**
+```typescript
+{currentPath !== '/enterprise-iq' && (
+  <div className="mb-6">
+    <button
+      onClick={() => {
+        onNavigate('/enterprise-iq');
+        setIsOpen(false);
+      }}
+      className="w-full text-left px-3 py-3 rounded-lg bg-accent text-background hover:bg-accent/90 transition-colors font-medium"
+    >
+      Home
+    </button>
+  </div>
+)}
+```
+
+**Key Points:**
+- Home button only visible when NOT on Enterprise-IQ landing page
+- Text-only (no icon) for clean appearance
+- Navigates to `/enterprise-iq`
+- Positioned at top of navigation panel
+
+---
+
+### 2. Filter Reset with localStorage Clear
+
+**Problem:** Filters persisted between sessions even after reset, causing user confusion.
+
+**Solution:** All dashboard layouts must clear localStorage on filter reset.
+
+**Standard Pattern:**
+```typescript
+// In layout.tsx HeaderFilters component
+<DashboardFilters
+  filters={filters}
+  onFiltersChange={setFilters}
+  onReset={() => {
+    // Clear localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('dashboard_name_filters');
+    }
+    // Reset to defaults
+    setFilters({
+      dateRange: {
+        startDate: "2017-01-01",
+        endDate: "2021-12-31",
+      },
+      // ... other default values
+    });
+  }}
+/>
+```
+
+**localStorage Keys Convention:**
+- `churnFilters` and `churnTimeRange` (Churn Prediction)
+- `segmentation_filters` (Customer Segmentation)
+- `ltv_filters` (Customer LTV)
+- `behaviorFilters` (Customer Behavior)
+- `anomalyFilters` (Anomaly Detection)
+- `engagement_classifier_filters` (Engagement Classifier)
+- `transactionFilters` (Transaction Patterns)
+- `performance_deviation_filters` (Performance Deviation)
+
+---
+
+### 3. Table Standardization
+
+**Reference:** Churn Prediction's `CustomerRiskDetails` table
+
+**Standard Component:** `DataTable` from `packages/components`
+
+**Required Features:**
+- ✅ Search functionality
+- ✅ Pagination (configurable page size)
+- ✅ Sortable columns
+- ✅ Shift-click on rows for selection
+- ✅ Responsive design
+- ✅ Loading states
+- ✅ Empty states
+
+**Implementation Pattern:**
+```typescript
+import { DataTable } from 'components/index';
+
+// Normalize data
+const rows = data.map((item, index) => ({
+  id: item.id || `row-${index}`,
+  // ... map fields to consistent structure
+}));
+
+// Define columns
+const columns: ColumnDefinition[] = [
+  {
+    key: 'name',
+    header: 'Name',
+    sortable: true,
+    render: (row) => row.name
+  },
+  // ... more columns
+];
+
+// Render
+<DataTable
+  data={rows}
+  columns={columns}
+  searchable
+  selectable={false}
+  pageSize={10}
+  onRowClick={(row, event) => {
+    if (event?.shiftKey) {
+      shiftClickManager.addPoint({
+        label: `Row: ${row.name}`,
+        value: `Value: ${row.value}`,
+        source: 'Table Name'
+      }, event.nativeEvent);
+    }
+  }}
+/>
+```
+
+---
+
+### 4. Graph Title Standardization (UPDATED 2025)
+
+**Problem:** Inconsistent title placement and styling - some inside cards, some in DashboardSection, varying font sizes and colors.
+
+**Solution:** ALL graph titles must:
+1. Be positioned ABOVE their cards as standalone h3 headings
+2. Use UNIFORM styling across all dashboards
+3. Have responsive font sizing for mobile and desktop
+4. Match the ChartContainer component pattern
+
+**Standard Pattern for Individual Chart Titles:**
+```typescript
+<DashboardSection>
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+    {/* Individual Chart */}
+    <div>
+      <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Chart Title</h3>
+      <Card
+        onShiftClick={(event) => {
+          shiftClickManager.addPoint({
+            label: "Chart Title",
+            value: `Chart description`,
+            source: 'Dashboard Name - Chart'
+          }, event.nativeEvent);
+        }}
+      >
+        {/* Chart content */}
+      </Card>
+    </div>
+  </div>
+</DashboardSection>
+```
+
+**Standard H3 Title Styling (REQUIRED):**
+```tsx
+className="text-base sm:text-lg font-semibold text-foreground mb-4"
+```
+
+**Breakdown:**
+- `text-base` - Base font size for mobile (16px)
+- `sm:text-lg` - Larger font size for desktop (18px)
+- `font-semibold` - Semi-bold weight (600)
+- `text-foreground` - Theme-aware text color
+- `mb-4` - Consistent bottom margin (1rem / 16px)
+
+**Section Title Guidelines:**
+- ✅ ONLY "Key Metrics" should have a DashboardSection title prop
+- ❌ All other sections should use `<DashboardSection>` WITHOUT title prop
+- ✅ Individual charts get h3 titles above their cards
+
+**Examples:**
+
+✅ **CORRECT** - KPI Section (only place with section title):
+```typescript
+<DashboardSection title="Key Metrics">
+  <KPIRow kpis={kpis} />
+</DashboardSection>
+```
+
+✅ **CORRECT** - Chart Section (no section title, only chart titles):
+```typescript
+<DashboardSection>
+  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
+    <div>
+      <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Risk Distribution Pyramid</h3>
+      <ChartCard className="glass-card card-hover" onShiftClick={...}>
+        <RiskPyramid data={data} />
+      </ChartCard>
+    </div>
+    <div>
+      <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Churn Probability Distribution</h3>
+      <ChartCard className="glass-card card-hover" onShiftClick={...}>
+        <ProbabilityHistogram data={data} />
+      </ChartCard>
+    </div>
+  </div>
+</DashboardSection>
+```
+
+❌ **INCORRECT** - Title inside Card:
+```typescript
+<ChartCard title="Chart Title">  {/* DON'T DO THIS */}
+  <Chart />
+</ChartCard>
+```
+
+❌ **INCORRECT** - Section title for non-KPI sections:
+```typescript
+<DashboardSection title="Analysis Section">  {/* DON'T DO THIS */}
+  <div>...</div>
+</DashboardSection>
+```
+
+❌ **INCORRECT** - Inconsistent h3 styling:
+```typescript
+<h3 className="text-lg font-semibold mb-2 text-foreground">  {/* DON'T DO THIS */}
+```
+
+**Chart.js Configuration:**
+- ❌ Do NOT use Chart.js plugin title config: `plugins: { title: { display: true, text: 'Chart Title' } }`
+- ✅ Disable Chart.js titles in component options: `plugins: { title: { display: false } }`
+
+**Important Rules:**
+1. NEVER use `title` or `description` props on Card/ChartCard components
+2. NEVER use varying h3 className patterns - always use the standard
+3. NEVER add section titles except "Key Metrics"
+4. ALWAYS wrap chart in a div with h3 title above it
+5. ALWAYS use the exact className pattern for responsive sizing
+
+**Exception:**
+- Customer Segmentation's "Segment Profiles" section keeps titles inside cards (this is intentional for that specific design pattern)
+
+---
+
+### 5. Shift-Click Functionality
+
+**Universal Implementation:** All KPI cards, chart cards, data points, and table rows must support shift-click.
+
+#### 5.1 Base Component Support
+
+**KPICard Component:**
+```typescript
+// packages/components/src/kpi/KPICard.tsx
+export interface KPICardProps {
+  // ... existing props
+  onClick?: (event: React.MouseEvent) => void;
+  onShiftClick?: (event: React.MouseEvent) => void;
+}
+
+const handleClick = (event: React.MouseEvent) => {
+  if (event.shiftKey && onShiftClick) {
+    onShiftClick(event);
+  } else if (onClick) {
+    onClick(event);
+  }
+};
+
+<div onClick={handleClick} className={/* ... */}>
+```
+
+**KPIRow Component:**
+```typescript
+// packages/components/src/kpi/KPIRow.tsx
+export interface KPIRowProps {
+  kpis: KPIData[];
+  onKPIClick?: (kpi: KPIData, event: React.MouseEvent) => void;
+  onKPIShiftClick?: (kpi: KPIData, event: React.MouseEvent) => void;
+}
+```
+
+**Card/ChartCard Components:**
+```typescript
+// packages/components/src/ui/Card.tsx
+// packages/components/src/ui/ChartCard.tsx
+export interface CardProps {
+  // ... existing props
+  onClick?: () => void;
+  onShiftClick?: (event: React.MouseEvent) => void;
+}
+```
+
+#### 5.2 KPI Implementation Pattern
+
+**Using KPIRow:**
+```typescript
+import { KPIRow, getShiftClickManager } from 'components/index';
+
+const shiftClickManager = getShiftClickManager();
+
+<KPIRow
+  kpis={kpiTiles}
+  columns={5}
+  animationDelay={50}
+  onKPIShiftClick={(kpi, event) => {
+    shiftClickManager.addPoint({
+      label: kpi.title,
+      value: typeof kpi.value === 'number' ? kpi.value.toString() : kpi.value.toString(),
+      source: 'Dashboard Name KPIs'
+    }, event.nativeEvent);
+  }}
+/>
+```
+
+**Using Individual KPICard:**
+```typescript
+<KPICard
+  title="Metric Name"
+  value={value}
+  icon={icon}
+  loading={loading}
+  onShiftClick={(event) => {
+    shiftClickManager.addPoint({
+      label: "Metric Name",
+      value: value.toString(),
+      source: 'Dashboard KPIs'
+    }, event.nativeEvent);
+  }}
+/>
+```
+
+#### 5.3 Chart Implementation Pattern
+
+**For Card Components:**
+```typescript
+import { Card, getShiftClickManager } from 'components/index';
+
+const shiftClickManager = getShiftClickManager();
+
+<Card
+  onShiftClick={(event) => {
+    shiftClickManager.addPoint({
+      label: "Chart Name",
+      value: `Chart description`,
+      source: 'Dashboard Name - Chart'
+    }, event.nativeEvent);
+  }}
+>
+  {/* Chart content */}
+</Card>
+```
+
+**For ChartCard Components:**
+```typescript
+import { ChartCard, getShiftClickManager } from 'components/index';
+
+const shiftClickManager = getShiftClickManager();
+
+<ChartCard
+  className="glass-card card-hover"
+  onShiftClick={(event) => {
+    shiftClickManager.addPoint({
+      label: "Chart Name",
+      value: `Chart description`,
+      source: 'Dashboard Name - Chart'
+    }, event.nativeEvent);
+  }}
+>
+  {/* Chart content */}
+</ChartCard>
+```
+
+#### 5.4 Data Point Implementation Pattern
+
+**For Chart.js Charts:**
+```typescript
+// Inside chart options
+onClick: (event: any, elements: any[]) => {
+  if (elements.length > 0 && event?.native?.shiftKey) {
+    const index = elements[0].index;
+    const dataPoint = data[index];
+
+    shiftClickManager.addPoint({
+      label: `${dataPoint.label}`,
+      value: `${dataPoint.value}`,
+      source: 'Chart Name - Data Point'
+    }, event.native);
+  }
+}
+```
+
+**For Custom Visualizations:**
+```typescript
+<div
+  onClick={(e) => {
+    if (e.shiftKey) {
+      shiftClickManager.addPoint({
+        label: `Data: ${item.label}`,
+        value: `Value: ${item.value}`,
+        source: 'Visualization Name'
+      }, e.nativeEvent);
+    }
+  }}
+>
+  {/* Custom visualization element */}
+</div>
+```
+
+#### 5.5 Table Row Implementation
+
+See "Table Standardization" section above for DataTable shift-click pattern.
+
+---
+
+### 6. Filter Consistency
+
+**Standard:** All dashboard filters use `FilterBar` component from shared components library.
+
+**Layout Structure:**
+```typescript
+// In layout.tsx
+function HeaderFilters() {
+  const { filters, setFilters } = useDashboardContext();
+  return (
+    <DashboardFilters
+      filters={filters}
+      onFiltersChange={setFilters}
+      onReset={/* See section 2 for reset pattern */}
+    />
+  );
+}
+
+function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
+  // ... context setup
+
+  const mainContent = (
+    <div className="p-4 sm:p-6 lg:p-8">
+      <HeaderFilters />
+      <div className="mt-6">
+        {children}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <AppLayout
+        title="Dashboard Name"
+        mainContent={mainContent}
+        {/* ... other props */}
+      />
+    </>
+  );
+}
+```
+
+**Best Practices:**
+- ✅ Keep filter component in separate file (e.g., `DashboardFilters.tsx`)
+- ✅ Use consistent prop naming: `filters`, `onFiltersChange`, `onReset`
+- ✅ Wrap AppLayout in Fragment (`<> </>`) for consistency
+- ✅ Use standard padding: `p-4 sm:p-6 lg:p-8`
+
+---
+
+### 7. Import Standardization
+
+**Standard Imports:**
+```typescript
+// Page-level components
+import {
+  DashboardSection,
+  PageLoader,
+  Card,
+  ChartCard,
+  KPIRow,
+  DataTable,
+  getShiftClickManager
+} from 'components/index';
+```
+
+**Context Imports:**
+```typescript
+import { useDashboardContext } from './context';
+import { useDashboardData } from './hooks/useDashboardData';
+```
+
+---
+
+### 8. Code Organization Checklist
+
+When implementing or updating dashboards, ensure:
+
+**File Structure:**
+- [ ] `page.tsx` - Main dashboard page
+- [ ] `layout.tsx` - Layout with filters and AppLayout
+- [ ] `context.tsx` - Context provider with state management
+- [ ] `components/` - Dashboard-specific components
+  - [ ] `{Dashboard}Filters.tsx` - Filter component
+  - [ ] `{Dashboard}KPIs.tsx` - KPI component
+  - [ ] `visualizations/` - Chart components (if complex)
+  - [ ] `index.tsx` - Component exports
+- [ ] `hooks/` - Custom hooks
+  - [ ] `use{Dashboard}Data.ts` - Data fetching hook
+
+**Component Structure:**
+- [ ] All KPI cards have shift-click handlers
+- [ ] All charts have shift-click handlers on cards
+- [ ] All charts have shift-click handlers on data points
+- [ ] All tables use DataTable component with shift-click
+- [ ] All graph titles are positioned above cards
+- [ ] All filters use FilterBar component
+- [ ] Filter reset clears localStorage
+
+**Integration:**
+- [ ] Tool registered in `toolApiRegistry.ts`
+- [ ] Components registered in `ComponentRegistry.tsx`
+- [ ] Prop mappers defined in `componentPropMappers.ts`
+- [ ] Dashboard added to `dashboards.ts` constants
+
+---
+
+### 9. Testing Checklist
+
+**Shift-Click Functionality:**
+- [ ] Shift-clicking KPI cards adds to selection
+- [ ] Shift-clicking chart cards adds to selection
+- [ ] Shift-clicking data points adds to selection
+- [ ] Shift-clicking table rows adds to selection
+- [ ] Selected items appear in ChatBot context
+- [ ] Multiple shift-clicks accumulate selections
+- [ ] Clear selection button works
+
+**Filter Functionality:**
+- [ ] Filter changes update visualizations
+- [ ] Filter reset clears all selections
+- [ ] Filter reset clears localStorage
+- [ ] New session starts with fresh data (no persisted filters)
+- [ ] Filter state persists during session
+
+**Visual Consistency:**
+- [ ] All graph titles are above cards
+- [ ] All tables use DataTable component
+- [ ] Home button appears in navigation (except on Enterprise-IQ)
+- [ ] Layout matches other dashboards
 
 ---
 
@@ -1196,6 +3765,336 @@ const defaultFilters = {
 - `apps/frontend/src/app/sales-performance/components/visualizations/` - Chart examples
 - `apps/frontend/src/app/enterprise-iq/page.tsx` - Component registry
 - `apps/frontend/src/app/enterprise-iq/config/componentPropMappers.ts` - Prop mapper examples
+
+---
+
+## Filter Implementation Standards (2025 Update)
+
+### Rule: Single Filter Location Per Dashboard
+
+**Problem:** Some dashboards had duplicate filters in both `layout.tsx` AND `page.tsx`, causing:
+- Inconsistent filter state
+- Confusing user experience
+- Difficult maintenance
+- Different field naming conventions
+
+**Solution:** Filters must ONLY exist in ONE location per dashboard
+
+### Standard Pattern
+
+**✅ CORRECT - Filters in page.tsx ONLY:**
+
+```typescript
+// page.tsx
+export default function DashboardPage() {
+  const { filters, setFilters } = useDashboardContext();
+
+  return (
+    <PageLoader isLoading={loading}>
+      {/* Filters at top of page */}
+      <DashboardSection>
+        <FilterBar
+          config={{
+            dateRange: {
+              enabled: true,
+              value: filters.dateRange ? {
+                from: new Date(filters.dateRange.startDate),
+                to: new Date(filters.dateRange.endDate)
+              } : { from: new Date('2017-01-01'), to: new Date('2021-12-31') },
+              onChange: (range) => {
+                if (range?.from && range?.to) {
+                  setFilters({
+                    ...filters,
+                    dateRange: {
+                      startDate: range.from.toISOString().split('T')[0],
+                      endDate: range.to.toISOString().split('T')[0]
+                    }
+                  });
+                }
+              }
+            },
+            multiSelect: [
+              {
+                id: 'regions',
+                label: 'Regions',
+                options: [...],
+                value: filters.regions || [],
+                onChange: (values) => setFilters({ ...filters, regions: values }),
+                placeholder: 'Select regions...'
+              }
+            ]
+          }}
+          onReset={() => {
+            // Clear localStorage
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('dashboard_filters');
+            }
+            // Reset to defaults
+            setFilters({
+              dateRange: { startDate: '2017-01-01', endDate: '2021-12-31' },
+              regions: [],
+              // ... other defaults
+            });
+          }}
+          showResetButton={true}
+        />
+      </DashboardSection>
+
+      {/* Rest of dashboard content */}
+    </PageLoader>
+  );
+}
+```
+
+**❌ INCORRECT - Duplicate filters:**
+```typescript
+// layout.tsx - DON'T DO THIS
+function HeaderFilters() {
+  return <CustomFilters ... />; // ❌ Creates duplicate
+}
+
+// AND page.tsx - Having filters here too
+<FilterBar ... /> // ❌ Results in two filter sets
+```
+
+### Filter Field Naming Standards
+
+**Use consistent field names across all dashboards:**
+
+| Field Type | Standard Name | Example Value |
+|-----------|---------------|---------------|
+| Date Range | `dateRange: { startDate, endDate }` | `{ startDate: '2017-01-01', endDate: '2021-12-31' }` |
+| Multi-Select Arrays | `customerSegments`, `regions`, `valueCategories` | `['Enterprise', 'Mid-Market']` |
+| Search | `search` | `'customer name'` |
+| Single-Select | `selectedRegion`, `selectedType` | `'North America'` |
+
+**Important:**
+- Always clear localStorage in onReset handler
+- Always provide default values in reset
+- Always use FilterBar component from `components/index`
+- Never create custom filter components in layout.tsx
+
+---
+
+## Filter Dropdown Z-Index Standards (2025 Update)
+
+### Problem: Dropdown Overlap When Filters Wrap
+
+When filters wrap to multiple lines on smaller screens, dropdown menus from top-row filters would overlap or blend with bottom-row filters, making them unusable.
+
+**Visual Example:**
+```
+[Filter 1 ▼] [Filter 2 ▼]
+[Filter 3  ] [Filter 4  ]
+     |
+     └─ Dropdown appears here but gets cut off
+        by Filter 3 and 4 below
+```
+
+### Solution: Proper Z-Index Hierarchy
+
+**Updated Z-Index Values:**
+
+```typescript
+// Container: NO z-index (just relative)
+<div ref={dropdownRef} className={`relative ${className}`}>
+
+// Dropdown Menu: z-[100]
+{isOpen && (
+  <div className="absolute z-[100] w-full mt-1 ... top-full">
+```
+
+**Why This Works:**
+- **Container has NO z-index**: Avoids creating a new stacking context
+  - Using `position: relative` with a z-index creates a stacking context
+  - Child elements' z-index becomes relative to that context, not global
+  - Removing z-index from container lets children have global z-index values
+
+- **Dropdown has `z-[100]`**: Ensures it appears above ALL content globally
+  - Above other filters (no z-index)
+  - Above cards and charts (z-10 or z-20)
+  - Above dashboard sections (no z-index)
+  - Below modals and navigation (z-50, z-100+)
+
+**Key Concept - Stacking Context:**
+```typescript
+// ❌ WRONG - Creates stacking context
+<div className="relative z-30">  {/* Stacking context */}
+  <div className="absolute z-[100]">  {/* z-100 only within parent context */}
+    Dropdown
+  </div>
+</div>
+
+// ✅ CORRECT - No stacking context
+<div className="relative">  {/* No z-index = no stacking context */}
+  <div className="absolute z-[100]">  {/* z-100 is global */}
+    Dropdown
+  </div>
+</div>
+```
+
+### Files Updated
+
+Apply this pattern to all filter components:
+
+1. **MultiSelectFilter.tsx**
+   - Line 69: Container - `className={relative ${className}}` (NO z-index)
+   - Line 133: Dropdown - `className="absolute z-[100] ..."` (GLOBAL z-index)
+
+2. **SingleSelectFilter.tsx**
+   - Line 54: Container - `className={relative ${className}}` (NO z-index)
+   - Line 89: Dropdown - `className="absolute z-[100] ..."` (GLOBAL z-index)
+
+3. **DateRangeFilter.tsx** - (Uses Select component, already handles z-index correctly)
+
+### Testing
+
+After implementation, test:
+1. Resize browser to force filter wrapping
+2. Open dropdown from top-row filter
+3. Verify dropdown appears ABOVE bottom-row filters
+4. Verify dropdown is fully visible and clickable
+5. Test on mobile, tablet, and desktop viewports
+
+---
+
+## Table Row Shift-Click Standard (2025 Update)
+
+### Requirement
+
+**ALL tables MUST support shift-click on rows for multi-point selection in Business Intelligence panel.**
+
+### Implementation
+
+#### 1. DataTable Component Fix
+
+The `DataTable` component must pass the event object to `onRowClick`:
+
+```typescript
+// packages/components/src/tables/DataTable.tsx
+
+// Type definition (line 19)
+export interface DataTableProps<T> {
+  // ...
+  onRowClick?: (row: T, event?: React.MouseEvent<HTMLTableRowElement>) => void;
+  // ...
+}
+
+// Row rendering (line 214)
+<tr
+  onClick={(event) => onRowClick?.(row, event)}  // ✅ Pass event
+>
+```
+
+**✅ CORRECT:**
+```typescript
+onClick={(event) => onRowClick?.(row, event)}
+```
+
+**❌ INCORRECT:**
+```typescript
+onClick={() => onRowClick?.(row)}  // Missing event parameter
+```
+
+#### 2. Table Component Pattern
+
+Every table component must implement shift-click in its `onRowClick` handler:
+
+```typescript
+import { getShiftClickManager } from 'components/index';
+
+export function CustomerTable({ data, loading }: Props) {
+  const shiftClickManager = getShiftClickManager();
+
+  // Define columns
+  const columns: ColumnDefinition[] = [
+    {
+      key: 'name',
+      header: 'Customer Name',
+      sortable: true,
+      render: (row) => row.customer_name
+    },
+    // ... more columns
+  ];
+
+  return (
+    <DataTable
+      data={rows}
+      columns={columns}
+      searchable
+      pageSize={10}
+      onRowClick={(row, event) => {
+        if (event?.shiftKey) {
+          // Shift+click: Add to multi-select for BI panel
+          shiftClickManager.addPoint({
+            label: `Customer: ${row.name}`,
+            value: `Total Spend: $${row.totalSpend.toFixed(2)}, Status: ${row.status}`,
+            source: 'Dashboard Name - Table Name'
+          }, event.nativeEvent);
+        } else {
+          // Regular click: Show customer details or other action
+          onCustomerSelect?.(row);
+        }
+      }}
+    />
+  );
+}
+```
+
+### Key Points
+
+1. **Always check `event?.shiftKey`** before adding to shift-click selection
+2. **Provide meaningful labels** - Use customer name, ID, or other identifier
+3. **Include relevant values** - Add key metrics, status, or summary data
+4. **Set clear source** - Format: `'Dashboard Name - Table Name'`
+5. **Use `event.nativeEvent`** when calling `shiftClickManager.addPoint()`
+6. **Support regular clicks** - Non-shift clicks can trigger other actions (details panel, navigation, etc.)
+
+### Example Implementations
+
+**Churn Prediction Table:**
+```typescript
+onRowClick={(row, event) => {
+  if (event?.shiftKey) {
+    shiftClickManager.addPoint({
+      label: `Customer: ${row.name}`,
+      value: `Risk: ${row.riskLevel} (${row.riskPercentage}%)`,
+      source: 'Churn Dashboard - Customer Table'
+    }, event.nativeEvent);
+  } else {
+    onCustomerSelect(row);
+  }
+}}
+```
+
+**Anomaly Detection Table:**
+```typescript
+onRowClick={(row, event) => {
+  if (event?.shiftKey) {
+    shiftClickManager.addPoint({
+      label: `Customer: ${row.customer_name}`,
+      value: `Severity: ${row.severity_level} (Score: ${row.anomaly_score.toFixed(3)})`,
+      source: 'Anomaly Dashboard - Anomalies Table'
+    }, event.nativeEvent);
+  } else {
+    setSelectedCustomer(row);
+  }
+}}
+```
+
+### Testing Checklist
+
+- [ ] Shift-click on table row adds point to selection manager
+- [ ] Non-shift click triggers default action (if any)
+- [ ] Multiple shift-clicks accumulate in selection
+- [ ] Selection visible in BI panel
+- [ ] Clear selection button works
+- [ ] Selected points show correct label and value
+- [ ] Source attribution is accurate
+
+### Migration Note
+
+**All existing tables** already have this pattern implemented. New tables MUST follow this standard from day one.
 
 ---
 
