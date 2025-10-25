@@ -14,10 +14,7 @@ import aiohttp
 import asyncio
 dotenv.load_dotenv()
 from cartesia.tts import OutputFormat_Raw, TtsRequestIdSpecifier
-from deepgram import (
-    DeepgramClient,
-    SpeakOptions,
-)
+from deepgram import DeepgramClient
 
 COMPONENT_SCHEMA = {
     "spawnableComponents": {
@@ -772,14 +769,16 @@ async def get_audio_deepgram(text: str) -> dict:
     SPEAK_TEXT = {"text": remove_markdown_characters_fast(text)}
 
     try:
+        # Initialize Deepgram client with API key only
         deepgram = DeepgramClient(api_key=os.getenv("DEEPGRAM_API_KEY", ""))
 
-        # Configure for MP3 output
+        # Configure for MP3 output - pass as dictionary
         options = {
             "model": "aura-2-thalia-en",
-            "encoding": "mp3",
+            "encoding": "mp3",  # Specify MP3 encoding
         }
 
+        # Call the async REST API
         res = await deepgram.speak.asyncrest.v("1").stream_memory(
             SPEAK_TEXT, options
         )
