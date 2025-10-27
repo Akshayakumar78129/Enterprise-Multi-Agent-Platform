@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { ChartCard } from 'components/index';
+import { ChartCard, getShiftClickManager } from 'components/index';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -42,6 +42,8 @@ interface NPVPortfolioChartProps {
 }
 
 export function NPVPortfolioChart({ data, npvSummary, loading }: NPVPortfolioChartProps) {
+  const shiftClickManager = getShiftClickManager();
+
   if (loading || !data || data.length === 0) {
     return (
       <ChartCard loading={loading}>
@@ -76,6 +78,17 @@ export function NPVPortfolioChart({ data, npvSummary, loading }: NPVPortfolioCha
   const options: ChartOptions<'bar'> = {
     responsive: true,
     maintainAspectRatio: false,
+    onClick: (event: any, elements: any[]) => {
+      if (elements.length > 0 && event?.native?.shiftKey) {
+        const index = elements[0].index;
+        const bucket = data[index];
+        shiftClickManager.addPoint({
+          label: `${bucket.range} AR Bucket`,
+          value: `Book Value: $${bucket.amount.toLocaleString()}, NPV: $${bucket.npvAdjustedAmount.toLocaleString()}, Erosion: $${bucket.valueErosion.toLocaleString()}`,
+          source: 'AR Aging - NPV Portfolio Chart'
+        }, event.native);
+      }
+    },
     plugins: {
       legend: {
         position: 'top' as const,
@@ -135,7 +148,15 @@ export function NPVPortfolioChart({ data, npvSummary, loading }: NPVPortfolioCha
   };
 
   return (
-    <ChartCard>
+    <ChartCard
+      onShiftClick={(event) => {
+        shiftClickManager.addPoint({
+          label: "NPV-Adjusted AR Portfolio",
+          value: `Total Erosion: $${npvSummary?.totalValueErosion.toLocaleString() || 'N/A'}`,
+          source: 'AR Aging - NPV Portfolio Chart'
+        }, event.nativeEvent);
+      }}
+    >
       <div className="h-96">
         <Bar data={chartData} options={options} />
       </div>

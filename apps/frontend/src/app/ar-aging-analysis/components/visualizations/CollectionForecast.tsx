@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { ChartCard } from 'components/index';
+import { ChartCard, getShiftClickManager } from 'components/index';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -32,6 +32,8 @@ interface CollectionForecastProps {
 }
 
 export function CollectionForecast({ data, loading }: CollectionForecastProps) {
+  const shiftClickManager = getShiftClickManager();
+
   if (loading || !data || data.length === 0) {
     return (
       <ChartCard loading={loading}>
@@ -163,7 +165,15 @@ export function CollectionForecast({ data, loading }: CollectionForecastProps) {
   const week8Milestone = data[7]?.predictedAmount || 0;
 
   return (
-    <ChartCard>
+    <ChartCard
+      onShiftClick={(event) => {
+        shiftClickManager.addPoint({
+          label: "Collection Forecast",
+          value: `8-Week Total: $${(totalPredicted / 1000000).toFixed(2)}M, Avg Confidence: ${avgConfidence.toFixed(1)}%`,
+          source: 'AR Aging - Collection Forecast'
+        }, event.nativeEvent);
+      }}
+    >
       <div className="h-96">
         <Line data={chartData} options={options} />
       </div>

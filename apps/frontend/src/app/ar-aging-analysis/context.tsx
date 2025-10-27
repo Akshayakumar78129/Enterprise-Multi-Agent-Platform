@@ -9,9 +9,12 @@ export interface ARAgingFilters {
     startDate: string;
     endDate: string;
   };
-  customerType: string;
-  region: string;
-  segment: string;
+  customerSegments: string[];
+  regions: string[];
+  riskLevels: string[];
+  minAmount?: number;
+  maxAmount?: number;
+  wacc: number;
 }
 
 interface ARAgingContextType {
@@ -62,9 +65,10 @@ export function ARAgingProvider({ children }: { children: React.ReactNode }) {
   // Always start with default filters to avoid hydration mismatch
   const [filters, setFilters] = useState<ARAgingFilters>({
     dateRange: { startDate: '2017-01-01', endDate: '2021-12-31' },
-    customerType: 'all',
-    region: 'all',
-    segment: 'all'
+    customerSegments: [],
+    regions: [],
+    riskLevels: [],
+    wacc: 10.0
   });
 
   // Load filters from localStorage after hydration

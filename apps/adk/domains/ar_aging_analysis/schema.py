@@ -155,6 +155,8 @@ class ARAgingSchema:
             'customerSegments': self.CUSTOMER.refs['category'],
             'customer_type': self.CUSTOMER.refs['type'],
             'region': self.CUSTOMER.refs['region'],
+            'regions': self.CUSTOMER.refs['region'],  # Added regions filter mapping
+            'riskLevels': '',  # Risk levels calculated in memory, not a DB filter
             'minAmount': self.AR_DETAIL.refs['debit_amount'],
             'maxAmount': self.AR_DETAIL.refs['debit_amount']
         }

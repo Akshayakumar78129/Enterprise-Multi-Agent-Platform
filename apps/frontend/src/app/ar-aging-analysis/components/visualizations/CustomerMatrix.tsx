@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { ChartCard } from 'components/index';
+import { ChartCard, getShiftClickManager } from 'components/index';
 import { Scatter } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -32,6 +32,8 @@ interface CustomerMatrixProps {
 }
 
 export function CustomerMatrix({ data, loading }: CustomerMatrixProps) {
+  const shiftClickManager = getShiftClickManager();
+
   if (loading || !data || data.length === 0) {
     return (
       <ChartCard loading={loading}>
@@ -79,6 +81,18 @@ export function CustomerMatrix({ data, loading }: CustomerMatrixProps) {
   const options: ChartOptions<'scatter'> = {
     responsive: true,
     maintainAspectRatio: false,
+    onClick: (event: any, elements: any[]) => {
+      if (elements.length > 0 && event?.native?.shiftKey) {
+        const datasetIndex = elements[0].datasetIndex;
+        const index = elements[0].index;
+        const point = datasets[datasetIndex].data[index] as any;
+        shiftClickManager.addPoint({
+          label: point.customerName,
+          value: `CLV: $${point.x.toLocaleString()}, Risk: ${(100 - point.y).toFixed(1)}, Outstanding: $${point.outstandingAmount.toLocaleString()}`,
+          source: 'AR Aging - Customer Portfolio Matrix'
+        }, event.native);
+      }
+    },
     plugins: {
       legend: {
         position: 'top' as const,
@@ -151,7 +165,15 @@ export function CustomerMatrix({ data, loading }: CustomerMatrixProps) {
   };
 
   return (
-    <ChartCard>
+    <ChartCard
+      onShiftClick={(event) => {
+        shiftClickManager.addPoint({
+          label: "Customer Portfolio Matrix",
+          value: `${data.length} customers across ${Object.keys(segmentedData).length} segments`,
+          source: 'AR Aging - Customer Matrix'
+        }, event.nativeEvent);
+      }}
+    >
       <div className="h-96 relative">
         <Scatter data={chartData} options={options} />
 

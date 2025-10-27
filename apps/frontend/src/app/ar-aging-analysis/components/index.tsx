@@ -1,11 +1,12 @@
-import React from 'react';
-import { AnimatedKPITile } from 'components/index';
-import { DollarSign, Calendar, AlertTriangle, TrendingUp, Shield } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { KPIRow, getShiftClickManager } from 'components/index';
 
 // Export filters
 export { ARAgingFilters } from './ARAgingFilters';
 
 export function ARAgingKPIs({ metrics, loading }: { metrics: any; loading?: boolean }) {
+  const shiftClickManager = getShiftClickManager();
+
   // Map status to color
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -22,55 +23,81 @@ export function ARAgingKPIs({ metrics, loading }: { metrics: any; loading?: bool
     return 0;
   };
 
-  const kpis = [
-    {
-      title: 'Total A/R',
-      value: metrics?.totalAR?.formatted_value || '$0',
-      subtitle: 'Outstanding receivables',
-      icon: DollarSign,
-      trend: getTrendValue(metrics?.totalAR),
-      color: getStatusColor(metrics?.totalAR?.status || 'good')
-    },
-    {
-      title: 'Days Sales Outstanding',
-      value: metrics?.dso?.formatted_value || '0 days',
-      subtitle: 'Average collection time',
-      icon: Calendar,
-      trend: getTrendValue(metrics?.dso),
-      color: getStatusColor(metrics?.dso?.status || 'good')
-    },
-    {
-      title: 'Overdue Amount',
-      value: metrics?.overdueAmount?.formatted_value || '$0',
-      subtitle: 'Past due receivables',
-      icon: AlertTriangle,
-      trend: getTrendValue(metrics?.overdueAmount),
-      color: getStatusColor(metrics?.overdueAmount?.status || 'warning')
-    },
-    {
-      title: 'Collection Efficiency',
-      value: metrics?.collectionEfficiency?.formatted_value || '0%',
-      subtitle: 'Current / Total AR',
-      icon: TrendingUp,
-      trend: getTrendValue(metrics?.collectionEfficiency),
-      color: getStatusColor(metrics?.collectionEfficiency?.status || 'good')
-    },
-    {
-      title: 'High Risk Exposure',
-      value: metrics?.riskExposure?.formatted_value || '$0',
-      subtitle: '90+ days overdue',
-      icon: Shield,
-      trend: getTrendValue(metrics?.riskExposure),
-      color: getStatusColor(metrics?.riskExposure?.status || 'good')
-    }
-  ];
+  const kpis = useMemo(() => {
+    return [
+      {
+        id: "total-ar",
+        title: 'Total A/R',
+        value: metrics?.totalAR?.value || 0,
+        format: "currency" as const,
+        subtitle: 'Outstanding receivables',
+        trend: getTrendValue(metrics?.totalAR),
+        color: getStatusColor(metrics?.totalAR?.status || 'good')
+      },
+      {
+        id: "days-sales-outstanding",
+        title: 'Days Sales Outstanding',
+        value: metrics?.dso?.value || 0,  // Raw number
+        format: "number" as const,
+        subtitle: 'Average collection time',
+        trend: getTrendValue(metrics?.dso),
+        color: getStatusColor(metrics?.dso?.status || 'good')
+      },
+      {
+        id: "overdue-amount",
+        title: 'Overdue Amount',
+        value: metrics?.overdueAmount?.value || 0,  // Raw number
+        format: "currency" as const,
+        subtitle: 'Past due receivables',
+        trend: getTrendValue(metrics?.overdueAmount),
+        color: getStatusColor(metrics?.overdueAmount?.status || 'warning')
+      },
+      {
+        id: "collection-efficiency",
+        title: 'Collection Efficiency',
+        value: metrics?.collectionEfficiency?.value || 0,  // Raw number
+        format: "percentage" as const,
+        subtitle: 'Current / Total AR',
+        trend: getTrendValue(metrics?.collectionEfficiency),
+        color: getStatusColor(metrics?.collectionEfficiency?.status || 'good')
+      },
+      {
+        id: "high-risk-exposure",
+        title: 'High Risk Exposure',
+        value: metrics?.riskExposure?.value || 0,  // Raw number
+        format: "currency" as const,
+        subtitle: '90+ days overdue',
+        trend: getTrendValue(metrics?.riskExposure),
+        color: getStatusColor(metrics?.riskExposure?.status || 'good')
+      }
+    ];
+  }, [metrics]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-      {kpis.map((kpi, index) => (
-        <AnimatedKPITile key={index} {...kpi} loading={loading} />
-      ))}
-    </div>
+    <KPIRow
+      kpis={kpis}
+      columns={5}
+      animationDelay={50}
+      onKPIShiftClick={(kpi, event) => {
+        // Format the value based on the KPI format type
+        let formattedValue = '';
+        if (kpi.format === 'currency') {
+          formattedValue = `$${kpi.value.toLocaleString()}`;
+        } else if (kpi.format === 'percentage') {
+          formattedValue = `${kpi.value.toFixed(1)}%`;
+        } else if (kpi.format === 'number') {
+          formattedValue = kpi.value.toLocaleString();
+        } else {
+          formattedValue = kpi.value.toString();
+        }
+
+        shiftClickManager.addPoint({
+          label: kpi.title,
+          value: formattedValue,
+          source: 'AR Aging KPIs'
+        }, event.nativeEvent);
+      }}
+    />
   );
 }
 

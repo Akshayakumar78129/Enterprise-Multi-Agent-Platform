@@ -105,9 +105,12 @@ export interface ARAgingFilters {
     startDate: string;
     endDate: string;
   };
-  customerType: string;
-  region: string;
-  segment: string;
+  customerSegments: string[];
+  regions: string[];
+  riskLevels: string[];
+  minAmount?: number;
+  maxAmount?: number;
+  wacc: number;
 }
 
 class ARAgingService {
@@ -118,20 +121,29 @@ class ARAgingService {
       // Convert to POST /summary format
       const postFilters: any = {
         dateFrom: filters.dateRange.startDate,
-        dateTo: filters.dateRange.endDate
+        dateTo: filters.dateRange.endDate,
+        wacc: filters.wacc || 10.0
       };
 
-      // Only include non-"all" filters
-      if (filters.customerType && filters.customerType !== 'all') {
-        postFilters.customerType = filters.customerType;
+      // Only include non-empty array filters
+      if (filters.customerSegments && filters.customerSegments.length > 0) {
+        postFilters.customerSegments = filters.customerSegments;
       }
 
-      if (filters.region && filters.region !== 'all') {
-        postFilters.region = filters.region;
+      if (filters.regions && filters.regions.length > 0) {
+        postFilters.regions = filters.regions;
       }
 
-      if (filters.segment && filters.segment !== 'all') {
-        postFilters.segment = filters.segment;
+      if (filters.riskLevels && filters.riskLevels.length > 0) {
+        postFilters.riskLevels = filters.riskLevels;
+      }
+
+      if (filters.minAmount !== undefined && filters.minAmount !== null) {
+        postFilters.minAmount = filters.minAmount;
+      }
+
+      if (filters.maxAmount !== undefined && filters.maxAmount !== null) {
+        postFilters.maxAmount = filters.maxAmount;
       }
 
       const response = await axios.post(`${this.baseUrl}/summary`, postFilters);

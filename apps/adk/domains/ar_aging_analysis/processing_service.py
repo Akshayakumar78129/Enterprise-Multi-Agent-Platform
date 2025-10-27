@@ -15,6 +15,7 @@ from .models import (
     KPIStatus,
     TrendDirection
 )
+from domains.common.dashboard_cache import cache_dashboard_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +26,12 @@ class ARAgingProcessingService:
     def __init__(self):
         self.data_service = ARAgingDataService()
 
-    async def get_ar_aging_summary(self, filters: ARAgingFilters) -> Dict[str, Any]:
+    @cache_dashboard_endpoint(dashboard_type='ar_aging_analysis', ttl=300)
+    async def get_ar_aging_summary(self, filters) -> Dict[str, Any]:
         """Get complete AR aging summary with all visualizations
 
         Args:
-            filters: AR aging filters including date range, segments, WACC
+            filters: AR aging filters dict or Pydantic model with date range, segments, WACC
 
         Returns:
             Complete dashboard data with KPIs, aging buckets, customer insights, forecast
@@ -156,41 +158,52 @@ class ARAgingProcessingService:
         bucket_90_plus = next((b for b in aging_buckets if b['range'] == '90+ days'), None)
         risk_exposure = bucket_90_plus['amount'] if bucket_90_plus else 0
 
+        # Calculate status indicators safely (avoid division by zero)
+        total_ar_status = 'good'
+        if total_ar > 0:
+            overdue_ratio = total_overdue / total_ar
+            total_ar_status = 'warning' if overdue_ratio > 0.2 else 'good'
+
+        overdue_status = 'warning'
+        if total_ar > 0:
+            overdue_ratio = total_overdue / total_ar
+            overdue_status = 'critical' if overdue_ratio > 0.3 else 'warning'
+
+        risk_status = 'critical'
+        if total_ar > 0:
+            risk_ratio = risk_exposure / total_ar
+            risk_status = 'good' if risk_ratio < 0.1 else 'critical'
+
         return {
             'totalAR': {
-                'value': round(total_ar, 2),
+                'value': round(total_ar, 2),  # Raw number - frontend will format
                 'change': 1.2,  # Placeholder - would need historical data
                 'trend': 'up',
-                'status': 'warning' if total_overdue / total_ar > 0.2 else 'good',
-                'formatted_value': f"${total_ar:,.0f}"
+                'status': total_ar_status
             },
             'dso': {
-                'value': dso,
+                'value': dso,  # Raw number - frontend will format
                 'change': -2.1,  # Placeholder
                 'trend': 'down',
-                'status': 'good' if dso < 45 else 'warning' if dso < 60 else 'critical',
-                'formatted_value': f"{dso} days"
+                'status': 'good' if dso < 45 else 'warning' if dso < 60 else 'critical'
             },
             'overdueAmount': {
-                'value': round(total_overdue, 2),
+                'value': round(total_overdue, 2),  # Raw number - frontend will format
                 'change': 3.5,  # Placeholder
                 'trend': 'up',
-                'status': 'critical' if total_overdue / total_ar > 0.3 else 'warning',
-                'formatted_value': f"${total_overdue:,.0f}"
+                'status': overdue_status
             },
             'collectionEfficiency': {
-                'value': collection_efficiency,
+                'value': collection_efficiency,  # Raw number - frontend will format
                 'change': 2.8,  # Placeholder
                 'trend': 'up',
-                'status': 'good' if collection_efficiency > 70 else 'warning',
-                'formatted_value': f"{collection_efficiency}%"
+                'status': 'good' if collection_efficiency > 70 else 'warning'
             },
             'riskExposure': {
-                'value': round(risk_exposure, 2),
+                'value': round(risk_exposure, 2),  # Raw number - frontend will format
                 'change': -1.2,  # Placeholder
                 'trend': 'down',
-                'status': 'good' if risk_exposure / total_ar < 0.1 else 'critical',
-                'formatted_value': f"${risk_exposure:,.0f}"
+                'status': risk_status
             }
         }
 

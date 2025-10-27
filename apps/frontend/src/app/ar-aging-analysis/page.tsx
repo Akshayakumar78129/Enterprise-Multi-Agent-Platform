@@ -1,11 +1,12 @@
 "use client";
 
 import React from 'react';
-import { DashboardSection } from 'components/index';
+import { DashboardSection, PageLoader } from 'components/index';
 import { useARAgingContext } from './context';
 import { useARAgingData } from './hooks/useARAgingData';
 import {
   ARAgingKPIs,
+  ARAgingFilters,
   NPVPortfolioChart,
   CustomerMatrix,
   CollectionForecast,
@@ -15,6 +16,7 @@ import {
 
 export default function ARAgingAnalysisPage() {
   const context = useARAgingContext();
+  const [filterKey, setFilterKey] = React.useState(0);
 
   if (!context) {
     return (
@@ -24,7 +26,7 @@ export default function ARAgingAnalysisPage() {
     );
   }
 
-  const { filters } = context;
+  const { filters, setFilters } = context;
 
   const {
     loading,
@@ -35,7 +37,8 @@ export default function ARAgingAnalysisPage() {
     collectionForecast,
     npvSummary,
     agingTable,
-    insights
+    insights,
+    hasNoData
   } = useARAgingData({
     dateRange: filters.dateRange,
     customerSegments: filters.customerSegments,
@@ -46,7 +49,7 @@ export default function ARAgingAnalysisPage() {
     regions: filters.regions
   });
 
-  if (error) {
+  if (error && !loading && hasNoData) {
     return (
       <div className="min-h-screen p-6">
         <div className="max-w-7xl mx-auto">
@@ -66,53 +69,86 @@ export default function ARAgingAnalysisPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* KPIs Section */}
-      <DashboardSection title="Key Metrics">
-        <ARAgingKPIs metrics={kpiMetrics} loading={loading} />
-      </DashboardSection>
+    <PageLoader
+      isLoading={loading}
+      loaderProps={{
+        title: "AR Aging Analysis",
+      }}
+    >
+      <div className="space-y-6">
+        {/* Filters Section */}
+        <DashboardSection>
+          <ARAgingFilters
+            key={filterKey}
+            filters={filters}
+            onFiltersChange={setFilters}
+            onReset={() => {
+              // Clear localStorage (including time range preset)
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem('arAgingFilters');
+                localStorage.removeItem('arAgingTimeRange');
+              }
+              // Reset to defaults
+              setFilters({
+                dateRange: { startDate: "2017-01-01", endDate: "2021-12-31" },
+                customerSegments: [],
+                regions: [],
+                riskLevels: [],
+                wacc: 10.0
+              });
+              // Force re-render of filter component to clear internal state
+              setFilterKey(prev => prev + 1);
+            }}
+          />
+        </DashboardSection>
 
-      {/* NPV Portfolio Chart */}
-      <DashboardSection title="NPV-Adjusted AR Portfolio">
-        <NPVPortfolioChart
-          data={agingBuckets}
-          npvSummary={npvSummary}
-          loading={loading}
-        />
-      </DashboardSection>
+        {/* KPIs Section */}
+        <DashboardSection title="Key Metrics">
+          <ARAgingKPIs metrics={kpiMetrics} loading={loading} />
+        </DashboardSection>
 
-      {/* Grid Layout: Customer Matrix + Collection Forecast */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <DashboardSection title="Customer Portfolio Matrix">
-          <CustomerMatrix
-            data={customerInsights}
+        {/* NPV Portfolio Chart */}
+        <DashboardSection title="NPV-Adjusted AR Portfolio">
+          <NPVPortfolioChart
+            data={agingBuckets}
+            npvSummary={npvSummary}
             loading={loading}
           />
         </DashboardSection>
-        <DashboardSection title="Collection Forecast">
-          <CollectionForecast
-            data={collectionForecast}
+
+        {/* Grid Layout: Customer Matrix + Collection Forecast */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <DashboardSection title="Customer Portfolio Matrix">
+            <CustomerMatrix
+              data={customerInsights}
+              loading={loading}
+            />
+          </DashboardSection>
+          <DashboardSection title="Collection Forecast">
+            <CollectionForecast
+              data={collectionForecast}
+              loading={loading}
+            />
+          </DashboardSection>
+        </div>
+
+        {/* Risk Heatmap */}
+        <DashboardSection title="Collection Probability Engine">
+          <RiskHeatmap
+            customers={customerInsights}
+            agingBuckets={agingBuckets}
+            loading={loading}
+          />
+        </DashboardSection>
+
+        {/* Aging Table */}
+        <DashboardSection title="Detailed AR Breakdown">
+          <AgingTable
+            data={agingTable}
             loading={loading}
           />
         </DashboardSection>
       </div>
-
-      {/* Risk Heatmap */}
-      <DashboardSection title="Collection Probability Engine">
-        <RiskHeatmap
-          customers={customerInsights}
-          agingBuckets={agingBuckets}
-          loading={loading}
-        />
-      </DashboardSection>
-
-      {/* Aging Table */}
-      <DashboardSection title="Detailed AR Breakdown">
-        <AgingTable
-          data={agingTable}
-          loading={loading}
-        />
-      </DashboardSection>
-    </div>
+    </PageLoader>
   );
 }

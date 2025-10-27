@@ -21,63 +21,51 @@ export function ARAgingFilters({
         dateRange: {
           enabled: true,
           value: filters.dateRange,
-          onChange: (range) =>
-            onFiltersChange({ ...filters, dateRange: range }),
-          presets: [
-            { label: "All Time", startDate: "2017-01-01", endDate: "2021-12-31" },
-            { label: "2021", startDate: "2021-01-01", endDate: "2021-12-31" },
-            { label: "2020", startDate: "2020-01-01", endDate: "2020-12-31" },
-            { label: "Last 6 Months", startDate: "2021-06-01", endDate: "2021-12-31" },
-            { label: "Q4 2021", startDate: "2021-10-01", endDate: "2021-12-31" },
-            { label: "Q3 2021", startDate: "2021-07-01", endDate: "2021-09-30" },
-          ],
+          onChange: (range) => onFiltersChange({ ...filters, dateRange: range }),
         },
-        singleSelect: [
+        multiSelect: [
           {
-            id: "customerType",
-            label: "Customer Type",
+            id: "customerSegments",
+            label: "Customer Segments",
             options: [
-              { value: "all", label: "All Customer Types" },
               { value: "enterprise", label: "Enterprise" },
               { value: "smb", label: "Small-Medium Business" },
               { value: "retail", label: "Retail" },
               { value: "government", label: "Government" },
             ],
-            value: filters.customerType,
-            onChange: (value) =>
-              onFiltersChange({ ...filters, customerType: value }),
+            value: filters.customerSegments || [],
+            onChange: (values) => onFiltersChange({ ...filters, customerSegments: values }),
+            placeholder: "All Customer Segments"
           },
           {
-            id: "region",
-            label: "Region",
+            id: "regions",
+            label: "Regions",
             options: [
-              { value: "all", label: "All Regions" },
               { value: "north", label: "North" },
               { value: "south", label: "South" },
               { value: "east", label: "East" },
               { value: "west", label: "West" },
             ],
-            value: filters.region,
-            onChange: (value) =>
-              onFiltersChange({ ...filters, region: value }),
+            value: filters.regions || [],
+            onChange: (values) => onFiltersChange({ ...filters, regions: values }),
+            placeholder: "All Regions"
           },
           {
-            id: "segment",
-            label: "Segment",
+            id: "riskLevels",
+            label: "Risk Levels",
             options: [
-              { value: "all", label: "All Segments" },
-              { value: "high_value", label: "High Value" },
-              { value: "medium_value", label: "Medium Value" },
-              { value: "low_value", label: "Low Value" },
-              { value: "new_customer", label: "New Customer" },
+              { value: "high", label: "High Risk" },
+              { value: "medium", label: "Medium Risk" },
+              { value: "low", label: "Low Risk" },
             ],
-            value: filters.segment,
-            onChange: (value) =>
-              onFiltersChange({ ...filters, segment: value }),
+            value: filters.riskLevels || [],
+            onChange: (values) => onFiltersChange({ ...filters, riskLevels: values }),
+            placeholder: "All Risk Levels"
           },
         ],
       }}
       onReset={onReset}
+      showResetButton={true}
     />
   );
 }
