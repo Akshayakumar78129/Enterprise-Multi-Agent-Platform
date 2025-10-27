@@ -97,5 +97,6 @@ class RegionalSalesResponse(BaseModel):
     """Complete regional sales analysis response"""
     kpiMetrics: RegionalKPI
     mainData: dict  # Contains regional performance, country performance, time series, opportunities
-    insights: List[dict]
+    insights: List[str]  # Unified insights array (rule-based + AI)
+    insights_metadata: Optional[dict] = None  # Metadata about insights generation
     metadata: dict

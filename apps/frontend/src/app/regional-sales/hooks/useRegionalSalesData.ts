@@ -1,64 +1,48 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { regionalSalesService, RegionalSalesData, RegionalSalesFilters } from '../services/regionalSalesService';
 
 export function useRegionalSalesData(filters: RegionalSalesFilters) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<RegionalSalesData | null>(null);
+  // Build filter params - memoize to avoid unnecessary re-renders
+  const filterParams = useMemo(() => {
+    const params: Record<string, any> = {};
 
-  // Serialize filters to avoid infinite re-renders
-  const filtersKey = JSON.stringify(filters);
+    if (filters.dateFrom) {
+      params.dateFrom = filters.dateFrom;
+    }
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+    if (filters.dateTo) {
+      params.dateTo = filters.dateTo;
+    }
 
-        const result = await regionalSalesService.getDashboardData(filters);
-        setData(result);
-      } catch (err: any) {
-        setError(err.message || 'Failed to load regional sales data');
-        // Set empty data on error
-        setData({
-          kpiMetrics: {
-            totalSales: 0,
-            netSales: 0,
-            grossProfit: 0,
-            profitMargin: 0,
-            countryCount: 0,
-            stateCount: 0,
-            customerCount: 0,
-            transactionCount: 0,
-            avgTransactionValue: 0,
-            growthRate: null
-          },
-          mainData: {
-            regionalPerformance: [],
-            countryPerformance: [],
-            timeSeries: [],
-            opportunities: [],
-            topRegions: []
-          },
-          insights: [],
-          metadata: {
-            filtersApplied: filters,
-            timestamp: new Date().toISOString(),
-            dateRange: {
-              start: filters.dateFrom || '',
-              end: filters.dateTo || ''
-            },
-            totalRegions: 0
-          }
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Only include non-empty array filters
+    if (filters.countries && filters.countries.length > 0) {
+      params.countries = filters.countries;
+    }
 
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtersKey]);
+    if (filters.states && filters.states.length > 0) {
+      params.states = filters.states;
+    }
+
+    return params;
+  }, [filters]);
+
+  // Use React Query for data fetching with caching
+  const {
+    data,
+    isLoading: loading,
+    error: queryError,
+    refetch
+  } = useQuery({
+    queryKey: ['regional-sales', filterParams],
+    queryFn: () => regionalSalesService.getDashboardData(filterParams as RegionalSalesFilters),
+    staleTime: 5 * 60 * 1000, // 5 minutes - matches backend cache TTL
+    gcTime: 10 * 60 * 1000, // 10 minutes - garbage collection time
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+
+  const error = queryError ? (queryError as Error).message : null;
 
   // Derived data for easier component access
   const kpiMetrics = data?.kpiMetrics || {
@@ -83,19 +67,6 @@ export function useRegionalSalesData(filters: RegionalSalesFilters) {
   const hasNoData = !loading && (!data ||
     (regionalPerformance.length === 0 &&
      timeSeries.length === 0));
-
-  const refetch = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const result = await regionalSalesService.getDashboardData(filters);
-      setData(result);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load regional sales data');
-    } finally {
-      setLoading(false);
-    }
-  }, [filters]);
 
   return {
     loading,

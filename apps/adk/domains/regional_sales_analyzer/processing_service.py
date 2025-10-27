@@ -2,7 +2,8 @@
 
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
-from domains.common.simple_cache import cache_dashboard_endpoint
+import asyncio
+from domains.common.dashboard_cache import cache_dashboard_endpoint
 from .data_service import RegionalSalesAnalyzerDataService
 from .models import (
     RegionalKPI,
@@ -20,7 +21,7 @@ class RegionalSalesAnalyzerProcessingService:
     def __init__(self):
         self.data_service = RegionalSalesAnalyzerDataService()
 
-    @cache_dashboard_endpoint("regional_sales_analyzer")
+    @cache_dashboard_endpoint(dashboard_type="regional_sales_analyzer", ttl=300)
     async def get_dashboard_data(self, filters: Dict[str, Any] = {}) -> Dict:
         """Get complete regional sales analyzer dashboard data"""
 
@@ -34,6 +35,20 @@ class RegionalSalesAnalyzerProcessingService:
         time_series = await self._get_time_series(normalized_filters)
         opportunities = await self._get_opportunities(normalized_filters)
         top_regions = await self._get_top_regions(normalized_filters)
+
+        # Generate rule-based insights (fast, always present)
+        rule_based_insights = self._generate_insights(kpis.dict(), regional_performance, opportunities)
+
+        # Get AI insights from separate cache (non-blocking, async)
+        ai_insights = await self._get_cached_ai_insights(
+            normalized_filters,
+            kpis.dict(),
+            regional_performance,
+            opportunities
+        )
+
+        # Combine into single unified insights array
+        combined_insights = rule_based_insights + ai_insights
 
         # Create response structure
         return {
@@ -56,7 +71,13 @@ class RegionalSalesAnalyzerProcessingService:
                 'opportunities': [o.dict() for o in opportunities],
                 'topRegions': [tr.dict() for tr in top_regions]
             },
-            'insights': self._generate_insights(kpis.dict(), regional_performance, opportunities),
+            'insights': combined_insights,
+            'insights_metadata': {
+                'total_count': len(combined_insights),
+                'rule_based_count': len(rule_based_insights),
+                'ai_count': len(ai_insights),
+                'insights_version': 'unified_v2'
+            },
             'metadata': {
                 'filtersApplied': normalized_filters,
                 'timestamp': datetime.now().isoformat()
@@ -211,80 +232,211 @@ class RegionalSalesAnalyzerProcessingService:
             for t in top
         ]
 
-    def _generate_insights(self, kpis: dict, regional_performance: list, opportunities: list) -> list:
-        """Generate AI insights based on data"""
+    def _generate_insights(self, kpis: dict, regional_performance: list, opportunities: list) -> List[str]:
+        """Generate rule-based insights (fast, deterministic)
+
+        These insights are always present and provide immediate value without API calls.
+        Focus on data-driven observations with actionable recommendations.
+
+        Returns:
+            List of formatted insight strings with priority indicators
+        """
         insights = []
 
         # Growth rate insight
         growth_rate = kpis.get('growthRate')
         if growth_rate is not None:
-            if growth_rate > 10:
-                insights.append({
-                    'type': 'positive',
-                    'message': f"Regional sales growing strongly at {growth_rate}%"
-                })
+            if growth_rate > 20:
+                insights.append(
+                    f"CRITICAL: Regional sales growing at {growth_rate:.1f}%, significantly above market average. "
+                    f"**Action:** Analyze success factors and replicate across underperforming regions. "
+                    f"Expected: 15-20% boost in low-growth regions."
+                )
+            elif growth_rate > 10:
+                insights.append(
+                    f"HIGH: Strong regional sales growth at {growth_rate:.1f}%. "
+                    f"**Action:** Identify drivers and expand investment in top-performing regions. "
+                    f"Expected: Maintain growth trajectory."
+                )
             elif growth_rate < -5:
-                insights.append({
-                    'type': 'warning',
-                    'message': f"Regional sales declining by {abs(growth_rate)}%"
-                })
+                insights.append(
+                    f"CRITICAL: Regional sales declining by {abs(growth_rate):.1f}%. "
+                    f"**Action:** Launch immediate market analysis within 48h to identify root causes. "
+                    f"Expected: Stabilize decline within 30 days."
+                )
 
-        # Total sales insight
+        # Total sales insight with revenue protection
         total_sales = kpis.get('totalSales', 0)
-        if total_sales > 1000000:
-            insights.append({
-                'type': 'positive',
-                'message': f"Strong regional performance at ${total_sales:,.0f} in total sales"
-            })
+        if total_sales > 5000000:
+            insights.append(
+                f"HIGH: Strong regional portfolio at ${total_sales:,.0f} in total sales. "
+                f"**Action:** Implement revenue protection measures and customer retention programs. "
+                f"Expected: Secure ${total_sales * 0.95:,.0f} baseline revenue."
+            )
 
-        # Profit margin insight
+        # Profit margin insight with action items
         profit_margin = kpis.get('profitMargin', 0)
         if profit_margin > 30:
-            insights.append({
-                'type': 'positive',
-                'message': f"Excellent profit margin of {profit_margin:.1f}%"
-            })
+            insights.append(
+                f"HIGH: Excellent profit margin of {profit_margin:.1f}% across regions. "
+                f"**Action:** Document pricing strategy and operational efficiency best practices. "
+                f"Expected: Replicate in lower-margin regions."
+            )
         elif profit_margin < 15:
-            insights.append({
-                'type': 'warning',
-                'message': f"Low profit margin at {profit_margin:.1f}% - review pricing strategy"
-            })
+            insights.append(
+                f"CRITICAL: Low profit margin at {profit_margin:.1f}% requires immediate attention. "
+                f"**Action:** Conduct pricing review and cost analysis within 7 days. "
+                f"Expected: 5-8% margin improvement through optimization."
+            )
 
-        # Top region insight
+        # Top region insight with strategic recommendations
         if regional_performance and len(regional_performance) > 0:
             top_region = regional_performance[0]
-            insights.append({
-                'type': 'info',
-                'message': f"Top performing region: {top_region.state}, {top_region.country} with ${top_region.totalSales:,.0f} in sales"
-            })
+            insights.append(
+                f"INFO: Top performing region is {top_region.state}, {top_region.country} with ${top_region.totalSales:,.0f} in sales. "
+                f"**Action:** Study success factors for replication. Monitor for market saturation signals."
+            )
 
-        # Opportunity insight
+        # Opportunity insights with quantified impact
         if opportunities:
             star_regions = [o for o in opportunities if o.opportunityCategory == 'Star Region']
             growth_regions = [o for o in opportunities if o.opportunityCategory == 'Growth Opportunity']
 
             if star_regions:
-                insights.append({
-                    'type': 'positive',
-                    'message': f"{len(star_regions)} Star Region(s) identified with high sales and customer engagement"
-                })
+                total_star_sales = sum(o.totalSales for o in star_regions)
+                insights.append(
+                    f"HIGH: {len(star_regions)} Star Region(s) identified with high sales and customer engagement (${total_star_sales:,.0f}). "
+                    f"**Action:** Prioritize resource allocation and maintain competitive positioning. "
+                    f"Expected: Protect ${total_star_sales * 0.9:,.0f} revenue baseline."
+                )
 
-            if growth_regions:
-                insights.append({
-                    'type': 'info',
-                    'message': f"{len(growth_regions)} Growth Opportunity region(s) with high customer potential"
-                })
+            if growth_regions and len(growth_regions) >= 3:
+                insights.append(
+                    f"MODERATE: {len(growth_regions)} Growth Opportunity region(s) with high customer potential. "
+                    f"**Action:** Develop targeted expansion plans for top 3 opportunities within Q1. "
+                    f"Expected: 25-30% sales increase in targeted regions."
+                )
 
-        # Geographic diversity insight
+        # Geographic diversity insight with risk assessment
         country_count = kpis.get('countryCount', 0)
         state_count = kpis.get('stateCount', 0)
         if country_count > 5:
-            insights.append({
-                'type': 'positive',
-                'message': f"Strong geographic diversity across {country_count} countries and {state_count} states"
-            })
+            insights.append(
+                f"INFO: Strong geographic diversity across {country_count} countries and {state_count} states reduces market risk. "
+                f"**Action:** Maintain balanced portfolio and monitor regional dependencies."
+            )
+        elif country_count <= 2:
+            insights.append(
+                f"MODERATE: Limited geographic diversity ({country_count} countries) increases market concentration risk. "
+                f"**Action:** Explore expansion into 2-3 adjacent markets within 6 months. "
+                f"Expected: 20% risk reduction through diversification."
+            )
+
+        # Always provide a fallback insight if nothing specific was generated
+        if not insights:
+            insights = [
+                f"INFO: Regional analysis completed for {country_count} countries and {state_count} states.",
+                "INFO: Review segment performance and trends for optimization opportunities."
+            ]
 
         return insights
+
+    @cache_dashboard_endpoint(dashboard_type="regional_sales_analyzer_ai_insights", ttl=1800)
+    async def _get_cached_ai_insights(
+        self,
+        filters: Dict[str, Any],
+        kpis: Dict,
+        regional_performance: List,
+        opportunities: List
+    ) -> List[str]:
+        """Get AI insights from cache or generate async (non-blocking)
+
+        Cached separately with longer TTL (30 min) since AI insights are less filter-dependent.
+        Uses asyncio.to_thread() to run blocking AI generation in thread pool.
+
+        Returns:
+            List of AI-generated insight strings (empty on error)
+        """
+        try:
+            # Run AI generation in thread pool to avoid blocking event loop
+            ai_insights = await asyncio.to_thread(
+                self._generate_ai_insights,
+                kpis,
+                regional_performance,
+                opportunities,
+                filters
+            )
+            return ai_insights
+        except Exception as e:
+            print(f"[RegionalSalesAnalyzerProcessingService] Error in _get_cached_ai_insights: {e}")
+            return []  # Graceful fallback
+
+    def _generate_ai_insights(
+        self,
+        kpis: Dict,
+        regional_performance: List,
+        opportunities: List,
+        filters: Dict
+    ) -> List[str]:
+        """Generate AI-powered strategic insights using Gemini
+
+        This complements rule-based insights with creative, strategic analysis.
+        Uses dashboard-specific prompts for consistent, actionable recommendations.
+
+        Args:
+            kpis: KPI metrics from dashboard
+            regional_performance: Regional performance data
+            opportunities: Opportunity analysis data
+            filters: Applied filters for context
+
+        Returns:
+            List of AI-generated insight strings (empty list on error)
+        """
+        try:
+            # Import at method level for error isolation
+            from lib.ai_insights_generator import generate_ai_insights
+
+            # Calculate additional metrics for AI context
+            total_regions = len(regional_performance)
+            top_region = regional_performance[0] if regional_performance else None
+            star_regions = [o for o in opportunities if o.opportunityCategory == 'Star Region']
+            growth_regions = [o for o in opportunities if o.opportunityCategory == 'Growth Opportunity']
+
+            # Build context for AI
+            kpis_dict = {
+                'total_sales': kpis.get('totalSales', 0),
+                'gross_profit': kpis.get('grossProfit', 0),
+                'profit_margin': kpis.get('profitMargin', 0),
+                'growth_rate': kpis.get('growthRate', 0),
+                'country_count': kpis.get('countryCount', 0),
+                'state_count': kpis.get('stateCount', 0),
+                'customer_count': kpis.get('customerCount', 0),
+            }
+
+            data_summary = {
+                'total_regions': total_regions,
+                'top_region': f"{top_region.state}, {top_region.country}" if top_region else "N/A",
+                'top_region_sales': top_region.totalSales if top_region else 0,
+                'star_region_count': len(star_regions),
+                'growth_region_count': len(growth_regions),
+            }
+
+            # Generate AI insights
+            ai_insights = generate_ai_insights(
+                dashboard_type='regional_sales',
+                kpis=kpis_dict,
+                data_summary=data_summary,
+                filters=filters
+            )
+
+            return ai_insights
+
+        except ImportError:
+            print("[RegionalSalesAnalyzerProcessingService] AI insights module not available, skipping AI insights")
+            return []
+        except Exception as e:
+            print(f"[RegionalSalesAnalyzerProcessingService] Error generating AI insights: {e}")
+            return []  # Graceful fallback
 
     def _get_previous_period_filters(self, filters: Dict[str, Any]) -> Dict[str, Any]:
         """Get filters for previous period comparison"""
