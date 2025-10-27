@@ -72,11 +72,13 @@ export interface RegionalSalesData {
       profitMargin: number;
     }>;
   };
-  insights: Array<{
-    type: string;
-    message: string;
-    severity: string;
-  }>;
+  insights: string[];  // Unified insights array (rule-based + AI)
+  insights_metadata?: {
+    total_count: number;
+    rule_based_count: number;
+    ai_count: number;
+    insights_version: string;
+  };
   metadata: {
     filtersApplied: any;
     timestamp: string;

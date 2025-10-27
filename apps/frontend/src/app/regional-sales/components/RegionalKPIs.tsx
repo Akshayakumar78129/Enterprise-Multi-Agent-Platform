@@ -87,38 +87,38 @@ export function RegionalKPIs({ metrics, topRegion, opportunityCount = 0, loading
       {
         id: "total-regional-sales",
         title: "Total Regional Sales",
-        value: Number((metrics.totalSales || 0).toFixed(2)),
+        value: metrics.totalSales || 0,  // Raw number, KPICard will format as $30.1M
         subtitle: `${metrics.transactionCount?.toLocaleString() || 0} transactions`,
         format: "currency" as const,
         color: "#38bdf8",
         trend: metrics.growthRate !== null ? {
-          value: Number(metrics.growthRate.toFixed(2)),
+          value: metrics.growthRate,  // Raw number
           format: "percentage" as const
         } : undefined
       },
       {
-        id: "top-region",
-        title: "Top Performing Region",
-        value: topRegionDisplay,
-        subtitle: `$${(topRegionSales / 1000).toFixed(1)}K sales`,
-        format: "text" as const,
-        color: "#f59e0b",
+        id: "gross-profit",
+        title: "Gross Profit",
+        value: metrics.grossProfit || 0,  // Raw number, KPICard will format
+        subtitle: `${metrics.profitMargin?.toFixed(1) || 0}% margin`,
+        format: "currency" as const,
+        color: "#10b981",
       },
       {
         id: "regional-coverage",
         title: "Regional Coverage",
-        value: Number((metrics.countryCount || 0).toFixed(0)),
+        value: metrics.countryCount || 0,  // Raw number
         subtitle: `${metrics.stateCount || 0} states/provinces`,
         format: "number" as const,
-        color: "#10b981",
+        color: "#8b5cf6",
       },
       {
-        id: "market-concentration",
-        title: "Market Concentration",
-        value: Number(concentrationRatio.toFixed(1)),
-        subtitle: concentrationRatio > 50 ? "High concentration" : concentrationRatio > 20 ? "Medium concentration" : "Low concentration",
-        format: "percentage" as const,
-        color: "#8b5cf6",
+        id: "customer-reach",
+        title: "Customer Reach",
+        value: metrics.customerCount || 0,  // Raw number, KPICard will format as 150K
+        subtitle: `Avg transaction: $${(metrics.avgTransactionValue || 0).toFixed(0)}`,
+        format: "number" as const,
+        color: "#f59e0b",
       },
       {
         id: "growth-opportunities",
