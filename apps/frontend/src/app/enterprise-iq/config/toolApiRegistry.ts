@@ -94,9 +94,9 @@ export const toolApiRegistry: Record<string, ToolApiConfig> = {
 
   // Sales Trends Dashboard
   'sales-trends': {
-    endpoint: '/api/sales/trends/summary',
+    endpoint: '/api/sales-trends/summary',
     method: 'POST',
-    description: 'Sales trend analysis and forecasting'
+    description: 'Sales trends analysis with time series, seasonality, and growth patterns'
   },
 
   // Regional Sales Dashboard
