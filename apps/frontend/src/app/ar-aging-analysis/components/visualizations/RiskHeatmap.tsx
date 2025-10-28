@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { ChartCard } from 'components/index';
+import { ChartCard, getShiftClickManager } from 'components/index';
 
 interface CustomerInsight {
   customerId: string;
@@ -24,6 +24,8 @@ interface RiskHeatmapProps {
 }
 
 export function RiskHeatmap({ customers, agingBuckets, loading }: RiskHeatmapProps) {
+  const shiftClickManager = getShiftClickManager();
+
   if (loading || !customers || customers.length === 0) {
     return (
       <ChartCard loading={loading}>
@@ -79,7 +81,15 @@ export function RiskHeatmap({ customers, agingBuckets, loading }: RiskHeatmapPro
   };
 
   return (
-    <ChartCard>
+    <ChartCard
+      onShiftClick={(event) => {
+        shiftClickManager.addPoint({
+          label: "Collection Probability Engine",
+          value: `Top ${topRiskCustomers.length} highest risk customers`,
+          source: 'AR Aging - Risk Heatmap'
+        }, event.nativeEvent);
+      }}
+    >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

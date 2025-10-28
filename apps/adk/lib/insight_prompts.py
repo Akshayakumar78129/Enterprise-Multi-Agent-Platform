@@ -27,7 +27,9 @@ def get_prompt_template(dashboard_type: str) -> str:
         'ltv': CUSTOMER_LTV_PROMPT,  # Alias
         'product_performance': PRODUCT_PERFORMANCE_PROMPT,
         'sales_performance': SALES_PERFORMANCE_PROMPT,
-        'next_purchase': NEXT_PURCHASE_PROMPT,  # Add Next Purchase
+        'next_purchase': NEXT_PURCHASE_PROMPT,
+        'regional_sales': REGIONAL_SALES_PROMPT,
+        'regional_sales_analyzer': REGIONAL_SALES_PROMPT,  # Alias
     }
 
     if dashboard_type not in templates:
@@ -312,3 +314,60 @@ AVOID:
 - Ignoring the predicted purchase timing data
 
 Generate your insights now:"""
+
+# ============================================================================
+# REGIONAL SALES ANALYZER PROMPT
+# ============================================================================
+
+REGIONAL_SALES_PROMPT = """You are a regional sales strategist analyzing geographic performance data for market expansion and optimization.
+
+CONTEXT:
+- Dashboard: Regional Sales Analyzer
+- Total Sales: ${total_sales:,.0f}
+- Gross Profit: ${gross_profit:,.0f}
+- Profit Margin: {profit_margin:.1f}%
+- Growth Rate: {growth_rate:.1f}% YoY
+- Countries Active: {country_count}
+- States/Provinces: {state_count}
+- Total Customers: {customer_count:,}
+
+REGIONAL INSIGHTS:
+- Total Regions Analyzed: {total_regions}
+- Top Performing Region: {top_region} (${top_region_sales:,.0f})
+- Star Regions (High Sales + High Engagement): {star_region_count}
+- Growth Opportunity Regions: {growth_region_count}
+
+INSTRUCTIONS:
+As a regional strategist, identify opportunities and risks in geographic performance:
+1. **Market Penetration**: Where to double down investment vs where to consolidate
+2. **Geographic Concentration Risk**: Revenue dependencies and diversification needs
+3. **Expansion Opportunities**: Untapped markets with high potential
+4. **Regional Optimization**: Performance gaps between similar markets
+5. **Go-to-Market Strategy**: Region-specific approaches based on local patterns
+
+PRIORITY LEVELS:
+- CRITICAL: Immediate action required (revenue impact >$500k or >20% growth decline)
+- HIGH: Action needed within 7 days (significant opportunity or risk)
+- MODERATE: Monitor and plan intervention (trend opportunity)
+- INFO: Strategic context or longer-term consideration
+
+FORMAT REQUIREMENTS:
+- One insight per line
+- 2-3 sentences each
+- Start with priority label (CRITICAL:, HIGH:, MODERATE:, INFO:)
+- Include "**Action:**" section with specific steps
+- Add expected outcomes with numbers (e.g., "Expected: 25% sales increase, $500k new revenue")
+- Reference specific regions, countries, or states
+- Include timelines (7 days, Q1, 6 months, etc.)
+
+EXAMPLE:
+HIGH: Top 3 regions (California, Texas, New York) contribute 67% of total sales ($2.1M) but show signs of market saturation with <5% YoY growth. Meanwhile, {growth_region_count} growth opportunity regions show 35% higher customer engagement but 45% lower sales. **Action:** Within 30 days, reallocate 20% of marketing budget from mature markets to top 5 growth regions, launch targeted campaigns, and establish local partnerships. Expected: 30% sales increase in growth regions ($450k), overall portfolio diversification reducing concentration risk by 15%.
+
+AVOID:
+- Generic advice like "expand to new markets"
+- Stating obvious facts without strategic interpretation
+- Recommendations without revenue/profit impact metrics
+- Vague regional references without specific names
+- Ignoring local market dynamics and cultural factors
+
+Generate your regional sales insights now:"""

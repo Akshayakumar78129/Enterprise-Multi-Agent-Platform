@@ -113,6 +113,8 @@ class ARAgingDataService:
             AVG(ABS({self.schema.AR_DETAIL.refs['age_band_days']})) as avg_days_overdue,
             COUNT(DISTINCT {self.schema.AR_DETAIL.refs['customer_id']}) as unique_customers
         FROM {self.schema.TABLES['ar_detail']} {self.schema.ALIASES['ar_detail']}
+        LEFT JOIN {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
+            ON {self.schema.AR_DETAIL.refs['customer_id']} = {self.schema.CUSTOMER.refs['id']}
         WHERE {self.schema.AR_DETAIL.refs['debit_amount']} > 0
             AND {self.schema.AR_DETAIL.refs['deleted_flag']} = 0
         """
@@ -140,34 +142,31 @@ class ARAgingDataService:
         """
         sql = f"""
         SELECT
-            c.{self.schema.CUSTOMER.refs['id'].split('.')[-1]} AS customer_id,
-            c.{self.schema.CUSTOMER.refs['name'].split('.')[-1]} AS customer_name,
-            c.{self.schema.CUSTOMER.refs['type'].split('.')[-1]} AS customer_type,
-            c.{self.schema.CUSTOMER.refs['region'].split('.')[-1]} AS region,
-            c.{self.schema.CUSTOMER.refs['credit_limit'].split('.')[-1]} AS credit_limit,
+            {self.schema.CUSTOMER.refs['id']} AS customer_id,
+            {self.schema.CUSTOMER.refs['name']} AS customer_name,
+            {self.schema.CUSTOMER.refs['type']} AS customer_type,
+            {self.schema.CUSTOMER.refs['region']} AS region,
+            {self.schema.CUSTOMER.refs['credit_limit']} AS credit_limit,
             SUM({self.schema.AR_DETAIL.refs['debit_amount']}) as total_outstanding,
             AVG(ABS({self.schema.AR_DETAIL.refs['age_band_days']})) as avg_days_overdue,
             MAX(ABS({self.schema.AR_DETAIL.refs['age_band_days']})) as max_days_overdue,
             COUNT(*) as invoice_count,
-            l.{self.schema.LOYALTY.refs['lifetime_sales'].split('.')[-1]} AS lifetime_sales,
-            l.{self.schema.LOYALTY.refs['rfm_score'].split('.')[-1]} AS rfm_score,
-            l.{self.schema.LOYALTY.refs['loyalty_status'].split('.')[-1]} AS loyalty_status
+            MAX({self.schema.LOYALTY.refs['lifetime_sales']}) AS lifetime_sales,
+            MAX({self.schema.LOYALTY.refs['rfm_score']}) AS rfm_score,
+            MAX({self.schema.LOYALTY.refs['loyalty_status']}) AS loyalty_status
         FROM {self.schema.TABLES['ar_detail']} {self.schema.ALIASES['ar_detail']}
         INNER JOIN {self.schema.TABLES['customer']} c
-            ON {self.schema.AR_DETAIL.refs['customer_id']} = c."Customer Key"
+            ON {self.schema.AR_DETAIL.refs['customer_id']} = {self.schema.CUSTOMER.refs['id']}
         LEFT JOIN {self.schema.TABLES['loyalty']} l
-            ON c."Customer Key" = l."Entity Key"
+            ON {self.schema.CUSTOMER.refs['id']} = {self.schema.LOYALTY.refs['customer_id']}
         WHERE {self.schema.AR_DETAIL.refs['debit_amount']} > 0
             AND {self.schema.AR_DETAIL.refs['deleted_flag']} = 0
         GROUP BY
-            c."Customer Key",
-            c."Customer Name",
-            c."Customer Type Desc",
-            c."Customer State/Prov",
-            c."Credit Limit Amount",
-            l."LTD Sales Amount",
-            l."RFM Score",
-            l."Loyalty Status"
+            {self.schema.CUSTOMER.refs['id']},
+            {self.schema.CUSTOMER.refs['name']},
+            {self.schema.CUSTOMER.refs['type']},
+            {self.schema.CUSTOMER.refs['region']},
+            {self.schema.CUSTOMER.refs['credit_limit']}
         """
 
         query, params = self.filter_engine.apply_filters(sql, filters, self.schema)

@@ -6,32 +6,8 @@ import {
   BusinessIntelligencePanel
 } from "components/index";
 import React from "react";
-import { ARAgingFilters } from "./components";
 import { ARAgingProvider, useARAgingContext } from "./context";
 import { useARAgingData } from "./hooks/useARAgingData";
-
-function HeaderFilters() {
-  const context = useARAgingContext();
-
-  if (!context) return null;
-
-  const { filters, setFilters } = context;
-
-  return (
-    <ARAgingFilters
-      filters={filters}
-      onFiltersChange={setFilters}
-      onReset={() =>
-        setFilters({
-          dateRange: { startDate: "2017-01-01", endDate: "2021-12-31" },
-          customerType: "all",
-          region: "all",
-          segment: "all"
-        })
-      }
-    />
-  );
-}
 
 function ARAgingLayoutContent({ children }: { children: React.ReactNode }) {
   const context = useARAgingContext();
@@ -61,12 +37,25 @@ function ARAgingLayoutContent({ children }: { children: React.ReactNode }) {
 
   const { insights, kpiMetrics } = useARAgingData(filters);
 
+  // Transform kpiMetrics from nested structure to flat structure for BI Panel
+  // Backend returns: { totalAR: { value: 123, change: 1.2, ... }, ... }
+  // BI Panel expects: { totalAR: 123, dso: 45, ... }
+  const flatKpiMetrics = React.useMemo(() => {
+    if (!kpiMetrics) return {};
+    const flat: Record<string, number> = {};
+    Object.entries(kpiMetrics).forEach(([key, metric]: [string, any]) => {
+      if (metric && typeof metric === 'object' && 'value' in metric) {
+        flat[key] = metric.value;
+      } else if (typeof metric === 'number') {
+        flat[key] = metric;
+      }
+    });
+    return flat;
+  }, [kpiMetrics]);
+
   const mainContent = (
     <div className="p-4 sm:p-6 lg:p-8">
-      <HeaderFilters />
-      <div className="mt-6">
-        {children}
-      </div>
+      {children}
     </div>
   );
 
@@ -99,7 +88,7 @@ function ARAgingLayoutContent({ children }: { children: React.ReactNode }) {
     <BusinessIntelligencePanel
       onClose={() => setIsBIModalOpen(false)}
       insights={insights || []}
-      kpiMetrics={kpiMetrics || {}}
+      kpiMetrics={flatKpiMetrics}
       data={arAgingData}
       dashboardContext="ar_aging"
     />

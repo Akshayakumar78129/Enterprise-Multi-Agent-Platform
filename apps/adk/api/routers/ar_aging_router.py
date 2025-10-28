@@ -36,7 +36,8 @@ async def get_dashboard_summary(filters: ARAgingFilters, request: Request):
         if filters.regions and len(filters.regions) > 0:
             filter_dict['regions'] = filters.regions
 
-        result = await service.get_ar_aging_summary(filters)
+        # Pass filter_dict instead of Pydantic model
+        result = await service.get_ar_aging_summary(filter_dict)
         return result
     except Exception as e:
         print(f"[ARAgingRouter] Error in dashboard_summary: {e}")
@@ -88,7 +89,9 @@ async def get_collection_forecast(filters: ARAgingFilters, request: Request):
     try:
         service = request.app.state.ar_aging_service
 
-        result = await service.get_ar_aging_summary(filters)
+        # Convert to dict
+        filter_dict = filters.dict()
+        result = await service.get_ar_aging_summary(filter_dict)
         forecast_data = result.get('mainData', {}).get('collectionForecast', [])
 
         return {
