@@ -86,6 +86,3 @@ export { DataTable } from "./tables/DataTable";
 
 // Context Components
 export { ThemeProvider, useTheme } from "./context/ThemeContext";
-
-// Utility Components
-export { FormattedMessage } from "./utils/FormattedMessage";

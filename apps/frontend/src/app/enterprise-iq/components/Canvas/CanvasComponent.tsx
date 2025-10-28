@@ -215,7 +215,7 @@ export default function CanvasComponent({
           )}
           {!loading && !error && Component && (
             <ComponentErrorBoundary componentType={`${component.toolId}.${component.type}`}>
-              <div className="w-full h-full" style={{ minHeight: 0, maxHeight: '100%' }}>
+              <div className="w-full h-full">
                 {/* Pass the data with proper format handling */}
                 {(() => {
                   console.log(`[CanvasComponent] ${component.type} - component.data:`, component.data);

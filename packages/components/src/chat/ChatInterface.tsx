@@ -59,10 +59,6 @@ export function ChatInterface({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Generate unique session per component instance (not shared across tabs)
-  const sessionIdRef = useRef(`dashboard_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
-  const userIdRef = useRef(`user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
-
   // Set default API URL - ensure no trailing /api
   const rawApiUrl = apiUrl || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   const baseApiUrl = rawApiUrl.replace(/\/api\/?$/, '');
@@ -110,9 +106,13 @@ export function ChatInterface({
     abortControllerRef.current = new AbortController();
 
     try {
-      // Use unique session IDs from refs (no sessionStorage)
-      const sessionId = sessionIdRef.current;
-      const userId = userIdRef.current;
+      // Generate or retrieve session info
+      const sessionId = sessionStorage.getItem('chat_session_id') || `session_${Date.now()}`;
+      const userId = sessionStorage.getItem('chat_user_id') || `user_${Date.now()}`;
+
+      // Store for future use
+      sessionStorage.setItem('chat_session_id', sessionId);
+      sessionStorage.setItem('chat_user_id', userId);
 
       const requestBody = {
         user_query: queryWithContext,
@@ -178,9 +178,10 @@ export function ChatInterface({
                 // Handle both formats: data.content and data.text
                 const content = data.content || data.text || "";
                 if (content && !data.partial) {
-                  // Append new content instead of replacing
-                  accumulatedContent += content;
-
+                  // Only append if not a partial message (avoid duplicates)
+                  if (!accumulatedContent.includes(content)) {
+                    accumulatedContent = content;
+                  }
                   setMessages(prev =>
                     prev.map(msg =>
                       msg.id === assistantMessage.id
@@ -361,7 +362,7 @@ export function ChatInterface({
                   : "bg-muted"
               )}
             >
-              <div className="whitespace-pre-wrap text-sm">{message.content}</div>
+              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
               {message.isStreaming && (
                 <span className="inline-block w-2 h-4 ml-1 bg-current animate-pulse" />
               )}

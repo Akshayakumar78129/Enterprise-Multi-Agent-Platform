@@ -190,7 +190,7 @@ export default function ChatInterface({ sessionId }: ChatInterfaceProps) {
                   : 'glass-card text-foreground'
               }`}
             >
-              <div className="whitespace-pre-wrap text-sm">{message.content}</div>
+              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
               {message.components && message.components.length > 0 && (
                 <div className="mt-2 pt-2 border-t border-border">
                   <p className="text-xs text-muted-foreground">

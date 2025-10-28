@@ -13,5 +13,3 @@ export { default as ComponentRegistry } from './Canvas/ComponentRegistry';
 // Other Components
 export { QueryInput } from './QueryInput';
 export { ChatHistoryPanel } from './ChatHistoryPanel';
-export { VoiceInputButton } from './VoiceInputButton';
-export { FormattedMessage } from './FormattedMessage';

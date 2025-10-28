@@ -427,15 +427,8 @@ async def run_agent(req: Union[SimpleQueryRequest, AgentRunRequest]) -> Streamin
                                                 "partial": False
                                             }
 
-                                            # Debug logging
-                                            print(f"📤 SENDING TEXT RESPONSE TO FRONTEND:")
-                                            print(f"   Length: {len(response_text)} chars")
-                                            print(f"   First 200 chars: {response_text[:200]}")
-                                            print(f"   is_visualisation: {is_vis}")
-
                                             # Send the text response immediately
                                             yield f"data: {json.dumps(response_data)}\n\n"
-                                            print(f"✅ Text response sent successfully")
 
                                             # Generate and send visualization if needed
                                             if is_vis and isinstance(req, SimpleQueryRequest) and req.is_canvas:
@@ -500,8 +493,8 @@ async def run_agent(req: Union[SimpleQueryRequest, AgentRunRequest]) -> Streamin
                         # Check if this is from frontend canvas request
                         is_canvas = isinstance(req, SimpleQueryRequest) and req.is_canvas
 
-                        # Generate audio for the complete accumulated text (for ALL canvas responses)
-                        if is_canvas and accumulated_text:
+                        # Generate audio for the complete accumulated text
+                        if is_canvas and is_visualisation and accumulated_text:
                             try:
                                 print(f"\n🎵 Generating audio for COMPLETE response ({len(accumulated_text)} chars)...")
                                 print(f"First 200 chars of accumulated text: {accumulated_text[:200]}")
