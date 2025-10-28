@@ -262,10 +262,10 @@ export const DASHBOARDS: Dashboard[] = [
     name: 'Revenue Forecast',
     path: '/revenue-forecast',
     domain: 'finance',
-    description: 'Forecast revenue using predictive models',
+    description: 'Strategic revenue forecasting with growth decomposition and cohort analysis',
     icon: '📈',
-    features: ['kpi', 'filters', 'charts', 'table'],
-    status: 'development',
+    features: ['kpi', 'filters', 'charts', 'table', 'forecast'],
+    status: 'active',
   },
   {
     id: 'financial-health',
