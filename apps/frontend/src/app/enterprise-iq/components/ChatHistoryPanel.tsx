@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { MessageSquare, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { RootState } from '@/store';
+import { FormattedMessage } from './FormattedMessage';
 
 export function ChatHistoryPanel() {
   const [isOpen, setIsOpen] = useState(false);
@@ -35,20 +36,15 @@ export function ChatHistoryPanel() {
           aria-label="Open chat history"
         >
           <MessageSquare className="w-6 h-6 text-foreground" />
-          {messages.length > 0 && (
-            <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
-              {messages.length}
-            </span>
-          )}
         </button>
       )}
 
       {/* Chat History Panel */}
       {isOpen && (
         <div className={`
-          fixed right-6 z-[60] glass-card border border-border rounded-lg shadow-2xl backdrop-blur-xl
+          fixed bottom-6 right-6 z-[60] glass-card border border-border rounded-lg shadow-2xl backdrop-blur-xl
           transition-all duration-300 ease-in-out
-          ${isMinimized ? 'bottom-6 w-80' : 'bottom-6 w-96 h-[500px]'}
+          ${isMinimized ? 'w-80' : 'w-96 h-[500px]'}
         `}>
           {/* Header */}
           <div className="flex items-center justify-between p-3 border-b border-border bg-gradient-to-r from-primary/10 to-accent/10 rounded-t-lg">
@@ -115,9 +111,13 @@ export function ChatHistoryPanel() {
                             : 'bg-muted text-foreground border border-border shadow-sm'
                         }`}
                       >
-                        <p className="whitespace-pre-wrap break-words leading-relaxed">
-                          {message.content}
-                        </p>
+                        {message.role === 'user' ? (
+                          <p className="whitespace-pre-wrap break-words leading-relaxed">
+                            {message.content}
+                          </p>
+                        ) : (
+                          <FormattedMessage content={message.content} />
+                        )}
                         {message.agent && message.role === 'assistant' && (
                           <p className="text-xs opacity-60 mt-1 font-medium">
                             {message.agent}

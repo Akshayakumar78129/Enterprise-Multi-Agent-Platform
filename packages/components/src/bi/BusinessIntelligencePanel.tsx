@@ -4,6 +4,7 @@ import React, { useState, useMemo } from "react";
 import { X, TrendingUp, AlertTriangle, Info, CheckCircle, Lightbulb, Target } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Button } from "../ui/Button";
+import { FormattedMessage } from "../utils/FormattedMessage";
 
 // ==================== Type Definitions ====================
 
@@ -254,7 +255,9 @@ export function BusinessIntelligencePanel({
       <div key={index} className={cn("p-3 rounded-lg border", color)}>
         <div className="flex items-start gap-2">
           <div className="mt-0.5">{getInsightIcon(insight.type)}</div>
-          <p className="text-xs leading-relaxed flex-1">{insight.message}</p>
+          <div className="flex-1">
+            <FormattedMessage content={insight.message} />
+          </div>
         </div>
       </div>
     );
@@ -377,7 +380,7 @@ export function BusinessIntelligencePanel({
                   )}
                 </div>
                 <div className="flex-1">
-                  <p className="text-xs leading-relaxed">{insight.message}</p>
+                  <FormattedMessage content={insight.message} />
                 </div>
               </div>
             </div>

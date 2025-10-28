@@ -85,12 +85,13 @@ export const SpeechBubble: React.FC<SpeechBubbleProps> = ({
     border: '2px solid #e0d9f2',
     borderRadius: '12px',
     padding: '12px 16px',
-    maxWidth: '250px',
+    maxWidth: '500px',
+    maxHeight: '600px',
+    overflow: 'auto',
     boxShadow: '0 4px 16px rgba(183, 148, 244, 0.15)',
     zIndex: Z_INDEX.SPEECH_BUBBLE,  // Below graphs (1000+) but above robot (50)
     fontSize: '14px',
     color: '#4a5568',
-    whiteSpace: 'pre-wrap',
     animation: isThinking ? 'bubbleThinking 2s infinite' : 'bubbleAppear 0.3s ease-out',
   };
 
@@ -158,7 +159,7 @@ export const SpeechBubble: React.FC<SpeechBubbleProps> = ({
           </span>
         </div>
       ) : (
-        message
+        <div style={{ whiteSpace: 'pre-wrap', fontSize: '14px' }}>{message}</div>
       )}
 
       {/* Animation styles */}

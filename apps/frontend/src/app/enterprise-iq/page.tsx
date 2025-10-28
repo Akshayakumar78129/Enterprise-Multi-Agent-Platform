@@ -8,6 +8,7 @@ import { DashboardLayout } from 'components/index';
 import { Volume2, VolumeX } from 'lucide-react';
 import { RootState } from '@/store';
 import { addComponent, replaceComponentByType } from '@/store/slices/canvasSlice';
+import { createConversation, addMessage } from '@/store/slices/conversationSlice';
 import {
   ConversationalCanvas,
   RobotCharacter,
@@ -236,6 +237,15 @@ export default function EnterpriseIQPage() {
     user_id: 'enterprise-user',
     app_name: 'enterprise_iq'
   });
+
+  // Initialize conversation on mount
+  useEffect(() => {
+    if (!activeConversationId) {
+      dispatch(createConversation(session.session_id));
+      console.log(`[Conversation] Created new conversation: ${session.session_id}`);
+    }
+  }, []);
+
   const [loading, setLoading] = useState(false);
   const [componentSpawning, setComponentSpawning] = useState(false);
   const [spawnProgress, setSpawnProgress] = useState({ current: 0, total: 0, currentComponent: '' });
@@ -880,16 +890,15 @@ export default function EnterpriseIQPage() {
     // Cancel any ongoing requests first
     cancelOngoingRequests();
 
-    // Clear previous state for new query
+    // Clear UI state for new query (but maintain conversation context)
     setUserSelectedChartPoints([]);
     setSpawnedComponents(new Set());
     occupiedPositionsRef.current.clear();
     activeVisualizationTypesRef.current.clear();
-    currentQuerySessionRef.current.clear(); // Reset query session tracker
+    // DON'T clear currentQuerySessionRef - maintain conversation continuity
 
     const sessionId = `session-${Date.now()}`;
-    console.log(`🎆 Starting new query session: ${sessionId}`);
-    console.log(`🔄 Cleared currentQuerySessionRef for new query`);
+    console.log(`🎆 Processing query in existing session`);
 
     // Set robot to thinking state
     setRobotState(prev => ({
@@ -900,6 +909,17 @@ export default function EnterpriseIQPage() {
 
     setLoading(true);
     setErrorWithAutoClear(null);
+
+    // Add user message to conversation history
+    dispatch(addMessage({
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: query,
+      timestamp: Date.now()
+    }));
+
+    let currentTextResponse = ''; // Track assistant response for conversation history
+    const visualizationBuffer: any[] = []; // Buffer visualizations until text completes
 
     try {
       // Process SSE stream directly for real-time updates
@@ -930,7 +950,6 @@ export default function EnterpriseIQPage() {
 
       const decoder = new TextDecoder();
       let buffer = '';
-      let currentTextResponse = '';
       let hasStartedSpeaking = false;
       sseReaderRef.current = reader;
 
@@ -954,18 +973,21 @@ export default function EnterpriseIQPage() {
               console.log(`🎯 Processing SSE chunk:`, {
                 hasText: !!jsonData.text,
                 hasAudio: !!jsonData.audio,
-                hasViz: !!(jsonData.visualisation || jsonData.visualization_output)
+                hasViz: !!(jsonData.visualisation || jsonData.visualization_output),
+                rawData: jsonData
               });
 
               // Handle text updates
               if (jsonData.text) {
                 currentTextResponse += jsonData.text;
-                console.log(`📝 Text chunk received`);
+                console.log(`📝 Text chunk received:`, jsonData.text);
+                console.log(`📝 Full accumulated text so far:`, currentTextResponse);
 
+                // Show the FULL accumulated response, not just the current chunk
                 setRobotState(prev => ({
                   ...prev,
                   state: 'speaking',
-                  message: jsonData.text
+                  message: currentTextResponse  // Changed from jsonData.text to show full response
                 }));
               }
 
@@ -995,13 +1017,13 @@ export default function EnterpriseIQPage() {
                 }
               }
 
-              // Handle visualization - simplified like web folder
+              // Handle visualization - buffer until text completes
               if (jsonData.visualisation || jsonData.visualization_output) {
                 const vizData = jsonData.visualisation || jsonData.visualization_output;
-                console.log('📊 Visualization data received:', vizData);
+                console.log('📊 Visualization data received, buffering until text completes');
 
-                // Process visualization immediately
-                setVisualisation(vizData);
+                // Add to buffer instead of processing immediately
+                visualizationBuffer.push(vizData);
               }
 
             } catch (e) {
@@ -1024,6 +1046,25 @@ export default function EnterpriseIQPage() {
         message: friendlyErrorMsg
       }));
     } finally {
+      // Add assistant message to conversation history
+      if (currentTextResponse) {
+        dispatch(addMessage({
+          id: `assistant-${Date.now()}`,
+          role: 'assistant',
+          content: currentTextResponse,
+          timestamp: Date.now(),
+          agent: 'Enterprise IQ Assistant'
+        }));
+      }
+
+      // Process buffered visualizations now that text is complete
+      if (visualizationBuffer.length > 0) {
+        console.log(`📊 Processing ${visualizationBuffer.length} buffered visualizations`);
+        for (const vizData of visualizationBuffer) {
+          await setVisualisation(vizData);
+        }
+      }
+
       // Clean up SSE reader
       if (sseReaderRef.current) {
         try {
@@ -1165,41 +1206,21 @@ export default function EnterpriseIQPage() {
                 />
               </div>
 
-              {/* Zoom Percentage - Bottom right corner */}
-              <div className="absolute bottom-4 right-4 px-3 py-2 glass-card rounded-lg shadow-lg border border-accent/20" style={{ zIndex: Z_INDEX.AUDIO_CONTROLS }}>
-                <span className="text-sm font-medium text-foreground">
-                  {Math.round(transform.scale * 100)}%
-                </span>
-              </div>
-
-              {/* Audio Controls - Above zoom percentage */}
-              <div className="absolute bottom-16 right-4 flex gap-2" style={{ zIndex: Z_INDEX.AUDIO_CONTROLS }}>
-                {/* Play Pending Audio Button - Only show when needed */}
-                {audioPlaybackFailed && pendingAudio && (
-                  <button
-                    onClick={playPendingAudio}
-                    className="p-3 bg-white/90 hover:bg-gray-100 rounded-lg transition-all shadow-md border border-gray-200"
-                    title="Click to play audio"
-                  >
-                    <Volume2 className="w-5 h-5 text-green-500" />
-                  </button>
-                )}
-
-                {/* Mute/Unmute Button - Only show when audio is playing */}
-                {isAudioPlaying && (
-                  <button
-                    onClick={toggleMute}
-                    className="p-3 bg-white/90 hover:bg-gray-100 rounded-lg transition-all shadow-md border border-gray-200"
-                    title={isMuted ? 'Unmute' : 'Mute'}
-                  >
-                    {isMuted ? (
-                      <VolumeX className="w-5 h-5 text-red-500" />
-                    ) : (
-                      <Volume2 className="w-5 h-5 text-purple-600" />
-                    )}
-                  </button>
-                )}
-              </div>
+              {/* Mute Button - Only visible when audio is playing */}
+              {isAudioPlaying && (
+                <button
+                  onClick={toggleMute}
+                  className="fixed bottom-20 right-6 z-[60] glass-card p-3 rounded-full border border-border hover:bg-accent/20 transition-all shadow-lg hover:shadow-xl"
+                  title={isMuted ? 'Unmute' : 'Mute'}
+                  aria-label={isMuted ? 'Unmute' : 'Mute'}
+                >
+                  {isMuted ? (
+                    <VolumeX className="w-6 h-6 text-foreground" />
+                  ) : (
+                    <Volume2 className="w-6 h-6 text-foreground" />
+                  )}
+                </button>
+              )}
       </div>
 
       {/* Component spawning progress */}
