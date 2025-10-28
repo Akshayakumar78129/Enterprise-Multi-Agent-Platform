@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { useSalesTrendsContext } from '../context';
 import { salesTrendsService, FilterOptions } from '../services/salesTrendsService';
-import { Calendar, BarChart2, TrendingUp } from 'lucide-react';
+import { Calendar, BarChart2, TrendingUp, RotateCcw } from 'lucide-react';
 
 export function SalesTrendsFilters() {
-  const { filters, updateFilter } = useSalesTrendsContext();
+  const { filters, updateFilter, resetFilters } = useSalesTrendsContext();
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     customerCategories: [],
     customerRegions: [],
@@ -31,12 +31,30 @@ export function SalesTrendsFilters() {
     fetchOptions();
   }, []);
 
+  const handleResetFilters = () => {
+    resetFilters();
+    // Close advanced filters accordion if it's open
+    const detailsElement = document.querySelector('details');
+    if (detailsElement) {
+      detailsElement.open = false;
+    }
+  };
+
   return (
     <div className="glass-card p-4 lg:p-6 space-y-4">
-      <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-        <BarChart2 className="h-5 w-5" />
-        Filters
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          <BarChart2 className="h-5 w-5" />
+          Filters
+        </h3>
+        <button
+          onClick={handleResetFilters}
+          className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Reset All Filters
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         {/* Date From */}
