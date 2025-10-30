@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { ChartTooltip, useChartTooltip, TooltipItem } from "../ui/ChartTooltip";
 
 export interface FeatureImportance {
   name: string;
@@ -26,6 +27,7 @@ export const AIFeatureImportance: React.FC<AIFeatureImportanceProps> = ({
   className = "",
 }) => {
   const [selectedSort, setSelectedSort] = useState(sortBy);
+  const { tooltipData, showTooltip, hideTooltip } = useChartTooltip();
 
   // Ensure data is an array and fix malformed data
   let safeData = Array.isArray(data) ? data : [];
@@ -113,6 +115,47 @@ export const AIFeatureImportance: React.FC<AIFeatureImportanceProps> = ({
               key={`feature-${index}-${feature.name || 'unknown'}`}
               className="group cursor-pointer"
               onClick={(e) => onFeatureClick?.(feature, e)}
+              onMouseEnter={(e) => {
+                const tooltipItems: TooltipItem[] = [
+                  {
+                    label: "Importance",
+                    value: `${(Number(feature.importance) || 0).toFixed(1)}%`,
+                    color: color,
+                  },
+                  {
+                    label: "Impact",
+                    value: `${(Number(feature.impact) || 0).toFixed(1)}%`,
+                  },
+                ];
+                showTooltip(
+                  e.clientX,
+                  e.clientY,
+                  feature.name,
+                  tooltipItems
+                );
+              }}
+              onMouseLeave={() => {
+                hideTooltip();
+              }}
+              onMouseMove={(e) => {
+                const tooltipItems: TooltipItem[] = [
+                  {
+                    label: "Importance",
+                    value: `${(Number(feature.importance) || 0).toFixed(1)}%`,
+                    color: color,
+                  },
+                  {
+                    label: "Impact",
+                    value: `${(Number(feature.impact) || 0).toFixed(1)}%`,
+                  },
+                ];
+                showTooltip(
+                  e.clientX,
+                  e.clientY,
+                  feature.name,
+                  tooltipItems
+                );
+              }}
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm font-medium text-foreground">{feature.name}</span>
@@ -148,6 +191,14 @@ export const AIFeatureImportance: React.FC<AIFeatureImportanceProps> = ({
           </div>
         ))}
       </div>
+
+      {/* Chart Tooltip */}
+      <ChartTooltip
+        {...tooltipData}
+        variant="dark"
+        size="sm"
+        showArrow={false}
+      />
 
     </div>
   );

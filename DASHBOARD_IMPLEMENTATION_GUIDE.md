@@ -1952,6 +1952,397 @@ const testValues = [
 - No measurable performance impact vs standard formatting
 - Built-in browser API with excellent cross-browser support
 
+##### 2.1.5: Visualization Labeling Standards
+
+**MANDATORY REQUIREMENTS for ALL Visualizations:**
+
+All charts and graphs MUST include the following labels for clarity and accessibility:
+
+**Label Checklist:**
+- [ ] **Chart Title**: Clear, descriptive title (can be in parent component or internal to visualization)
+- [ ] **X-Axis Label**: Text describing what the horizontal axis represents
+- [ ] **Y-Axis Label**: Text describing what the vertical axis represents
+- [ ] **Legend**: If multiple data series, include clearly labeled legend
+- [ ] **Tooltips**: Show detailed information on hover
+- [ ] **Units**: Clearly indicate units of measurement (%, $, count, etc.)
+
+**Implementation Guidelines:**
+
+**For SVG Custom Charts** (like RiskTrendsOverTime, custom area charts):
+
+```tsx
+// X-axis label - centered below the chart
+<text
+  x={chartArea.left + chartArea.width / 2}
+  y={chartArea.bottom + 40}
+  textAnchor="middle"
+  className="text-sm fill-muted-foreground"
+>
+  {xAxisLabel}  // e.g., "Date", "Time Period", "Month"
+</text>
+
+// Y-axis label - rotated, left of chart
+<text
+  x={chartArea.left - 40}
+  y={chartArea.top + chartArea.height / 2}
+  textAnchor="middle"
+  transform={`rotate(-90 ${chartArea.left - 40} ${chartArea.top + chartArea.height / 2})`}
+  className="text-sm fill-muted-foreground"
+>
+  {yAxisLabel}  // e.g., "Number of Customers", "Revenue ($)", "Count"
+</text>
+```
+
+**For Chart.js/Recharts** (library-based charts):
+
+```tsx
+// Chart.js example
+const options = {
+  scales: {
+    x: {
+      title: {
+        display: true,
+        text: 'Date',  // X-axis label
+        color: 'rgb(156, 163, 175)'
+      }
+    },
+    y: {
+      title: {
+        display: true,
+        text: 'Revenue ($)',  // Y-axis label
+        color: 'rgb(156, 163, 175)'
+      }
+    }
+  },
+  plugins: {
+    title: {
+      display: true,
+      text: 'Revenue Trends Over Time'  // Chart title
+    },
+    legend: {
+      display: true,
+      position: 'bottom'  // Legend
+    }
+  }
+};
+```
+
+**Dynamic Scaling Requirements:**
+
+- ✅ **ALWAYS calculate max values from data** - NEVER hard-code axis maximums
+- ✅ **Add padding**: Use `Math.max(...data) * 1.1` to add 10% headroom
+- ✅ **Round intelligently**: Round max values to nearest sensible increment (e.g., 500, 1000)
+
+```tsx
+// ❌ WRONG: Hard-coded max value
+const maxValue = 2500;  // BAD! What if data exceeds this?
+
+// ✅ CORRECT: Dynamic max value
+const maxValue = Math.max(...data.map(d => d.total)) * 1.1;
+const roundedMax = Math.ceil(maxValue / 500) * 500;  // Round to nearest 500
+```
+
+**Common Label Examples by Chart Type:**
+
+| Chart Type | X-Axis Label | Y-Axis Label | Example Title |
+|------------|--------------|--------------|---------------|
+| Time Series | "Date" / "Month" / "Time Period" | "Count" / "Revenue ($)" / "Number of Customers" | "Sales Trends Over Time" |
+| Bar Chart | "Category" / "Product" / "Region" | "Value" / "Count" / "Amount" | "Sales by Product Category" |
+| Histogram | "Value Range" / "Probability" | "Frequency" / "Count" | "Churn Probability Distribution" |
+| Scatter Plot | "[Metric Name]" | "[Metric Name]" | "Customer Lifetime Value vs. Engagement" |
+| Heatmap | "[Dimension 1]" | "[Dimension 2]" | "Risk by Segment Matrix" |
+
+**Tooltip Implementation - MANDATORY:**
+
+ALL custom SVG visualizations MUST use the shared `ChartTooltip` component for consistency and accessibility. This ensures:
+- Consistent styling across all dashboards
+- Proper color contrast and readability
+- Accessible tooltip behavior
+- Theme-aware appearance
+
+**Required Implementation Pattern:**
+
+```tsx
+import { ChartTooltip, useChartTooltip, TooltipItem } from "../ui/ChartTooltip";
+
+export const MyVisualization = ({ data }) => {
+  const { tooltipData, showTooltip, hideTooltip } = useChartTooltip();
+
+  // On hover handlers for interactive elements
+  const handleMouseEnter = (item: DataItem, e: React.MouseEvent) => {
+    const tooltipItems: TooltipItem[] = [
+      {
+        label: "Metric Name",
+        value: item.value,
+        color: item.color,  // Optional: Color indicator
+      },
+      {
+        label: "Secondary Metric",
+        value: item.secondaryValue,
+      },
+    ];
+
+    showTooltip(
+      e.clientX,
+      e.clientY,
+      item.name,  // Tooltip title
+      tooltipItems
+    );
+  };
+
+  const handleMouseMove = (item: DataItem, e: React.MouseEvent) => {
+    // Same tooltip items as mouseEnter
+    showTooltip(e.clientX, e.clientY, item.name, tooltipItems);
+  };
+
+  return (
+    <div>
+      {/* Your visualization with mouse event handlers */}
+      <div
+        onMouseEnter={(e) => handleMouseEnter(item, e)}
+        onMouseLeave={hideTooltip}
+        onMouseMove={(e) => handleMouseMove(item, e)}
+      >
+        {/* Chart elements */}
+      </div>
+
+      {/* Render tooltip at end of component */}
+      <ChartTooltip
+        {...tooltipData}
+        variant="dark"
+        size="sm"
+        showArrow={false}
+      />
+    </div>
+  );
+};
+```
+
+**ChartTooltip Props:**
+- `variant`: "default" | "dark" | "light" (default: "default")
+- `size`: "sm" | "md" | "lg" (default: "md")
+- `showArrow`: boolean (default: true)
+- `footer`: Optional footer text or component
+
+**IMPORTANT: Header Color Fix**
+- The tooltip header MUST use theme colors: `border-border text-foreground`
+- NEVER use opacity-based colors like `border-current opacity-20` as they can blend with the graph background
+- This ensures proper contrast and readability in all contexts
+
+**Exception for Library-Based Charts:**
+- Chart.js and Recharts components may use their native tooltip systems
+- Ensure native tooltips are styled to match theme colors
+- Use `hsl(var(--foreground))`, `hsl(var(--background))`, `hsl(var(--border))` for consistency
+
+**Examples of Components Using ChartTooltip:**
+- ✅ `RiskTrendsOverTime.tsx`
+- ✅ `SegmentComparisonMatrix.tsx`
+- ✅ `ProbabilityHistogram.tsx`
+- ✅ `RiskPyramid.tsx`
+- ✅ `AIFeatureImportance.tsx`
+
+##### 2.1.6: Card Layout Consistency Standards
+
+**MANDATORY: Equal Height for Horizontal Layouts**
+
+When multiple visualization cards are placed on the same horizontal level (same row in a grid), they MUST have equal heights for visual consistency and professional appearance.
+
+**Why This Matters:**
+- Creates balanced, professional layouts
+- Prevents awkward height mismatches
+- Improves visual hierarchy
+- Better user experience on all screen sizes
+
+**Implementation Patterns:**
+
+**Pattern 1: Fixed Height with Flexbox** (Recommended for most cases)
+
+```tsx
+// Parent grid container
+<div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+  {/* Card 1: AI Feature Importance */}
+  <div className="h-full flex flex-col">
+    <h3 className="text-lg font-semibold mb-4">AI Feature Importance</h3>
+    <ChartCard className="flex-1 min-h-[500px]">
+      {/* Chart content */}
+    </ChartCard>
+  </div>
+
+  {/* Card 2: Segment Comparison Matrix */}
+  <div className="h-full flex flex-col">
+    <h3 className="text-lg font-semibold mb-4">Segment Comparison Matrix</h3>
+    <ChartCard className="flex-1 min-h-[500px]">
+      {/* Chart content */}
+    </ChartCard>
+  </div>
+</div>
+```
+
+**Pattern 2: Explicit Height Classes** (For simpler layouts)
+
+```tsx
+<div className="grid grid-cols-2 gap-4">
+  <ChartCard className="h-[500px]">
+    {/* Card 1 content */}
+  </ChartCard>
+  <ChartCard className="h-[500px]">
+    {/* Card 2 content */}
+  </ChartCard>
+</div>
+```
+
+**Pattern 3: Auto-Height with Min-Height** (For dynamic content)
+
+```tsx
+<div className="flex gap-4">
+  <div className="flex-1 min-h-[500px]">
+    {/* Card 1 */}
+  </div>
+  <div className="flex-1 min-h-[500px]">
+    {/* Card 2 */}
+  </div>
+</div>
+```
+
+**Height Selection Guidelines:**
+
+| Content Type | Recommended Min Height | Notes |
+|--------------|----------------------|-------|
+| Simple Charts (bar, line) | `h-[400px]` or `min-h-[400px]` | Compact, easy to scan |
+| Complex Visualizations | `h-[500px]` or `min-h-[500px]` | Room for details, legends |
+| Tables with Data | `h-[600px]` or `min-h-[600px]` | Allows scrolling, more rows |
+| Dashboard Cards | `h-[300px]` or `min-h-[300px]` | Quick KPI overview |
+
+**Implementation Checklist:**
+- [ ] Cards on same row have consistent height classes
+- [ ] Use either explicit height (`h-[Xpx]`) or flex pattern (`flex-1` with `min-h-[Xpx]`)
+- [ ] Test at different screen sizes (sm, md, lg, xl, 2xl)
+- [ ] Ensure content fits without overflow (add `overflow-auto` if needed)
+- [ ] Consider responsive breakpoints - may stack vertically on mobile
+
+**Common Mistakes to Avoid:**
+- ❌ Mixing height specifications (one card with `h-[500px]`, another with `h-auto`)
+- ❌ Forgetting to test at xl+ breakpoints where cards appear side-by-side
+- ❌ Using only `min-h` without flex context (may not stretch to match sibling)
+- ❌ Hard-coding content height instead of using card container height
+
+**Responsive Behavior:**
+
+```tsx
+// Cards stack on small screens, side-by-side on large screens
+<div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+  {/* On mobile (< xl): Cards stack vertically, each can have natural height */}
+  {/* On desktop (xl+): Cards side-by-side, MUST have equal heights */}
+
+  <div className="h-full flex flex-col">
+    {/* This ensures equal heights only when in grid layout */}
+  </div>
+</div>
+```
+
+##### 2.1.7: Single Card Per Visualization Rule ⚠️ CRITICAL
+
+**MANDATORY REQUIREMENT**: Each visualization must have EXACTLY ONE card border around it. Never nest cards or create double borders.
+
+**Why This Matters:**
+- Double cards create visual clutter and confusion
+- Reduces professional appearance
+- Wastes screen real estate with unnecessary padding
+- Creates inconsistent spacing across dashboard
+
+**The Rule:**
+
+> **If a visualization component has its own card/border styling built-in, do NOT wrap it in an external Card component**
+
+**Correct Patterns:**
+
+**Pattern 1: Component with Built-In Card** (No external wrapper needed)
+
+```tsx
+// ✅ CORRECT: Component already has card styling
+<DashboardSection>
+  <div
+    onClick={(e) => {
+      if (e.shiftKey) {
+        // Shift-click handling
+      }
+    }}
+  >
+    <SegmentDistributionMap data={data} />
+    {/* SegmentDistributionMap internally has: */}
+    {/*   border: '2px solid #e8d4e6' */}
+    {/*   borderRadius: '12px' */}
+    {/*   boxShadow: '...' */}
+  </div>
+</DashboardSection>
+
+// ❌ WRONG: Double card (external Card + internal styling)
+<DashboardSection>
+  <Card className="glass-card">  {/* ← External card */}
+    <SegmentDistributionMap data={data} />
+    {/* SegmentDistributionMap also has border/card styling ← Internal card */}
+  </Card>
+</DashboardSection>
+```
+
+**Pattern 2: Component WITHOUT Built-In Card** (External Card wrapper needed)
+
+```tsx
+// ✅ CORRECT: Chart.js/Recharts components have no built-in borders
+<div className="h-full flex flex-col">
+  <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+    Customer Segment Distribution
+  </h3>
+  <Card className="glass-card flex-1 min-h-[450px]">
+    <BarChart data={data} height={400} />
+    {/* BarChart has NO built-in border/card styling */}
+  </Card>
+</div>
+
+// ❌ WRONG: No card wrapper when component doesn't have styling
+<div>
+  <h3>Customer Segment Distribution</h3>
+  <BarChart data={data} height={400} />
+  {/* No border, no background - looks incomplete */}
+</div>
+```
+
+**How to Check if Component Has Built-In Card:**
+
+1. **Read the component file** - Look for inline styles or className with borders:
+   ```tsx
+   // HAS built-in card if you see:
+   style={{
+     border: '2px solid ...',
+     borderRadius: '12px',
+     boxShadow: '...'
+   }}
+
+   // OR:
+   className="border rounded-lg shadow-lg bg-white"
+   ```
+
+2. **Visual inspection** - If the component already has a visible border/shadow when rendered alone, it has built-in card styling
+
+3. **Common patterns:**
+   - ✅ Custom complex components (maps, multi-part visualizations) → Usually have built-in styling
+   - ✅ Chart.js/Recharts components → NO built-in card (need external Card wrapper)
+   - ✅ Simple bar/line/pie charts → NO built-in card (need external Card wrapper)
+
+**Exceptions:**
+- **Segment Profile Cards**: These are card collections where each item is a card - this is intentional
+- **KPI Cards**: Each KPI is a card within the KPIRow component - this is the standard pattern
+- **Multi-card layouts**: Dashboard sections can contain multiple separate cards side-by-side
+
+**Testing Checklist:**
+- [ ] Inspect each visualization in browser DevTools
+- [ ] Count the number of border/box-shadow layers
+- [ ] If you see 2+ borders around a single chart → Fix required
+- [ ] Verify shift-click still works after removing extra Card wrapper
+
+**Common Violation:**
+The most common mistake is adding a Card wrapper to SegmentDistributionMap, which already has complete card styling built into the component.
+
 #### Step 2.2: Export All Components
 
 ```typescript
@@ -3096,6 +3487,20 @@ const defaultFilters = {
 - [ ] Tool has `<is_visualisation>true</is_visualisation>` tag
 - [ ] COMPONENT_SCHEMA updated with all components
 - [ ] Default time period: 2017-2021
+- [ ] **DATA CONSISTENCY**: All dashboards use the SAME default date range (2017-2021) to ensure consistent "Total Customers" and other cross-dashboard metrics
+- [ ] **DATA CONSISTENCY**: Filter engine (`apps/adk/database/filter_engine.py`) applies identical date defaults regardless of table type (transaction, loyalty, AR_DETAIL, etc.)
+- [ ] **DATA CONSISTENCY**: API responses for the same time period produce identical base metrics (e.g., total customers, total revenue) across different dashboards
+- [ ] **DATA CONSISTENCY**: Total customer counts must use `transactions_df['customer_id'].nunique()` or `customers_df['customer_id'].nunique()`, NOT derived data like predictions count
+- [ ] **NO HARDCODED DATA**: NEVER use hardcoded/mock/sample data arrays in backend or frontend, even as fallbacks
+- [ ] **NO HARDCODED DATA**: Return empty arrays `[]` or empty states instead of fake data
+- [ ] **NO HARDCODED DATA**: Do NOT hardcode metric values (e.g., `return 5.2` for growth, `accuracy: 0.85` for model accuracy)
+- [ ] **NO HARDCODED DATA**: Default date ranges (2017-2021) are acceptable as they match actual dataset, but should be documented
+- [ ] **NO HARDCODED DATA**: If historical data unavailable for trends/comparisons, remove the field entirely rather than returning 0 or fake values
+- [ ] **FILTER CONSISTENCY**: Filters with same semantic meaning (e.g., "Customer Segment", "Risk Level") must have IDENTICAL dropdown options across all dashboards
+- [ ] **FILTER CONSISTENCY**: Filter option labels, values, and order must be standardized (e.g., ["Champions", "Loyal", "At Risk"] not ["Champions", "Loyal Customers", "At-Risk"])
+- [ ] **FILTER CONSISTENCY**: Shared filter configurations MUST be imported from `apps/frontend/src/lib/constants/filterOptions.ts` - NEVER define inline
+- [ ] **FILTER CONSISTENCY**: Available centralized filters: `CUSTOMER_SEGMENT_OPTIONS`, `RFM_SEGMENT_OPTIONS`, `REGION_OPTIONS`, `VALUE_CATEGORY_OPTIONS`, `RISK_LEVEL_OPTIONS`, `BEHAVIOR_TYPE_OPTIONS`, `DEFAULT_DATE_RANGE`
+- [ ] **FILTER CONSISTENCY**: Import example: `import { REGION_OPTIONS, CUSTOMER_SEGMENT_OPTIONS } from '@/lib/constants/filterOptions'`
 - [ ] Processing service handles all filters correctly
 - [ ] **Caching**: All data-fetching methods have `@cache_dashboard_endpoint` decorators
 - [ ] **Caching**: TTL configured appropriately for dashboard type
@@ -3146,6 +3551,12 @@ const defaultFilters = {
 - [ ] Table sorting/searching works
 - [ ] Chat spawns graphs correctly
 - [ ] Data consistency verified (dashboard = chat)
+- [ ] **DATA CONSISTENCY ACROSS DASHBOARDS**: Total Customers matches across all dashboards (Churn, Segmentation, LTV) when using same date filters
+- [ ] **DATA CONSISTENCY ACROSS DASHBOARDS**: Base metrics (revenue, customers, transactions) match between dashboards for the same time period
+- [ ] **DATA CONSISTENCY ACROSS DASHBOARDS**: Default date range (2017-2021) produces identical counts/sums in all dashboard KPIs
+- [ ] **FILTER CONSISTENCY ACROSS DASHBOARDS**: Same filter types have identical dropdown options across dashboards (e.g., "Customer Segment" filter shows same segments in Churn and Segmentation dashboards)
+- [ ] **FILTER CONSISTENCY ACROSS DASHBOARDS**: Filter option labels match exactly (e.g., all dashboards use "Champions" not mix of "Champions" and "Champion Customers")
+- [ ] **FILTER CONSISTENCY ACROSS DASHBOARDS**: Filter option order is consistent (alphabetical or by importance, but same across all dashboards)
 - [ ] **Caching**: Backend cache hit/miss behavior verified
 - [ ] **Caching**: Different filters create different cache entries
 - [ ] **Caching**: Frontend cache working (Network tab shows reduced API calls)

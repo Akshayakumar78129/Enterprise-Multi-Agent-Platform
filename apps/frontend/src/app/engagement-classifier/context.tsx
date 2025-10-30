@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState } from 'react';
-import { Message } from 'components';
+import { Message, SelectedPoint, SelectionManager, getShiftClickManager } from 'components';
 
 interface EngagementFilters {
   dateRange: {
@@ -25,13 +25,8 @@ interface EngagementClassifierContextType {
   setIsChatOpen: (open: boolean) => void;
   isBIModalOpen: boolean;
   setIsBIModalOpen: (open: boolean) => void;
-  selectedPoints: any[];
-  selectionManager: {
-    addPoint: (point: any) => void;
-    removePoint: (point: any) => void;
-    clearAll: () => void;
-    hasPoint: (point: any) => boolean;
-  };
+  selectedPoints: SelectedPoint[];
+  selectionManager: SelectionManager;
   timeRange: string;
   // Chat state
   chatMessages: Message[];
@@ -109,29 +104,21 @@ export function EngagementClassifierProvider({ children }: { children: React.Rea
   const [chatSessionId] = useState(() => `session_${Date.now()}`);
   const [chatUserId] = useState(() => `user_${Math.random().toString(36).substr(2, 9)}`);
 
-  const [selectedPoints, setSelectedPoints] = useState<any[]>([]);
+  const [selectedPoints, setSelectedPoints] = useState<SelectedPoint[]>([]);
+  const [selectionManager] = useState(() => getShiftClickManager());
 
   const timeRange = `${filters.dateRange.startDate} to ${filters.dateRange.endDate}`;
 
-  const selectionManager = {
-    addPoint: (point: any) => {
-      setSelectedPoints(prev => {
-        if (!prev.find(p => p.id === point.id)) {
-          return [...prev, point];
-        }
-        return prev;
-      });
-    },
-    removePoint: (point: any) => {
-      setSelectedPoints(prev => prev.filter(p => p.id !== point.id));
-    },
-    clearAll: () => {
-      setSelectedPoints([]);
-    },
-    hasPoint: (point: any) => {
-      return selectedPoints.some(p => p.id === point.id);
-    }
-  };
+  // Subscribe to selection manager to sync selectedPoints state
+  React.useEffect(() => {
+    const unsubscribe = selectionManager.subscribe((points) => {
+      setSelectedPoints(points);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [selectionManager]);
 
   return (
     <EngagementClassifierContext.Provider

@@ -82,23 +82,18 @@ export function ChurnProvider({ children }: { children: React.ReactNode }) {
     return (localStorage.getItem("churnTimeRange") as TimeRange) || "30d";
   });
 
-  const [filters, setFilters] = React.useState<ChurnFilters>(() => {
-    // Default to full data range 2017-2021 (complete data for comprehensive analysis)
-    const defaultStartDate = "2017-01-01";
-    const defaultEndDate = "2021-12-31";
+  // Default filters - always used for SSR to prevent hydration mismatch
+  const defaultFilters: ChurnFilters = React.useMemo(() => ({
+    dateRange: { startDate: "2017-01-01", endDate: "2021-12-31" },
+    riskLevels: [],
+    segments: [],
+    productCategories: []
+  }), []);
 
-    const defaultFilters = {
-      dateRange: { startDate: defaultStartDate, endDate: defaultEndDate },
-      riskLevels: [],
-      segments: [],
-      productCategories: [],
-      search: "",
-    };
+  const [filters, setFilters] = React.useState<ChurnFilters>(defaultFilters);
 
-    if (typeof window === "undefined") {
-      return defaultFilters;
-    }
-
+  // Load saved filters from localStorage AFTER hydration (client-side only)
+  React.useEffect(() => {
     try {
       const saved = localStorage.getItem("churnFilters");
       if (saved) {
@@ -107,18 +102,17 @@ export function ChurnProvider({ children }: { children: React.ReactNode }) {
         // Migration: Update old 2021-only date range to full 2017-2021 range
         if (parsed.dateRange?.startDate === "2021-01-01") {
           parsed.dateRange.startDate = "2017-01-01";
-          // Save the migrated value back to localStorage
           localStorage.setItem("churnFilters", JSON.stringify(parsed));
         }
 
-        return parsed;
+        setFilters(parsed);
       }
-      return defaultFilters;
-    } catch {
-      return defaultFilters;
+    } catch (error) {
+      console.error('[ChurnContext] Failed to load saved filters:', error);
     }
-  });
+  }, []); // Run once on mount
 
+  // Save filters to localStorage whenever they change
   React.useEffect(() => {
     try {
       localStorage.setItem("churnFilters", JSON.stringify(filters));

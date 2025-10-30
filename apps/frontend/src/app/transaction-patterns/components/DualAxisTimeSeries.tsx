@@ -61,6 +61,9 @@ export const DualAxisTimeSeries: React.FC<DualAxisTimeSeriesProps> = ({
       intersect: false
     },
     plugins: {
+      title: {
+        display: false
+      },
       legend: {
         position: 'top' as const,
         labels: {
@@ -105,7 +108,7 @@ export const DualAxisTimeSeries: React.FC<DualAxisTimeSeriesProps> = ({
           text: 'Transaction Count'
         },
         grid: {
-          color: 'rgba(139, 92, 246, 0.1)'
+          color: 'rgba(156, 163, 175, 0.2)'  // Neutral gray instead of purple
         }
       },
       y2: {
@@ -130,7 +133,7 @@ export const DualAxisTimeSeries: React.FC<DualAxisTimeSeriesProps> = ({
   };
 
   return (
-    <div className="h-80">
+    <div className="h-[400px] w-full">
       <LineChart data={chartData} options={options} />
     </div>
   );

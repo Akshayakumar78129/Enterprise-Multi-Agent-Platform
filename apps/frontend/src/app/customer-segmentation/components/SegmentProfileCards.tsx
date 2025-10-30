@@ -204,17 +204,19 @@ export function SegmentProfileCards({
             className={`p-6 cursor-pointer transition-all duration-200 hover:shadow-lg ${
               isSelected ? 'ring-2 ring-blue-500' : ''
             } ${isExpanded ? 'md:col-span-2 lg:col-span-2' : ''}`}
-            onClick={(e) => {
-              if (e.shiftKey) {
-                // Shift+click: Add to global shift+click selection
-                shiftClickManager.addPoint({
-                  label: `Segment: ${segment.segment_name}`,
-                  value: `${segment.customer_count} customers, Avg LTV: $${(segment.avg_lifetime_value || 0).toLocaleString()}`,
-                  source: 'Segment Profiles'
-                }, e.nativeEvent);
-              } else if (onSegmentSelect) {
+            onClick={() => {
+              // Regular click: select segment
+              if (onSegmentSelect) {
                 onSegmentSelect(segment.segment_name);
               }
+            }}
+            onShiftClick={(event) => {
+              // Shift+click: Add to global shift+click selection
+              shiftClickManager.addPoint({
+                label: `Segment: ${segment.segment_name}`,
+                value: `${segment.customer_count} customers, Avg LTV: $${(segment.avg_lifetime_value || 0).toLocaleString()}`,
+                source: 'Segment Profiles'
+              }, event.nativeEvent);
             }}
             style={{ borderColor: segment.color || '#e5e7eb' }}
           >

@@ -17,6 +17,7 @@ import { Users, TrendingUp, DollarSign, Activity, Layers, Target } from 'lucide-
 import { useSegmentationContext } from './context';
 import { SegmentProfileCards, SegmentDistributionMap } from './components';
 import { useSegmentationData } from './hooks/useSegmentationData';
+import { RFM_SEGMENT_OPTIONS, VALUE_CATEGORY_OPTIONS, BEHAVIOR_TYPE_OPTIONS } from '@/lib/constants/filterOptions';
 
 export default function CustomerSegmentationPage() {
   const { filters, setFilters, setInsights, setSegments } = useSegmentationContext();
@@ -148,7 +149,7 @@ export default function CustomerSegmentationPage() {
   };
 
   const generateTrendData = () => {
-    // Mock trend data for now - should come from API
+    // ✅ NO HARDCODED DATA: Only use real trend data from API
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
     const lineColors = [
       { border: 'rgb(16, 185, 129)', bg: 'rgba(16, 185, 129, 0.2)' },
@@ -156,29 +157,73 @@ export default function CustomerSegmentationPage() {
       { border: 'rgb(245, 158, 11)', bg: 'rgba(245, 158, 11, 0.2)' }
     ];
 
+    // Debug: Log segment distribution data
+    console.log('[SegmentTrends] Total segments:', segmentDistribution.length);
+    console.log('[SegmentTrends] First 3 segments:', segmentDistribution.slice(0, 3).map((s: any) => ({
+      name: s.segment_name,
+      has_trend_data: !!s.trend_data,
+      trend_data: s.trend_data
+    })));
+
+    // Filter to only segments that have real trend data
+    const segmentsWithTrendData = segmentDistribution
+      .slice(0, 3)
+      .filter((segment: any) => segment.trend_data && Array.isArray(segment.trend_data) && segment.trend_data.length > 0);
+
+    console.log('[SegmentTrends] Segments with trend data:', segmentsWithTrendData.length);
+
     return {
       labels: months,
-      datasets: segmentDistribution.slice(0, 3).map((segment: any, index: number) => {
-        // Generate realistic mock trend data based on current customer count if API doesn't provide it
-        const trendData = segment.trend_data || months.map((_, idx) => {
-          const baseCount = segment.customer_count || 100;
-          // Simulate gradual growth/decline with some randomness
-          const trendFactor = (idx / months.length) * 0.2; // 20% growth over time
-          const randomVariation = (Math.random() - 0.5) * 0.1; // ±5% random variation
-          return Math.max(0, Math.floor(baseCount * (1 - 0.1 + trendFactor + randomVariation)));
-        });
-
-        return {
-          label: segment.segment_name,
-          data: trendData,
-          borderColor: lineColors[index % lineColors.length].border,
-          backgroundColor: lineColors[index % lineColors.length].bg,
-          fill: true,
-          tension: 0.4
-        };
-      })
+      datasets: segmentsWithTrendData.map((segment: any, index: number) => ({
+        label: segment.segment_name,
+        data: segment.trend_data,
+        borderColor: lineColors[index % lineColors.length].border,
+        backgroundColor: lineColors[index % lineColors.length].bg,
+        fill: true,
+        tension: 0.4
+      })),
+      hasData: segmentsWithTrendData.length > 0
     };
   };
+
+  const trendData = generateTrendData();
+
+  // Error state
+  if (error && !loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center max-w-md">
+          <div className="mb-4">
+            <svg
+              className="w-16 h-16 mx-auto text-destructive"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-foreground mb-2">
+            Error Loading Data
+          </h2>
+          <p className="text-muted-foreground mb-4">
+            {typeof error === 'string' ? error : 'An unexpected error occurred while loading the dashboard.'}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <PageLoader
@@ -194,17 +239,14 @@ export default function CustomerSegmentationPage() {
           config={{
             dateRange: {
               enabled: true,
-              value: filters.dateRange ? {
-                from: new Date(filters.dateRange.startDate),
-                to: new Date(filters.dateRange.endDate)
-              } : { from: new Date('2017-01-01'), to: new Date('2021-12-31') },
+              value: filters.dateRange || { startDate: '2017-01-01', endDate: '2021-12-31' },
               onChange: (range) => {
-                if (range?.from && range?.to) {
+                if (range?.startDate && range?.endDate) {
                   setFilters({
                     ...filters,
                     dateRange: {
-                      startDate: range.from.toISOString().split('T')[0],
-                      endDate: range.to.toISOString().split('T')[0]
+                      startDate: range.startDate,
+                      endDate: range.endDate
                     }
                   });
                 }
@@ -214,16 +256,7 @@ export default function CustomerSegmentationPage() {
               {
                 id: 'customerSegments',
                 label: 'Customer Segments',
-                options: [
-                  { value: 'champions', label: 'Champions' },
-                  { value: 'loyal_customers', label: 'Loyal Customers' },
-                  { value: 'potential_loyalists', label: 'Potential Loyalists' },
-                  { value: 'new_customers', label: 'New Customers' },
-                  { value: 'at_risk', label: 'At Risk' },
-                  { value: 'cant_lose_them', label: "Can't Lose Them" },
-                  { value: 'hibernating', label: 'Hibernating' },
-                  { value: 'lost', label: 'Lost' }
-                ],
+                options: RFM_SEGMENT_OPTIONS,
                 value: filters.customerSegments || [],
                 onChange: (values) => setFilters({ ...filters, customerSegments: values }),
                 placeholder: 'Select segments...'
@@ -231,13 +264,7 @@ export default function CustomerSegmentationPage() {
               {
                 id: 'valueCategories',
                 label: 'Value Categories',
-                options: [
-                  { value: 'high_value', label: 'High Value' },
-                  { value: 'medium_high_value', label: 'Medium-High Value' },
-                  { value: 'medium_value', label: 'Medium Value' },
-                  { value: 'medium_low_value', label: 'Medium-Low Value' },
-                  { value: 'low_value', label: 'Low Value' }
-                ],
+                options: VALUE_CATEGORY_OPTIONS,
                 value: filters.valueCategories || [],
                 onChange: (values) => setFilters({ ...filters, valueCategories: values }),
                 placeholder: 'Select value categories...'
@@ -245,14 +272,7 @@ export default function CustomerSegmentationPage() {
               {
                 id: 'behaviorTypes',
                 label: 'Behavior Types',
-                options: [
-                  { value: 'frequent_purchasers', label: 'Frequent Purchasers' },
-                  { value: 'regular_purchasers', label: 'Regular Purchasers' },
-                  { value: 'occasional_purchasers', label: 'Occasional Purchasers' },
-                  { value: 'rare_purchasers', label: 'Rare Purchasers' },
-                  { value: 'new_purchasers', label: 'New Purchasers' },
-                  { value: 'inactive', label: 'Inactive' }
-                ],
+                options: BEHAVIOR_TYPE_OPTIONS,
                 value: filters.behaviorTypes || [],
                 onChange: (values) => setFilters({ ...filters, behaviorTypes: values }),
                 placeholder: 'Select behavior types...'
@@ -308,9 +328,12 @@ export default function CustomerSegmentationPage() {
 
       {/* Main Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <DashboardSection className="w-full">
+        <div className="h-full flex flex-col">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+            Customer Segment Distribution
+          </h3>
           <Card
-            className="glass-card"
+            className="glass-card flex-1 min-h-[450px]"
             onShiftClick={(event) => {
               shiftClickManager.addPoint({
                 label: "Segment Distribution",
@@ -319,21 +342,57 @@ export default function CustomerSegmentationPage() {
               }, event.nativeEvent);
             }}
           >
-            <div className="w-full">
-              <BarChart
-                data={generateSegmentChart()}
-                height={350}
-                showLegend={false}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      display: false
-                    }
-                  },
+            <div className="w-full h-full">
+              {!segmentDistribution || segmentDistribution.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center text-muted-foreground">
+                    <svg className="w-16 h-16 mx-auto mb-2 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <p className="text-sm">No segment data available</p>
+                  </div>
+                </div>
+              ) : (
+                <BarChart
+                  data={generateSegmentChart()}
+                  height={400}
+                  showLegend={false}
+                  options={{
+                    onClick: (event: any, elements: any[]) => {
+                      if (elements.length > 0 && event?.native?.shiftKey) {
+                        const index = elements[0].index;
+                        const segment = segmentDistribution[index];
+                        shiftClickManager.addPoint({
+                          label: `Segment: ${segment.segment_name}`,
+                          value: `${segment.customer_count} customers (${segment.percentage?.toFixed(1)}%)`,
+                          source: 'Segment Distribution Chart - Data Point'
+                        }, event.native);
+                      }
+                    },
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      title: {
+                        display: false
+                      },
+                      legend: {
+                        display: false
+                      },
+                      tooltip: {
+                        backgroundColor: 'rgb(31, 41, 55)',
+                        titleColor: 'rgb(243, 244, 246)',
+                        bodyColor: 'rgb(209, 213, 219)',
+                        borderColor: 'rgb(75, 85, 99)',
+                        borderWidth: 1
+                      }
+                    },
                   scales: {
                     x: {
+                      title: {
+                        display: true,
+                        text: 'Customer Segments',
+                        color: '#7a6a7c'
+                      },
                       grid: {
                         color: '#f3e8ff',
                         borderColor: '#e8d4e6'
@@ -343,6 +402,11 @@ export default function CustomerSegmentationPage() {
                       }
                     },
                     y: {
+                      title: {
+                        display: true,
+                        text: 'Number of Customers',
+                        color: '#7a6a7c'
+                      },
                       grid: {
                         color: '#f3e8ff',
                         borderColor: '#e8d4e6'
@@ -354,13 +418,17 @@ export default function CustomerSegmentationPage() {
                   }
                 }}
               />
+              )}
             </div>
           </Card>
-        </DashboardSection>
+        </div>
 
-        <DashboardSection className="w-full">
+        <div className="h-full flex flex-col">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+            Segment Growth Trends Over Time
+          </h3>
           <Card
-            className="glass-card"
+            className="glass-card flex-1 min-h-[450px]"
             onShiftClick={(event) => {
               shiftClickManager.addPoint({
                 label: "Segment Trends",
@@ -369,51 +437,110 @@ export default function CustomerSegmentationPage() {
               }, event.nativeEvent);
             }}
           >
-            <div className="w-full">
-              <LineChart
-                data={generateTrendData()}
-                height={350}
-                showLegend={true}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      labels: {
-                        color: '#7a6a7c'
-                      }
-                    }
-                  },
-                  scales: {
-                    x: {
-                      grid: {
-                        color: '#f3e8ff',
-                        borderColor: '#e8d4e6'
-                      },
-                      ticks: {
-                        color: '#7a6a7c'
+            <div className="w-full h-full">
+              {!segmentDistribution || segmentDistribution.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center text-muted-foreground">
+                    <svg className="w-16 h-16 mx-auto mb-2 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                    </svg>
+                    <p className="text-sm">No trend data available</p>
+                  </div>
+                </div>
+              ) : (
+                <LineChart
+                  data={generateTrendData()}
+                  height={400}
+                  showLegend={true}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    onClick: (event: any, elements: any[]) => {
+                      if (elements.length > 0 && event?.native?.shiftKey) {
+                        const datasetIndex = elements[0].datasetIndex;
+                        const index = elements[0].index;
+                        const trendData = generateTrendData();
+                        const dataset = trendData.datasets[datasetIndex];
+                        const label = trendData.labels[index];
+                        const value = dataset.data[index];
+
+                        shiftClickManager.addPoint({
+                          label: `${dataset.label} - ${label}`,
+                          value: `${value} customers`,
+                          source: 'Segment Trends Chart - Data Point'
+                        }, event.native);
                       }
                     },
-                    y: {
-                      grid: {
-                        color: '#f3e8ff',
-                        borderColor: '#e8d4e6'
+                    plugins: {
+                      title: {
+                        display: false
                       },
-                      ticks: {
-                        color: '#7a6a7c'
+                      legend: {
+                        labels: {
+                          color: '#7a6a7c'
+                        }
+                      },
+                      tooltip: {
+                        backgroundColor: 'rgb(31, 41, 55)',
+                        titleColor: 'rgb(243, 244, 246)',
+                        bodyColor: 'rgb(209, 213, 219)',
+                        borderColor: 'rgb(75, 85, 99)',
+                        borderWidth: 1
+                      }
+                    },
+                    scales: {
+                      x: {
+                        title: {
+                          display: true,
+                          text: 'Time Period',
+                          color: '#7a6a7c'
+                        },
+                        grid: {
+                          color: '#f3e8ff',
+                          borderColor: '#e8d4e6'
+                        },
+                        ticks: {
+                          color: '#7a6a7c'
+                        }
+                      },
+                      y: {
+                        title: {
+                          display: true,
+                          text: 'Customer Count',
+                          color: '#7a6a7c'
+                        },
+                        grid: {
+                          color: '#f3e8ff',
+                          borderColor: '#e8d4e6'
+                        },
+                        ticks: {
+                          color: '#7a6a7c'
+                        }
                       }
                     }
-                  }
-                }}
-              />
+                  }}
+                />
+              )}
             </div>
           </Card>
-        </DashboardSection>
+        </div>
       </div>
 
       {/* Segment Distribution Map */}
       <DashboardSection className="w-full">
-        <div className="w-full" style={{ minHeight: '600px' }}>
+        <div
+          className="w-full cursor-pointer"
+          style={{ minHeight: '600px' }}
+          onClick={(event) => {
+            if (event.shiftKey) {
+              shiftClickManager.addPoint({
+                label: "Segment Distribution Map",
+                value: `${segmentData.length} customers across ${Object.keys(segmentDistribution || {}).length} segments`,
+                source: 'Segmentation Dashboard - Distribution Map'
+              }, event.nativeEvent);
+            }
+          }}
+        >
           <SegmentDistributionMap
             data={segmentData}
             selectedSegments={filters.customerSegments}
@@ -430,7 +557,6 @@ export default function CustomerSegmentationPage() {
 
       {/* Segment Profiles */}
       <DashboardSection>
-        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Segment Profiles</h3>
         <SegmentProfileCards
           segmentDistribution={segmentDistribution}
           segmentComparison={segmentComparison}
@@ -463,7 +589,6 @@ export default function CustomerSegmentationPage() {
           }}
         />
       </DashboardSection>
-
 
       </div>
     </PageLoader>

@@ -96,6 +96,11 @@ export function LtvDistribution({ data = [], loading = false }: LtvDistributionP
         display: false
       },
       tooltip: {
+        backgroundColor: 'rgb(31, 41, 55)',
+        titleColor: 'rgb(243, 244, 246)',
+        bodyColor: 'rgb(209, 213, 219)',
+        borderColor: 'rgb(75, 85, 99)',
+        borderWidth: 1,
         callbacks: {
           label: function(context: any) {
             return `Customers: ${context.parsed.y}`;
@@ -105,6 +110,11 @@ export function LtvDistribution({ data = [], loading = false }: LtvDistributionP
     },
     scales: {
       x: {
+        title: {
+          display: true,
+          text: 'LTV Range',
+          color: '#a3a3a3'
+        },
         grid: {
           color: 'rgba(255, 255, 255, 0.1)'
         },
@@ -113,6 +123,11 @@ export function LtvDistribution({ data = [], loading = false }: LtvDistributionP
         }
       },
       y: {
+        title: {
+          display: true,
+          text: 'Customer Count',
+          color: '#a3a3a3'
+        },
         grid: {
           color: 'rgba(255, 255, 255, 0.1)'
         },
@@ -128,6 +143,21 @@ export function LtvDistribution({ data = [], loading = false }: LtvDistributionP
       <Card className="p-6">
         <div className="h-80 flex items-center justify-center">
           <div className="text-muted-foreground">Loading...</div>
+        </div>
+      </Card>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <Card className="p-6">
+        <div className="h-80 flex items-center justify-center">
+          <div className="text-center text-muted-foreground">
+            <svg className="w-16 h-16 mx-auto mb-2 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <p className="text-sm">No LTV distribution data available</p>
+          </div>
         </div>
       </Card>
     );

@@ -38,18 +38,21 @@ export const TemporalHeatmap: React.FC<TemporalHeatmapProps> = ({
   );
 
   const getColor = (count: number) => {
+    if (count === 0) return 'rgba(156, 163, 175, 0.1)';  // Gray for zero
+
     const intensity = count / maxCount;
-    if (intensity === 0) return 'rgba(139, 92, 246, 0.05)';
-    if (intensity < 0.2) return 'rgba(139, 92, 246, 0.2)';
-    if (intensity < 0.4) return 'rgba(139, 92, 246, 0.4)';
-    if (intensity < 0.6) return 'rgba(139, 92, 246, 0.6)';
-    if (intensity < 0.8) return 'rgba(139, 92, 246, 0.8)';
-    return 'rgba(139, 92, 246, 1)';
+    // Blue → Purple → Pink gradient for better visual distinction
+    if (intensity < 0.2) return 'rgba(59, 130, 246, 0.4)';    // Blue
+    if (intensity < 0.4) return 'rgba(96, 165, 250, 0.6)';    // Light blue
+    if (intensity < 0.6) return 'rgba(139, 92, 246, 0.75)';   // Purple
+    if (intensity < 0.8) return 'rgba(192, 132, 252, 0.85)';  // Light purple
+    if (intensity < 0.95) return 'rgba(236, 72, 153, 0.9)';   // Pink
+    return 'rgba(219, 39, 119, 1)';                            // Deep pink
   };
 
   return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[600px]">
+    <div className="overflow-x-auto min-h-[400px] flex items-center">
+      <div className="min-w-[600px] w-full">
           {/* Hour labels on top */}
           <div className="flex mb-2">
             <div className="w-24"></div>
@@ -93,19 +96,16 @@ export const TemporalHeatmap: React.FC<TemporalHeatmapProps> = ({
             </div>
           ))}
 
-          {/* Legend */}
+          {/* Legend - Match actual gradient */}
           <div className="mt-4 flex items-center justify-center gap-4">
             <span className="text-xs text-muted-foreground">Low</span>
             <div className="flex gap-1">
-              {[0.1, 0.3, 0.5, 0.7, 0.9].map(intensity => (
-                <div
-                  key={intensity}
-                  className="w-6 h-4 rounded-sm"
-                  style={{
-                    backgroundColor: `rgba(139, 92, 246, ${intensity})`
-                  }}
-                />
-              ))}
+              <div className="w-6 h-4 rounded-sm" style={{ backgroundColor: 'rgba(59, 130, 246, 0.4)' }} />
+              <div className="w-6 h-4 rounded-sm" style={{ backgroundColor: 'rgba(96, 165, 250, 0.6)' }} />
+              <div className="w-6 h-4 rounded-sm" style={{ backgroundColor: 'rgba(139, 92, 246, 0.75)' }} />
+              <div className="w-6 h-4 rounded-sm" style={{ backgroundColor: 'rgba(192, 132, 252, 0.85)' }} />
+              <div className="w-6 h-4 rounded-sm" style={{ backgroundColor: 'rgba(236, 72, 153, 0.9)' }} />
+              <div className="w-6 h-4 rounded-sm" style={{ backgroundColor: 'rgba(219, 39, 119, 1)' }} />
             </div>
             <span className="text-xs text-muted-foreground">High</span>
           </div>

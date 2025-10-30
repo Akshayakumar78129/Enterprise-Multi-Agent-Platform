@@ -36,15 +36,24 @@ export const AmountDistribution: React.FC<AmountDistributionProps> = ({
       data: data.map(d => d.count),
       backgroundColor: data.map((_, index) => {
         const colors = [
-          'rgba(139, 92, 246, 0.8)',
-          'rgba(168, 85, 247, 0.8)',
-          'rgba(196, 181, 253, 0.8)',
-          'rgba(221, 214, 254, 0.8)',
-          'rgba(237, 233, 254, 0.8)'
+          'rgba(59, 130, 246, 0.8)',   // Blue
+          'rgba(16, 185, 129, 0.8)',   // Emerald
+          'rgba(245, 158, 11, 0.8)',   // Amber
+          'rgba(236, 72, 153, 0.8)',   // Pink
+          'rgba(139, 92, 246, 0.8)'    // Purple (only one!)
         ];
         return colors[index % colors.length];
       }),
-      borderColor: 'rgba(139, 92, 246, 1)',
+      borderColor: data.map((_, index) => {
+        const colors = [
+          'rgb(37, 99, 235)',    // Blue border
+          'rgb(5, 150, 105)',    // Emerald border
+          'rgb(217, 119, 6)',    // Amber border
+          'rgb(219, 39, 119)',   // Pink border
+          'rgb(124, 58, 237)'    // Purple border
+        ];
+        return colors[index % colors.length];
+      }),
       borderWidth: 1
     }]
   };
@@ -53,6 +62,9 @@ export const AmountDistribution: React.FC<AmountDistributionProps> = ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
+      title: {
+        display: false
+      },
       legend: {
         display: false
       },
@@ -75,22 +87,42 @@ export const AmountDistribution: React.FC<AmountDistributionProps> = ({
     },
     scales: {
       x: {
+        title: {
+          display: true,
+          text: 'Transaction Amount Range',
+          font: {
+            size: 13,
+            weight: 'bold' as const
+          }
+        },
         grid: {
           display: false
         },
         ticks: {
           maxRotation: 45,
-          minRotation: 0
+          minRotation: 0,
+          font: {
+            size: 11
+          }
         }
       },
       y: {
         beginAtZero: true,
         title: {
           display: true,
-          text: 'Number of Transactions'
+          text: 'Number of Transactions',
+          font: {
+            size: 13,
+            weight: 'bold' as const
+          }
         },
         grid: {
-          color: 'rgba(139, 92, 246, 0.1)'
+          color: 'rgba(156, 163, 175, 0.2)'
+        },
+        ticks: {
+          font: {
+            size: 11
+          }
         }
       }
     },
@@ -103,32 +135,8 @@ export const AmountDistribution: React.FC<AmountDistributionProps> = ({
   };
 
   return (
-    <div>
-      <div className="h-80">
-        <BarChart data={chartData} options={options} />
-      </div>
-
-      {/* Summary Stats */}
-      <div className="mt-4 grid grid-cols-3 gap-4 pt-4">
-        <div className="text-center">
-          <div className="text-sm text-muted-foreground">Total Transactions</div>
-          <div className="text-lg font-semibold">
-            {data.reduce((sum, bin) => sum + bin.count, 0).toLocaleString()}
-          </div>
-        </div>
-        <div className="text-center">
-          <div className="text-sm text-muted-foreground">Most Common Range</div>
-          <div className="text-lg font-semibold">
-            {data.reduce((max, bin) => bin.count > max.count ? bin : max, data[0])?.range || 'N/A'}
-          </div>
-        </div>
-        <div className="text-center">
-          <div className="text-sm text-muted-foreground">Distribution Spread</div>
-          <div className="text-lg font-semibold">
-            {data.length} bins
-          </div>
-        </div>
-      </div>
+    <div className="h-[500px] w-full">
+      <BarChart data={chartData} options={options} />
     </div>
   );
 };

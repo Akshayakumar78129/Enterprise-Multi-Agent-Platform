@@ -5,6 +5,7 @@ from typing import Dict
 import logging
 
 from domains.customer_segmentation.processing_service import CustomerSegmentationService
+from domains.common.dashboard_cache import cache_dashboard_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +13,7 @@ router = APIRouter(prefix="/api/segmentation", tags=["customer-segmentation"])
 service = CustomerSegmentationService()
 
 @router.post("/summary")
+@cache_dashboard_endpoint(dashboard_type='customer', ttl=300)
 async def get_segmentation_summary(filters: Dict = {}) -> Dict:
     """
     Get customer segmentation dashboard summary

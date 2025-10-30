@@ -5,7 +5,7 @@ type CardProps = {
   children: React.ReactNode;
   className?: string;
   variant?: "default" | "outlined" | "elevated";
-  onClick?: () => void;
+  onClick?: (event: React.MouseEvent) => void;
   onShiftClick?: (event: React.MouseEvent) => void;
 };
 
@@ -21,7 +21,7 @@ export const Card = ({
     if (event.shiftKey && onShiftClick) {
       onShiftClick(event);
     } else if (onClick) {
-      onClick();
+      onClick(event);
     }
   };
   const variants = {

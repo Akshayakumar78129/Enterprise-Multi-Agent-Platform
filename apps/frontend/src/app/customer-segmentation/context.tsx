@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { SelectionManager } from './services/SelectionManager';
 import { Message } from 'components';
 
@@ -42,48 +42,45 @@ interface SegmentationContextType {
 const SegmentationContext = createContext<SegmentationContextType | undefined>(undefined);
 
 export function SegmentationProvider({ children }: { children: React.ReactNode }) {
-  // Initialize filters
-  const [filters, setFilters] = useState<SegmentationFilters>(() => {
-    // Default date range
-    const defaultFilters = {
-      dateRange: {
-        startDate: '2017-01-01',
-        endDate: '2021-12-31'
-      },
-      customerSegments: [],
-      valueCategories: [],
-      behaviorTypes: []
-    };
+  // Default filters - always used for SSR to prevent hydration mismatch
+  const defaultFilters: SegmentationFilters = useMemo(() => ({
+    dateRange: {
+      startDate: '2017-01-01',
+      endDate: '2021-12-31'
+    },
+    customerSegments: [],
+    valueCategories: [],
+    behaviorTypes: []
+  }), []);
 
-    // Load from localStorage if available
-    if (typeof window !== 'undefined') {
+  const [filters, setFilters] = useState<SegmentationFilters>(defaultFilters);
+
+  // Load saved filters from localStorage AFTER hydration (client-side only)
+  useEffect(() => {
+    try {
       const saved = localStorage.getItem('segmentation_filters');
       if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
+        const parsed = JSON.parse(saved);
 
-          // Migration: Convert old dateFrom/dateTo to new dateRange format
-          if (parsed.dateFrom && parsed.dateTo) {
-            return {
-              dateRange: {
-                startDate: parsed.dateFrom,
-                endDate: parsed.dateTo
-              },
-              customerSegments: parsed.customerSegments || [],
-              valueCategories: parsed.valueCategories || [],
-              behaviorTypes: parsed.behaviorTypes || []
-            };
-          }
-
-          return parsed;
-        } catch (e) {
-          console.error('Failed to load saved filters:', e);
+        // Migration: Convert old dateFrom/dateTo to new dateRange format
+        if (parsed.dateFrom && parsed.dateTo) {
+          setFilters({
+            dateRange: {
+              startDate: parsed.dateFrom,
+              endDate: parsed.dateTo
+            },
+            customerSegments: parsed.customerSegments || [],
+            valueCategories: parsed.valueCategories || [],
+            behaviorTypes: parsed.behaviorTypes || []
+          });
+        } else {
+          setFilters(parsed);
         }
       }
+    } catch (e) {
+      console.error('[SegmentationContext] Failed to load saved filters:', e);
     }
-
-    return defaultFilters;
-  });
+  }, []); // Run once on mount
 
   const [selectedSegment, setSelectedSegment] = useState<string | null>(null);
   const [segments, setSegments] = useState<any[]>([]);

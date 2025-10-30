@@ -121,7 +121,11 @@ class EngagementClassifierDataService:
         return {"data": transformed_rows, "success": True}
 
     async def get_kpi_metrics(self, filters: Dict[str, Any] = {}) -> Dict:
-        """Get KPI metrics for engagement dashboard"""
+        """Get KPI metrics for engagement dashboard
+
+        ✅ DATA CONSISTENCY: Counts ALL customers (not just those with loyalty data)
+        to ensure totalCustomers matches across all dashboards
+        """
 
         sql = f"""
         WITH EngagementKPIs AS (
@@ -138,12 +142,12 @@ class EngagementClassifierDataService:
             FROM {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
             LEFT JOIN {self.schema.TABLES['loyalty']} {self.schema.ALIASES['loyalty']}
                 ON {self.schema.CUSTOMER.refs['id']} = {self.schema.LOYALTY.refs['customer_id']}
-            WHERE {self.schema.LOYALTY.refs['days_since_last_activity']} IS NOT NULL
+            WHERE 1=1
         """
 
-        # Add filters
+        # Add filters - ensure date filter doesn't exclude customers without loyalty data
         if filters.get('startDate') and filters.get('endDate'):
-            sql += f" AND {self.schema.LOYALTY.refs['last_activity_date']} BETWEEN '{filters['startDate']}' AND '{filters['endDate']}'"
+            sql += f" AND ({self.schema.LOYALTY.refs['last_activity_date']} IS NULL OR {self.schema.LOYALTY.refs['last_activity_date']} BETWEEN '{filters['startDate']}' AND '{filters['endDate']}')"
 
         if filters.get('engagementLevels') and len(filters['engagementLevels']) > 0:
             levels = [f"'{level}'" for level in filters['engagementLevels']]

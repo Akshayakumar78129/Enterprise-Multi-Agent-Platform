@@ -11,6 +11,7 @@ import {
 } from './components';
 import { useCustomerLtvData } from './hooks/useCustomerLtvData';
 import { useCustomerLtvContext } from './context';
+import { REGION_OPTIONS, CUSTOMER_SEGMENT_OPTIONS } from '@/lib/constants/filterOptions';
 
 export default function CustomerLtvPage() {
   const { filters, setFilters, setCustomers, setInsights } = useCustomerLtvContext();
@@ -51,14 +52,25 @@ export default function CustomerLtvPage() {
 
   if (error && !loading && hasNoData) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center max-w-md">
+          <div className="mb-4">
+            <svg className="w-16 h-16 mx-auto text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
           <h2 className="text-xl font-semibold text-foreground mb-2">
             No LTV Data Available
           </h2>
-          <p className="text-muted-foreground">
-            There's no lifetime value data to display for the selected filters.
+          <p className="text-muted-foreground mb-4">
+            There's no lifetime value data to display for the selected filters. Try adjusting your filters or check back later.
           </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -78,16 +90,15 @@ export default function CustomerLtvPage() {
           config={{
             dateRange: {
               enabled: true,
-              value: filters.date_from && filters.date_to ? {
-                from: new Date(filters.date_from),
-                to: new Date(filters.date_to)
-              } : { from: new Date('2017-01-01'), to: new Date('2021-12-31') },
+              value: filters.dateRange || { startDate: '2017-01-01', endDate: '2021-12-31' },
               onChange: (range) => {
-                if (range?.from && range?.to) {
+                if (range?.startDate && range?.endDate) {
                   setFilters({
                     ...filters,
-                    date_from: range.from.toISOString().split('T')[0],
-                    date_to: range.to.toISOString().split('T')[0]
+                    dateRange: {
+                      startDate: range.startDate,
+                      endDate: range.endDate
+                    }
                   });
                 }
               }
@@ -96,13 +107,7 @@ export default function CustomerLtvPage() {
               {
                 id: 'regions',
                 label: 'Regions',
-                options: [
-                  { value: 'north_america', label: 'North America' },
-                  { value: 'europe', label: 'Europe' },
-                  { value: 'asia_pacific', label: 'Asia Pacific' },
-                  { value: 'latin_america', label: 'Latin America' },
-                  { value: 'middle_east_africa', label: 'Middle East & Africa' }
-                ],
+                options: REGION_OPTIONS,
                 value: filters.regions || [],
                 onChange: (values) => setFilters({ ...filters, regions: values }),
                 placeholder: 'Select regions...'
@@ -110,13 +115,7 @@ export default function CustomerLtvPage() {
               {
                 id: 'customerTypes',
                 label: 'Customer Types',
-                options: [
-                  { value: 'enterprise', label: 'Enterprise' },
-                  { value: 'mid_market', label: 'Mid-Market' },
-                  { value: 'smb', label: 'Small Business' },
-                  { value: 'startup', label: 'Startup' },
-                  { value: 'individual', label: 'Individual' }
-                ],
+                options: CUSTOMER_SEGMENT_OPTIONS,
                 value: filters.customerTypes || [],
                 onChange: (values) => setFilters({ ...filters, customerTypes: values }),
                 placeholder: 'Select customer types...'
@@ -125,8 +124,10 @@ export default function CustomerLtvPage() {
           }}
           onReset={() => {
             setFilters({
-              date_from: '2017-01-01',
-              date_to: '2021-12-31',
+              dateRange: {
+                startDate: '2017-01-01',
+                endDate: '2021-12-31'
+              },
               regions: [],
               customerTypes: []
             });
@@ -157,19 +158,23 @@ export default function CustomerLtvPage() {
       {/* Value Distribution Section - 2 graphs */}
       <DashboardSection>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-          <div>
+          <div className="h-full flex flex-col">
             <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">LTV Distribution</h3>
-            <LtvDistribution
-              data={ltvDistribution}
-              loading={false}
-            />
+            <div className="flex-1 min-h-[450px]">
+              <LtvDistribution
+                data={ltvDistribution}
+                loading={false}
+              />
+            </div>
           </div>
-          <div>
+          <div className="h-full flex flex-col">
             <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Segment Analysis</h3>
-            <SegmentAnalysis
-              data={segmentAnalysis}
-              loading={false}
-            />
+            <div className="flex-1 min-h-[450px]">
+              <SegmentAnalysis
+                data={segmentAnalysis}
+                loading={false}
+              />
+            </div>
           </div>
         </div>
       </DashboardSection>

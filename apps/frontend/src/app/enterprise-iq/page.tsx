@@ -12,7 +12,7 @@ import {
   ConversationalCanvas,
   RobotCharacter,
   QueryInput,
-  ChatHistoryPanel
+  // ChatHistoryPanel
 } from './components';
 
 // Import new configuration modules
@@ -1220,7 +1220,7 @@ export default function EnterpriseIQPage() {
         )}
 
       {/* Chat History Panel - Floating conversation history */}
-      <ChatHistoryPanel />
+      {/* <ChatHistoryPanel /> */}
     </DashboardLayout>
   );
 }

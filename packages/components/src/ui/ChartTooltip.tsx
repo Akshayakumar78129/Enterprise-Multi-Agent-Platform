@@ -187,7 +187,7 @@ export const ChartTooltip: React.FC<ChartTooltipProps> = ({
       <div className="relative">
         {/* Title */}
         {title && (
-          <div className="font-semibold mb-2 pb-2 border-b border-current opacity-20">
+          <div className="font-semibold mb-2 pb-2 border-b border-border text-foreground">
             {title}
           </div>
         )}

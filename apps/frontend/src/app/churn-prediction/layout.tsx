@@ -6,35 +6,7 @@ import {
   BusinessIntelligencePanel
 } from "components/index";
 import React from "react";
-import { ChurnFilters, ChurnKPIs } from "./components";
 import { ChurnProvider, useChurnContext } from "./context";
-
-function HeaderFilters() {
-  const { filters, setFilters } = useChurnContext();
-  return (
-    <ChurnFilters
-      filters={filters}
-      onFiltersChange={setFilters}
-      onReset={() => {
-        // Clear localStorage
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('churnFilters');
-          localStorage.removeItem('churnTimeRange');
-        }
-        // Reset to defaults
-        setFilters({
-          dateRange: {
-            startDate: "2017-01-01",
-            endDate: "2021-12-31",
-          },
-          riskLevels: [],
-          segments: [],
-          productCategories: [],
-        });
-      }}
-    />
-  );
-}
 
 function ChurnLayoutContent({ children }: { children: React.ReactNode }) {
   const {
@@ -66,10 +38,7 @@ function ChurnLayoutContent({ children }: { children: React.ReactNode }) {
 
   const mainContent = (
     <div className="p-4 sm:p-6 lg:p-8">
-      <HeaderFilters />
-      <div className="mt-6">
-        {children}
-      </div>
+      {children}
     </div>
   );
 

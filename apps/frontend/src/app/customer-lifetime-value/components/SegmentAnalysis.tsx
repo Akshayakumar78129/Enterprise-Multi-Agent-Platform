@@ -81,6 +81,11 @@ export function SegmentAnalysis({ data = [], loading = false }: SegmentAnalysisP
         display: false
       },
       tooltip: {
+        backgroundColor: 'rgb(31, 41, 55)',
+        titleColor: 'rgb(243, 244, 246)',
+        bodyColor: 'rgb(209, 213, 219)',
+        borderColor: 'rgb(75, 85, 99)',
+        borderWidth: 1,
         callbacks: {
           label: function(context: any) {
             const label = context.label || '';

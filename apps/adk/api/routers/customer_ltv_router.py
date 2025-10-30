@@ -7,6 +7,7 @@ from typing import Dict
 import logging
 
 from domains.customer_ltv.processing_service import CustomerLtvService
+from domains.common.dashboard_cache import cache_dashboard_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,7 @@ router = APIRouter(prefix="/api/customer-ltv", tags=["customer-ltv"])
 service = CustomerLtvService()
 
 @router.post("/summary")
+@cache_dashboard_endpoint(dashboard_type='customer', ttl=300)
 async def get_dashboard_summary(filters: Dict = {}) -> Dict:
     """Get Customer Lifetime Value dashboard summary"""
     try:

@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { DataTable, Skeleton, getShiftClickManager } from 'components/index';
-import { TrendingUp, TrendingDown } from 'lucide-react';
 
 interface TopCustomersProps {
   data: any[];
@@ -21,7 +20,6 @@ export function TopCustomers({ data = [], loading = false, onCustomerSelect }: T
     const transactions = customer.transactions || customer.transaction_count || 0;
     const avgOrder = customer.avgOrder || customer.avg_order_value || 0;
     const segment = customer.segment || customer.customerType || 'Standard';
-    const trend = customer.trend || 0;
 
     return {
       id,
@@ -31,7 +29,6 @@ export function TopCustomers({ data = [], loading = false, onCustomerSelect }: T
       transactions,
       avgOrder,
       segment,
-      trend,
       rawData: customer
     };
   });
@@ -42,15 +39,6 @@ export function TopCustomers({ data = [], loading = false, onCustomerSelect }: T
       header: "Customer",
       accessor: "name" as const,
       sortable: true,
-    },
-    {
-      id: "customerId",
-      header: "ID",
-      accessor: "customerId" as const,
-      sortable: true,
-      render: (value: string | number) => (
-        <span className="text-muted-foreground">{value}</span>
-      ),
     },
     {
       id: "ltv",
@@ -84,28 +72,7 @@ export function TopCustomers({ data = [], loading = false, onCustomerSelect }: T
           {value}
         </span>
       ),
-    },
-    {
-      id: "trend",
-      header: "Trend",
-      accessor: "trend" as const,
-      sortable: true,
-      render: (value: number) => (
-        <div className="flex items-center justify-end gap-1">
-          {value > 0 ? (
-            <>
-              <TrendingUp className="h-4 w-4 text-success" />
-              <span className="text-success">+{value}%</span>
-            </>
-          ) : (
-            <>
-              <TrendingDown className="h-4 w-4 text-error" />
-              <span className="text-error">{value}%</span>
-            </>
-          )}
-        </div>
-      ),
-    },
+    }
   ];
 
   if (loading) {

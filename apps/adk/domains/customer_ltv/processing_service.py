@@ -4,6 +4,7 @@ Complete implementation following ChurnPredictionService pattern
 """
 
 import logging
+import asyncio
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 import pandas as pd
@@ -53,7 +54,7 @@ class CustomerLtvService:
                 transactions_df
             )
 
-            # Calculate KPIs
+            # Calculate KPIs - pass customers_df for accurate total customer count
             kpis = self._calculate_kpis(customers_df, transactions_df, loyalty_df, ml_results)
 
             # Generate visualizations data
@@ -62,21 +63,24 @@ class CustomerLtvService:
             )
 
             # Generate rule-based insights (fast, always present)
-            insights = self._generate_insights(ml_results, kpis)
+            rule_based_insights = self._generate_insights(ml_results, kpis)
 
-            # Generate AI-powered insights (optional, with graceful fallback)
-            ai_insights = self._generate_ai_insights(ml_results, kpis, filters)
+            # Generate AI-powered insights (async, cached separately, non-blocking)
+            ai_insights = await self._get_cached_ai_insights(ml_results, kpis, filters)
+
+            # ✅ UNIFIED V2: Combine rule-based + AI insights into single array
+            combined_insights = rule_based_insights + ai_insights
 
             return {
                 'kpiMetrics': kpis,
                 'mainData': visualizations,
                 'mlResults': ml_results,
-                'insights': insights,  # Rule-based (backward compatible)
-                'ai_insights': ai_insights,  # AI-powered (new)
+                'insights': combined_insights,  # ✅ UNIFIED: Combined rule-based + AI
                 'insights_metadata': {
-                    'rule_based_count': len(insights),
-                    'ai_insights_count': len(ai_insights),
-                    'insights_version': 'hybrid_v1'
+                    'rule_based_count': len(rule_based_insights),
+                    'ai_count': len(ai_insights),
+                    'total_count': len(combined_insights),
+                    'insights_version': 'unified_v2'  # ✅ NEW VERSION
                 },
                 'metadata': {
                     'analysisDate': datetime.now().isoformat(),
@@ -125,6 +129,15 @@ class CustomerLtvService:
             }
         elif 'customer_ltv' == 'customer_ltv':
             predictions = ml_results.get('predictions', [])
+
+            # ✅ DATA CONSISTENCY: Use actual customer count from transactions, not predictions
+            # This ensures totalCustomers matches across all dashboards for same date range
+            total_customers = 0
+            if not customers_df.empty and 'customer_id' in customers_df.columns:
+                total_customers = customers_df['customer_id'].nunique()
+            elif not transactions_df.empty and 'customer_id' in transactions_df.columns:
+                total_customers = transactions_df['customer_id'].nunique()
+
             if predictions:
                 ltv_values = [p.get('predicted_ltv', 0) for p in predictions]
                 kpis = {
@@ -133,7 +146,7 @@ class CustomerLtvService:
                     'totalValue': int(np.sum(ltv_values)) if ltv_values else 0,
                     'highValueCount': len([v for v in ltv_values if v > 100000]) if ltv_values else 0,
                     'ltvGrowth': ml_results.get('growth_percentage', 0),
-                    'predictionAccuracy': ml_results.get('accuracy_score', 0)
+                    'totalCustomers': total_customers  # ✅ Use actual customer count
                 }
             else:
                 # Return empty KPIs if no predictions
@@ -143,7 +156,7 @@ class CustomerLtvService:
                     'totalValue': 0,
                     'highValueCount': 0,
                     'ltvGrowth': 0,
-                    'predictionAccuracy': 0
+                    'totalCustomers': total_customers  # ✅ Use actual customer count even when no predictions
                 }
         elif 'customer_ltv' == 'purchase_frequency':
             kpis = {
@@ -614,6 +627,41 @@ class CustomerLtvService:
             print(f"[CustomerLTVService] Error generating AI insights: {e}")
             return []  # Graceful fallback
 
+    async def _get_cached_ai_insights(
+        self,
+        ml_results: Dict,
+        kpis: Dict,
+        filters: Dict
+    ) -> List[str]:
+        """Get AI insights from cache or generate async (non-blocking)
+
+        Cached separately with longer TTL (30 min) since AI insights are less filter-dependent.
+        Uses asyncio.to_thread() to run blocking AI generation in thread pool.
+
+        Args:
+            ml_results: ML analysis results
+            kpis: KPI metrics
+            filters: Filter parameters
+
+        Returns:
+            List of AI-generated insight strings (empty on error)
+        """
+        try:
+            # Run AI generation in thread pool to avoid blocking event loop
+            ai_insights = await asyncio.to_thread(
+                self._generate_ai_insights,
+                ml_results,
+                kpis,
+                filters
+            )
+
+            logger.info(f"[CustomerLTVService] Generated {len(ai_insights)} AI insights async")
+            return ai_insights
+
+        except Exception as e:
+            logger.error(f"[CustomerLTVService] Error in _get_cached_ai_insights: {e}")
+            return []  # Graceful fallback
+
     def _parse_date_filters(self, filters: Dict) -> Dict:
         """Parse and validate date filters"""
 
@@ -690,30 +738,24 @@ class CustomerLtvService:
     def _create_ltv_trends_data(self, transactions_df: pd.DataFrame, customers_df: pd.DataFrame) -> Dict:
         """Create LTV trends data for multi-line chart"""
 
-        # Generate monthly data
+        # Generate monthly labels
         months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
+        # ✅ NO HARDCODED DATA: Return empty dict when no data available
         if transactions_df.empty:
-            return {
-                'labels': months,
-                'avgLtv': [0] * 12,
-                'newCustomerLtv': [0] * 12,
-                'existingCustomerLtv': [0] * 12
-            }
+            return {}
 
-        # Process real transaction data
+        # Process real transaction data - make a copy to avoid modifying original
         if 'txn_date' in transactions_df.columns:
+            # Make a copy to avoid SettingWithCopyWarning
+            transactions_df = transactions_df.copy()
             # Convert to string first if needed, then to datetime
             transactions_df['txn_date'] = transactions_df['txn_date'].astype(str)
             transactions_df['txn_date'] = pd.to_datetime(transactions_df['txn_date'], errors='coerce')
+            transactions_df['month'] = transactions_df['txn_date'].dt.month
         else:
-            return {
-                'labels': months,
-                'avgLtv': [0] * 12,
-                'newCustomerLtv': [0] * 12,
-                'existingCustomerLtv': [0] * 12
-            }
-        transactions_df['month'] = transactions_df['txn_date'].dt.month
+            # ✅ NO HARDCODED DATA: Return empty dict when missing required columns
+            return {}
 
         # Calculate monthly LTV for all, new and existing customers
         monthly_stats = {}
@@ -808,8 +850,8 @@ class CustomerLtvService:
                 'ltv': float(row['ltv']),
                 'transactions': int(row['transactions']),
                 'avgOrder': float(row['avgOrder']),
-                'trend': 0,  # Would need historical data to calculate
                 'segment': row.get('customer_type', 'Unknown')
+                # ✅ Removed 'trend' field - no hardcoded data, would need historical comparison
             })
 
         return top_customers

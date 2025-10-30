@@ -46,13 +46,13 @@ class FilterEngine:
         date_from = filters.get('dateFrom') or filters.get('datefrom') or filters.get('date_from')
         date_to = filters.get('dateTo') or filters.get('dateto') or filters.get('date_to')
 
-        # Date range filters for TRANSACTION table - DEFAULT TO 2021 if no dates provided
+        # Date range filters for TRANSACTION table - DEFAULT TO 2017-2021 for consistency across dashboards
         if has_transaction_table:
             date_field = schema.TRANSACTION.refs.get('date', schema.TRANSACTION.refs.get('txn_date'))
             if date_field:
-                # DEFAULT TO 2021 if no date filters provided
+                # DEFAULT TO 2017-2021 if no date filters provided (standardized across all dashboards)
                 if not date_from and not date_to and not filters.get('timeRange'):
-                    date_from = '2021-01-01'
+                    date_from = '2017-01-01'
                     date_to = '2021-12-31'
 
                 if date_from and date_to:

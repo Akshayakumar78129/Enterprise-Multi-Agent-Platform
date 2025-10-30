@@ -53,7 +53,9 @@ export function PatternKPIs({ metrics, loading }: { metrics: any; loading?: bool
     {
       id: 'total-transactions',
       title: 'Total Transactions',
-      value: formatNumber(metrics?.totalTransactions || 0),
+      value: metrics?.totalTransactions || 0,  // Raw number
+      format: 'number' as const,
+      color: '#3b82f6',  // Blue
       change: metrics?.transactionGrowth || 0,
       trend: metrics?.transactionGrowth > 0 ? 'up' : 'down' as const,
       subtitle: formatCurrency(metrics?.totalAmount || 0) + ' total value'
@@ -61,7 +63,9 @@ export function PatternKPIs({ metrics, loading }: { metrics: any; loading?: bool
     {
       id: 'anomaly-rate',
       title: 'Anomaly Rate',
-      value: `${(metrics?.anomalyRate || 0).toFixed(1)}%`,
+      value: metrics?.anomalyRate || 0,  // Raw number
+      format: 'percentage' as const,
+      color: '#ef4444',  // Red (for anomalies)
       change: metrics?.anomalyChange || 0,
       trend: metrics?.anomalyChange < 0 ? 'up' : 'down' as const,
       subtitle: 'Unusual patterns detected'
@@ -69,14 +73,19 @@ export function PatternKPIs({ metrics, loading }: { metrics: any; loading?: bool
     {
       id: 'avg-transaction',
       title: 'Avg Transaction',
-      value: formatCurrency(metrics?.avgTransactionValue || 0),
+      value: metrics?.avgTransactionValue || 0,  // Raw number
+      format: 'currency' as const,
+      color: '#10b981',  // Emerald
       change: metrics?.avgValueChange || 0,
-      trend: metrics?.avgValueChange > 0 ? 'up' : 'down' as const
+      trend: metrics?.avgValueChange > 0 ? 'up' : 'down' as const,
+      subtitle: 'Per transaction value'
     },
     {
       id: 'peak-hour',
       title: 'Peak Hour',
-      value: metrics?.peakHour ? `${metrics.peakHour}:00` : '14:00',
+      value: metrics?.peakHour ? `${metrics.peakHour}:00` : '14:00',  // Keep as string for display
+      format: 'text' as const,
+      color: '#f59e0b',  // Amber
       change: 0,
       trend: 'neutral' as const,
       subtitle: 'Highest transaction volume'

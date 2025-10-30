@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { SelectionManager, getSelectionManager } from './services/SelectionManager';
 import { Message } from "components";
 
@@ -55,51 +55,51 @@ interface CustomerLtvContextType {
 const CustomerLtvContext = createContext<CustomerLtvContextType | undefined>(undefined);
 
 export function CustomerLtvProvider({ children }: { children: React.ReactNode }) {
-  // Initialize filters from localStorage or defaults
-  const [filters, setFiltersState] = useState<CustomerLtvFilters>(() => {
-    const defaultFilters = {
-      dateRange: {
-        startDate: '2017-01-01',
-        endDate: '2021-12-31'
-      },
-      regions: [],
-      customerTypes: [],
-    };
+  // Default filters - always used for SSR to prevent hydration mismatch
+  const defaultFilters: CustomerLtvFilters = useMemo(() => ({
+    dateRange: {
+      startDate: '2017-01-01',
+      endDate: '2021-12-31'
+    },
+    regions: [],
+    customerTypes: [],
+  }), []);
 
-    if (typeof window !== 'undefined') {
+  const [filters, setFiltersState] = useState<CustomerLtvFilters>(defaultFilters);
+
+  // Load saved filters from localStorage AFTER hydration (client-side only)
+  useEffect(() => {
+    try {
       const stored = localStorage.getItem('ltv_filters');
       if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
+        const parsed = JSON.parse(stored);
 
-          // Migration: Convert old date_from/date_to to new dateRange format
-          if (parsed.date_from && parsed.date_to) {
-            return {
-              dateRange: {
-                startDate: parsed.date_from,
-                endDate: parsed.date_to
-              },
-              regions: parsed.regions || [],
-              customerTypes: parsed.customerTypes || [],
-              minValue: parsed.minValue,
-              maxValue: parsed.maxValue
-            };
-          }
-
-          return parsed;
-        } catch {
-          // Invalid JSON, use defaults
+        // Migration: Convert old date_from/date_to to new dateRange format
+        if (parsed.date_from && parsed.date_to) {
+          setFiltersState({
+            dateRange: {
+              startDate: parsed.date_from,
+              endDate: parsed.date_to
+            },
+            regions: parsed.regions || [],
+            customerTypes: parsed.customerTypes || [],
+            minValue: parsed.minValue,
+            maxValue: parsed.maxValue
+          });
+        } else {
+          setFiltersState(parsed);
         }
       }
+    } catch (error) {
+      console.error('[LtvContext] Failed to load saved filters:', error);
     }
-    return defaultFilters;
-  });
+  }, []); // Run once on mount
 
-  // Persist filters to localStorage
+  // Persist filters to localStorage whenever they change
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    try {
       localStorage.setItem('ltv_filters', JSON.stringify(filters));
-    }
+    } catch {}
   }, [filters]);
 
   const setFilters = (newFilters: CustomerLtvFilters) => {

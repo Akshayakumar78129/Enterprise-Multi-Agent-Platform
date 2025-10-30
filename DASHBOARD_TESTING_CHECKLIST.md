@@ -96,6 +96,52 @@ Test the following dashboards:
 - [ ] No visual overlaps or cut-off content
 - [ ] Consistent vertical spacing between sections
 
+### 1.3.1 Single Card Per Visualization ⚠️ CRITICAL
+
+**Requirement**: Each visualization must have EXACTLY ONE card border around it. No double cards or nested borders.
+
+**Test Procedure**:
+
+1. **Visual Inspection**:
+   - Open dashboard in browser
+   - Look at each chart/graph/visualization
+   - Count the number of visible borders around each visualization
+   - [ ] Each visualization has exactly 1 border/card styling (not 0, not 2+)
+
+2. **DevTools Inspection**:
+   - Right-click each visualization → "Inspect Element"
+   - Look for nested elements with border/boxShadow styles
+   - [ ] No nested Card components creating double borders
+   - [ ] No combination of external Card + component with built-in borders
+
+3. **Common Violations to Check**:
+
+   **SegmentDistributionMap** (most common violation):
+   - [ ] SegmentDistributionMap has NO external Card wrapper
+   - [ ] Only the component's internal border is visible
+   - [ ] Shift-click still works (implemented on wrapper div)
+
+   **BarChart/LineChart**:
+   - [ ] These charts HAVE an external Card wrapper (they need it)
+   - [ ] Chart.js title is disabled (`plugins: { title: { display: false } }`)
+   - [ ] Title is h3 tag above the Card
+
+   **Custom Components**:
+   - [ ] Components with built-in card styling have NO external Card
+   - [ ] Components without built-in styling HAVE external Card wrapper
+
+4. **Exceptions** (these are correct):
+   - **Segment Profile Cards**: Each segment IS a card - multiple cards in grid is intentional
+   - **KPI Cards**: Each KPI is a card within KPIRow - this is standard pattern
+   - **Multi-visualization sections**: Multiple separate cards side-by-side is OK
+
+**How to Identify Double Card Issues**:
+- ❌ Two borders/shadows around one visualization
+- ❌ Extra padding creating a "card within a card" look
+- ❌ DevTools shows nested elements both with `border` or `box-shadow` styles
+
+**Impact**: Double cards look unprofessional, waste space, and create visual clutter. This is a **CRITICAL** compliance failure.
+
 ### 1.4 Responsive Behavior
 
 #### Desktop (1920px)
@@ -802,6 +848,337 @@ onRowClick={(row, event) => {
 - [ ] All dashboards use `FilterBar` from `components/index`
 - [ ] All dashboards use `DataTable` from `components/index`
 - [ ] All dashboards use `DashboardSection` from `components/index`
+
+### 11.4 Cross-Dashboard Data Consistency ⚠️ CRITICAL
+
+**Requirement**: All dashboards querying the same underlying data must report identical base metrics (total customers, total revenue, etc.) when using the same date filters. This ensures data integrity and user trust.
+
+**Test Procedure**:
+
+1. **Open Multiple Dashboards** (in separate tabs or windows):
+   - Churn Prediction (`/churn-prediction`)
+   - Customer Segmentation (`/customer-segmentation`)
+   - Customer Lifetime Value (`/customer-lifetime-value`)
+
+2. **Verify Default Date Range**:
+   - All dashboards should default to: **2017-01-01 to 2021-12-31**
+   - Check FilterBar or date picker to confirm default range
+
+3. **Record Base Metrics** (without changing filters):
+
+   | Dashboard | Total Customers | Date Range |
+   |-----------|----------------|------------|
+   | Churn Prediction | _________ | 2017-2021 |
+   | Customer Segmentation | _________ | 2017-2021 |
+   | Customer LTV | _________ | 2017-2021 |
+
+4. **Verify Consistency**:
+   - [ ] **Total Customers** is IDENTICAL across all dashboards (e.g., 5,300)
+   - [ ] If numbers differ, this indicates a critical data consistency bug
+   - [ ] All dashboards show the same default date range: 2017-01-01 to 2021-12-31
+
+5. **Test with Custom Filters**:
+   - Set ALL dashboards to: **2021-01-01 to 2021-12-31** (1 year)
+   - Record Total Customers for each dashboard
+   - [ ] **Total Customers** is IDENTICAL for 2021 data across all dashboards (e.g., 2,300)
+
+6. **Test Revenue/Transaction Metrics** (if applicable):
+   - For dashboards showing revenue (Sales Performance, Product Performance):
+   - [ ] **Total Revenue** matches for the same date range
+   - [ ] **Total Transactions** matches for the same date range
+
+**Expected Results**:
+- ✅ Same time period → Same base metrics across all dashboards
+- ✅ Different dashboards can show different KPIs (churn rate vs segment count) but base counts must match
+- ✅ Example: If 5,300 customers exist in 2017-2021, ALL dashboards must show 5,300 total customers
+
+**Common Failures & Causes**:
+- ❌ Different default date ranges (e.g., one uses 2021, another uses 2017-2021)
+  - **Root Cause**: Filter engine has inconsistent defaults in `apps/adk/database/filter_engine.py`
+  - **Fix**: Standardize all table type defaults to 2017-2021
+
+- ❌ Different data source queries (e.g., one queries transactions, another queries loyalty)
+  - **Root Cause**: Dashboards using different base tables with different customer coverage
+  - **Fix**: Ensure all dashboards query the same customer base table
+
+- ❌ One dashboard has additional filters applied by default
+  - **Root Cause**: Backend service applies hidden filters (e.g., "active customers only")
+  - **Fix**: Remove implicit filters, make all filters explicit
+
+**When to Fail This Test**:
+- If Total Customers differs by even 1 between dashboards using same date range
+- If the difference is NOT explained by explicit filter differences
+- If default date ranges are inconsistent
+
+**Impact**: Data inconsistency erodes user trust and indicates serious architectural issues. This is a **CRITICAL** failure that must be fixed before production deployment.
+
+### 11.5 Cross-Dashboard Filter Consistency ⚠️ CRITICAL
+
+**Requirement**: Filters representing the same concept (e.g., "Customer Segment", "Risk Level", "Product Category") must have IDENTICAL dropdown options, labels, and order across all dashboards that use them.
+
+**Test Procedure**:
+
+1. **Identify Common Filters Across Dashboards**:
+
+   Common filter types to check:
+   - **Customer Segment**: Used in Churn, Segmentation, LTV dashboards
+   - **Risk Level**: Used in Churn, Credit Risk dashboards
+   - **Product Category**: Used in Product Performance, Sales dashboards
+   - **Date Range**: Used in ALL dashboards
+
+2. **Test Customer Segment Filter** (if applicable):
+
+   Open dashboards that have "Customer Segment" filter:
+   - Customer Segmentation (`/customer-segmentation`)
+   - Churn Prediction (`/churn-prediction`)
+   - Customer LTV (`/customer-lifetime-value`)
+
+   For EACH dashboard:
+   - [ ] Open the "Customer Segment" filter dropdown
+   - [ ] Record the exact list of options (labels and order)
+   - [ ] Verify all three dashboards show IDENTICAL options:
+     ```
+     Expected: ["Champions", "Loyal Customers", "Potential Loyalists", "New Customers",
+                "At Risk", "Can't Lose Them", "Hibernating", "Lost"]
+     ```
+   - [ ] Verify the ORDER is identical across all three dashboards
+   - [ ] Verify labels match exactly (not "Champions" in one and "Champion Customers" in another)
+
+3. **Test Risk Level Filter** (if applicable):
+
+   Open dashboards with "Risk Level" filter:
+   - Churn Prediction
+   - Anomaly Detection
+
+   - [ ] Verify both dashboards show IDENTICAL risk levels
+   - [ ] Expected options: `["Low", "Medium", "High", "Very High"]` (in this order)
+   - [ ] No variations like "Low Risk" vs "Low" or different order
+
+4. **Test Product Category Filter** (if applicable):
+
+   Open dashboards with "Product Category" filter:
+   - Product Performance
+   - Sales Performance
+
+   - [ ] Verify both dashboards show IDENTICAL category list
+   - [ ] Same category names (e.g., "Electronics" not "Electronic Items")
+   - [ ] Same order (alphabetical or by importance, but consistent)
+
+5. **Test Date Range Picker**:
+
+   - [ ] All dashboards use the same date picker component
+   - [ ] Default date range is identical: **2017-01-01 to 2021-12-31**
+   - [ ] Date format is consistent (YYYY-MM-DD or MM/DD/YYYY, but not mixed)
+
+6. **Test Filter Behavior**:
+
+   - [ ] Selecting a filter option triggers the same backend query format
+   - [ ] Filter values sent to API are consistent (e.g., "Champions" not "champions" or "Champion")
+   - [ ] Multi-select filters work the same way across dashboards
+
+**Expected Results**:
+- ✅ Same filter type → Exact same dropdown options across all dashboards
+- ✅ Labels match character-for-character (case-sensitive)
+- ✅ Order is consistent
+- ✅ No extra/missing options in one dashboard vs another
+
+**Common Failures & Causes**:
+- ❌ Segment filter shows 8 options in one dashboard, 10 in another
+  - **Root Cause**: Hardcoded filter options in each dashboard instead of shared constants
+  - **Fix**: Create `lib/constants/filterOptions.ts` with shared filter configs, import in all dashboards
+
+- ❌ One dashboard shows "At Risk", another shows "At-Risk" or "AtRisk"
+  - **Root Cause**: Inconsistent label strings
+  - **Fix**: Use single source of truth for filter labels
+
+- ❌ Different sort order (alphabetical vs by importance)
+  - **Root Cause**: Each dashboard sorts independently
+  - **Fix**: Pre-sort in shared constant
+
+- ❌ One dashboard has extra options not in others
+  - **Root Cause**: Backend returns different segment lists for different dashboards
+  - **Fix**: Standardize segment calculation logic
+
+**When to Fail This Test**:
+- If any filter option differs between dashboards (even by capitalization)
+- If order differs between dashboards
+- If one dashboard has extra/missing options
+
+**Impact**: Filter inconsistency creates confusion and suggests poor data governance. Users expect the same filter to behave identically everywhere. This is a **HIGH PRIORITY** issue that degrades UX.
+
+**Fix Pattern**:
+```typescript
+// ❌ WRONG: Hardcoded in each dashboard
+const segmentOptions = [
+  { label: "Champions", value: "Champions" },
+  { label: "Loyal", value: "Loyal" }  // Inconsistent with other dashboards
+];
+
+// ✅ CORRECT: Shared constant
+// lib/constants/filterOptions.ts
+export const CUSTOMER_SEGMENT_OPTIONS = [
+  { label: "Champions", value: "Champions" },
+  { label: "Loyal Customers", value: "Loyal Customers" },
+  // ... all 8 segments in standard order
+] as const;
+
+// Import in all dashboards
+import { CUSTOMER_SEGMENT_OPTIONS } from '@/lib/constants/filterOptions';
+```
+
+**Test Procedure - Centralized Filter Usage**:
+
+1. **Code Review**:
+   - [ ] Search for inline filter option arrays in dashboard page.tsx files
+   - [ ] Verify all dashboards import from `@/lib/constants/filterOptions`
+   - [ ] Check that NO dashboard defines its own `{ value: '...', label: '...' }` arrays
+
+2. **Available Centralized Filters** (from `apps/frontend/src/lib/constants/filterOptions.ts`):
+   - `CUSTOMER_SEGMENT_OPTIONS` - Business customer types (Enterprise, Mid-Market, Small Business, Startup, Individual)
+   - `RFM_SEGMENT_OPTIONS` - RFM segments (Champions, Loyal Customers, At Risk, Lost, etc.)
+   - `REGION_OPTIONS` - Geographic regions (North America, Europe, Asia Pacific, Latin America, Middle East & Africa)
+   - `VALUE_CATEGORY_OPTIONS` - Value tiers (High Value, Medium-High, Medium, Medium-Low, Low Value)
+   - `RISK_LEVEL_OPTIONS` - Risk classifications (Very High, High, Medium, Low)
+   - `BEHAVIOR_TYPE_OPTIONS` - Behavior patterns (Frequent, Regular, Occasional, Rare, New Purchasers, Inactive)
+   - `DEFAULT_DATE_RANGE` - Standard date range (2017-01-01 to 2021-12-31)
+
+3. **Verification**:
+   - [ ] Customer LTV uses `REGION_OPTIONS` and `CUSTOMER_SEGMENT_OPTIONS`
+   - [ ] Customer Segmentation uses `RFM_SEGMENT_OPTIONS`, `VALUE_CATEGORY_OPTIONS`, `BEHAVIOR_TYPE_OPTIONS`
+   - [ ] Churn Prediction uses `CUSTOMER_SEGMENT_OPTIONS` and `RISK_LEVEL_OPTIONS`
+
+**Expected Results**:
+- ✅ All filter dropdowns match exactly across dashboards
+- ✅ No inline filter definitions found
+- ✅ Import statements present in all dashboard pages
+
+**When to Fail This Test**:
+- ANY dashboard defines filter options inline instead of importing
+- Filter options differ between dashboards for same semantic concept
+- Missing import from centralized filterOptions.ts
+
+### 11.6 No Hardcoded Data ⚠️ CRITICAL
+
+**Requirement**: Dashboards must NEVER display hardcoded, mock, or sample data, even as fallbacks. If real data is unavailable, display empty states with "No data available" messages. This ensures data integrity and prevents misleading information.
+
+**Test Procedure**:
+
+1. **Backend Code Review**:
+   - [ ] Search for hardcoded arrays like `data = [{ ... }, { ... }]` in processing services
+   - [ ] Search for hardcoded metric values like `return 5.2` or `'model_accuracy': 0.85`
+   - [ ] Check ML predictor files for fallback values
+   - [ ] Search for keywords: `mock_`, `sample_`, `dummy_`, `fake_`
+
+2. **Frontend Code Review**:
+   - [ ] Search for hardcoded data arrays in components
+   - [ ] Check useState defaults for mock data
+   - [ ] Look for `const mockData = [...]` or `sampleData = [...]`
+   - [ ] Verify all components show empty states when data is `[]` or `null`
+
+3. **Runtime Testing - No Data Scenario**:
+   - [ ] Set date filters to a range with NO data (e.g., 1990-01-01 to 1990-12-31)
+   - [ ] Verify NO hardcoded data appears
+   - [ ] All KPIs show 0 or "N/A"
+   - [ ] All charts show "No data available" empty state
+   - [ ] All tables show "No rows to display" empty state
+   - [ ] NO fake trend percentages (e.g., +5.2%)
+   - [ ] NO placeholder customer names like "Customer 1", "Customer 2"
+
+4. **Verify Acceptable Defaults**:
+   - [ ] Default date range (2017-2021) is acceptable - matches actual dataset
+   - [ ] Initial filter state with empty arrays `[]` is acceptable
+   - [ ] Welcome messages for chat/AI are acceptable (not data)
+
+**Examples of Violations**:
+
+❌ **WRONG - Hardcoded Growth Rate**:
+```python
+def _calculate_growth_rate(df):
+    if has_data:
+        return calculate_actual_growth()
+    return 5.2  # ← VIOLATION: Fake growth rate
+```
+
+❌ **WRONG - Hardcoded Model Accuracy**:
+```python
+return {
+    'metrics': {
+        'model_accuracy': 0.85,  # ← VIOLATION: Fake accuracy
+        'prediction_confidence': 0.80  # ← VIOLATION: Fake confidence
+    }
+}
+```
+
+❌ **WRONG - Hardcoded Trend in Table**:
+```python
+top_customers.append({
+    'name': customer.name,
+    'ltv': customer.ltv,
+    'trend': 0  # ← VIOLATION: Always returns 0, should remove field entirely
+})
+```
+
+❌ **WRONG - Mock Data Array**:
+```typescript
+const mockCustomers = [
+  { id: 1, name: 'Sample Customer', ltv: 50000 },
+  { id: 2, name: 'Test Customer', ltv: 30000 }
+];
+// Using mockCustomers when real data unavailable
+```
+
+✅ **CORRECT - Empty State**:
+```python
+def _calculate_growth_rate(df):
+    if has_data:
+        return calculate_actual_growth()
+    return 0  # ← CORRECT: Return 0 to indicate no data
+```
+
+✅ **CORRECT - Remove Unavailable Field**:
+```python
+top_customers.append({
+    'name': customer.name,
+    'ltv': customer.ltv
+    # ← CORRECT: No trend field since historical comparison unavailable
+})
+```
+
+✅ **CORRECT - Frontend Empty State**:
+```typescript
+if (!data || data.length === 0) {
+  return (
+    <div className="empty-state">
+      <p>No customer data available</p>
+    </div>
+  );
+}
+```
+
+**Expected Results**:
+- ✅ All dashboards return real data from database or empty arrays `[]`
+- ✅ Empty states display when no data available
+- ✅ No hardcoded metric values (growth rates, accuracy scores, trend percentages)
+- ✅ No mock/sample customer records
+- ✅ KPIs show 0 or "N/A" when data unavailable, not fake values
+
+**Common Violations & Fixes**:
+
+| Violation | Root Cause | Fix |
+|-----------|------------|-----|
+| Growth rate always shows 5.2% | Hardcoded fallback `return 5.2` | Change to `return 0` |
+| Model accuracy shows 85% | Hardcoded `'accuracy': 0.85` | Remove field or return 0 |
+| Trend column always 0% | Hardcoded `'trend': 0` in backend | Remove trend field entirely |
+| Sample customers appear | Mock data array as fallback | Return empty array `[]` |
+| Default dates show data when none exists | Using fallback data | Show empty state instead |
+
+**When to Fail This Test**:
+- ANY hardcoded data arrays found in code (except acceptable defaults)
+- ANY fake metric values (growth, accuracy, confidence, etc.)
+- ANY fields that always return 0 (remove field instead)
+- Dashboard shows data when date range has no records
+
+**Impact**: Hardcoded data creates false insights and undermines data integrity. Users make business decisions based on dashboard data - fake data can lead to catastrophic business mistakes. This is a **CRITICAL PRIORITY** issue.
 
 ---
 

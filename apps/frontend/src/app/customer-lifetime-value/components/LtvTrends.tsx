@@ -97,6 +97,11 @@ export function LtvTrends({ data = {}, loading = false }: LtvTrendsProps) {
         display: false
       },
       tooltip: {
+        backgroundColor: 'rgb(31, 41, 55)',
+        titleColor: 'rgb(243, 244, 246)',
+        bodyColor: 'rgb(209, 213, 219)',
+        borderColor: 'rgb(75, 85, 99)',
+        borderWidth: 1,
         mode: 'index' as const,
         intersect: false,
         callbacks: {
@@ -108,6 +113,11 @@ export function LtvTrends({ data = {}, loading = false }: LtvTrendsProps) {
     },
     scales: {
       x: {
+        title: {
+          display: true,
+          text: 'Time Period',
+          color: '#a3a3a3'
+        },
         grid: {
           color: 'rgba(255, 255, 255, 0.1)'
         },
@@ -116,6 +126,11 @@ export function LtvTrends({ data = {}, loading = false }: LtvTrendsProps) {
         }
       },
       y: {
+        title: {
+          display: true,
+          text: 'Lifetime Value ($)',
+          color: '#a3a3a3'
+        },
         grid: {
           color: 'rgba(255, 255, 255, 0.1)'
         },
@@ -134,6 +149,23 @@ export function LtvTrends({ data = {}, loading = false }: LtvTrendsProps) {
       <Card className="p-6">
         <div className="h-96 flex items-center justify-center">
           <div className="text-muted-foreground">Loading...</div>
+        </div>
+      </Card>
+    );
+  }
+
+  const hasData = isArray ? (data && data.length > 0) : (data && data.labels && data.labels.length > 0);
+
+  if (!hasData) {
+    return (
+      <Card className="p-6">
+        <div className="h-96 flex items-center justify-center">
+          <div className="text-center text-muted-foreground">
+            <svg className="w-16 h-16 mx-auto mb-2 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+            </svg>
+            <p className="text-sm">No LTV trend data available</p>
+          </div>
         </div>
       </Card>
     );

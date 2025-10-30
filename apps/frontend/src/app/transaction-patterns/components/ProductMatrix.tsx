@@ -1,11 +1,26 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { Scatter } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+  ChartOptions,
+} from 'chart.js';
+
+ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend);
 
 interface ProductData {
   productCategory: string;
   transactionCount: number;
   totalRevenue: number;
   avgPrice: number;
-  growthRate?: number;
+  growthRate: number;
+  marginPercent: number;
+  marketShare: number;
+  quadrant: string;
 }
 
 interface ProductMatrixProps {
@@ -21,94 +36,220 @@ export const ProductMatrix: React.FC<ProductMatrixProps> = ({
 }) => {
   if (loading) {
     return (
-      <div className="h-96 animate-pulse">
+      <div className="h-[500px] animate-pulse">
         <div className="h-full bg-muted/20 rounded-lg"></div>
       </div>
     );
   }
 
-  // Sort products by revenue for better visualization
-  const validData = data.filter(d => d && d.totalRevenue !== undefined && d.transactionCount !== undefined);
-  const sortedData = [...validData].sort((a, b) => (b.totalRevenue || 0) - (a.totalRevenue || 0));
-  const topProducts = sortedData.slice(0, 10); // Show top 10 products
+  const validData = data.filter(d =>
+    d &&
+    d.marginPercent !== undefined &&
+    d.growthRate !== undefined &&
+    d.totalRevenue !== undefined
+  );
 
-  if (topProducts.length === 0) {
+  if (validData.length === 0) {
     return (
-      <div className="h-96 flex items-center justify-center text-muted-foreground">
+      <div className="h-[500px] flex items-center justify-center text-muted-foreground">
         No product data available
       </div>
     );
   }
 
-  const maxRevenue = Math.max(...topProducts.map(p => p.totalRevenue || 0), 1);
-  const maxCount = Math.max(...topProducts.map(p => p.transactionCount || 0), 1);
+  const maxRevenue = Math.max(...validData.map(p => p.totalRevenue), 1);
+
+  // Group products by quadrant
+  const quadrantGroups = useMemo(() => {
+    const groups: Record<string, ProductData[]> = {
+      'High Performers': [],
+      'Stable Products': [],
+      'Growing Products': [],
+      'Low Performers': []
+    };
+
+    validData.forEach(product => {
+      const quadrant = product.quadrant || 'Low Performers';
+      if (groups[quadrant]) {
+        groups[quadrant].push(product);
+      }
+    });
+
+    return groups;
+  }, [validData]);
+
+  // Calculate quadrant summaries
+  const quadrantSummaries = useMemo(() => {
+    return Object.entries(quadrantGroups).map(([quadrant, products]) => ({
+      name: quadrant,
+      count: products.length,
+      totalRevenue: products.reduce((sum, p) => sum + p.totalRevenue, 0)
+    }));
+  }, [quadrantGroups]);
+
+  // Prepare scatter plot datasets
+  const chartData = {
+    datasets: Object.entries(quadrantGroups).map(([quadrant, products]) => {
+      const colors: Record<string, { bg: string; border: string }> = {
+        'High Performers': { bg: 'rgba(59, 130, 246, 0.7)', border: 'rgb(37, 99, 235)' },    // Blue
+        'Stable Products': { bg: 'rgba(16, 185, 129, 0.7)', border: 'rgb(5, 150, 105)' },     // Emerald
+        'Growing Products': { bg: 'rgba(245, 158, 11, 0.7)', border: 'rgb(217, 119, 6)' },    // Amber
+        'Low Performers': { bg: 'rgba(239, 68, 68, 0.7)', border: 'rgb(220, 38, 38)' }        // Red
+      };
+
+      const color = colors[quadrant] || colors['Low Performers'];
+
+      return {
+        label: quadrant,
+        data: products.map(p => ({
+          x: p.marginPercent,
+          y: p.growthRate,
+          r: Math.max(5, Math.min(25, (p.totalRevenue / maxRevenue) * 25)),
+          product: p
+        })),
+        backgroundColor: color.bg,
+        borderColor: color.border,
+        borderWidth: 2,
+      };
+    })
+  };
+
+  const options: ChartOptions<'scatter'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      title: {
+        display: false
+      },
+      legend: {
+        display: true,
+        position: 'top' as const,
+        labels: {
+          usePointStyle: true,
+          padding: 15,
+          font: {
+            size: 12
+          }
+        }
+      },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        titleColor: 'white',
+        bodyColor: 'white',
+        padding: 12,
+        cornerRadius: 8,
+        callbacks: {
+          title: (context: any) => {
+            const product = context[0]?.raw?.product;
+            return product?.productCategory || 'Unknown';
+          },
+          label: (context: any) => {
+            const product = context.raw?.product;
+            if (!product) return '';
+
+            return [
+              `Revenue: $${(product.totalRevenue / 1000).toFixed(1)}K`,
+              `Growth: ${product.growthRate.toFixed(1)}%`,
+              `Margin: ${product.marginPercent.toFixed(1)}%`,
+              `Market Share: ${product.marketShare.toFixed(1)}%`,
+              `Transactions: ${product.transactionCount.toLocaleString()}`
+            ];
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        type: 'linear',
+        position: 'bottom',
+        title: {
+          display: true,
+          text: 'Profit Margin (%)',
+          font: {
+            size: 13,
+            weight: '600'
+          }
+        },
+        grid: {
+          color: 'rgba(156, 163, 175, 0.2)',
+          drawBorder: true
+        },
+        ticks: {
+          callback: (value) => `${value}%`
+        }
+      },
+      y: {
+        type: 'linear',
+        position: 'left',
+        title: {
+          display: true,
+          text: 'Growth Rate (%)',
+          font: {
+            size: 13,
+            weight: '600'
+          }
+        },
+        grid: {
+          color: 'rgba(156, 163, 175, 0.2)',
+          drawBorder: true
+        },
+        ticks: {
+          callback: (value) => `${value}%`
+        }
+      }
+    },
+    onClick: (event: any, elements: any[]) => {
+      if (elements.length > 0 && onProductClick) {
+        const datasetIndex = elements[0].datasetIndex;
+        const index = elements[0].index;
+        const product = chartData.datasets[datasetIndex].data[index].product;
+        onProductClick(product, event);
+      }
+    }
+  };
+
+  // Add quadrant divider lines as plugins
+  const quadrantPlugin = {
+    id: 'quadrantLines',
+    afterDraw: (chart: any) => {
+      const ctx = chart.ctx;
+      const xScale = chart.scales.x;
+      const yScale = chart.scales.y;
+
+      // Thresholds
+      const marginThreshold = 20; // 20%
+      const growthThreshold = 10;  // 10%
+
+      ctx.save();
+
+      // Vertical line (margin threshold)
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(156, 163, 175, 0.4)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      const xPos = xScale.getPixelForValue(marginThreshold);
+      ctx.moveTo(xPos, yScale.top);
+      ctx.lineTo(xPos, yScale.bottom);
+      ctx.stroke();
+
+      // Horizontal line (growth threshold)
+      ctx.beginPath();
+      const yPos = yScale.getPixelForValue(growthThreshold);
+      ctx.moveTo(xScale.left, yPos);
+      ctx.lineTo(xScale.right, yPos);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+  };
 
   return (
-    <div className="space-y-3">
-        {topProducts.map((product, index) => {
-          const revenueWidth = (product.totalRevenue / maxRevenue) * 100;
-          const countWidth = (product.transactionCount / maxCount) * 100;
-
-          return (
-            <div
-              key={product.productCategory}
-              className="group cursor-pointer hover:bg-muted/50 rounded-lg p-3 transition-colors"
-              onClick={(e) => onProductClick?.(product, e)}
-            >
-              {/* Product Name and Stats */}
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <div className="font-medium text-sm">{product.productCategory || 'Unknown'}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {(product.transactionCount || 0).toLocaleString()} transactions •
-                    Avg: ${(product.avgPrice || 0).toFixed(2)}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-semibold">
-                    ${((product.totalRevenue || 0) / 1000).toFixed(1)}K
-                  </div>
-                  {product.growthRate !== undefined && (
-                    <div className={`text-xs ${product.growthRate > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                      {product.growthRate > 0 ? '+' : ''}{(product.growthRate || 0).toFixed(1)}%
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Dual Progress Bars */}
-              <div className="space-y-1">
-                {/* Revenue Bar */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground w-16">Revenue</span>
-                  <div className="flex-1 h-2 bg-muted/30 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-primary to-primary/60 transition-all duration-300"
-                      style={{ width: `${revenueWidth}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Transaction Count Bar */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground w-16">Volume</span>
-                  <div className="flex-1 h-2 bg-muted/30 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-accent to-accent/60 transition-all duration-300"
-                      style={{ width: `${countWidth}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        {data.length > 10 && (
-          <div className="text-center text-sm text-muted-foreground pt-2 border-t border-border/50">
-            Showing top 10 of {data.length} product categories
-          </div>
-        )}
+    <div className="h-[580px]">
+      <Scatter
+        data={chartData}
+        options={options}
+        plugins={[quadrantPlugin]}
+      />
     </div>
   );
 };

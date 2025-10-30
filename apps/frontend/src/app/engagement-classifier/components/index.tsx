@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Skeleton, FilterBar, KPIRow, MetricsRow, RiskPyramid, ChartCard, getShiftClickManager } from 'components/index';
 import { useEngagementClassifierContext } from '../context';
+import { ENGAGEMENT_LEVEL_OPTIONS, LOYALTY_STATUS_OPTIONS } from '@/lib/constants/filterOptions';
 import dynamic from 'next/dynamic';
 
 // Dynamically import Plot to avoid SSR issues
@@ -45,11 +46,7 @@ export function EngagementFilters({
             id: "engagement",
             label: "Engagement Level",
             type: "dropdown",
-            options: [
-              { value: "High", label: "High Engagement" },
-              { value: "Medium", label: "Medium Engagement" },
-              { value: "Low", label: "Low Engagement" },
-            ],
+            options: ENGAGEMENT_LEVEL_OPTIONS,
             value: filters.engagementLevels || [],
             onChange: (values) => onFiltersChange({ ...filters, engagementLevels: values }),
           },
@@ -57,14 +54,7 @@ export function EngagementFilters({
             id: "loyalty",
             label: "Loyalty Status",
             type: "dropdown",
-            options: [
-              { value: "Active", label: "Active" },
-              { value: "Active, Loyal", label: "Active, Loyal" },
-              { value: "Inactive", label: "Inactive" },
-              { value: "Active, New", label: "Active, New" },
-              { value: "Prospect", label: "Prospect" },
-              { value: "Lost", label: "Lost" }
-            ],
+            options: LOYALTY_STATUS_OPTIONS,
             value: filters.loyaltyStatus || [],
             onChange: (values) => onFiltersChange({ ...filters, loyaltyStatus: values }),
           },
@@ -125,8 +115,8 @@ export function EngagementKPIs({ metrics, loading }: { metrics: any; loading?: b
           color: "#10b981", // Emerald
         },
         {
-          id: "at-risk",
-          title: "At Risk Customers",
+          id: "low-engagement",
+          title: "Low Engagement",
           value: 0,
           format: "number" as const,
           color: "#ef4444", // Red
@@ -184,8 +174,8 @@ export function EngagementKPIs({ metrics, loading }: { metrics: any; loading?: b
         color: "#10b981", // Emerald
       },
       {
-        id: "at-risk",
-        title: "At Risk Customers",
+        id: "low-engagement",
+        title: "Low Engagement",
         value: metrics.atRiskCount || 0,
         format: "number" as const,
         color: "#ef4444", // Red

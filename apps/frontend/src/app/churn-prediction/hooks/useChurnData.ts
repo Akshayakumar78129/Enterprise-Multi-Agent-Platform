@@ -34,12 +34,14 @@ interface ChurnFilters {
 }
 
 export function useChurnData(filters: ChurnFilters) {
-  // Map frontend segment labels to backend values
+  // Map frontend segment values to backend values
+  // CUSTOMER_SEGMENT_OPTIONS uses lowercase snake_case values like 'enterprise', 'mid_market'
   const segmentMap: Record<string, string> = {
-    'Enterprise': 'High-Value',
-    'Mid-Market': 'Mid-Value',
-    'Small Business': 'Standard',
-    'Startup': 'Small'
+    'enterprise': 'High-Value',
+    'mid_market': 'Mid-Value',
+    'small_business': 'Standard',
+    'startup': 'Small',
+    'individual': 'Small'  // Map individual to Small segment
   };
 
   // Reverse map for display (backend to frontend)

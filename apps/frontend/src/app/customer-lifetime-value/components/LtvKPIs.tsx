@@ -11,7 +11,6 @@ interface LtvKPIsProps {
     totalValue?: number;
     highValueCount?: number;
     ltvGrowth?: number;
-    predictionAccuracy?: number;
     totalCustomers?: number;
   };
   loading?: boolean;
@@ -51,11 +50,10 @@ export function LtvKPIs({ metrics = {}, loading = false, onTileClick }: LtvKPIsP
       color: '#ec4899' as const // Pink
     },
     {
-      title: 'Model Accuracy',
-      value: metrics.predictionAccuracy ? `${metrics.predictionAccuracy}%` : '0%',
-      subtitle: 'Prediction confidence',
+      title: 'Total Customers',
+      value: metrics.totalCustomers?.toLocaleString() || '0',
+      subtitle: 'Customer base',
       icon: Activity,
-      progress: metrics.predictionAccuracy || 0,
       color: '#8b5cf6' as const // Purple
     }
   ];

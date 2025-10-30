@@ -79,15 +79,14 @@ export function PredictionAccuracy({ data = [], loading = false, onPointClick }:
         }
       },
       title: {
-        display: true,
-        text: 'Prediction Accuracy',
-        color: '#e5e5e5',
-        font: {
-          size: 14,
-          weight: 500 as const
-        }
+        display: false
       },
       tooltip: {
+        backgroundColor: 'rgb(31, 41, 55)',
+        titleColor: 'rgb(243, 244, 246)',
+        bodyColor: 'rgb(209, 213, 219)',
+        borderColor: 'rgb(75, 85, 99)',
+        borderWidth: 1,
         callbacks: {
           label: function(context: any) {
             const point = context.raw as any;

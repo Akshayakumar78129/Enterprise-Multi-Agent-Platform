@@ -99,18 +99,17 @@ export default function EngagementClassifierPage() {
       )}
 
       <div id="key-metrics" />
-      <DashboardSection>
-        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Key Metrics</h3>
+      <DashboardSection title="Key Metrics">
         <EngagementKPIs metrics={kpiMetrics} loading={false} />
       </DashboardSection>
 
       <div id="engagement-analysis" />
       <DashboardSection>
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
-          <div>
+          <div className="flex flex-col">
             <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Engagement Distribution Pyramid</h3>
             <ChartCard
-              className="glass-card card-hover"
+              className="glass-card card-hover h-full"
               onShiftClick={(event) => {
                 shiftClickManager.addPoint({
                   label: "Engagement Distribution Pyramid",
@@ -127,10 +126,10 @@ export default function EngagementClassifierPage() {
             </ChartCard>
           </div>
 
-          <div>
+          <div className="flex flex-col">
             <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Engagement Activity Timeline</h3>
             <ChartCard
-              className="glass-card card-hover"
+              className="glass-card card-hover h-full"
               onShiftClick={(event) => {
                 shiftClickManager.addPoint({
                   label: "Engagement Activity Timeline",
@@ -151,10 +150,8 @@ export default function EngagementClassifierPage() {
 
       <div id="customer-insights" />
       <DashboardSection>
-        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Customer Insights</h3>
-        <div>
-          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">RFM Classification</h3>
-          <ChartCard
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">RFM Classification</h3>
+        <ChartCard
             className="glass-card card-hover"
             onShiftClick={(event) => {
               shiftClickManager.addPoint({
@@ -166,7 +163,6 @@ export default function EngagementClassifierPage() {
           >
             <CustomerClassification data={customerClassification} loading={false} />
           </ChartCard>
-        </div>
       </DashboardSection>
 
       <div id="re-engagement" />
@@ -188,7 +184,6 @@ export default function EngagementClassifierPage() {
 
       <div id="customer-details" />
       <DashboardSection>
-        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Customer Details</h3>
         <CustomerSearchAnalytics />
       </DashboardSection>
 

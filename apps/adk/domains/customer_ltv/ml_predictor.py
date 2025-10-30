@@ -201,12 +201,9 @@ class CustomerLtvMLPredictor:
         return {
             'predictions': predictions_list,
             'feature_importance': feature_importance[:10],
-            'metrics': {
-                'model_accuracy': 0.85,
-                'prediction_confidence': 0.80
-            },
-            'growth_percentage': self._calculate_growth_rate(df),
-            'accuracy_score': 85.5
+            'growth_percentage': self._calculate_growth_rate(df)
+            # ✅ NO HARDCODED DATA: Removed model_accuracy, prediction_confidence, accuracy_score
+            # These were never displayed and were misleading hardcoded values
         }
 
     def _calculate_growth_rate(self, df: pd.DataFrame) -> float:
@@ -217,7 +214,8 @@ class CustomerLtvMLPredictor:
             predicted = df['predicted_ltv'].sum()
             if current > 0:
                 return float((predicted - current) / current * 100)
-        return 5.2
+        # ✅ NO HARDCODED DATA: Return 0 instead of fake 5.2% growth
+        return 0
 
     def _empty_ltv_results(self) -> Dict:
         """Return empty results structure"""

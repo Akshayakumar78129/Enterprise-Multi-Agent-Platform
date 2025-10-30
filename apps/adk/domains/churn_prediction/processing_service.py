@@ -105,9 +105,11 @@ class ChurnProcessingService:
         """Main dashboard endpoint - combines SQL and ML
 
         Returns data matching Express getDashboardSummary format
+
+        ALL FILTERS update the ENTIRE dashboard (KPIs, graphs, table).
         """
         try:
-            # Get all metrics in parallel for better performance
+            # Get all metrics in parallel - ALL using the SAME filters
             (
                 customer_stats,
                 segment_risk,
@@ -122,7 +124,7 @@ class ChurnProcessingService:
                 self.get_feature_importance(filters)
             )
 
-            # Generate rule-based insights (fast, always present)
+            # Generate rule-based insights
             rule_based_insights = self._generate_insights(
                 customer_stats,
                 segment_risk,
@@ -130,7 +132,7 @@ class ChurnProcessingService:
                 feature_importance
             )
 
-            # Get AI-powered insights from separate cache (non-blocking, async)
+            # Get AI-powered insights from separate cache
             ai_insights = await self._get_cached_ai_insights(
                 filters,
                 customer_stats,
@@ -142,6 +144,21 @@ class ChurnProcessingService:
             # COMBINE into single unified insights array
             combined_insights = rule_based_insights + ai_insights
 
+            # ✅ DATA CONSISTENCY: Calculate total customers from unique customer_ids
+            total_customers = 0
+            if customer_stats:
+                unique_customers = set()
+                for stat in customer_stats:
+                    if 'customerId' in stat:
+                        unique_customers.add(stat['customerId'])
+                    elif 'customer_id' in stat:
+                        unique_customers.add(stat['customer_id'])
+                total_customers = len(unique_customers)
+
+            # Calculate KPI metrics for consistency with other dashboards
+            high_risk_count = len([c for c in customer_stats if c.get('riskLevel') in ['High', 'Very High']]) if customer_stats else 0
+            avg_risk = sum(c.get('riskPercentage', 0) for c in customer_stats) / total_customers if total_customers > 0 else 0
+
             # Return in Express format with UNIFIED insights
             return {
                 "customerStats": customer_stats or [],
@@ -149,19 +166,23 @@ class ChurnProcessingService:
                 "monthlyRisk": monthly_risk or [],
                 "probabilityDistribution": probability_dist or [],
                 "featureImportance": feature_importance or [],
-                "insights": combined_insights,  # UNIFIED: rule-based + AI
+                "insights": combined_insights,
                 "insights_metadata": {
                     "total_count": len(combined_insights),
                     "rule_based_count": len(rule_based_insights),
                     "ai_count": len(ai_insights),
                     "insights_version": "unified_v2"
+                },
+                "kpiMetrics": {
+                    "totalCustomers": total_customers,
+                    "highRiskCount": high_risk_count,
+                    "avgRiskPercentage": round(avg_risk, 2)
                 }
             }
         except Exception as e:
             import traceback
             print(f"[ChurnProcessingService] Error in getDashboardSummary: {e}")
             print(f"[ChurnProcessingService] Full traceback: {traceback.format_exc()}")
-            # Return empty structure on error (matching Express)
             return {
                 "customerStats": [],
                 "segmentRisk": [],
@@ -220,15 +241,18 @@ class ChurnProcessingService:
             # Ensure model is trained with current filters
             await self._ensure_model_trained(filters)
 
-            # Get segment and category filters if present
+            # Get segment, category, and risk level filters if present
             segment_filter = filters.get('segments', [])
             category_filter = filters.get('productCategories', [])
+            risk_level_filter = filters.get('riskLevels', [])
 
-            # Remove segments and categories from filters for DB query (since they're not in DB)
+            # Remove segments, categories, and riskLevels from filters for DB query (since they're not in DB)
             db_filters = filters.copy()
             db_filters.pop('segments', None)
             db_filters.pop('segment', None)
             db_filters.pop('productCategories', None)
+            db_filters.pop('riskLevels', None)
+            db_filters.pop('riskLevel', None)
 
             # Log the DB filters being used
             print(f"[ChurnProcessingService] DB filters: {db_filters}")
@@ -269,6 +293,10 @@ class ChurnProcessingService:
                     customer_segment = "Standard"
                 else:
                     customer_segment = "Small"
+
+                # Apply risk level filter if present
+                if risk_level_filter and row['risk_level'] not in risk_level_filter:
+                    continue
 
                 # Apply segment filter if present
                 if segment_filter and customer_segment not in segment_filter:

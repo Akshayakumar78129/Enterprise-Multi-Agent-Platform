@@ -57,10 +57,10 @@ export function ChurnAIInsights({
 
   return (
     <>
-      <div>
+      <div className="h-full flex flex-col">
         <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">AI Feature Importance</h3>
         <ChartCard
-          className="glass-card card-hover"
+          className="glass-card card-hover flex-1 min-h-[500px]"
           onShiftClick={(event) => {
             shiftClickManager.addPoint({
               label: "AI Feature Importance",
@@ -86,10 +86,10 @@ export function ChurnAIInsights({
           />
         </ChartCard>
       </div>
-      <div>
+      <div className="h-full flex flex-col">
         <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Segment Comparison Matrix</h3>
         <ChartCard
-          className="glass-card card-hover"
+          className="glass-card card-hover flex-1 min-h-[500px]"
           onShiftClick={(event) => {
             shiftClickManager.addPoint({
               label: "Segment Comparison Matrix",

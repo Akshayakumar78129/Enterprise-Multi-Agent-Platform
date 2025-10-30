@@ -61,8 +61,7 @@ export default function TransactionPatternsPage() {
     >
       <div className="space-y-6">
         {/* KPI Section */}
-        <DashboardSection>
-          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Key Metrics</h3>
+        <DashboardSection title="Key Metrics">
           <PatternKPIs metrics={kpiMetrics} loading={false} />
         </DashboardSection>
 
@@ -70,9 +69,10 @@ export default function TransactionPatternsPage() {
         <DashboardSection>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
             {/* Temporal Heatmap */}
-            <div>
+            <div className="flex flex-col">
               <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Temporal Transaction Patterns</h3>
               <ChartCard
+                className="flex-1 min-h-[480px]"
                 onShiftClick={(event) => {
                   shiftClickManager.addPoint({
                     label: "Temporal Transaction Patterns",
@@ -92,9 +92,10 @@ export default function TransactionPatternsPage() {
             </div>
 
             {/* Dual Axis Time Series */}
-            <div>
+            <div className="flex flex-col">
               <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Transaction Volume & Value Trends</h3>
               <ChartCard
+                className="flex-1 min-h-[480px]"
                 onShiftClick={(event) => {
                   shiftClickManager.addPoint({
                     label: "Transaction Volume & Value Trends",
@@ -119,9 +120,10 @@ export default function TransactionPatternsPage() {
         <DashboardSection>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
             {/* Product Performance Matrix */}
-            <div>
+            <div className="flex flex-col">
               <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Product Performance Matrix</h3>
               <ChartCard
+                className="flex-1 min-h-[680px]"
                 onShiftClick={(event) => {
                   shiftClickManager.addPoint({
                     label: "Product Performance Matrix",
@@ -141,9 +143,10 @@ export default function TransactionPatternsPage() {
             </div>
 
             {/* Amount Distribution */}
-            <div>
+            <div className="flex flex-col">
               <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Transaction Amount Distribution</h3>
               <ChartCard
+                className="flex-1 min-h-[680px] flex items-center justify-center"
                 onShiftClick={(event) => {
                   shiftClickManager.addPoint({
                     label: "Transaction Amount Distribution",

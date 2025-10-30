@@ -6,13 +6,13 @@ import {
   ChartCard,
   InsightCard,
   PageLoader,
+  FilterBar,
   type InsightData,
   type ChurnCustomer,
   getShiftClickManager
 } from "components/index"
 import {
   ChurnKPIs,
-  ChurnFilters,
   ChurnRiskAnalysis,
   ChurnAIInsights,
   ChurnCustomerTable
@@ -25,6 +25,7 @@ import {
   generateDashboardInsights,
   calculateAvgLTV
 } from "./utils/insightGenerator";
+import { CUSTOMER_SEGMENT_OPTIONS, RISK_LEVEL_OPTIONS } from "@/lib/constants/filterOptions";
 
 export default function ChurnPredictionPage() {
   const { filters, setFilters, timeRange, setTimeRange, selectedPoints, selectionManager, setChurnCustomers, setInsights, setKpiMetrics } = useChurnContext();
@@ -34,6 +35,7 @@ export default function ChurnPredictionPage() {
 
   const {
     loading,
+    error,
     data,
     featureImportance,
     segmentComparison,
@@ -41,7 +43,8 @@ export default function ChurnPredictionPage() {
     riskPyramidData,
     probabilityArray,
     insights,
-    kpiMetrics
+    kpiMetrics,
+    hasNoData
   } = useChurnData(filters);
 
   // Helper function to show insight card
@@ -76,6 +79,33 @@ export default function ChurnPredictionPage() {
     setKpiMetrics(kpiMetrics || {});
   }, [insights, kpiMetrics, setInsights, setKpiMetrics]);
 
+  // Error state
+  if (error && !loading && hasNoData) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center max-w-md">
+          <div className="mb-4">
+            <svg className="w-16 h-16 mx-auto text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-foreground mb-2">
+            No Churn Data Available
+          </h2>
+          <p className="text-muted-foreground mb-4">
+            {error || "There's no churn prediction data to display for the selected filters. Try adjusting your filters or check back later."}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <PageLoader
       isLoading={loading}
@@ -83,11 +113,65 @@ export default function ChurnPredictionPage() {
         title: "Churn Prediction",
       }}
     >
-      <div id="key-metrics" />
-      <DashboardSection>
-        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Key Metrics</h3>
-        <ChurnKPIs data={data} loading={false} />
-      </DashboardSection>
+      <div className="space-y-6">
+        {/* Filters Section */}
+        <DashboardSection>
+          <FilterBar
+            config={{
+              dateRange: {
+                enabled: true,
+                value: filters.dateRange || { startDate: '2017-01-01', endDate: '2021-12-31' },
+                onChange: (range) => {
+                  if (range?.startDate && range?.endDate) {
+                    setFilters({
+                      ...filters,
+                      dateRange: {
+                        startDate: range.startDate,
+                        endDate: range.endDate
+                      }
+                    });
+                  }
+                }
+              },
+              multiSelect: [
+                {
+                  id: 'riskLevels',
+                  label: 'Risk Level',
+                  options: RISK_LEVEL_OPTIONS,
+                  value: filters.riskLevels || [],
+                  onChange: (values) => setFilters({ ...filters, riskLevels: values }),
+                  placeholder: 'Select risk levels...'
+                },
+                {
+                  id: 'segments',
+                  label: 'Customer Segment',
+                  options: CUSTOMER_SEGMENT_OPTIONS,
+                  value: filters.segments || [],
+                  onChange: (values) => setFilters({ ...filters, segments: values }),
+                  placeholder: 'Select segments...'
+                }
+              ]
+            }}
+            onReset={() => {
+              setFilters({
+                dateRange: {
+                  startDate: '2017-01-01',
+                  endDate: '2021-12-31'
+                },
+                riskLevels: [],
+                segments: [],
+                productCategories: []
+              });
+            }}
+            showResetButton={true}
+          />
+        </DashboardSection>
+
+        <div id="key-metrics" />
+        <DashboardSection>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Key Metrics</h3>
+          <ChurnKPIs data={data} loading={false} />
+        </DashboardSection>
 
       <div id="risk-analysis" />
       <DashboardSection>
@@ -154,15 +238,6 @@ export default function ChurnPredictionPage() {
         >
           <RiskTrendsOverTime
             data={riskTrends}
-            timeRange={timeRange}
-            onTimeRangeChange={(newTimeRange) => {
-              setTimeRange(newTimeRange);
-              // Clear date range when time range is selected
-              setFilters(prev => ({
-                ...prev,
-                dateRange: { startDate: "", endDate: "" }
-              }));
-            }}
             onDataPointClick={(dataPoint, event) => {
             if (event?.shiftKey) {
               // Shift+click: Add to selection
@@ -186,23 +261,24 @@ export default function ChurnPredictionPage() {
       </DashboardSection>
 
 
-      {activeInsight && (
-        <InsightCard
-          data={activeInsight}
-          position={insightPosition}
-          isVisible={!!activeInsight}
-          onClose={() => setActiveInsight(null)}
-          onDrillDown={() => {
-            // Handle drill down
-            console.log("Drill down:", activeInsight);
-            setActiveInsight(null);
-          }}
-          onExport={() => {
-            // Handle export
-            console.log("Export:", activeInsight);
-          }}
-        />
-      )}
+        {activeInsight && (
+          <InsightCard
+            data={activeInsight}
+            position={insightPosition}
+            isVisible={!!activeInsight}
+            onClose={() => setActiveInsight(null)}
+            onDrillDown={() => {
+              // Handle drill down
+              console.log("Drill down:", activeInsight);
+              setActiveInsight(null);
+            }}
+            onExport={() => {
+              // Handle export
+              console.log("Export:", activeInsight);
+            }}
+          />
+        )}
+      </div>
     </PageLoader>
   );
 }

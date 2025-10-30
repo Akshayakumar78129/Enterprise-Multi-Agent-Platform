@@ -176,6 +176,7 @@ export const KPICard: React.FC<KPICardProps> = ({
         glass-card
         transition-all duration-300 ease-out
         min-w-0
+        min-h-[140px]
         ${onClick || onShiftClick ? "cursor-pointer" : ""}
         ${isHovered ? "transform -translate-y-1" : ""}
         ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
