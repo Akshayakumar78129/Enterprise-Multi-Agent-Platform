@@ -1049,6 +1049,83 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
   },
 
   // =============================
+  // Sales Trends Components
+  // =============================
+  'sales-trends.kpis': (summary) => {
+    return {
+      metrics: summary.kpiMetrics || {},
+      loading: false
+    };
+  },
+
+  'sales-trends.kpiTiles': (summary) => {
+    return {
+      metrics: summary.kpiMetrics || {},
+      loading: false
+    };
+  },
+
+  'sales-trends.overview': (summary) => {
+    return {
+      data: summary.mainData?.timeSeries || [],
+      loading: false,
+      selectedMetric: summary.filters?.metric || 'revenue'
+    };
+  },
+
+  'sales-trends.timeSeries': (summary) => {
+    return {
+      data: summary.mainData?.timeSeries || [],
+      loading: false,
+      selectedMetric: summary.filters?.metric || 'revenue'
+    };
+  },
+
+  'sales-trends.timeSeriesExplorer': (summary) => {
+    return {
+      data: summary.mainData?.timeSeries || [],
+      loading: false,
+      selectedMetric: summary.filters?.metric || 'revenue'
+    };
+  },
+
+  'sales-trends.seasonality': (summary) => {
+    return {
+      data: summary.mainData?.seasonality || [],
+      loading: false
+    };
+  },
+
+  'sales-trends.seasonalPatternAnalyzer': (summary) => {
+    return {
+      data: summary.mainData?.seasonality || [],
+      loading: false
+    };
+  },
+
+  'sales-trends.growthRates': (summary) => {
+    return {
+      data: summary.mainData?.growthRates || [],
+      loading: false
+    };
+  },
+
+  'sales-trends.growthRateVisualizer': (summary) => {
+    return {
+      data: summary.mainData?.growthRates || [],
+      loading: false
+    };
+  },
+
+  'sales-trends.topPerformers': (summary) => {
+    return {
+      data: summary.mainData?.topPerformers || [],
+      loading: false,
+      dimension: summary.filters?.dimension || 'product'
+    };
+  },
+
+  // =============================
   // Cash Flow Components
   // =============================
   'cash-flow.kpis': (summary) => {

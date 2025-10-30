@@ -146,6 +146,18 @@ const componentRegistry: any = {
     marginAnalysis: dynamic(() => import('../product-performance/components').then(mod => mod.MarginAnalysisScatter)),
     priceBands: dynamic(() => import('../product-performance/components').then(mod => mod.PriceBandDistribution))
   },
+  'sales-trends': {
+    kpis: dynamic(() => import('../sales-trends/components').then(mod => mod.SalesTrendsKPIs)),
+    kpiTiles: dynamic(() => import('../sales-trends/components').then(mod => mod.SalesTrendsKPIs)),
+    overview: dynamic(() => import('../sales-trends/components').then(mod => mod.TimeSeriesExplorer)),
+    timeSeries: dynamic(() => import('../sales-trends/components').then(mod => mod.TimeSeriesExplorer)),
+    timeSeriesExplorer: dynamic(() => import('../sales-trends/components').then(mod => mod.TimeSeriesExplorer)),
+    seasonality: dynamic(() => import('../sales-trends/components').then(mod => mod.SeasonalPatternAnalyzer)),
+    seasonalPatternAnalyzer: dynamic(() => import('../sales-trends/components').then(mod => mod.SeasonalPatternAnalyzer)),
+    growthRates: dynamic(() => import('../sales-trends/components').then(mod => mod.GrowthRateVisualizer)),
+    growthRateVisualizer: dynamic(() => import('../sales-trends/components').then(mod => mod.GrowthRateVisualizer)),
+    topPerformers: dynamic(() => import('../sales-trends/components').then(mod => mod.TopPerformers))
+  },
   'cash-flow': {
     kpis: dynamic(() => import('../cash-flow/components').then(mod => mod.CashFlowKPIs)),
     trends: dynamic(() => import('../cash-flow/components').then(mod => mod.CashFlowTrends)),
