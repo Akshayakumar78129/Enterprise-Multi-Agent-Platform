@@ -24,19 +24,8 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy ALL application files including databases
+# Copy application files
 COPY . /app/
-
-# Explicitly verify database file exists and show size
-RUN if [ -f "/app/orchestration_agent/database/customers.db" ]; then \
-        echo "SUCCESS: Database file found!" && \
-        ls -lh /app/orchestration_agent/database/customers.db && \
-        du -h /app/orchestration_agent/database/customers.db; \
-    else \
-        echo "ERROR: Database file NOT found!" && \
-        ls -la /app/orchestration_agent/database/ && \
-        exit 1; \
-    fi
 
 # Create cache directory
 RUN mkdir -p /app/cache
