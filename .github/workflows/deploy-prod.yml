@@ -1,0 +1,258 @@
+name: Deploy to Azure Production
+
+on:
+  push:
+    branches:
+      - prod  # Trigger on push to prod branch
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  AZURE_RESOURCE_GROUP: rg-multiagent-prod
+  AZURE_LOCATION: eastus
+  ACR_NAME: acrmultiagent5678
+  CONTAINER_APP_ENV: cae-multiagent-prod
+
+jobs:
+  # Job 1: Build and Test
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@9.0.0
+
+      - name: Install frontend dependencies
+        working-directory: ./apps/frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint frontend
+        working-directory: ./apps/frontend
+        run: pnpm lint || true  # Continue even if lint fails
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies for ADK
+        working-directory: ./apps/adk
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint Python code (ADK)
+        working-directory: ./apps/adk
+        run: |
+          pip install black flake8
+          black --check . || true
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
+
+  # Job 2: Build and Push Docker Images
+  build-push-images:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          echo "tags=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "date=$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Build and push Frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/frontend
+          file: ./apps/frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.ACR_NAME }}.azurecr.io/frontend:latest
+            ${{ env.ACR_NAME }}.azurecr.io/frontend:${{ steps.meta.outputs.tags }}
+          cache-from: type=registry,ref=${{ env.ACR_NAME }}.azurecr.io/frontend:buildcache
+          cache-to: type=registry,ref=${{ env.ACR_NAME }}.azurecr.io/frontend:buildcache,mode=max
+
+      - name: Build and push ADK Backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/adk
+          file: ./apps/adk/Dockerfile
+          push: true
+          tags: |
+            ${{ env.ACR_NAME }}.azurecr.io/adk-backend:latest
+            ${{ env.ACR_NAME }}.azurecr.io/adk-backend:${{ steps.meta.outputs.tags }}
+          cache-from: type=registry,ref=${{ env.ACR_NAME }}.azurecr.io/adk-backend:buildcache
+          cache-to: type=registry,ref=${{ env.ACR_NAME }}.azurecr.io/adk-backend:buildcache,mode=max
+
+      - name: Run Trivy vulnerability scanner on Frontend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.ACR_NAME }}.azurecr.io/frontend:latest
+          format: 'sarif'
+          output: 'trivy-results-frontend.sarif'
+          severity: 'CRITICAL,HIGH'
+        continue-on-error: true
+
+      - name: Run Trivy vulnerability scanner on ADK Backend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.ACR_NAME }}.azurecr.io/adk-backend:latest
+          format: 'sarif'
+          output: 'trivy-results-adk.sarif'
+          severity: 'CRITICAL,HIGH'
+        continue-on-error: true
+
+  # Job 3: Deploy to Azure Container Apps
+  deploy-to-azure:
+    runs-on: ubuntu-latest
+    needs: build-push-images
+    environment: production  # Optional: Requires manual approval
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Update ADK Backend Container App
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az containerapp update \
+              --name ca-multiagent-adk \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --image ${{ env.ACR_NAME }}.azurecr.io/adk-backend:latest \
+              --set-env-vars \
+                GOOGLE_API_KEY=secretref:google-api-key \
+                DEEPGRAM_API_KEY=secretref:deepgram-api-key \
+                DB_USER=secretref:db-user \
+                DB_PASSWORD=secretref:db-password \
+                DB_HOST=secretref:db-host \
+                DB_PORT=5432 \
+                DB_NAME=enterpriseiq \
+                SSL_MODE=require \
+                PORT=8000 \
+                MODEL=gemini-2.5-flash \
+                GOOGLE_GENAI_USE_VERTEXAI=False
+
+      - name: Update Frontend Container App
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            # Get the ADK Backend URL
+            ADK_URL=$(az containerapp show \
+              --name ca-multiagent-adk \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --query properties.configuration.ingress.fqdn \
+              --output tsv)
+
+            # Frontend connects DIRECTLY to ADK backend (no gateway)
+            az containerapp update \
+              --name ca-multiagent-frontend \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --image ${{ env.ACR_NAME }}.azurecr.io/frontend:latest \
+              --set-env-vars \
+                NEXT_PUBLIC_API_URL=https://${ADK_URL}/api \
+                NEXT_PUBLIC_BACKEND_AI_URL=https://${ADK_URL} \
+                NEXT_PUBLIC_ADK_URL=https://${ADK_URL} \
+                NODE_ENV=production
+
+      - name: Wait for deployment to stabilize
+        run: sleep 60
+
+      - name: Health check - ADK Backend
+        run: |
+          ADK_URL=$(az containerapp show \
+            --name ca-multiagent-adk \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query properties.configuration.ingress.fqdn \
+            --output tsv)
+
+          echo "Checking ADK Backend health at https://${ADK_URL}/health"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://${ADK_URL}/health)
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ ADK Backend health check failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+          echo "✅ ADK Backend is healthy"
+
+      - name: Health check - Frontend
+        run: |
+          FRONTEND_URL=$(az containerapp show \
+            --name ca-multiagent-frontend \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query properties.configuration.ingress.fqdn \
+            --output tsv)
+
+          echo "Checking Frontend at https://${FRONTEND_URL}"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://${FRONTEND_URL})
+
+          if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "307" ]; then
+            echo "⚠️  Frontend returned HTTP $HTTP_CODE"
+          else
+            echo "✅ Frontend is accessible"
+          fi
+
+      - name: Get deployment URLs
+        id: urls
+        run: |
+          FRONTEND_URL=$(az containerapp show \
+            --name ca-multiagent-frontend \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query properties.configuration.ingress.fqdn \
+            --output tsv)
+
+          ADK_URL=$(az containerapp show \
+            --name ca-multiagent-adk \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query properties.configuration.ingress.fqdn \
+            --output tsv)
+
+          echo "frontend-url=https://${FRONTEND_URL}" >> $GITHUB_OUTPUT
+          echo "adk-url=https://${ADK_URL}" >> $GITHUB_OUTPUT
+
+      - name: Deployment summary
+        run: |
+          echo "## 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Application URLs:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend (Main App):** ${{ steps.urls.outputs.frontend-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **ADK Backend API:** ${{ steps.urls.outputs.adk-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployment Details:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Architecture:" >> $GITHUB_STEP_SUMMARY
+          echo "- 2 Container Apps (Frontend + ADK Backend)" >> $GITHUB_STEP_SUMMARY
+          echo "- Direct frontend-to-backend communication (no API gateway)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Azure Logout
+        run: az logout
+        if: always()

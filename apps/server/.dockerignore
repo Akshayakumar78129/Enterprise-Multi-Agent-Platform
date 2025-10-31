@@ -20,17 +20,9 @@ env/
 .env.production
 *.env
 
-# Database files (will be mounted from Azure Storage)
-*.db
-*.sqlite
-*.sqlite3
-orchestration_agent/database/*.db
-
 # Cache
-cache/
 .pytest_cache/
 .mypy_cache/
-.ruff_cache/
 
 # IDE
 .vscode/
@@ -54,15 +46,11 @@ README.md
 
 # Development scripts
 dev.sh
-start.sh
 
 # Testing
 tests/
 *.test.py
 coverage/
-htmlcov/
-.coverage
 
 # Logs
 *.log
-logs/

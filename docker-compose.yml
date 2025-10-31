@@ -1,0 +1,97 @@
+# Docker Compose for local testing of containerized services
+# This mimics the Azure production environment locally
+version: '3.8'
+
+services:
+  # PostgreSQL Database (simulates Azure PostgreSQL)
+  postgres:
+    image: postgres:15-alpine
+    container_name: multiagent-postgres
+    environment:
+      POSTGRES_USER: enterpriseiq
+      POSTGRES_PASSWORD: devpassword123
+      POSTGRES_DB: enterpriseiq
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U enterpriseiq"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - multiagent-network
+
+  # ADK Backend Service
+  adk-backend:
+    build:
+      context: ./apps/adk
+      dockerfile: Dockerfile
+    container_name: multiagent-adk
+    ports:
+      - "8000:8000"
+    environment:
+      # Google AI Configuration
+      GOOGLE_GENAI_USE_VERTEXAI: "False"
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      MODEL: gemini-2.5-flash
+      MODEL_PROVIDER: gemini
+
+      # Deepgram API
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY}
+
+      # PostgreSQL Configuration
+      DB_USER: enterpriseiq
+      DB_PASSWORD: devpassword123
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: enterpriseiq
+      SSL_MODE: disable
+
+      # Server Configuration
+      PORT: 8000
+    volumes:
+      # Mount SQLite databases for development
+      - ./apps/adk/orchestration_agent/database:/app/orchestration_agent/database
+      # Mount cache directory
+      - ./apps/adk/cache:/app/cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - multiagent-network
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    container_name: multiagent-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      # Frontend connects DIRECTLY to ADK backend (no gateway needed)
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api
+      NEXT_PUBLIC_BACKEND_AI_URL: http://localhost:8000
+      NEXT_PUBLIC_ADK_URL: http://localhost:8000
+      NODE_ENV: production
+    depends_on:
+      adk-backend:
+        condition: service_healthy
+    networks:
+      - multiagent-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  multiagent-network:
+    driver: bridge
