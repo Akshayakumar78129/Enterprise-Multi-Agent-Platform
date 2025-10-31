@@ -20,11 +20,11 @@ env/
 .env.production
 *.env
 
-# Database files (will be mounted from Azure Storage)
-*.db
-*.sqlite
-*.sqlite3
-orchestration_agent/database/*.db
+# Database files - customers.db is included in Docker image
+# Exclude other temp database files
+*.db-shm
+*.db-wal
+cache/*.db
 
 # Cache
 cache/
