@@ -24,11 +24,14 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create directories BEFORE copying files to avoid overwriting
-RUN mkdir -p orchestration_agent/database cache
-
-# Copy application code (this will copy customers.db from orchestration_agent/database/)
+# Copy application code FIRST (includes all database files)
 COPY . .
+
+# Verify database file was copied and list its size
+RUN ls -lh orchestration_agent/database/customers.db || echo "ERROR: customers.db not found!"
+
+# Create cache directory if it doesn't exist
+RUN mkdir -p cache
 
 # Create non-root user for security
 RUN useradd -m -u 1001 appuser && \
