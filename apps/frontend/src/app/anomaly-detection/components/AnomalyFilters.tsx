@@ -30,7 +30,7 @@ export function AnomalyFilters({
     dateRange: {
       enabled: true,
       value: filters.dateRange,
-      onChange: (range) => {
+      onChange: (range: any) => {
         onFiltersChange({
           ...filters,
           dateRange: range
@@ -40,7 +40,7 @@ export function AnomalyFilters({
     search: {
       enabled: true,
       value: filters.search,
-      onChange: (value) => {
+      onChange: (value: string) => {
         onFiltersChange({
           ...filters,
           search: value
