@@ -154,12 +154,6 @@ jobs:
               --set-env-vars \
                 GOOGLE_API_KEY=secretref:google-api-key \
                 DEEPGRAM_API_KEY=secretref:deepgram-api-key \
-                DB_USER=secretref:db-user \
-                DB_PASSWORD=secretref:db-password \
-                DB_HOST=secretref:db-host \
-                DB_PORT=5432 \
-                DB_NAME=enterpriseiq \
-                SSL_MODE=require \
                 PORT=8000 \
                 MODEL=gemini-2.5-flash \
                 GOOGLE_GENAI_USE_VERTEXAI=False
