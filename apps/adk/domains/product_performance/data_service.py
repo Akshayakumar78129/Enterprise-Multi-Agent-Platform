@@ -26,7 +26,7 @@ class ProductPerformanceDataService:
             SUM(t."Net Sales Quantity") as total_units,
             AVG(t."Net Sales Amount" / NULLIF(t."Net Sales Quantity", 0)) as avg_price
         FROM dbo_F_Sales_Transaction t
-        LEFT JOIN `"dbo_D_Item"` i ON t."Item Key" = i."Item Key"
+        LEFT JOIN dbo_D_Item i ON t."Item Key" = i."Item Key"
         WHERE t."Deleted Flag" = 0
             AND t."Excluded Flag" = 0
         """
@@ -66,7 +66,7 @@ class ProductPerformanceDataService:
             SUM(t."Net Sales Amount") as margin,
             (SUM(t."Net Sales Amount") / NULLIF(SUM(t."Net Sales Amount"), 0) * 100) as margin_percent
         FROM dbo_F_Sales_Transaction t
-        LEFT JOIN `"dbo_D_Item"` i ON t."Item Key" = i."Item Key"
+        LEFT JOIN dbo_D_Item i ON t."Item Key" = i."Item Key"
         WHERE t."Deleted Flag" = 0
             AND t."Excluded Flag" = 0
         GROUP BY i."Item Desc", i."Item Category Desc"
@@ -102,7 +102,7 @@ class ProductPerformanceDataService:
             SUM(t."Net Sales Quantity") as units_sold,
             AVG(t."Net Sales Amount" / NULLIF(t."Net Sales Quantity", 0)) as avg_price
         FROM dbo_F_Sales_Transaction t
-        LEFT JOIN `"dbo_D_Item"` i ON t."Item Key" = i."Item Key"
+        LEFT JOIN dbo_D_Item i ON t."Item Key" = i."Item Key"
         WHERE t."Deleted Flag" = 0
             AND t."Excluded Flag" = 0
         GROUP BY i."Item Category Desc"
@@ -138,7 +138,7 @@ class ProductPerformanceDataService:
             0 as avg_cost,
             (SUM(t."Net Sales Amount") / NULLIF(SUM(t."Net Sales Amount"), 0) * 100) as margin_percent
         FROM dbo_F_Sales_Transaction t
-        LEFT JOIN `"dbo_D_Item"` i ON t."Item Key" = i."Item Key"
+        LEFT JOIN dbo_D_Item i ON t."Item Key" = i."Item Key"
         WHERE t."Deleted Flag" = 0
             AND t."Excluded Flag" = 0
         GROUP BY i."Item Desc", i."Item Category Desc"
@@ -179,7 +179,7 @@ class ProductPerformanceDataService:
             COUNT(DISTINCT i."Item Key") as count,
             SUM(t."Net Sales Amount") as revenue
         FROM dbo_F_Sales_Transaction t
-        LEFT JOIN `"dbo_D_Item"` i ON t."Item Key" = i."Item Key"
+        LEFT JOIN dbo_D_Item i ON t."Item Key" = i."Item Key"
         WHERE t."Deleted Flag" = 0
             AND t."Excluded Flag" = 0
             AND t."Net Sales Quantity" > 0

@@ -147,8 +147,10 @@ export function RegionalSalesTrends({ data, loading }: RegionalSalesTrendsProps)
   }
 
   return (
-    <div style={{ height: '400px', position: 'relative' }}>
-      <Line data={chartData} options={options} />
+    <div className="glass-card p-6">
+      <div style={{ height: '400px', position: 'relative' }}>
+        <Line data={chartData} options={options} />
+      </div>
     </div>
   );
 }

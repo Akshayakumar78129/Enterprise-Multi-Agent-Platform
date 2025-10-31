@@ -211,7 +211,6 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Purchase Timeline</h3>
-          <p className="text-sm text-muted-foreground mb-4">Purchase trends over time</p>
           <Card
             onShiftClick={(event) => {
               shiftClickManager.addPoint({
@@ -295,7 +294,6 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
 
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Purchase Pattern Analysis</h3>
-          <p className="text-sm text-muted-foreground mb-4">Multi-dimensional pattern overview</p>
           <Card
             onShiftClick={(event) => {
               shiftClickManager.addPoint({
@@ -324,7 +322,6 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
       {frequencyData && (
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Purchase Frequency Distribution</h3>
-          <p className="text-sm text-muted-foreground mb-4">Customer distribution by purchase frequency</p>
           <Card
             onShiftClick={(event) => {
               shiftClickManager.addPoint({

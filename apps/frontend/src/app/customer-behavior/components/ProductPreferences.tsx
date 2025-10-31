@@ -131,7 +131,6 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Category Distribution</h3>
-          <p className="text-sm text-muted-foreground mb-4">Top product categories by sales</p>
           <Card
             onShiftClick={(event) => {
               shiftClickManager.addPoint({
@@ -189,7 +188,6 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
 
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Category Treemap</h3>
-          <p className="text-sm text-muted-foreground mb-4">Hierarchical view of product categories</p>
           <Card
             onShiftClick={(event) => {
               shiftClickManager.addPoint({
@@ -239,7 +237,6 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
       {productData && (
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Top Products</h3>
-          <p className="text-sm text-muted-foreground mb-4">Best selling products</p>
           <Card
             onShiftClick={(event) => {
               shiftClickManager.addPoint({

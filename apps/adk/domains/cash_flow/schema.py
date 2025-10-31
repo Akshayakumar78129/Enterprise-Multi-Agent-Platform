@@ -10,8 +10,8 @@ class CashFlowSchema(BaseSchema):
     TABLES = {
         'transaction': 'dbo_F_Sales_Transaction',
         'customer': 'dbo_D_Customer',
-        'item': '`"dbo_D_Item"`',
-        'region': '`"dbo_D_Sales_Organization"`',
+        'item': 'dbo_D_Item',
+        'region': 'dbo_D_Sales_Organization',
     }
 
     # Table aliases
@@ -81,7 +81,7 @@ class CashFlowSchema(BaseSchema):
 
     # Item schema
     ITEM = TableSchema(
-        table_name='`"dbo_D_Item"`',
+        table_name='dbo_D_Item',
         alias='i',
         columns={
             'key': '[Item Key]',
@@ -105,7 +105,7 @@ class CashFlowSchema(BaseSchema):
 
     # Region schema
     REGION = TableSchema(
-        table_name='`"dbo_D_Sales_Organization"`',
+        table_name='dbo_D_Sales_Organization',
         alias='r',
         columns={
             'key': '[Sales Organization Key]',

@@ -2,6 +2,7 @@
 
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
+import asyncio
 from domains.common.simple_cache import cache_dashboard_endpoint
 from .data_service import SalesTrendsDataService
 from .models import (
@@ -37,13 +38,26 @@ class SalesTrendsProcessingService:
         growth_rates = await self._calculate_growth_rates(time_series)
         top_performers = await self._get_top_performers(normalized_filters)
 
-        # Generate insights
-        insights = self._generate_insights(
+        # Generate rule-based insights
+        rule_based_insights = self._generate_insights(
             kpis.dict(),
             time_series,
             growth_rates,
             top_performers
         )
+
+        # Get AI insights async (non-blocking with graceful fallback)
+        ai_insights = await self._get_cached_ai_insights(
+            normalized_filters,
+            kpis.dict(),
+            time_series,
+            seasonality,
+            growth_rates,
+            top_performers
+        )
+
+        # Combine insights (rule-based + AI)
+        all_insights = rule_based_insights + [{'type': 'ai', 'message': insight} for insight in ai_insights]
 
         # Create response
         return {
@@ -61,7 +75,7 @@ class SalesTrendsProcessingService:
                 'growthRates': [gr.dict() for gr in growth_rates],
                 'topPerformers': [tp.dict() for tp in top_performers]
             },
-            'insights': insights,
+            'insights': all_insights,
             'metadata': {
                 'filtersApplied': normalized_filters,
                 'timestamp': datetime.now().isoformat(),
@@ -367,3 +381,134 @@ class SalesTrendsProcessingService:
                 prev_filters['dateTo'] = (end - timedelta(days=period_days)).isoformat()
 
         return prev_filters
+
+    @cache_dashboard_endpoint(dashboard_type="sales_trends_ai_insights", ttl=1800)
+    async def _get_cached_ai_insights(
+        self,
+        filters: Dict[str, Any],
+        kpis: Dict,
+        time_series: List,
+        seasonality: List,
+        growth_rates: List,
+        top_performers: List
+    ) -> List[str]:
+        """Get AI insights from cache or generate async (non-blocking)
+
+        Cached separately with longer TTL (30 min) since AI insights are less filter-dependent.
+        Uses asyncio.to_thread() to run blocking AI generation in thread pool.
+
+        Returns:
+            List of AI-generated insight strings (empty on error)
+        """
+        try:
+            # Run AI generation in thread pool to avoid blocking event loop
+            ai_insights = await asyncio.to_thread(
+                self._generate_ai_insights,
+                kpis,
+                time_series,
+                seasonality,
+                growth_rates,
+                top_performers,
+                filters
+            )
+            return ai_insights
+        except Exception as e:
+            print(f"[SalesTrendsProcessingService] Error in _get_cached_ai_insights: {e}")
+            return []  # Graceful fallback
+
+    def _generate_ai_insights(
+        self,
+        kpis: Dict,
+        time_series: List,
+        seasonality: List,
+        growth_rates: List,
+        top_performers: List,
+        filters: Dict
+    ) -> List[str]:
+        """Generate AI-powered strategic insights using Gemini
+
+        This complements rule-based insights with creative, strategic analysis.
+        Uses dashboard-specific prompts for consistent, actionable recommendations.
+
+        Args:
+            kpis: KPI metrics from dashboard
+            time_series: Time series data points
+            seasonality: Seasonality patterns
+            growth_rates: Growth rate data
+            top_performers: Top performers by metric
+            filters: Applied filters for context
+
+        Returns:
+            List of AI-generated insight strings (empty list on error)
+        """
+        try:
+            # Import at method level for error isolation
+            from lib.ai_insights_generator import generate_ai_insights
+
+            # Calculate additional metrics for AI context
+            total_periods = len(time_series)
+            
+            # Find peak and lowest periods
+            if time_series:
+                peak_period = max(time_series, key=lambda x: x.get('value', 0) if isinstance(x, dict) else x.value)
+                low_period = min(time_series, key=lambda x: x.get('value', 0) if isinstance(x, dict) else x.value)
+            else:
+                peak_period = None
+                low_period = None
+
+            # Find strongest seasonality
+            if seasonality:
+                strongest_season = max(seasonality, key=lambda x: x.get('value', 0) if isinstance(x, dict) else x.value)
+            else:
+                strongest_season = None
+
+            # Find highest growth rate
+            if growth_rates:
+                highest_growth = max(growth_rates, key=lambda x: x.get('growthRate', 0) if isinstance(x, dict) else x.growthRate)
+            else:
+                highest_growth = None
+
+            # Build KPIs dict for AI
+            kpis_dict = {
+                'total_revenue': kpis.get('totalRevenue', 0),
+                'total_units': kpis.get('totalUnits', 0),
+                'avg_order_value': kpis.get('avgOrderValue', 0),
+                'margin_percentage': kpis.get('marginPercentage', 0),
+                'revenue_growth': kpis.get('revenueGrowth', 0),
+                'transaction_count': kpis.get('transactionCount', 0),
+            }
+
+            peak_val = peak_period.value if hasattr(peak_period, 'value') else peak_period.get('value', 0) if peak_period else 0
+            low_val = low_period.value if hasattr(low_period, 'value') else low_period.get('value', 0) if low_period else 0
+            peak_date = peak_period.date if hasattr(peak_period, 'date') else peak_period.get('date', 'N/A') if peak_period else 'N/A'
+            low_date = low_period.date if hasattr(low_period, 'date') else low_period.get('date', 'N/A') if low_period else 'N/A'
+
+            data_summary = {
+                'total_periods': total_periods,
+                'peak_period': peak_date,
+                'peak_value': peak_val,
+                'low_period': low_date,
+                'low_value': low_val,
+                'strongest_season': strongest_season.period if strongest_season and hasattr(strongest_season, 'period') else 'N/A',
+                'highest_growth_period': highest_growth.period if highest_growth and hasattr(highest_growth, 'period') else 'N/A',
+                'highest_growth_rate': highest_growth.growthRate if highest_growth and hasattr(highest_growth, 'growthRate') else 0,
+            }
+
+            # Generate AI insights using CORRECT function signature
+            ai_insights = generate_ai_insights(
+                dashboard_type='sales_trends',
+                kpis=kpis_dict,
+                data_summary=data_summary,
+                filters=filters
+            )
+
+            print(f"[SalesTrendsProcessingService] Generated {len(ai_insights)} AI insights")
+            return ai_insights
+
+        except ImportError:
+            print("[SalesTrendsProcessingService] AI insights module not available, skipping AI insights")
+            return []
+        except Exception as e:
+            print(f"[SalesTrendsProcessingService] Error generating AI insights: {e}")
+            return []
+

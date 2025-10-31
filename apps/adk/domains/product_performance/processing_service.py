@@ -2,6 +2,7 @@
 
 from typing import Dict, Any, List
 from datetime import datetime, timedelta
+import asyncio
 from .data_service import ProductPerformanceDataService
 
 
@@ -56,8 +57,20 @@ class ProductPerformanceProcessingService:
             'priceBandDistribution': self._calculate_price_bands(top_products)
         }
 
-        # Generate insights
-        insights = self._generate_insights(kpi_metrics, top_products, category_performance, margin_analysis)
+        # Generate rule-based insights
+        rule_based_insights = self._generate_insights(kpi_metrics, top_products, category_performance, margin_analysis)
+
+        # Get AI insights async (non-blocking with graceful fallback)
+        ai_insights = await self._get_cached_ai_insights(
+            filters,
+            kpi_metrics,
+            top_products,
+            category_performance,
+            margin_analysis
+        )
+
+        # Combine insights (rule-based as strings + AI)
+        all_insights = rule_based_insights + ai_insights
 
         # Metadata
         metadata = {
@@ -70,7 +83,7 @@ class ProductPerformanceProcessingService:
         return {
             'kpiMetrics': kpi_metrics,
             'mainData': main_data,
-            'insights': insights,
+            'insights': all_insights,
             'metadata': metadata
         }
 
@@ -149,3 +162,146 @@ class ProductPerformanceProcessingService:
             )
 
         return insights
+
+    async def _get_cached_ai_insights(
+        self,
+        filters: Dict[str, Any],
+        kpis: Dict,
+        top_products: List[Dict],
+        categories: List[Dict],
+        margins: List[Dict]
+    ) -> List[str]:
+        """Get AI insights from cache or generate async (non-blocking)
+
+        Cached separately with longer TTL (30 min) since AI insights are less filter-dependent.
+        Uses asyncio.to_thread() to run blocking AI generation in thread pool.
+
+        Returns:
+            List of AI-generated insight strings (empty on error)
+        """
+        try:
+            # Run AI generation in thread pool to avoid blocking event loop
+            ai_insights = await asyncio.to_thread(
+                self._generate_ai_insights,
+                kpis,
+                top_products,
+                categories,
+                margins,
+                filters
+            )
+            return ai_insights
+        except Exception as e:
+            print(f"[ProductPerformanceProcessingService] Error in _get_cached_ai_insights: {e}")
+            return []  # Graceful fallback
+
+    def _generate_ai_insights(
+        self,
+        kpis: Dict,
+        top_products: List[Dict],
+        categories: List[Dict],
+        margins: List[Dict],
+        filters: Dict
+    ) -> List[str]:
+        """Generate AI-powered strategic insights using Gemini
+
+        This complements rule-based insights with creative, strategic analysis.
+        Uses dashboard-specific prompts for consistent, actionable recommendations.
+
+        Args:
+            kpis: KPI metrics from dashboard
+            top_products: Top performing products
+            categories: Category performance data
+            margins: Margin analysis data
+            filters: Applied filters for context
+
+        Returns:
+            List of AI-generated insight strings (empty list on error)
+        """
+        try:
+            # Import at method level for error isolation
+            from lib.ai_insights_generator import generate_ai_insights
+
+            # Calculate additional metrics for AI context
+            total_products = kpis.get('totalProducts', 0)
+            total_categories = len(categories)
+            
+            top_product = top_products[0] if top_products else None
+            top_category = categories[0] if categories else None
+            
+            # Find high/low margin products
+            high_margin = [m for m in margins if m.get('marginPercent', 0) > 50]
+            low_margin = [m for m in margins if m.get('marginPercent', 0) < 20]
+
+            # Build context for AI
+            kpis_dict = {
+                'total_revenue': kpis.get('totalRevenue', 0),
+                'total_units': kpis.get('totalUnits', 0),
+                'avg_price': kpis.get('avgPrice', 0),
+                'avg_margin': kpis.get('avgMargin', 0),
+                'total_products': total_products,
+            }
+
+            data_summary = {
+                'total_categories': total_categories,
+                'top_product': top_product.get('productName') if top_product else "N/A",
+                'top_product_revenue': top_product.get('revenue', 0) if top_product else 0,
+                'top_product_margin': top_product.get('marginPercent', 0) if top_product else 0,
+                'top_category': top_category.get('category') if top_category else "N/A",
+                'top_category_revenue': top_category.get('revenue', 0) if top_category else 0,
+                'high_margin_count': len(high_margin),
+                'low_margin_count': len(low_margin),
+            }
+
+            # Create prompt for product performance analysis
+            prompt = f"""Analyze this product performance data and provide 3-4 strategic insights:
+
+KPIs:
+- Total Revenue: ${kpis_dict['total_revenue']:,.2f}
+- Total Units: {kpis_dict['total_units']:,}
+- Average Price: ${kpis_dict['avg_price']:.2f}
+- Average Margin: {kpis_dict['avg_margin']:.1f}%
+- Total Products: {kpis_dict['total_products']:,}
+
+Performance Highlights:
+- Categories: {data_summary['total_categories']} total
+- Top Product: {data_summary['top_product']} (${data_summary['top_product_revenue']:,.0f}, {data_summary['top_product_margin']:.1f}% margin)
+- Top Category: {data_summary['top_category']} (${data_summary['top_category_revenue']:,.0f})
+- High Margin Products (>50%): {data_summary['high_margin_count']}
+- Low Margin Products (<20%): {data_summary['low_margin_count']}
+
+Provide actionable insights focusing on:
+1. Product mix optimization and pricing strategies
+2. Margin improvement opportunities
+3. Category expansion or rationalization
+4. Inventory and SKU optimization
+5. Cross-sell and bundle recommendations
+
+Format: Return ONLY a JSON array of insight strings, each 1-2 sentences. Example:
+["Insight 1 here", "Insight 2 here", "Insight 3 here"]"""
+
+            # Generate AI insights
+            insights_response = generate_ai_insights(prompt, dashboard_type="product_performance")
+            
+            # Parse response (expecting JSON array of strings)
+            import json
+            try:
+                if isinstance(insights_response, str):
+                    insights_list = json.loads(insights_response)
+                else:
+                    insights_list = insights_response
+                
+                # Validate and clean
+                if isinstance(insights_list, list):
+                    return [str(insight).strip() for insight in insights_list if insight][:4]
+                else:
+                    return []
+            except:
+                # If JSON parsing fails, split by newlines and clean
+                return [line.strip() for line in str(insights_response).split('\n') if line.strip()][:4]
+
+        except ImportError:
+            print("[ProductPerformanceProcessingService] AI insights module not available, skipping AI insights")
+            return []
+        except Exception as e:
+            print(f"[ProductPerformanceProcessingService] Error generating AI insights: {e}")
+            return []

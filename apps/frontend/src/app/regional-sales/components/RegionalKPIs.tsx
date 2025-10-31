@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { KPIRow, MetricsRow, Skeleton } from 'components/index';
+import { KPIRow, MetricsRow, Skeleton, getShiftClickManager } from 'components/index';
 
 interface RegionalKPIsProps {
   metrics: {
@@ -27,6 +27,8 @@ interface RegionalKPIsProps {
 }
 
 export function RegionalKPIs({ metrics, topRegion, opportunityCount = 0, loading }: RegionalKPIsProps) {
+  const shiftClickManager = getShiftClickManager();
+
   const kpis = useMemo(() => {
     if (!metrics) {
       return [
@@ -87,38 +89,66 @@ export function RegionalKPIs({ metrics, topRegion, opportunityCount = 0, loading
       {
         id: "total-regional-sales",
         title: "Total Regional Sales",
-        value: metrics.totalSales || 0,  // Raw number, KPICard will format as $30.1M
+        value: metrics.totalSales || 0,
         subtitle: `${metrics.transactionCount?.toLocaleString() || 0} transactions`,
         format: "currency" as const,
         color: "#38bdf8",
         trend: metrics.growthRate !== null ? {
-          value: metrics.growthRate,  // Raw number
+          value: metrics.growthRate,
           format: "percentage" as const
-        } : undefined
+        } : undefined,
+        onShiftClick: (event: React.MouseEvent) => {
+          shiftClickManager.addPoint({
+            label: "Total Regional Sales",
+            value: `$${(metrics.totalSales || 0).toLocaleString()} | Growth: ${(metrics.growthRate || 0).toFixed(1)}%`,
+            source: "Regional Sales - KPIs"
+          }, event.nativeEvent);
+        }
       },
       {
         id: "gross-profit",
         title: "Gross Profit",
-        value: metrics.grossProfit || 0,  // Raw number, KPICard will format
+        value: metrics.grossProfit || 0,
         subtitle: `${metrics.profitMargin?.toFixed(1) || 0}% margin`,
         format: "currency" as const,
         color: "#10b981",
+        onShiftClick: (event: React.MouseEvent) => {
+          shiftClickManager.addPoint({
+            label: "Gross Profit",
+            value: `$${(metrics.grossProfit || 0).toLocaleString()} | Margin: ${(metrics.profitMargin || 0).toFixed(1)}%`,
+            source: "Regional Sales - KPIs"
+          }, event.nativeEvent);
+        }
       },
       {
         id: "regional-coverage",
         title: "Regional Coverage",
-        value: metrics.countryCount || 0,  // Raw number
+        value: metrics.countryCount || 0,
         subtitle: `${metrics.stateCount || 0} states/provinces`,
         format: "number" as const,
         color: "#8b5cf6",
+        onShiftClick: (event: React.MouseEvent) => {
+          shiftClickManager.addPoint({
+            label: "Regional Coverage",
+            value: `${metrics.countryCount || 0} countries | ${metrics.stateCount || 0} states`,
+            source: "Regional Sales - KPIs"
+          }, event.nativeEvent);
+        }
       },
       {
         id: "customer-reach",
         title: "Customer Reach",
-        value: metrics.customerCount || 0,  // Raw number, KPICard will format as 150K
+        value: metrics.customerCount || 0,
         subtitle: `Avg transaction: $${(metrics.avgTransactionValue || 0).toFixed(0)}`,
         format: "number" as const,
         color: "#f59e0b",
+        onShiftClick: (event: React.MouseEvent) => {
+          shiftClickManager.addPoint({
+            label: "Customer Reach",
+            value: `${(metrics.customerCount || 0).toLocaleString()} customers | AOV: $${(metrics.avgTransactionValue || 0).toFixed(0)}`,
+            source: "Regional Sales - KPIs"
+          }, event.nativeEvent);
+        }
       },
       {
         id: "growth-opportunities",
@@ -127,9 +157,16 @@ export function RegionalKPIs({ metrics, topRegion, opportunityCount = 0, loading
         subtitle: "High potential regions",
         format: "number" as const,
         color: "#ec4899",
+        onShiftClick: (event: React.MouseEvent) => {
+          shiftClickManager.addPoint({
+            label: "Growth Opportunities",
+            value: `${opportunityCount} high potential regions`,
+            source: "Regional Sales - KPIs"
+          }, event.nativeEvent);
+        }
       },
     ];
-  }, [metrics, topRegion, opportunityCount]);
+  }, [metrics, topRegion, opportunityCount, shiftClickManager]);
 
   if (loading) {
     return (

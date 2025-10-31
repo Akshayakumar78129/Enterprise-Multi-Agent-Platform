@@ -10,8 +10,8 @@ from typing import Dict, List, Optional, Any
 from functools import lru_cache
 import google.generativeai as genai
 
-# Configure Gemini API
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# Configure Gemini API - Check both env var names
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
@@ -41,7 +41,7 @@ def generate_ai_insights(
         ... )
     """
     if not GEMINI_API_KEY:
-        print("[AI Insights] GEMINI_API_KEY not set, skipping AI insights generation")
+        print("[AI Insights] GEMINI_API_KEY or GOOGLE_API_KEY not set, skipping AI insights generation")
         return []
 
     try:

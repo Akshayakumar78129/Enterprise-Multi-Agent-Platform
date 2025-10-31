@@ -62,6 +62,15 @@ class PerformanceProcessingService:
             deviation_patterns = self._calculate_deviation_patterns(ml_results)
             factor_correlations = self._calculate_factor_correlations(all_kpis_df)
 
+            # Generate AI insights
+            ai_insights = await self._get_cached_ai_insights(
+                filters,
+                kpi_metrics,
+                ml_results,
+                deviation_patterns,
+                factor_correlations
+            )
+
             # 5. Format the complete response
             return {
                 # Core ML outputs (used by both agent and frontend)
@@ -74,6 +83,7 @@ class PerformanceProcessingService:
                 "businessFunctionComparison": business_comparison,
                 "deviationPatterns": deviation_patterns,
                 "factorCorrelations": factor_correlations,
+                "insights": [{'type': 'ai', 'message': insight} for insight in ai_insights],
 
                 # Metadata
                 "metadata": {
@@ -513,9 +523,78 @@ class PerformanceProcessingService:
             "businessFunctionComparison": {"radar": {}},
             "deviationPatterns": {"patterns": [], "calendar": {}, "monthlyStats": {}},
             "factorCorrelations": {"series": {}},
+            "insights": [],
             "metadata": {
                 "totalDataPoints": 0,
                 "businessFunctions": [],
                 "lastUpdated": datetime.now().isoformat()
             }
         }
+
+    @cache_dashboard_endpoint(dashboard_type="performance_deviation_ai_insights", ttl=1800)
+    async def _get_cached_ai_insights(
+        self,
+        filters: Dict,
+        kpi_metrics: Dict,
+        ml_results: Dict,
+        deviation_patterns: Dict,
+        factor_correlations: Dict
+    ) -> List[str]:
+        """Get cached AI insights with 30-minute TTL"""
+        try:
+            ai_insights = await asyncio.to_thread(
+                self._generate_ai_insights,
+                kpi_metrics,
+                ml_results,
+                deviation_patterns,
+                factor_correlations,
+                filters
+            )
+            return ai_insights
+        except Exception as e:
+            print(f"[PerformanceProcessingService] Error generating AI insights: {e}")
+            return []
+
+    def _generate_ai_insights(
+        self,
+        kpi_metrics: Dict,
+        ml_results: Dict,
+        deviation_patterns: Dict,
+        factor_correlations: Dict,
+        filters: Optional[Dict] = None
+    ) -> List[str]:
+        """Generate AI-powered insights using Gemini"""
+        try:
+            from lib.ai_insights_generator import generate_ai_insights
+
+            # Prepare KPIs dict
+            kpis_dict = {
+                'avgDeviation': kpi_metrics.get('averageDeviation', {}).get('value', 0),
+                'anomalyCount': kpi_metrics.get('anomalyCount', {}).get('value', 0),
+                'topFactor': kpi_metrics.get('topFactor', {}).get('value', 'N/A'),
+                'explanationPower': kpi_metrics.get('explanationPower', {}).get('value', 0)
+            }
+
+            # Prepare data summary
+            data_summary = {
+                'featureImportance': ml_results.get('feature_importance', {}),
+                'varianceDecomposition': ml_results.get('variance_decomposition', {}),
+                'deviationPatterns': deviation_patterns.get('patterns', []),
+                'significantPatterns': [p for p in deviation_patterns.get('patterns', []) if p.get('is_significant')],
+                'topCorrelations': factor_correlations.get('series', {})
+            }
+
+            # Call AI insights generator
+            ai_insights = generate_ai_insights(
+                dashboard_type='performance_deviation',
+                kpis=kpis_dict,
+                data_summary=data_summary,
+                filters=filters
+            )
+
+            print(f"[PerformanceProcessingService] Generated {len(ai_insights)} AI insights")
+            return ai_insights
+
+        except Exception as e:
+            print(f"[PerformanceProcessingService] Error in _generate_ai_insights: {e}")
+            return []

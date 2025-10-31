@@ -65,8 +65,10 @@ export default function RegionalSalesPage() {
       ) : (
         <div className="space-y-6">
           {/* Key Metrics */}
-          <div id="key-metrics" />
-          <DashboardSection title="Key Metrics">
+          <DashboardSection>
+            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+              Key Metrics
+            </h3>
             <RegionalKPIs
               metrics={kpiMetrics}
               topRegion={topRegions && topRegions.length > 0 ? topRegions[0] : null}
@@ -78,31 +80,42 @@ export default function RegionalSalesPage() {
             />
           </DashboardSection>
 
-          {/* Regional Sales Trends */}
-          <div id="regional-sales-trends" />
-          <DashboardSection title="Regional Sales Trends">
-            <RegionalSalesTrends
-              data={timeSeries}
-              loading={loading}
-            />
-          </DashboardSection>
+          {/* Charts and Tables */}
+          <DashboardSection>
+            <div className="space-y-6">
+              {/* Regional Sales Trends */}
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+                  Regional Sales Trends
+                </h3>
+                <RegionalSalesTrends
+                  data={timeSeries}
+                  loading={loading}
+                />
+              </div>
 
-          {/* Regional Performance Comparison */}
-          <div id="regional-performance" />
-          <DashboardSection title="Regional Performance Comparison">
-            <RegionalPerformanceTable
-              data={regionalPerformance}
-              loading={loading}
-            />
-          </DashboardSection>
+              {/* Regional Performance Comparison */}
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+                  Regional Performance Comparison
+                </h3>
+                <RegionalPerformanceTable
+                  data={regionalPerformance}
+                  loading={loading}
+                />
+              </div>
 
-          {/* Growth Opportunities */}
-          <div id="growth-opportunities" />
-          <DashboardSection title="Growth Opportunities">
-            <GrowthOpportunitiesTable
-              data={opportunities}
-              loading={loading}
-            />
+              {/* Growth Opportunities */}
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+                  Growth Opportunities
+                </h3>
+                <GrowthOpportunitiesTable
+                  data={opportunities}
+                  loading={loading}
+                />
+              </div>
+            </div>
           </DashboardSection>
         </div>
       )}

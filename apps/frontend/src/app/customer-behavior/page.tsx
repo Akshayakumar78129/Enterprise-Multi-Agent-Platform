@@ -62,39 +62,54 @@ export default function CustomerBehaviorPage() {
       }}
     >
       <div className="space-y-6">
-      {/* KPI Section */}
-      <BehaviorKPIs kpiMetrics={kpiMetrics} loading={false} />
+        {/* Key Metrics */}
+        <DashboardSection>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+            Key Metrics
+          </h3>
+          <BehaviorKPIs kpiMetrics={kpiMetrics} loading={false} />
+        </DashboardSection>
 
-      {/* Purchase Patterns Section */}
-      <PurchasePatterns
-        data={purchasePatterns}
-        loading={false}
-      />
+        {/* Purchase Patterns Section */}
+        <DashboardSection>
+          <PurchasePatterns
+            data={purchasePatterns}
+            loading={false}
+          />
+        </DashboardSection>
 
-      {/* Product Preferences Section */}
-      <ProductPreferences
-        data={productPreferences}
-        loading={false}
-      />
+        {/* Product Preferences Section */}
+        <DashboardSection>
+          <ProductPreferences
+            data={productPreferences}
+            loading={false}
+          />
+        </DashboardSection>
 
-      {/* Channel Usage Section */}
-      <ChannelUsage
-        data={channelUsage}
-        loading={false}
-      />
+        {/* Channel Usage Section */}
+        <DashboardSection>
+          <ChannelUsage
+            data={channelUsage}
+            loading={false}
+          />
+        </DashboardSection>
 
-      {/* Engagement Metrics Section */}
-      <EngagementMetrics
-        data={engagementMetrics}
-        loading={false}
-      />
+        {/* Engagement Metrics Section */}
+        <DashboardSection>
+          <EngagementMetrics
+            data={engagementMetrics}
+            loading={false}
+          />
+        </DashboardSection>
 
-      {/* Customer Details Table */}
-      <CustomerTable
-        data={topCustomers}
-        loading={false}
-        onCustomerSelect={handleCustomerSelect}
-      />
+        {/* Customer Details Table */}
+        <DashboardSection>
+          <CustomerTable
+            data={topCustomers}
+            loading={false}
+            onCustomerSelect={handleCustomerSelect}
+          />
+        </DashboardSection>
       </div>
     </PageLoader>
   );

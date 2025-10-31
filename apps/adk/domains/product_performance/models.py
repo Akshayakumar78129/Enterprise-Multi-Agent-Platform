@@ -16,11 +16,11 @@ class ProductPerformanceSchema:
     """Schema definition for product performance analysis"""
 
     def __init__(self):
-        # Table names - some have quotes as part of the table name, use backticks to escape
+        # Table names
         self.TABLES = {
-            'transaction': 'dbo_F_Sales_Transaction',  # No quotes in name
-            'item': '`"dbo_D_Item"`',  # Name includes quotes, use backticks
-            'customer': 'dbo_D_Customer'  # No quotes in name
+            'transaction': 'dbo_F_Sales_Transaction',
+            'item': 'dbo_D_Item',
+            'customer': 'dbo_D_Customer'
         }
 
         # Table aliases

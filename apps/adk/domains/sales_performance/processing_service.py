@@ -2,6 +2,7 @@
 
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
+import asyncio
 from domains.common.simple_cache import cache_dashboard_endpoint
 from .data_service import SalesPerformanceDataService
 from .models import (
@@ -36,6 +37,21 @@ class SalesPerformanceProcessingService:
         category_performance = await self._get_category_performance(normalized_filters)
         top_customers = await self._get_top_customers(normalized_filters)
 
+        # Generate rule-based insights
+        rule_based_insights = self._generate_insights(kpis.dict(), product_performance, region_performance)
+
+        # Get AI insights async (non-blocking with graceful fallback)
+        ai_insights = await self._get_cached_ai_insights(
+            normalized_filters,
+            kpis.dict(),
+            product_performance,
+            region_performance,
+            category_performance
+        )
+
+        # Combine insights (rule-based + AI)
+        all_insights = rule_based_insights + [{'type': 'ai', 'message': insight} for insight in ai_insights]
+
         # Create response with KPI metrics structure
         return {
             'kpiMetrics': {
@@ -53,7 +69,7 @@ class SalesPerformanceProcessingService:
                 'categoryPerformance': [c.dict() for c in category_performance],
                 'topCustomers': [cust.dict() for cust in top_customers]
             },
-            'insights': self._generate_insights(kpis.dict(), product_performance, region_performance),
+            'insights': all_insights,
             'metadata': {
                 'filtersApplied': normalized_filters,
                 'timestamp': datetime.now().isoformat()
@@ -322,3 +338,112 @@ class SalesPerformanceProcessingService:
 
         data['insights'] = insights
         return data
+
+    @cache_dashboard_endpoint(dashboard_type="sales_performance_ai_insights", ttl=1800)
+    async def _get_cached_ai_insights(
+        self,
+        filters: Dict[str, Any],
+        kpis: Dict,
+        product_performance: List,
+        region_performance: List,
+        category_performance: List
+    ) -> List[str]:
+        """Get AI insights from cache or generate async (non-blocking)
+
+        Cached separately with longer TTL (30 min) since AI insights are less filter-dependent.
+        Uses asyncio.to_thread() to run blocking AI generation in thread pool.
+
+        Returns:
+            List of AI-generated insight strings (empty on error)
+        """
+        try:
+            # Run AI generation in thread pool to avoid blocking event loop
+            ai_insights = await asyncio.to_thread(
+                self._generate_ai_insights,
+                kpis,
+                product_performance,
+                region_performance,
+                category_performance,
+                filters
+            )
+            return ai_insights
+        except Exception as e:
+            print(f"[SalesPerformanceProcessingService] Error in _get_cached_ai_insights: {e}")
+            return []  # Graceful fallback
+
+    def _generate_ai_insights(
+        self,
+        kpis: Dict,
+        product_performance: List,
+        region_performance: List,
+        category_performance: List,
+        filters: Dict
+    ) -> List[str]:
+        """Generate AI-powered strategic insights using Gemini
+
+        This complements rule-based insights with creative, strategic analysis.
+
+        Args:
+            kpis: KPI metrics from dashboard
+            product_performance: Product performance data
+            region_performance: Regional performance data
+            category_performance: Category performance data
+            filters: Applied filters for context
+
+        Returns:
+            List of AI-generated insight strings (empty list on error)
+        """
+        try:
+            # Import at method level for error isolation
+            from lib.ai_insights_generator import generate_ai_insights
+
+            # Calculate additional metrics for AI context
+            total_products = len(product_performance)
+            total_regions = len(region_performance)
+            total_categories = len(category_performance)
+            
+            top_product = product_performance[0] if product_performance else None
+            top_region = region_performance[0] if region_performance else None
+            top_category = category_performance[0] if category_performance else None
+
+            # Build KPIs dict for AI
+            kpis_dict = {
+                'total_revenue': kpis.get('totalRevenue', 0),
+                'total_units': kpis.get('totalUnits', 0),
+                'avg_order_value': kpis.get('avgOrderValue', 0),
+                'unique_customers': kpis.get('uniqueCustomers', 0),
+                'revenue_growth': kpis.get('revenueGrowth', 0),
+                'conversion_rate': kpis.get('conversionRate', 0),
+            }
+
+            # Build data summary for AI
+            data_summary = {
+                'total_products': total_products,
+                'total_regions': total_regions,
+                'total_categories': total_categories,
+                'top_product': top_product.productName if top_product else "N/A",
+                'top_product_revenue': top_product.revenue if top_product else 0,
+                'top_product_market_share': top_product.marketShare if top_product else 0,
+                'top_region': top_region.regionName if top_region else "N/A",
+                'top_region_revenue': top_region.revenue if top_region else 0,
+                'top_category': category_performance[0].categoryName if category_performance else "N/A",
+                'top_category_revenue': category_performance[0].revenue if category_performance else 0,
+            }
+
+            # Generate AI insights using correct function signature
+            ai_insights = generate_ai_insights(
+                dashboard_type='sales_performance',
+                kpis=kpis_dict,
+                data_summary=data_summary,
+                filters=filters
+            )
+
+            print(f"[SalesPerformanceProcessingService] Generated {len(ai_insights)} AI insights")
+            return ai_insights
+
+        except ImportError:
+            print("[SalesPerformanceProcessingService] AI insights module not available, skipping AI insights")
+            return []
+        except Exception as e:
+            print(f"[SalesPerformanceProcessingService] Error generating AI insights: {e}")
+            return []

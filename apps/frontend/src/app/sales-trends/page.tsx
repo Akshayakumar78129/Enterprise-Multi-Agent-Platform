@@ -15,7 +15,6 @@ import {
 } from './components';
 import { useSalesTrendsContext } from './context';
 import { useSalesTrendsData } from './hooks/useSalesTrendsData';
-import { AlertCircle } from 'lucide-react';
 
 export default function SalesTrendsPage() {
   const {
@@ -32,7 +31,6 @@ export default function SalesTrendsPage() {
     seasonality,
     growthRates,
     topPerformers,
-    insights,
     hasNoData,
   } = useSalesTrendsData(filters);
 
@@ -66,79 +64,74 @@ export default function SalesTrendsPage() {
           {/* Filters */}
           <SalesTrendsFilters />
 
-          {/* Insights Banner */}
-          {insights && insights.length > 0 && (
-            <div className="glass-card p-4 space-y-2">
-              <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3">
-                <AlertCircle className="h-4 w-4" />
-                Key Insights
-              </div>
-              <div className="space-y-2">
-                {insights.slice(0, 3).map((insight, idx) => (
-                  <div
-                    key={idx}
-                    className={`p-3 rounded-lg text-sm ${
-                      insight.type === 'positive'
-                        ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                        : insight.type === 'warning'
-                        ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-                        : insight.type === 'critical'
-                        ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                        : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                    }`}
-                  >
-                    <div dangerouslySetInnerHTML={{ __html: insight.message }} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Key Metrics */}
-          <div id="key-metrics" />
-          <DashboardSection title="Key Metrics">
+          <DashboardSection>
+            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+              Key Metrics
+            </h3>
             <SalesTrendsKPIs metrics={kpiMetrics} loading={loading} />
           </DashboardSection>
 
-          {/* Time Series Analysis - Full Width */}
-          <div id="time-series-analysis" />
-          <DashboardSection title="Time Series Analysis">
-            <TimeSeriesExplorer
-              data={timeSeries}
-              loading={loading}
-              selectedMetric={filters.metric}
-            />
-          </DashboardSection>
+          {/* Charts Grid */}
+          <DashboardSection>
+            <div className="space-y-6">
+              {/* Time Series Analysis */}
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+                  Sales Trend Over Time
+                </h3>
+                <div className="glass-card p-6">
+                  <TimeSeriesExplorer
+                    data={timeSeries}
+                    loading={loading}
+                    selectedMetric={filters.metric}
+                  />
+                </div>
+              </div>
 
-          {/* Seasonal Pattern - Full Width */}
-          <DashboardSection title="Seasonal Patterns">
-            <SeasonalPatternAnalyzer
-              data={seasonality}
-              loading={loading}
-            />
-          </DashboardSection>
+              {/* Seasonal Pattern */}
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+                  Seasonal Patterns
+                </h3>
+                <div className="glass-card p-6">
+                  <SeasonalPatternAnalyzer
+                    data={seasonality}
+                    loading={loading}
+                  />
+                </div>
+              </div>
 
-          {/* Growth Rate Analysis - Full Width */}
-          <DashboardSection title="Growth Rate Analysis">
-            <GrowthRateVisualizer
-              data={growthRates}
-              loading={loading}
-            />
-          </DashboardSection>
+              {/* Growth Rate Analysis */}
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+                  Growth Rate Analysis
+                </h3>
+                <div className="glass-card p-6">
+                  <GrowthRateVisualizer
+                    data={growthRates}
+                    loading={loading}
+                  />
+                </div>
+              </div>
 
-          {/* Top Performers - Full Width */}
-          {filters.dimension && (
-            <>
-              <div id="top-performers" />
-              <DashboardSection title={`Top Performers by ${filters.dimension?.charAt(0).toUpperCase()}${filters.dimension?.slice(1)}`}>
-                <TopPerformers
-                  data={topPerformers}
-                  loading={loading}
-                  dimension={filters.dimension}
-                />
-              </DashboardSection>
-            </>
-          )}
+              {/* Top Performers */}
+              {filters.dimension && (
+                <div>
+                  <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+                    Top Performers by {filters.dimension?.charAt(0).toUpperCase()}{filters.dimension?.slice(1)}
+                  </h3>
+                  <div className="glass-card p-6">
+                    <TopPerformers
+                      data={topPerformers}
+                      loading={loading}
+                      dimension={filters.dimension}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </DashboardSection>
         </div>
       )}
     </PageLoader>

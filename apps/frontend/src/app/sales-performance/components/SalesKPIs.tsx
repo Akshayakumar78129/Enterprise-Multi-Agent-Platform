@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { KPIRow, MetricsRow, Skeleton } from 'components/index';
+import { KPIRow, MetricsRow, Skeleton, getShiftClickManager } from 'components/index';
 
 interface SalesKPIsProps {
   metrics: {
@@ -16,6 +16,8 @@ interface SalesKPIsProps {
 }
 
 export function SalesKPIs({ metrics, loading }: SalesKPIsProps) {
+  const shiftClickManager = getShiftClickManager();
+
   const kpis = useMemo(() => {
     if (!metrics) {
       return [
@@ -71,6 +73,13 @@ export function SalesKPIs({ metrics, loading }: SalesKPIsProps) {
         value: Number((metrics.totalRevenue || 0).toFixed(2)),
         format: "currency" as const,
         color: "#38bdf8",
+        onShiftClick: (event: React.MouseEvent) => {
+          shiftClickManager.addPoint({
+            label: "Total Revenue",
+            value: `$${(metrics.totalRevenue || 0).toLocaleString()}`,
+            source: "Sales Performance - KPIs"
+          }, event.nativeEvent);
+        }
       },
       {
         id: "units-sold",
@@ -78,6 +87,13 @@ export function SalesKPIs({ metrics, loading }: SalesKPIsProps) {
         value: Number((metrics.totalUnits || 0).toFixed(2)),
         format: "number" as const,
         color: "#38bdf8",
+        onShiftClick: (event: React.MouseEvent) => {
+          shiftClickManager.addPoint({
+            label: "Units Sold",
+            value: `${(metrics.totalUnits || 0).toLocaleString()} units`,
+            source: "Sales Performance - KPIs"
+          }, event.nativeEvent);
+        }
       },
       {
         id: "avg-order-value",
@@ -85,6 +101,13 @@ export function SalesKPIs({ metrics, loading }: SalesKPIsProps) {
         value: Number((metrics.avgOrderValue || 0).toFixed(2)),
         format: "currency" as const,
         color: "#38bdf8",
+        onShiftClick: (event: React.MouseEvent) => {
+          shiftClickManager.addPoint({
+            label: "Avg Order Value",
+            value: `$${(metrics.avgOrderValue || 0).toFixed(2)}`,
+            source: "Sales Performance - KPIs"
+          }, event.nativeEvent);
+        }
       },
       {
         id: "unique-customers",
@@ -92,6 +115,13 @@ export function SalesKPIs({ metrics, loading }: SalesKPIsProps) {
         value: Number((metrics.uniqueCustomers || 0).toFixed(2)),
         format: "number" as const,
         color: "#38bdf8",
+        onShiftClick: (event: React.MouseEvent) => {
+          shiftClickManager.addPoint({
+            label: "Unique Customers",
+            value: `${(metrics.uniqueCustomers || 0).toLocaleString()} customers`,
+            source: "Sales Performance - KPIs"
+          }, event.nativeEvent);
+        }
       },
       {
         id: "revenue-growth",
@@ -99,6 +129,13 @@ export function SalesKPIs({ metrics, loading }: SalesKPIsProps) {
         value: Number((metrics.revenueGrowth || 0).toFixed(2)),
         format: "percentage" as const,
         color: "#38bdf8",
+        onShiftClick: (event: React.MouseEvent) => {
+          shiftClickManager.addPoint({
+            label: "Revenue Growth",
+            value: `${(metrics.revenueGrowth || 0).toFixed(1)}%`,
+            source: "Sales Performance - KPIs"
+          }, event.nativeEvent);
+        }
       },
       {
         id: "conversion-rate",
@@ -106,9 +143,16 @@ export function SalesKPIs({ metrics, loading }: SalesKPIsProps) {
         value: Number((metrics.conversionRate || 0).toFixed(2)),
         format: "percentage" as const,
         color: "#38bdf8",
+        onShiftClick: (event: React.MouseEvent) => {
+          shiftClickManager.addPoint({
+            label: "Conversion Rate",
+            value: `${(metrics.conversionRate || 0).toFixed(1)}%`,
+            source: "Sales Performance - KPIs"
+          }, event.nativeEvent);
+        }
       },
     ];
-  }, [metrics]);
+  }, [metrics, shiftClickManager]);
 
   if (loading) {
     return (

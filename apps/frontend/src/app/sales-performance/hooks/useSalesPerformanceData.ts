@@ -1,76 +1,53 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { salesPerformanceService, SalesPerformanceData } from '../services/salesPerformanceService';
 import { SalesPerformanceFilters } from '../context';
 
 export function useSalesPerformanceData(filters: SalesPerformanceFilters, dimension?: string, metric?: string) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<SalesPerformanceData | null>(null);
+  // Prepare filter params for query key
+  const filterParams = useMemo(() => ({
+    ...filters,
+    dimension,
+    metric
+  }), [filters, dimension, metric]);
 
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  // Use React Query for caching and automatic refetching
+  const {
+    data: rawData,
+    isLoading,
+    error: queryError,
+    isFetching,
+    refetch
+  } = useQuery({
+    queryKey: ['sales-performance', filterParams],
+    queryFn: () => salesPerformanceService.getDashboardData(filterParams),
+    staleTime: 3 * 60 * 1000, // 3 minutes (matches backend cache)
+    retry: 1,
+  });
 
-      const filtersWithDimensionMetric = {
-        ...filters,
-        dimension,
-        metric
-      };
+  const loading = isLoading || isFetching;
+  const error = queryError ? (queryError instanceof Error ? queryError.message : "Failed to fetch data") : null;
 
-      const result = await salesPerformanceService.getDashboardData(filtersWithDimensionMetric);
-      setData(result);
-    } catch (err: any) {
-      console.error('Error fetching sales performance data:', err);
-      setError(err.message || 'Failed to load sales performance data');
-      // Set empty data on error
-      setData({
-        kpiMetrics: {
-          totalRevenue: 0,
-          totalUnits: 0,
-          avgOrderValue: 0,
-          uniqueCustomers: 0,
-          revenueGrowth: 0,
-          conversionRate: 0
-        },
-        mainData: {
-          productPerformance: [],
-          regionPerformance: [],
-          salesTrends: [],
-          categoryPerformance: [],
-          topCustomers: []
-        },
-        insights: [],
-        metadata: {
-          filtersApplied: filters,
-          timestamp: new Date().toISOString()
-        }
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, dimension, metric]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  // Normalize data
+  const data = useMemo(() => rawData, [rawData]);
 
   // Derived data for easier component access
-  const kpiMetrics = data?.kpiMetrics || {
+  const kpiMetrics = useMemo(() => data?.kpiMetrics || {
     totalRevenue: 0,
     totalUnits: 0,
     avgOrderValue: 0,
     uniqueCustomers: 0,
     revenueGrowth: 0,
     conversionRate: 0
-  };
+  }, [data]);
 
-  const salesOverview = data?.mainData || null;
-  const topProducts = data?.mainData?.productPerformance || [];
-  const teamPerformance = data?.mainData?.regionPerformance || [];
-  const revenueTrends = data?.mainData?.salesTrends || [];
-  const salesTargets = data?.mainData?.categoryPerformance || [];
-  const topCustomers = data?.mainData?.topCustomers || [];
+  const salesOverview = useMemo(() => data?.mainData || null, [data]);
+  const topProducts = useMemo(() => data?.mainData?.productPerformance || [], [data]);
+  const teamPerformance = useMemo(() => data?.mainData?.regionPerformance || [], [data]);
+  const revenueTrends = useMemo(() => data?.mainData?.salesTrends || [], [data]);
+  const salesTargets = useMemo(() => data?.mainData?.categoryPerformance || [], [data]);
+  const topCustomers = useMemo(() => data?.mainData?.topCustomers || [], [data]);
+  const insights = useMemo(() => data?.insights || [], [data]);
 
   const hasNoData = !loading && (!data ||
     (topProducts.length === 0 &&
@@ -88,8 +65,8 @@ export function useSalesPerformanceData(filters: SalesPerformanceFilters, dimens
     revenueTrends,
     salesTargets,
     topCustomers,
-    insights: data?.insights || [],
+    insights,
     hasNoData,
-    refetch: fetchData
+    refetch
   };
 }

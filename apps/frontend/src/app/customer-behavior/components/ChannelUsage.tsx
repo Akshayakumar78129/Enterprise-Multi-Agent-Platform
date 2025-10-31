@@ -195,7 +195,6 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Channel Distribution</h3>
-          <p className="text-sm text-muted-foreground mb-4">Customer channel preferences</p>
           <Card
             onShiftClick={(event) => {
               shiftClickManager.addPoint({
@@ -220,7 +219,6 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
 
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Channel Performance</h3>
-          <p className="text-sm text-muted-foreground mb-4">Conversion and value metrics by channel</p>
           <Card
             onShiftClick={(event) => {
               shiftClickManager.addPoint({
@@ -278,7 +276,6 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
 
       <div>
         <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Cross-Channel Journey</h3>
-        <p className="text-sm text-muted-foreground mb-4">Customer journey across channels</p>
         <Card
           onShiftClick={(event) => {
             shiftClickManager.addPoint({

@@ -63,6 +63,21 @@ class CustomerBehaviorProcessingService:
             # Calculate comprehensive KPIs
             kpis = self._calculate_comprehensive_kpis(behavior_df, transaction_df)
 
+            # Generate rule-based insights
+            rule_based_insights = self._generate_behavior_insights(behavior_df, transaction_df)
+
+            # Get AI insights async (non-blocking with graceful fallback)
+            ai_insights = await self._get_cached_ai_insights(
+                filters,
+                kpis,
+                purchase_patterns,
+                product_preferences,
+                engagement_metrics
+            )
+
+            # Combine insights (rule-based + AI)
+            all_insights = rule_based_insights + [{'type': 'ai', 'message': insight} for insight in ai_insights]
+
             return {
                 'kpiMetrics': kpis,
                 'mainData': {
@@ -74,7 +89,7 @@ class CustomerBehaviorProcessingService:
                     'topCustomers': top_customers,
                     'behavioralMetrics': behavioral_metrics
                 },
-                'insights': self._generate_behavior_insights(behavior_df, transaction_df),
+                'insights': all_insights,
                 'metadata': {
                     'analysisDate': datetime.now().isoformat(),
                     'totalRecords': len(behavior_df),
@@ -369,6 +384,20 @@ class CustomerBehaviorProcessingService:
             total_customers = len(behavior_df)
             repeat_purchase_rate = (repeat_customers / total_customers * 100) if total_customers > 0 else 0
 
+        # Get top category
+        top_category = 'N/A'
+        if 'preferred_category' in behavior_df.columns:
+            mode_result = behavior_df['preferred_category'].mode()
+            if not mode_result.empty:
+                top_category = str(mode_result.iloc[0])
+        
+        # Get primary channel
+        primary_channel = 'N/A'
+        if 'preferred_channel' in behavior_df.columns:
+            mode_result = behavior_df['preferred_channel'].mode()
+            if not mode_result.empty:
+                primary_channel = str(mode_result.iloc[0])
+
         return {
             'totalCustomers': len(behavior_df),
             'avgOrderValue': float(behavior_df['avg_order_value'].mean()) if 'avg_order_value' in behavior_df.columns else 0,
@@ -378,7 +407,9 @@ class CustomerBehaviorProcessingService:
             'avgDaysBetweenPurchases': avg_frequency,
             'repeatPurchaseRate': round(repeat_purchase_rate, 2),
             'avgEngagementScore': float(behavior_df['engagement_score'].mean()) if 'engagement_score' in behavior_df.columns else 0,
-            'churnRiskPercentage': self._calculate_churn_risk_percentage(behavior_df)
+            'churnRiskPercentage': self._calculate_churn_risk_percentage(behavior_df),
+            'topCategory': top_category,
+            'primaryChannel': primary_channel
         }
 
     def _analyze_purchase_patterns_comprehensive(self, behavior_df: pd.DataFrame, transaction_df: pd.DataFrame) -> Dict:
@@ -1010,3 +1041,72 @@ class CustomerBehaviorProcessingService:
             'insights': [],
             'metadata': {}
         }
+
+    @cache_dashboard_endpoint(dashboard_type="customer_behavior_ai_insights", ttl=1800)
+    async def _get_cached_ai_insights(
+        self,
+        filters: Dict,
+        kpis: Dict,
+        purchase_patterns: List,
+        product_preferences: List,
+        engagement_metrics: Dict
+    ) -> List[str]:
+        """Get cached AI insights with 30-minute TTL"""
+        try:
+            ai_insights = await asyncio.to_thread(
+                self._generate_ai_insights,
+                kpis,
+                purchase_patterns,
+                product_preferences,
+                engagement_metrics,
+                filters
+            )
+            return ai_insights
+        except Exception as e:
+            logger.error(f"[CustomerBehaviorProcessingService] Error generating AI insights: {e}")
+            return []
+
+    def _generate_ai_insights(
+        self,
+        kpis: Dict,
+        purchase_patterns: List,
+        product_preferences: List,
+        engagement_metrics: Dict,
+        filters: Optional[Dict] = None
+    ) -> List[str]:
+        """Generate AI-powered insights using Gemini"""
+        try:
+            from lib.ai_insights_generator import generate_ai_insights
+
+            # Prepare KPIs dict
+            kpis_dict = {
+                'avgPurchaseFrequency': kpis.get('avgFrequency', 0),
+                'avgOrderValue': kpis.get('avgOrderValue', 0),
+                'avgEngagementScore': kpis.get('avgEngagement', 0),
+                'topCategory': kpis.get('topCategory', 'N/A'),
+                'primaryChannel': kpis.get('primaryChannel', 'N/A')
+            }
+
+            # Prepare data summary
+            data_summary = {
+                'totalPatterns': len(purchase_patterns),
+                'totalPreferences': len(product_preferences),
+                'engagementMetrics': engagement_metrics,
+                'topPurchasePattern': purchase_patterns[0] if purchase_patterns else {},
+                'topProductPreference': product_preferences[0] if product_preferences else {}
+            }
+
+            # Call AI insights generator
+            ai_insights = generate_ai_insights(
+                dashboard_type='customer_behavior',
+                kpis=kpis_dict,
+                data_summary=data_summary,
+                filters=filters
+            )
+
+            logger.info(f"[CustomerBehaviorProcessingService] Generated {len(ai_insights)} AI insights")
+            return ai_insights
+
+        except Exception as e:
+            logger.error(f"[CustomerBehaviorProcessingService] Error in _generate_ai_insights: {e}")
+            return []

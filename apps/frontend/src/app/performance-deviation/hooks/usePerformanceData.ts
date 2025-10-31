@@ -1,85 +1,49 @@
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 interface PerformanceFilters {
   dateFrom: string;
   dateTo: string;
-  businessFunctions: string[];
-  significanceThreshold: number;
-  customerIds?: string[];
-  productCategories?: string[];
+  businessFunctions?: string[];
+  kpis?: string[];
 }
 
-interface PerformanceData {
-  featureImportance: any;
-  varianceDecomposition: any;
-  performanceExplorer: any;
-  kpis: any;
-  businessFunctionComparison: any;
-  deviationPatterns: any;
-  factorCorrelations: any;
-  metadata: any;
+async function fetchPerformanceData(filters: PerformanceFilters) {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+  
+  const response = await fetch(`${apiUrl}/performance-deviation/summary`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filters)
+  });
+
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+
+  return response.json();
 }
 
 export function usePerformanceData(filters: PerformanceFilters) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<PerformanceData | null>(null);
+  const { data: rawData, isLoading, error: queryError } = useQuery({
+    queryKey: ['performance-deviation', filters],
+    queryFn: () => fetchPerformanceData(filters),
+    staleTime: 3 * 60 * 1000, // 3 minutes
+    refetchOnWindowFocus: false,
+  });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        // Always include all business functions if empty
-        const businessFunctions = filters.businessFunctions && filters.businessFunctions.length > 0
-          ? filters.businessFunctions
-          : ['sales', 'customer', 'finance'];
-
-        const response = await fetch('http://localhost:8000/api/performance/summary', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            dateFrom: filters.dateFrom,
-            dateTo: filters.dateTo,
-            businessFunctions: businessFunctions,
-            significanceThreshold: filters.significanceThreshold,
-            customerIds: filters.customerIds || [],
-            productCategories: filters.productCategories || []
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        console.log('API Response:', result);
-        console.log('KPIs from API:', result.kpis);
-        setData(result);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-        console.error('Error fetching performance data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [filters]);
+  const data = useMemo(() => rawData || {}, [rawData]);
 
   return {
-    loading,
-    error,
-    data,
-    featureImportance: data?.featureImportance || { aggregated: [], byKPI: {} },
-    varianceDecomposition: data?.varianceDecomposition || { components: [] },
-    performanceExplorer: data?.performanceExplorer || {},
-    kpis: data?.kpis || {},
-    businessComparison: data?.businessFunctionComparison || {},
-    deviationPatterns: data?.deviationPatterns || { patterns: [], calendar: {}, monthlyStats: {} },
-    factorCorrelations: data?.factorCorrelations || { series: {} }
+    loading: isLoading,
+    error: queryError?.message || null,
+    data: data.data || [],
+    featureImportance: data.featureImportance || { aggregated: [], byKPI: {} },
+    varianceDecomposition: data.varianceDecomposition || { components: [] },
+    performanceExplorer: data.performanceExplorer || {},
+    kpis: data.kpis || {},
+    businessComparison: data.businessFunctionComparison || { radar: {} },
+    deviationPatterns: data.deviationPatterns || { patterns: [], calendar: {}, monthlyStats: {} },
+    factorCorrelations: data.factorCorrelations || { series: {} }
   };
 }

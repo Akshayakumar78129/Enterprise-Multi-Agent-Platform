@@ -64,75 +64,98 @@ export default function SalesPerformancePage() {
       ) : (
         <div className="space-y-6">
           {/* Key Metrics */}
-          <div id="key-metrics" />
-          <DashboardSection title="Key Metrics">
+          <DashboardSection>
+            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+              Key Metrics
+            </h3>
             <SalesKPIs metrics={kpiMetrics} loading={loading} />
           </DashboardSection>
 
-          {/* Main Performance Overview - Full Width */}
-          <div id="performance-overview" />
-          <DashboardSection title="Performance Overview">
-            <PerformanceOverview
-              data={topProducts}
-              loading={loading}
-              selectedDimension={selectedDimension}
-              selectedMetric={selectedMetric}
-            />
-          </DashboardSection>
+          {/* Charts Section - Components have built-in cards */}
+          <DashboardSection>
+            <div className="space-y-6">
+              {/* Performance Overview - Full Width */}
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+                  Performance Overview
+                </h3>
+                <PerformanceOverview
+                  data={topProducts}
+                  loading={loading}
+                  selectedDimension={selectedDimension}
+                  selectedMetric={selectedMetric}
+                />
+              </div>
 
-          {/* Visualizations Grid */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
-            {/* Time Series Explorer */}
-            <DashboardSection title="Time Series Analysis">
-              <TimeSeriesExplorer
-                data={revenueTrends}
-                loading={loading}
-                selectedMetric={selectedMetric}
-              />
-            </DashboardSection>
+              {/* Visualizations Grid */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
+                {/* Time Series Explorer */}
+                <div>
+                  <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+                    Time Series Analysis
+                  </h3>
+                  <TimeSeriesExplorer
+                    data={revenueTrends}
+                    loading={loading}
+                    selectedMetric={selectedMetric}
+                  />
+                </div>
 
-            {/* Performance Distribution */}
-            <DashboardSection title="Performance Distribution">
-              <PerformanceDistributionAnalyzer
-                data={topProducts}
-                loading={loading}
-                selectedDimension={selectedDimension}
-                selectedMetric={selectedMetric}
-              />
-            </DashboardSection>
-          </div>
+                {/* Performance Distribution */}
+                <div>
+                  <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+                    Performance Distribution
+                  </h3>
+                  <PerformanceDistributionAnalyzer
+                    data={topProducts}
+                    loading={loading}
+                    selectedDimension={selectedDimension}
+                    selectedMetric={selectedMetric}
+                  />
+                </div>
+              </div>
 
-          {/* Advanced Analytics */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
-            {/* Correlation Matrix */}
-            <DashboardSection title="Performance Correlation">
-              <PerformanceCorrelationMatrix
-                data={topProducts}
-                loading={loading}
-                selectedDimension={selectedDimension}
-              />
-            </DashboardSection>
+              {/* Advanced Analytics */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
+                {/* Correlation Matrix */}
+                <div>
+                  <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+                    Performance Correlation
+                  </h3>
+                  <PerformanceCorrelationMatrix
+                    data={topProducts}
+                    loading={loading}
+                    selectedDimension={selectedDimension}
+                  />
+                </div>
 
-            {/* Performance Drivers */}
-            <DashboardSection title="Performance Drivers">
-              <PerformanceDriverAnalysis
-                data={topProducts}
-                loading={loading}
-                selectedDimension={selectedDimension}
-                selectedMetric={selectedMetric}
-              />
-            </DashboardSection>
-          </div>
+                {/* Performance Drivers */}
+                <div>
+                  <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+                    Performance Drivers
+                  </h3>
+                  <PerformanceDriverAnalysis
+                    data={topProducts}
+                    loading={loading}
+                    selectedDimension={selectedDimension}
+                    selectedMetric={selectedMetric}
+                  />
+                </div>
+              </div>
 
-          {/* Comparative Performance Grid - Full Width - MOVED TO LAST */}
-          <div id="comparative-performance" />
-          <DashboardSection title="Comparative Performance">
-            <ComparativePerformanceGrid
-              data={topProducts}
-              loading={loading}
-              selectedDimension={selectedDimension}
-              selectedMetric={selectedMetric}
-            />
+              {/* Comparative Performance Grid - Full Width */}
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+                  Comparative Performance
+                </h3>
+                <ComparativePerformanceGrid
+                  data={topProducts}
+                  loading={loading}
+                  selectedDimension={selectedDimension}
+                  selectedMetric={selectedMetric}
+                />
+              </div>
+            </div>
           </DashboardSection>
         </div>
       )}

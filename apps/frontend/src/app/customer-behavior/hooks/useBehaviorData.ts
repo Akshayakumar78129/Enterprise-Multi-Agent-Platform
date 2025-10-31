@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useMemo } from "react";
+import { useQuery } from '@tanstack/react-query';
 
 function getDashboardClient(dashboardType: string) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -7,7 +8,7 @@ function getDashboardClient(dashboardType: string) {
   const endpoint = dashboardType === 'behavior' ? 'customer-behavior' : dashboardType;
 
   return {
-    fetchSummary: async (params: any, options?: RequestInit) => {
+    fetchSummary: async (params: any) => {
       try {
         const response = await fetch(
           `${apiUrl}/${endpoint}/summary`,
@@ -16,12 +17,10 @@ function getDashboardClient(dashboardType: string) {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify(params || {}),
-            ...options
+            body: JSON.stringify(params || {})
           }
         );
         if (!response.ok) {
-          // Return mock data if API fails
           console.warn(`Customer behavior API failed (${response.status}), using empty data`);
           return {
             purchasePatterns: { data: [] },
@@ -35,7 +34,6 @@ function getDashboardClient(dashboardType: string) {
         return response.json();
       } catch (error) {
         console.warn(`Customer behavior API error:`, error);
-        // Return empty data structure to prevent crashes
         return {
           purchasePatterns: { data: [] },
           productPreferences: { data: [] },
@@ -55,216 +53,132 @@ interface BehaviorFilters {
     endDate: string;
   };
   segmentId: string | null;
-  segmentIds?: string[];  // Support multiple segments
+  segmentIds?: string[];
   behaviorTypes: string[];
   minTransactions: number;
   customerIds: string[];
   loyaltyStatus: string[];
 }
 
-export function useBehaviorData(filters: BehaviorFilters) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
-  const lastGoodDataRef = useRef<any>(null);
-  const [purchasePatterns, setPurchasePatterns] = useState<any>(null);
-  const [productPreferences, setProductPreferences] = useState<any>(null);
-  const [channelUsage, setChannelUsage] = useState<any>(null);
-  const [engagementMetrics, setEngagementMetrics] = useState<any>(null);
-  const [customerSegments, setCustomerSegments] = useState<any[]>([]);
-  const [topCustomers, setTopCustomers] = useState<any[]>([]);
-  const [hasNoData, setHasNoData] = useState(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
+function normalizeSummary(summary: any) {
+  const s = summary || {};
+  const mainData = s.mainData || s;
 
-  const client = useMemo(() => getDashboardClient("customer-behavior"), []);
-
-  function normalizeSummary(summary: any) {
-    const s = summary || {};
-
-    // Check if data is nested in mainData (new API structure)
-    const mainData = s.mainData || s;
-
-    // Normalize channel usage to ensure channel_distribution is available
-    const channelUsage = mainData.channelUsage || mainData.channel_usage || {};
-    if (channelUsage.channelDistribution && !channelUsage.channel_distribution) {
-      channelUsage.channel_distribution = channelUsage.channelDistribution;
-    }
-
-    // Normalize engagement metrics
-    const engagementMetrics = mainData.engagementMetrics || mainData.engagement_metrics || {};
-
-    // Normalize product preferences
-    const productPreferences = mainData.productPreferences || mainData.product_preferences || {};
-    if (!productPreferences.topCategories && productPreferences.top_categories) {
-      productPreferences.topCategories = productPreferences.top_categories;
-    }
-
-    // Normalize behavioral metrics
-    const behavioralMetrics = mainData.behavioralMetrics || mainData.behavioral_metrics || {};
-
-    // Extract from behavioralMetrics if not at top level
-    const finalProductPreferences = productPreferences && Object.keys(productPreferences).length > 0
-      ? productPreferences
-      : behavioralMetrics.product_preferences || {};
-
-    const finalChannelUsage = channelUsage && Object.keys(channelUsage).length > 0
-      ? channelUsage
-      : behavioralMetrics.channel_usage || {};
-
-    return {
-      purchasePatterns: mainData.purchasePatterns || mainData.purchase_patterns || {},
-      productPreferences: finalProductPreferences,
-      channelUsage: finalChannelUsage,
-      engagementMetrics: engagementMetrics || {},
-      customerSegments: mainData.customerSegments || mainData.customer_segments || [],
-      topCustomers: mainData.topCustomers || mainData.top_customers || [],
-      behaviorTrends: mainData.behaviorTrends || mainData.behavior_trends || [],
-      rfmAnalysis: mainData.rfmAnalysis || mainData.rfm_analysis || {},
-      clvAnalysis: mainData.clvAnalysis || mainData.clv_analysis || {},
-    };
+  const channelUsage = mainData.channelUsage || mainData.channel_usage || {};
+  if (channelUsage.channelDistribution && !channelUsage.channel_distribution) {
+    channelUsage.channel_distribution = channelUsage.channelDistribution;
   }
 
-  const emptyData = useMemo(() => ({
-    purchasePatterns: {},
-    productPreferences: {},
-    channelUsage: {},
-    engagementMetrics: {},
-    customerSegments: [],
-    topCustomers: [],
-    behaviorTrends: [],
-    rfmAnalysis: {},
-    clvAnalysis: {},
-  }), []);
+  const engagementMetrics = mainData.engagementMetrics || mainData.engagement_metrics || {};
+  const productPreferences = mainData.productPreferences || mainData.product_preferences || {};
+  if (!productPreferences.topCategories && productPreferences.top_categories) {
+    productPreferences.topCategories = productPreferences.top_categories;
+  }
 
-  useEffect(() => {
-    let isMounted = true;
+  const behavioralMetrics = mainData.behavioralMetrics || mainData.behavioral_metrics || {};
 
-    // Abort previous request if exists
-    if (abortControllerRef.current) abortControllerRef.current.abort('Filter changed');
+  const finalProductPreferences = productPreferences && Object.keys(productPreferences).length > 0
+    ? productPreferences
+    : behavioralMetrics.product_preferences || {};
 
-    // Create new AbortController for this request
-    const ac = new AbortController();
-    abortControllerRef.current = ac;
+  const finalChannelUsage = channelUsage && Object.keys(channelUsage).length > 0
+    ? channelUsage
+    : behavioralMetrics.channel_usage || {};
 
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  return {
+    purchasePatterns: mainData.purchasePatterns || mainData.purchase_patterns || {},
+    productPreferences: finalProductPreferences,
+    channelUsage: finalChannelUsage,
+    engagementMetrics: engagementMetrics || {},
+    customerSegments: mainData.customerSegments || mainData.customer_segments || [],
+    topCustomers: mainData.topCustomers || mainData.top_customers || [],
+    behaviorTrends: mainData.behaviorTrends || mainData.behavior_trends || [],
+    rfmAnalysis: mainData.rfmAnalysis || mainData.rfm_analysis || {},
+    clvAnalysis: mainData.clvAnalysis || mainData.clv_analysis || {},
+    insights: s.insights || [],
+    kpiMetrics: s.kpiMetrics || {}
+  };
+}
 
-        // Map frontend dateRange to backend dateFrom/dateTo
-        const filterParams: Record<string, any> = {
-          dateFrom: filters.dateRange.startDate,
-          dateTo: filters.dateRange.endDate,
-          segment_id: filters.segmentId ? parseInt(filters.segmentId) : null,
-          segment_ids: filters.segmentIds && filters.segmentIds.length > 0 ? filters.segmentIds : undefined,
-          behavior_types: filters.behaviorTypes.length > 0 ? filters.behaviorTypes : ["purchase_patterns", "product_preferences", "channel_usage", "engagement_metrics"],
-          min_transactions: filters.minTransactions || 2,
-          customer_ids: filters.customerIds.length > 0 ? filters.customerIds : undefined,
-          loyalty_status: filters.loyaltyStatus.length > 0 ? filters.loyaltyStatus : undefined,
-        };
+const emptyData = {
+  purchasePatterns: {},
+  productPreferences: {},
+  channelUsage: {},
+  engagementMetrics: {},
+  customerSegments: [],
+  topCustomers: [],
+  behaviorTrends: [],
+  rfmAnalysis: {},
+  clvAnalysis: {},
+  insights: [],
+  kpiMetrics: {}
+};
 
-        console.log('[useBehaviorData] Fetching with params:', filterParams);
-        const summaryResponse = await client.fetchSummary(filterParams, { signal: ac.signal } as any);
-        console.log('[useBehaviorData] Response received:', summaryResponse);
+export function useBehaviorData(filters: BehaviorFilters) {
+  const client = useMemo(() => getDashboardClient("customer-behavior"), []);
 
-        const effective = summaryResponse ? normalizeSummary(summaryResponse) : emptyData;
+  // Map frontend filters to backend format
+  const filterParams = useMemo(() => ({
+    dateFrom: filters.dateRange.startDate,
+    dateTo: filters.dateRange.endDate,
+    segment_id: filters.segmentId ? parseInt(filters.segmentId) : null,
+    segment_ids: filters.segmentIds && filters.segmentIds.length > 0 ? filters.segmentIds : undefined,
+    behavior_types: filters.behaviorTypes.length > 0 ? filters.behaviorTypes : ["purchase_patterns", "product_preferences", "channel_usage", "engagement_metrics"],
+    min_transactions: filters.minTransactions || 2,
+    customer_ids: filters.customerIds.length > 0 ? filters.customerIds : undefined,
+    loyalty_status: filters.loyaltyStatus.length > 0 ? filters.loyaltyStatus : undefined,
+  }), [filters]);
 
-        const isEmpty = !effective.topCustomers || effective.topCustomers.length === 0;
-        setHasNoData(isEmpty);
+  // Use React Query
+  const { data: rawData, isLoading, error: queryError } = useQuery({
+    queryKey: ['customer-behavior', filterParams],
+    queryFn: () => client.fetchSummary(filterParams),
+    staleTime: 3 * 60 * 1000, // 3 minutes
+    refetchOnWindowFocus: false,
+  });
 
-        setData(effective);
-        lastGoodDataRef.current = effective;
+  // Normalize and process data
+  const data = useMemo(() => {
+    if (!rawData) return emptyData;
+    return normalizeSummary(rawData);
+  }, [rawData]);
 
-        // Process purchase patterns
-        console.log('[useBehaviorData] purchasePatterns:', effective.purchasePatterns);
-        setPurchasePatterns(effective.purchasePatterns);
+  const hasNoData = useMemo(() => {
+    return !data.topCustomers || data.topCustomers.length === 0;
+  }, [data]);
 
-        // Process product preferences
-        setProductPreferences(effective.productPreferences);
+  // Process top customers
+  const topCustomers = useMemo(() => {
+    const customers = data.topCustomers || [];
+    return customers.length > 0 ? customers.map((c: any) => ({
+      ...c,
+      id: c.customerId || c.customer_id,
+      name: c.customerName || c.customer_name || `Customer ${c.customerId || c.customer_id}`,
+      segment: c.customerType || c.customer_type || c.segment || 'Unknown',
+      avgOrderValue: c.avgOrderValue || 0,
+      totalSpend: c.totalSpend || 0,
+      transactionCount: c.transactionCount || 0,
+      engagementScore: c.engagementScore || c.engagement_score || 0,
+      riskLevel: c.engagementScore && c.engagementScore < 0.3 ? 'High' :
+                 c.engagementScore && c.engagementScore < 0.6 ? 'Medium' : 'Low',
+    })) : [];
+  }, [data]);
 
-        // Process channel usage
-        setChannelUsage(effective.channelUsage);
-
-        // Process engagement metrics
-        setEngagementMetrics(effective.engagementMetrics);
-
-        // Process customer segments
-        setCustomerSegments(effective.customerSegments);
-
-        // Process top customers - preserve original field names
-        const customers = effective.topCustomers || [];
-        setTopCustomers(customers.length > 0 ? customers.map((c: any) => ({
-          ...c,
-          id: c.customerId || c.customer_id,
-          name: c.customerName || c.customer_name || `Customer ${c.customerId || c.customer_id}`,
-          segment: c.customerType || c.customer_type || c.segment || 'Unknown',
-          avgOrderValue: c.avgOrderValue || 0,
-          totalSpend: c.totalSpend || 0,
-          transactionCount: c.transactionCount || 0,
-          engagementScore: c.engagementScore || c.engagement_score || 0,
-          riskLevel: c.engagementScore && c.engagementScore < 0.3 ? 'High' :
-                     c.engagementScore && c.engagementScore < 0.6 ? 'Medium' : 'Low',
-        })) : []);
-
-      } catch (err: any) {
-        // Check if it's an abort error
-        const errString = String(err);
-        const isAbortError =
-          err?.name === "AbortError" ||
-          err?.code === 20 ||
-          err?.message === "Filter changed" ||
-          err?.message === "Cleanup" ||
-          err === "Cleanup" ||
-          errString === "Cleanup" ||
-          errString.includes("Cleanup") ||
-          err?.message?.includes("abort") ||
-          err?.message?.includes("cancelled");
-
-        if (isAbortError) {
-          console.log("[useBehaviorData] Request cancelled (expected behavior)");
-          return;
-        }
-
-        // Only log real errors
-        if (!isAbortError && !errString.includes("Cleanup")) {
-          console.error("Error fetching behavior data:", err);
-        }
-
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : "Failed to fetch data");
-          if (lastGoodDataRef.current) {
-            const stable = lastGoodDataRef.current;
-            setData(stable);
-            setHasNoData(!stable.topCustomers || stable.topCustomers.length === 0);
-          } else {
-            setData(emptyData);
-            setPurchasePatterns(null);
-            setProductPreferences(null);
-            setChannelUsage(null);
-            setEngagementMetrics(null);
-            setCustomerSegments([]);
-            setTopCustomers([]);
-            setHasNoData(true);
-          }
-        }
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    fetchData();
-
-    return () => {
-      isMounted = false;
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort('Cleanup');
-      }
-      abortControllerRef.current = null;
-    };
-  }, [filters, client, emptyData]);
-
-  // Calculate KPI metrics
+  // Use KPI metrics from backend or calculate fallback
   const kpiMetrics = useMemo(() => {
+    // If backend provides kpiMetrics, use them directly
+    if (data.kpiMetrics && Object.keys(data.kpiMetrics).length > 0) {
+      const backendKpis = data.kpiMetrics;
+      return {
+        avgFrequency: backendKpis.avgDaysBetweenPurchases || backendKpis.avgFrequency || 0,
+        avgOrderValue: backendKpis.avgOrderValue || 0,
+        topCategory: backendKpis.topCategory || 'N/A',
+        primaryChannel: backendKpis.primaryChannel || 'N/A',
+        avgEngagement: backendKpis.avgEngagementScore || backendKpis.avgEngagement || 0,
+      };
+    }
+
+    // Fallback: calculate from data if backend didn't provide
     if (!data || hasNoData) {
       return {
         avgFrequency: 0,
@@ -275,10 +189,8 @@ export function useBehaviorData(filters: BehaviorFilters) {
       };
     }
 
-    // Use correct field names based on API response
-    const avgFrequency = purchasePatterns?.avgDaysBetweenPurchases || 0;
+    const avgFrequency = data.purchasePatterns?.avgDaysBetweenPurchases || 0;
 
-    // Calculate average order value from top customers
     let avgOrderValue = 0;
     if (topCustomers && topCustomers.length > 0) {
       const totalAvgOrderValue = topCustomers.reduce((sum, c) =>
@@ -286,46 +198,38 @@ export function useBehaviorData(filters: BehaviorFilters) {
       avgOrderValue = totalAvgOrderValue / topCustomers.length;
     }
 
-    // Get top category from product preferences
-    const topCategory = productPreferences?.topCategories?.[0]?.category ||
-                       productPreferences?.topCategories?.[0]?.name || 'N/A';
+    const topCategory = data.productPreferences?.topCategories?.[0]?.category ||
+                       data.productPreferences?.topCategories?.[0]?.name || 'N/A';
 
-    // Get primary channel from channel usage distribution
-    const channelDist = channelUsage?.channelDistribution || {};
+    const channelDist = data.channelUsage?.channelDistribution || {};
     const primaryChannel = Object.entries(channelDist)
       .sort(([,a], [,b]) => (b as number) - (a as number))[0]?.[0] || 'N/A';
 
-    const avgEngagement = engagementMetrics?.avgEngagementScore || 0;
+    const avgEngagement = data.engagementMetrics?.avg_engagement_score || 
+                         data.engagementMetrics?.avgEngagementScore || 0;
 
     return {
-      avgFrequency: avgFrequency.toFixed(1),
-      avgOrderValue: avgOrderValue.toFixed(2),
+      avgFrequency: typeof avgFrequency === 'number' ? avgFrequency.toFixed(1) : avgFrequency,
+      avgOrderValue: typeof avgOrderValue === 'number' ? avgOrderValue.toFixed(2) : avgOrderValue,
       topCategory,
       primaryChannel,
-      avgEngagement: avgEngagement.toFixed(2),
+      avgEngagement: typeof avgEngagement === 'number' ? avgEngagement.toFixed(2) : avgEngagement,
     };
-  }, [data, purchasePatterns, productPreferences, channelUsage, engagementMetrics, topCustomers, hasNoData]);
-
-  // Extract insights from data
-  const insights = useMemo(() => {
-    if (!data || hasNoData) return [];
-    // Check if insights exist in the response
-    return data.insights || [];
-  }, [data, hasNoData]);
+  }, [data, topCustomers, hasNoData]);
 
   return {
-    loading,
-    error,
+    loading: isLoading,
+    error: queryError?.message || null,
     data,
-    purchasePatterns,
-    productPreferences,
-    channelUsage,
-    engagementMetrics,
-    customerSegments,
+    purchasePatterns: data.purchasePatterns,
+    productPreferences: data.productPreferences,
+    channelUsage: data.channelUsage,
+    engagementMetrics: data.engagementMetrics,
+    customerSegments: data.customerSegments,
     topCustomers,
     hasNoData,
     kpiMetrics,
-    insights,
+    insights: data.insights || [],
     client
   };
 }

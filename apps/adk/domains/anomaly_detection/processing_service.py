@@ -73,13 +73,32 @@ class AnomalyProcessingService:
                 self.get_time_series_anomalies(filters)
             )
 
-            # Generate insights
-            insights = self._generate_insights(
+            # Generate rule-based insights
+            rule_based_insights = self._generate_insights(
                 customer_anomalies,
                 segment_distribution,
                 severity_distribution,
                 feature_importance
             )
+
+            # Calculate KPIs for AI insights
+            kpis = self._calculate_kpis(
+                customer_anomalies,
+                severity_distribution,
+                time_series_anomalies
+            )
+
+            # Get AI insights async (non-blocking with graceful fallback)
+            ai_insights = await self._get_cached_ai_insights(
+                filters,
+                kpis,
+                customer_anomalies,
+                segment_distribution,
+                severity_distribution
+            )
+
+            # Combine insights (rule-based + AI)
+            all_insights = rule_based_insights + [{'type': 'ai', 'message': insight} for insight in ai_insights]
 
             # Return in structured format
             return {
@@ -89,7 +108,8 @@ class AnomalyProcessingService:
                 "severityDistribution": severity_distribution or [],
                 "featureImportance": feature_importance or [],
                 "timeSeriesAnomalies": time_series_anomalies or [],
-                "insights": insights
+                "insights": all_insights,
+                "kpiMetrics": kpis
             }
         except Exception as e:
             print(f"[AnomalyProcessingService] Error in getDashboardSummary: {e}")
@@ -406,6 +426,87 @@ class AnomalyProcessingService:
             )
 
         return insights
+
+    def _calculate_kpis(
+        self,
+        customer_anomalies: List[Dict],
+        severity_distribution: List[Dict],
+        time_series_anomalies: List[Dict]
+    ) -> Dict:
+        """Calculate KPIs for anomaly detection"""
+        total_customers = len(customer_anomalies)
+        total_anomalies = sum(1 for c in customer_anomalies if c.get('is_anomaly', False))
+        high_severity = sum(1 for c in customer_anomalies if c.get('severity_level', 0) >= 4)
+        
+        avg_anomaly_score = np.mean([c.get('anomaly_score', 0) for c in customer_anomalies]) if customer_anomalies else 0
+        
+        return {
+            'totalCustomers': total_customers,
+            'totalAnomalies': total_anomalies,
+            'highSeverityCount': high_severity,
+            'anomalyRate': (total_anomalies / total_customers * 100) if total_customers > 0 else 0,
+            'avgAnomalyScore': float(avg_anomaly_score),
+            'severityDistribution': len(severity_distribution)
+        }
+
+    @cache_dashboard_endpoint(dashboard_type="anomaly_detection_ai_insights", ttl=1800)
+    async def _get_cached_ai_insights(
+        self,
+        filters: Dict,
+        kpis: Dict,
+        customer_anomalies: List[Dict],
+        segment_distribution: List[Dict],
+        severity_distribution: List[Dict]
+    ) -> List[str]:
+        """Get cached AI insights with 30-minute TTL"""
+        try:
+            ai_insights = await asyncio.to_thread(
+                self._generate_ai_insights,
+                kpis,
+                customer_anomalies,
+                segment_distribution,
+                severity_distribution,
+                filters
+            )
+            return ai_insights
+        except Exception as e:
+            print(f"[AnomalyProcessingService] Error generating AI insights: {e}")
+            return []
+
+    def _generate_ai_insights(
+        self,
+        kpis: Dict,
+        customer_anomalies: List[Dict],
+        segment_distribution: List[Dict],
+        severity_distribution: List[Dict],
+        filters: Optional[Dict] = None
+    ) -> List[str]:
+        """Generate AI-powered insights using Gemini"""
+        try:
+            from lib.ai_insights_generator import generate_ai_insights
+
+            # Prepare data summary
+            data_summary = {
+                'totalAnomalies': len(customer_anomalies),
+                'topSegment': segment_distribution[0] if segment_distribution else {},
+                'severityBreakdown': severity_distribution,
+                'highSeverityCustomers': [c for c in customer_anomalies if c.get('severity_level', 0) >= 4][:5]
+            }
+
+            # Call AI insights generator
+            ai_insights = generate_ai_insights(
+                dashboard_type='anomaly_detection',
+                kpis=kpis,
+                data_summary=data_summary,
+                filters=filters
+            )
+
+            print(f"[AnomalyProcessingService] Generated {len(ai_insights)} AI insights")
+            return ai_insights
+
+        except Exception as e:
+            print(f"[AnomalyProcessingService] Error in _generate_ai_insights: {e}")
+            return []
 
     async def get_customers(self, filters: Dict) -> List[Dict]:
         """Get raw customer data"""

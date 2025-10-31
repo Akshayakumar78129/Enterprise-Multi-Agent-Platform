@@ -10,8 +10,8 @@ class  SalesPerformanceSchema(BaseSchema):
     TABLES = {
         'transaction': 'dbo_F_Sales_Transaction',
         'customer': 'dbo_D_Customer',
-        'item': '`"dbo_D_Item"`',  # Table name includes quotes, escape with backticks
-        'region': '`"dbo_D_Sales_Organization"`',  # Table name includes quotes
+        'item': 'dbo_D_Item',
+        'region': 'dbo_D_Sales_Organization',
     }
 
     # Table aliases
@@ -81,7 +81,7 @@ class  SalesPerformanceSchema(BaseSchema):
 
     # Item schema
     ITEM = TableSchema(
-        table_name='`"dbo_D_Item"`',
+        table_name='dbo_D_Item',
         alias='i',
         columns={
             'key': '[Item Key]',
@@ -105,7 +105,7 @@ class  SalesPerformanceSchema(BaseSchema):
 
     # Region/Sales Organization schema
     REGION = TableSchema(
-        table_name='`"dbo_D_Sales_Organization"`',
+        table_name='dbo_D_Sales_Organization',
         alias='r',
         columns={
             'key': '[Sales Organization Key]',

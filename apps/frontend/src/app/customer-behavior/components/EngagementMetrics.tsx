@@ -114,7 +114,6 @@ export function EngagementMetrics({ data, loading }: EngagementMetricsProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Engagement Channels</h3>
-          <p className="text-sm text-muted-foreground mb-4">Multi-channel engagement levels</p>
           <Card
             onShiftClick={(event) => {
               shiftClickManager.addPoint({
@@ -169,7 +168,6 @@ export function EngagementMetrics({ data, loading }: EngagementMetricsProps) {
 
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Engagement Quadrants</h3>
-          <p className="text-sm text-muted-foreground mb-4">Customer engagement distribution</p>
           <Card
             onShiftClick={(event) => {
               shiftClickManager.addPoint({
@@ -229,7 +227,6 @@ export function EngagementMetrics({ data, loading }: EngagementMetricsProps) {
       {trendData && (
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Engagement Trend</h3>
-          <p className="text-sm text-muted-foreground mb-4">Engagement metrics over time</p>
           <Card
             onShiftClick={(event) => {
               shiftClickManager.addPoint({

@@ -57,33 +57,45 @@ export default function ProductPerformancePage() {
     >
       <div className="space-y-6">
         {/* KPIs Section */}
-        <DashboardSection title="Key Metrics">
+        {/* Key Metrics */}
+        <DashboardSection>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+            Key Metrics
+          </h3>
           <ProductKPIs metrics={kpiMetrics} loading={loading} />
         </DashboardSection>
 
-        {/* Category & Price Band - 2 Column */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <CategoryPerformanceChart data={categoryPerformance} loading={loading} />
-          <PriceBandDistribution data={priceBandDistribution} loading={loading} />
-        </div>
+        {/* Charts and Analysis */}
+        <DashboardSection>
+          <div className="space-y-6">
+            {/* Category & Price Band - 2 Column */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <CategoryPerformanceChart data={categoryPerformance} loading={loading} />
+              <PriceBandDistribution data={priceBandDistribution} loading={loading} />
+            </div>
 
-        {/* Margin Analysis & Overview - 2 Column */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <MarginAnalysisScatter data={marginAnalysis} loading={loading} />
-          <ProductPerformanceOverview
-            data={{
-              revenue: topProducts?.slice(0, 10).map(p => p.revenue) || [],
-              units: topProducts?.slice(0, 10).map(p => p.unitsSold) || [],
-              margin: topProducts?.slice(0, 10).map(p => p.marginPercent || 0) || [],
-              labels: topProducts?.slice(0, 10).map(p => p.productName) || []
-            }}
-            loading={loading}
-          />
-        </div>
+            {/* Margin Analysis & Overview - 2 Column */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <MarginAnalysisScatter data={marginAnalysis} loading={loading} />
+              <ProductPerformanceOverview
+                data={{
+                  revenue: topProducts?.slice(0, 10).map(p => p.revenue) || [],
+                  units: topProducts?.slice(0, 10).map(p => p.unitsSold) || [],
+                  margin: topProducts?.slice(0, 10).map(p => p.marginPercent || 0) || [],
+                  labels: topProducts?.slice(0, 10).map(p => p.productName) || []
+                }}
+                loading={loading}
+              />
+            </div>
 
-        {/* Top Products Table - Full Width */}
-        <DashboardSection title="Top Products">
-          <TopProductsTable data={topProducts} loading={loading} />
+            {/* Top Products Table - Full Width */}
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
+                Top Products
+              </h3>
+              <TopProductsTable data={topProducts} loading={loading} />
+            </div>
+          </div>
         </DashboardSection>
       </div>
     </PageLoader>
