@@ -89,6 +89,10 @@ jobs:
           context: .
           file: ./apps/frontend/Dockerfile
           push: true
+          build-args: |
+            NEXT_PUBLIC_ADK_URL=https://ca-multiagent-adk.redstone-8a8a7ba1.eastus.azurecontainerapps.io
+            NEXT_PUBLIC_API_URL=https://ca-multiagent-adk.redstone-8a8a7ba1.eastus.azurecontainerapps.io/api
+            NEXT_PUBLIC_BACKEND_AI_URL=https://ca-multiagent-adk.redstone-8a8a7ba1.eastus.azurecontainerapps.io
           tags: |
             ${{ env.ACR_NAME }}.azurecr.io/frontend:latest
             ${{ env.ACR_NAME }}.azurecr.io/frontend:${{ steps.meta.outputs.tags }}

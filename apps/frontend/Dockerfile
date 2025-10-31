@@ -43,8 +43,16 @@ COPY package.json pnpm-lock.yaml ./
 # Copy frontend source code
 COPY apps/frontend ./apps/frontend
 
-# Set environment variable
+# Build arguments for environment variables
+ARG NEXT_PUBLIC_ADK_URL
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_BACKEND_AI_URL
+
+# Set environment variables for build
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_ADK_URL=${NEXT_PUBLIC_ADK_URL}
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_BACKEND_AI_URL=${NEXT_PUBLIC_BACKEND_AI_URL}
 
 # Build from root (pnpm workspaces need root context)
 RUN cd apps/frontend && pnpm build
