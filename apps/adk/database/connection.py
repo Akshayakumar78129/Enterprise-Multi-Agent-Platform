@@ -110,34 +110,63 @@ class DatabaseConnection:
         """Initialize database connection
 
         Args:
-            db_path: Path to SQLite database file. If None, uses default path.
-            use_pool: Whether to use connection pooling
+            db_path: Path to SQLite database file. If None, checks for PostgreSQL, then uses default SQLite path.
+            use_pool: Whether to use connection pooling (SQLite only)
         """
-        if db_path is None:
-            # Default to the existing database path
-            db_path = os.path.join(
-                os.path.dirname(os.path.dirname(__file__)),
-                "orchestration_agent",
-                "database",
-                "customers.db"
-            )
-        self.db_path = db_path
-        self.use_pool = use_pool
+        # Check for PostgreSQL configuration first
+        database_url = os.environ.get("DATABASE_URL")
+        use_postgres = os.environ.get("USE_POSTGRES", "false").lower() == "true"
 
-        # Initialize connection pool if enabled
-        if use_pool:
-            self.pool = ConnectionPool(db_path, pool_size=5)
-        else:
+        if database_url and use_postgres and POSTGRES_AVAILABLE:
+            # Use PostgreSQL
+            self.db_type = 'postgres'
+            self.database_url = database_url
+            self.db_path = None
+            self.use_pool = False  # PostgreSQL manages its own connection pooling
             self.pool = None
+            self._pg_connection = None
+            print(f"[INFO] DatabaseConnection initialized with PostgreSQL")
+        else:
+            # Use SQLite
+            self.db_type = 'sqlite'
+            self.database_url = None
+
+            if db_path is None:
+                # Default to the existing database path
+                db_path = os.path.join(
+                    os.path.dirname(os.path.dirname(__file__)),
+                    "orchestration_agent",
+                    "database",
+                    "customers.db"
+                )
+            self.db_path = db_path
+            self.use_pool = use_pool
+
+            # Initialize connection pool if enabled
+            if use_pool:
+                self.pool = ConnectionPool(db_path, pool_size=5)
+            else:
+                self.pool = None
+            print(f"[INFO] DatabaseConnection initialized with SQLite: {db_path}")
 
     @contextmanager
     def get_connection(self):
         """Context manager for database connections"""
-        if self.pool:
+        if self.db_type == 'postgres':
+            # PostgreSQL connection
+            conn = None
+            try:
+                conn = psycopg2.connect(self.database_url)
+                yield conn
+            finally:
+                if conn:
+                    conn.close()
+        elif self.pool:
+            # SQLite with connection pool
             with self.pool.get_connection() as conn:
                 yield conn
         else:
-            # Fallback to single connection
+            # SQLite single connection
             conn = sqlite3.connect(self.db_path)
             conn.row_factory = sqlite3.Row  # Enable column access by name
             try:
@@ -159,7 +188,12 @@ class DatabaseConnection:
             params = []
 
         with self.get_connection() as conn:
-            cursor = conn.cursor()
+            if self.db_type == 'postgres':
+                # Use RealDictCursor for PostgreSQL to get dict results
+                cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            else:
+                cursor = conn.cursor()
+
             try:
                 cursor.execute(sql, params)
             except Exception as e:
@@ -172,10 +206,15 @@ class DatabaseConnection:
             # Fetch all rows
             rows = cursor.fetchall()
 
-            # Convert Row objects to dictionaries
+            # Convert to dictionaries
             result_rows = []
-            for row in rows:
-                result_rows.append(dict(row))
+            if self.db_type == 'postgres':
+                # PostgreSQL with RealDictCursor already returns dicts
+                result_rows = [dict(row) for row in rows]
+            else:
+                # SQLite Row objects need conversion
+                for row in rows:
+                    result_rows.append(dict(row))
 
             return {
                 'rows': result_rows,
