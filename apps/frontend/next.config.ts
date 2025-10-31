@@ -9,7 +9,6 @@ const nextConfig = {
     // Disable type checking during production builds
     ignoreBuildErrors: true,
   },
-  output: 'standalone',
   experimental: {
     externalDir: true,
     optimizeCss: true,
