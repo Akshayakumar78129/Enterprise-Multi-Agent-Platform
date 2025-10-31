@@ -62,6 +62,14 @@ class PerformanceProcessingService:
             deviation_patterns = self._calculate_deviation_patterns(ml_results)
             factor_correlations = self._calculate_factor_correlations(all_kpis_df)
 
+            # Generate rule-based insights
+            rule_based_insights = self._generate_rule_based_insights(
+                kpi_metrics,
+                ml_results,
+                deviation_patterns,
+                factor_correlations
+            )
+
             # Generate AI insights
             ai_insights = await self._get_cached_ai_insights(
                 filters,
@@ -70,6 +78,9 @@ class PerformanceProcessingService:
                 deviation_patterns,
                 factor_correlations
             )
+
+            # Combine insights
+            all_insights = rule_based_insights + [{'type': 'ai', 'priority': 'INFO', 'message': insight} for insight in ai_insights]
 
             # 5. Format the complete response
             return {
@@ -83,7 +94,13 @@ class PerformanceProcessingService:
                 "businessFunctionComparison": business_comparison,
                 "deviationPatterns": deviation_patterns,
                 "factorCorrelations": factor_correlations,
-                "insights": [{'type': 'ai', 'message': insight} for insight in ai_insights],
+                "insights": all_insights,
+                "insights_metadata": {
+                    "rule_based_count": len(rule_based_insights),
+                    "ai_count": len(ai_insights),
+                    "total_count": len(all_insights),
+                    "insights_version": "unified_v2"
+                },
 
                 # Metadata
                 "metadata": {
@@ -598,3 +615,102 @@ class PerformanceProcessingService:
         except Exception as e:
             print(f"[PerformanceProcessingService] Error in _generate_ai_insights: {e}")
             return []
+
+    def _generate_rule_based_insights(
+        self,
+        kpi_metrics: Dict,
+        ml_results: Dict,
+        deviation_patterns: Dict,
+        factor_correlations: Dict
+    ) -> List[Dict]:
+        """Generate rule-based insights from performance data"""
+        insights = []
+
+        # Get key metrics
+        avg_deviation = kpi_metrics.get('averageDeviation', {}).get('value', 0)
+        anomaly_count = kpi_metrics.get('anomalyCount', {}).get('value', 0)
+        top_factor = kpi_metrics.get('topFactor', {}).get('value', 'Unknown')
+        explanation_power = kpi_metrics.get('explanationPower', {}).get('value', 0)
+
+        # Get significant patterns
+        significant_patterns = [p for p in deviation_patterns.get('patterns', []) if p.get('is_significant', False)]
+
+        # Insight 1: High deviation rate
+        if avg_deviation > 0.15:
+            insights.append({
+                'type': 'warning',
+                'priority': 'HIGH',
+                'message': f'Average performance deviation of {(avg_deviation * 100):.1f}% exceeds acceptable threshold (15%), indicating systematic performance issues across business functions. **Action:** Convene cross-functional leadership meeting within 48 hours to review deviation drivers. Implement daily monitoring dashboards. Conduct root cause analysis on top 3 contributing factors. **Expected outcome:** 40-50% reduction in deviation rate within 2 weeks, improved forecast accuracy from current levels to 90%+.'
+            })
+        elif avg_deviation > 0.08:
+            insights.append({
+                'type': 'info',
+                'priority': 'MODERATE',
+                'message': f'Performance deviation at {(avg_deviation * 100):.1f}% within acceptable operational range but trending above optimal (5-8%). **Action:** Review weekly deviation trends with department heads. Adjust forecasting models based on recent patterns. Implement early warning alerts for deviation spikes above 12%. **Expected outcome:** Maintain deviation within 5-8% range, prevent escalation to high-risk territory.'
+            })
+
+        # Insight 2: Anomaly count
+        if anomaly_count > 20:
+            insights.append({
+                'type': 'warning',
+                'priority': 'CRITICAL',
+                'message': f'{anomaly_count} significant performance anomalies detected, suggesting volatile operating conditions or data quality issues. **Action:** Immediate investigation of top 10 anomalies within 24 hours. Verify data pipeline integrity. Assess external market disruptions (competitor actions, supply chain, economic factors). Deploy rapid response protocols. **Expected outcome:** Identification and resolution of data quality issues, stabilization of performance metrics, 60-70% anomaly reduction within 1 week.'
+            })
+        elif anomaly_count > 10:
+            insights.append({
+                'type': 'info',
+                'priority': 'MODERATE',
+                'message': f'{anomaly_count} performance anomalies identified across KPIs. **Action:** Weekly anomaly review meeting. Categorize by root cause (internal vs external). Update forecasting models to account for new patterns. **Expected outcome:** Improved anomaly prediction, reduced surprise factor in performance reporting.'
+            })
+
+        # Insight 3: Top contributing factor
+        feature_importance = ml_results.get('feature_importance', {}).get('aggregated', [])
+        if feature_importance:
+            top_feature = feature_importance[0]
+            feature_name = top_feature.get('feature', 'Unknown')
+            feature_importance_pct = top_feature.get('avg_importance', 0) * 100
+
+            if feature_importance_pct > 50:
+                insights.append({
+                    'type': 'warning',
+                    'priority': 'HIGH',
+                    'message': f'Single factor "{feature_name}" dominates performance variance at {feature_importance_pct:.1f}% importance, creating concentrated risk exposure. **Action:** Develop contingency plans for {feature_name} disruption within 7 days. Identify 2-3 alternative levers to reduce dependency. Implement monitoring dashboard for this critical factor with hourly updates. **Expected outcome:** Risk diversification, reduced single-point-of-failure exposure, improved resilience to {feature_name} volatility.'
+                })
+            elif feature_importance_pct > 30:
+                insights.append({
+                    'type': 'info',
+                    'priority': 'MODERATE',
+                    'message': f'Primary driver "{feature_name}" accounts for {feature_importance_pct:.1f}% of performance variance. **Action:** Deep-dive analysis of {feature_name} patterns within 14 days. Optimize processes related to this factor. Develop playbook for managing {feature_name} fluctuations. **Expected outcome:** 20-25% improvement in {feature_name} control, better predictive capabilities.'
+                })
+
+        # Insight 4: Model explanation power
+        if explanation_power < 0.60:
+            insights.append({
+                'type': 'warning',
+                'priority': 'HIGH',
+                'message': f'Model explains only {(explanation_power * 100):.1f}% of performance variance, indicating significant unmeasured factors affecting outcomes. **Action:** Conduct stakeholder interviews to identify missing variables within 7 days. Expand data collection to capture external factors (market trends, seasonality, competitive actions). Enhance feature engineering. **Expected outcome:** Improved model R² to 75%+, better performance predictability, reduced unexplained variance.'
+            })
+        elif explanation_power > 0.80:
+            insights.append({
+                'type': 'info',
+                'priority': 'INFO',
+                'message': f'Strong model performance with {(explanation_power * 100):.1f}% variance explained, providing reliable performance attribution and forecasting foundation. **Action:** Maintain current monitoring protocols. Use model for scenario planning and what-if analysis. Share insights with leadership for strategic decision-making. **Expected outcome:** Continued high forecast accuracy, data-driven strategic planning.'
+            })
+
+        # Insight 5: Significant patterns detected
+        if len(significant_patterns) > 5:
+            insights.append({
+                'type': 'warning',
+                'priority': 'HIGH',
+                'message': f'{len(significant_patterns)} statistically significant deviation patterns detected, suggesting systematic rather than random performance issues. **Action:** Pattern analysis workshop with operations team within 3 days. Map patterns to business processes. Implement targeted interventions for each pattern cluster. Assign pattern owners. **Expected outcome:** Root cause identification for systematic issues, 50-60% pattern reduction through targeted fixes.'
+            })
+
+        # Fallback if no significant insights
+        if not insights:
+            insights.append({
+                'type': 'info',
+                'priority': 'INFO',
+                'message': f'Performance metrics operating within normal parameters. Average deviation at {(avg_deviation * 100):.1f}%, model explains {(explanation_power * 100):.1f}% of variance. **Action:** Continue standard monitoring protocols. Maintain current forecasting practices. Review quarterly for model retraining needs. **Expected outcome:** Sustained performance stability, continued forecast reliability.'
+            })
+
+        return insights

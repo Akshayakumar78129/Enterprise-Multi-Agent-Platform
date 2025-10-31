@@ -15,7 +15,8 @@ interface FeatureContributionPlotProps {
   onFeatureSelect?: (features: { x: string; y: string }) => void;
 }
 
-export function FeatureContributionPlot({
+// Wrap in React.memo to prevent unnecessary re-renders
+export const FeatureContributionPlot = React.memo(function FeatureContributionPlot({
   anomalies = [],
   featureContributions = [],
   loading = false,
@@ -241,12 +242,19 @@ export function FeatureContributionPlot({
               bordercolor: '#e8d4e6',
               borderwidth: 1
             },
-            hovermode: 'closest'
+            hovermode: 'closest',
+            // CRITICAL: Disable animations for better performance
+            transition: {
+              duration: 0
+            }
           }}
           config={{
             displayModeBar: false,
             displaylogo: false,
-            responsive: true
+            responsive: true,
+            // CRITICAL: Disable animations for performance
+            staticPlot: false,
+            scrollZoom: false
           }}
           style={{ width: '100%', height: '100%' }}
           useResizeHandler={true}
@@ -271,4 +279,4 @@ export function FeatureContributionPlot({
       </div>
     </Card>
   );
-}
+});

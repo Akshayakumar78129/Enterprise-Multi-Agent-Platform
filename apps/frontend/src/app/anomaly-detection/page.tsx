@@ -23,6 +23,7 @@ export default function AnomalyDetectionPage() {
   const { filters, setAnomalyCustomers } = useAnomalyContext();
   const shiftClickManager = getShiftClickManager();
   const [selectedCustomer, setSelectedCustomer] = React.useState<any>(null);
+  const prevCustomerAnomaliesRef = React.useRef<any[]>([]);
 
   const {
     loading,
@@ -39,19 +40,23 @@ export default function AnomalyDetectionPage() {
   } = useAnomalyData(filters);
 
   // Update context with customer data for BI panel
+  // CRITICAL FIX: Use ref to prevent infinite loop - only update if data actually changed
   React.useEffect(() => {
-    setAnomalyCustomers(customerAnomalies);
+    if (JSON.stringify(customerAnomalies) !== JSON.stringify(prevCustomerAnomaliesRef.current)) {
+      prevCustomerAnomaliesRef.current = customerAnomalies;
+      setAnomalyCustomers(customerAnomalies);
+    }
   }, [customerAnomalies, setAnomalyCustomers]);
 
-  // Handle customer selection
-  const handleCustomerSelect = (customer: any) => {
+  // Memoize callback functions to prevent infinite loops in child components
+  const handleCustomerSelect = React.useCallback((customer: any) => {
     setSelectedCustomer(customer);
     console.log('Selected customer:', customer);
-  };
+  }, []);
 
-  const handleFeatureSelect = (features: { x: string; y: string }) => {
+  const handleFeatureSelect = React.useCallback((features: { x: string; y: string }) => {
     console.log('Selected features:', features);
-  };
+  }, []);
 
   if (error && !loading && hasNoData) {
     return (
@@ -64,8 +69,8 @@ export default function AnomalyDetectionPage() {
     );
   }
 
-  // Prepare segment distribution data for bar chart
-  const segmentChartData = {
+  // Memoize expensive chart data computations to prevent re-calculations on every render
+  const segmentChartData = React.useMemo(() => ({
     labels: segmentDistribution.map(s => s.segment),
     datasets: [
       {
@@ -76,10 +81,10 @@ export default function AnomalyDetectionPage() {
         borderWidth: 1
       }
     ]
-  };
+  }), [segmentDistribution]);
 
-  // Prepare region distribution data for pie chart
-  const regionChartData = {
+  // Memoize region chart data
+  const regionChartData = React.useMemo(() => ({
     labels: regionDistribution.map(r => r.region),
     datasets: [
       {
@@ -94,7 +99,68 @@ export default function AnomalyDetectionPage() {
         ]
       }
     ]
-  };
+  }), [regionDistribution]);
+
+  // Memoize chart options to prevent unnecessary re-renders
+  const segmentChartOptions = React.useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      title: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(139, 92, 246, 0.95)',
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        borderColor: '#e8d4e6',
+        borderWidth: 1
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: {
+          color: 'rgba(232, 212, 230, 0.1)'
+        },
+        ticks: { color: '#8b5cf6' }
+      },
+      x: {
+        grid: { display: false },
+        ticks: { color: '#8b5cf6' }
+      }
+    }
+  }), []);
+
+  const regionChartOptions = React.useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: 'y' as const,
+    plugins: {
+      legend: { display: false },
+      title: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(139, 92, 246, 0.95)',
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        borderColor: '#e8d4e6',
+        borderWidth: 1
+      }
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+        grid: { color: 'rgba(232, 212, 230, 0.1)' },
+        ticks: { color: '#8b5cf6' }
+      },
+      y: {
+        grid: { display: false },
+        ticks: {
+          color: '#8b5cf6',
+          autoSkip: false
+        }
+      }
+    }
+  }), []);
 
   return (
     <PageLoader
@@ -147,7 +213,6 @@ export default function AnomalyDetectionPage() {
           {/* Segment Distribution */}
           <div>
             <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Segment Distribution</h3>
-            <p className="text-sm text-muted-foreground mb-4">Anomalies by customer segment</p>
             <Card
               onShiftClick={(event) => {
                 shiftClickManager.addPoint({
@@ -160,33 +225,7 @@ export default function AnomalyDetectionPage() {
             <div className="h-80 p-4">
               <Bar
                 data={segmentChartData}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                      backgroundColor: 'rgba(139, 92, 246, 0.95)',
-                      titleColor: '#fff',
-                      bodyColor: '#fff',
-                      borderColor: '#e8d4e6',
-                      borderWidth: 1
-                    }
-                  },
-                  scales: {
-                    y: {
-                      beginAtZero: true,
-                      grid: {
-                        color: 'rgba(232, 212, 230, 0.1)'
-                      },
-                      ticks: { color: '#8b5cf6' }
-                    },
-                    x: {
-                      grid: { display: false },
-                      ticks: { color: '#8b5cf6' }
-                    }
-                  }
-                }}
+                options={segmentChartOptions}
               />
             </div>
             </Card>
@@ -195,7 +234,6 @@ export default function AnomalyDetectionPage() {
           {/* Region Distribution */}
           <div>
             <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Regional Distribution</h3>
-            <p className="text-sm text-muted-foreground mb-4">Geographic anomaly distribution</p>
             <Card
               onShiftClick={(event) => {
                 shiftClickManager.addPoint({
@@ -208,35 +246,7 @@ export default function AnomalyDetectionPage() {
             <div className="h-80 p-4">
               <Bar
                 data={regionChartData}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  indexAxis: 'y',
-                  plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                      backgroundColor: 'rgba(139, 92, 246, 0.95)',
-                      titleColor: '#fff',
-                      bodyColor: '#fff',
-                      borderColor: '#e8d4e6',
-                      borderWidth: 1
-                    }
-                  },
-                  scales: {
-                    x: {
-                      beginAtZero: true,
-                      grid: { color: 'rgba(232, 212, 230, 0.1)' },
-                      ticks: { color: '#8b5cf6' }
-                    },
-                    y: {
-                      grid: { display: false },
-                      ticks: {
-                        color: '#8b5cf6',
-                        autoSkip: false
-                      }
-                    }
-                  }
-                }}
+                options={regionChartOptions}
               />
             </div>
             </Card>

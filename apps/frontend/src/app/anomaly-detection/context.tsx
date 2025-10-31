@@ -170,6 +170,7 @@ export function AnomalyProvider({ children }: { children: React.ReactNode }) {
       chatIsLoading,
       chatSessionId,
       chatUserId
+      // Note: Setter functions are intentionally excluded as they are stable
     ]
   );
 

@@ -1,16 +1,17 @@
 "use client";
 
 import React from "react";
-import { Card, LineChart, Skeleton, RiskPyramid, getShiftClickManager } from "components/index";
+import { Card, LineChart, Skeleton, RiskPyramid, getShiftClickManager, BarChart } from "components/index";
 import { useBehaviorContext } from "../context";
 import { Bar } from "react-chartjs-2";
 
 interface EngagementMetricsProps {
   data: any;
   loading: boolean;
+  purchasePatternsData?: any;
 }
 
-export function EngagementMetrics({ data, loading }: EngagementMetricsProps) {
+export function EngagementMetrics({ data, loading, purchasePatternsData }: EngagementMetricsProps) {
   const { selectionManager } = useBehaviorContext();
   const shiftClickManager = getShiftClickManager();
 
@@ -36,6 +37,20 @@ export function EngagementMetrics({ data, loading }: EngagementMetricsProps) {
 
   // Only use real engagement data
   const hasEngagementData = Object.values(engagementScores).some(v => v && v > 0);
+
+  // Get frequency distribution data from purchase patterns
+  const frequencyData = purchasePatternsData?.frequency_distribution ? {
+    labels: Object.keys(purchasePatternsData.frequency_distribution),
+    datasets: [
+      {
+        label: 'Customer Count',
+        data: Object.values(purchasePatternsData.frequency_distribution),
+        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+        borderColor: '#3b82f6',
+        borderWidth: 1
+      }
+    ]
+  } : null;
 
   const radarData = hasEngagementData ? {
     labels: ['Email', 'Web', 'Mobile', 'Social', 'Support', 'Loyalty'],
@@ -159,7 +174,13 @@ export function EngagementMetrics({ data, loading }: EngagementMetricsProps) {
             />
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                No engagement channel data available
+                <div className="text-center">
+                  <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  <p className="text-sm font-medium">Multi-channel tracking not configured</p>
+                  <p className="text-xs mt-1 text-muted-foreground">System currently tracks loyalty channel only</p>
+                </div>
               </div>
             )}
           </div>
@@ -167,56 +188,53 @@ export function EngagementMetrics({ data, loading }: EngagementMetricsProps) {
         </div>
 
         <div>
-          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Engagement Quadrants</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Purchase Frequency Distribution</h3>
           <Card
             onShiftClick={(event) => {
               shiftClickManager.addPoint({
-                label: "Engagement Quadrants",
-                value: `Customer engagement distribution`,
-                source: 'Behavior Dashboard - Engagement Quadrants'
+                label: "Purchase Frequency Distribution",
+                value: `Customer distribution by purchase frequency`,
+                source: 'Behavior Dashboard - Frequency'
               }, event.nativeEvent);
             }}>
           <div className="h-80 p-4">
-            {engagementQuadrants.length > 0 ? (
-            <div className="h-full flex flex-col gap-3">
-              {engagementQuadrants.map((quadrant, index) => {
-                const heightPercentage = 100 / engagementQuadrants.length;
-                const widthPercentage = 60 + (index * 10); // Pyramid shape
-
-                return (
-                  <div
-                    key={index}
-                    className="relative flex-1 flex items-center justify-center cursor-pointer transition-all hover:opacity-90"
-                    style={{
-                      background: quadrant.color,
-                      width: `${widthPercentage}%`,
-                      marginLeft: 'auto',
-                      marginRight: 'auto',
-                      borderRadius: '8px',
-                      minHeight: '60px'
-                    }}
-                    onClick={(event) => {
-                      selectionManager.addPoint({
-                        label: `Engagement: ${quadrant.level}`,
-                        value: `${quadrant.count} customers`,
-                        source: 'Engagement Quadrants',
-                        metadata: quadrant
-                      }, event.shiftKey);
-                    }}
-                  >
-                    <div className="text-center text-white px-4">
-                      <div className="font-semibold text-base">{quadrant.level}</div>
-                      <div className="text-sm mt-1">
-                        {quadrant.count} ({quadrant.percentage.toFixed(1)}%)
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            {frequencyData ? (
+              <BarChart
+                data={frequencyData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    title: { display: false },
+                    legend: { display: false }
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      grid: { color: 'rgba(232, 212, 230, 0.1)' },
+                      ticks: { color: '#3b82f6' }
+                    },
+                    x: {
+                      grid: { display: false },
+                      ticks: { color: '#3b82f6' },
+                      title: {
+                        display: true,
+                        text: 'Purchase Frequency Category',
+                        color: '#3b82f6'
+                      }
+                    }
+                  }
+                }}
+              />
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                No engagement quadrant data available
+                <div className="text-center">
+                  <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  <p className="text-sm font-medium">No frequency data available</p>
+                  <p className="text-xs mt-1 text-muted-foreground">Customer purchase frequency will appear here</p>
+                </div>
               </div>
             )}
           </div>

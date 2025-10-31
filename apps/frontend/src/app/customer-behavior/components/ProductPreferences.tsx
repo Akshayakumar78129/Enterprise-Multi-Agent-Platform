@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, Skeleton, getShiftClickManager } from "components/index";
+import { ChartCard, Skeleton, getShiftClickManager } from "components/index";
 import { useBehaviorContext } from "../context";
 import dynamic from 'next/dynamic';
 import { Bar } from "react-chartjs-2";
@@ -25,9 +25,9 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
 
   if (loading) {
     return (
-      <Card>
+      <ChartCard>
         <Skeleton className="h-80" />
-      </Card>
+      </ChartCard>
     );
   }
 
@@ -35,7 +35,7 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
 
   if (!data || topCategories.length === 0) {
     return (
-      <Card className="glass-card">
+      <ChartCard className="glass-card">
         <div className="h-80 flex items-center justify-center text-muted-foreground">
           <div className="text-center">
             <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -45,7 +45,7 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
             <p className="text-xs mt-1">Check filters or data source</p>
           </div>
         </div>
-      </Card>
+      </ChartCard>
     );
   }
 
@@ -111,7 +111,7 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
     textposition: 'middle center',
     marker: {
       colors: [
-        '#8b5cf6', '#d8b4fe', '#c084fc', '#a78bfa',
+        '#10b981', '#d8b4fe', '#c084fc', '#a78bfa',
         '#e8d4e6', '#f3e8ff', '#e9d5ff', '#c4b5fd'
       ],
       line: {
@@ -131,7 +131,7 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Category Distribution</h3>
-          <Card
+          <ChartCard
             onShiftClick={(event) => {
               shiftClickManager.addPoint({
                 label: "Category Distribution",
@@ -147,6 +147,7 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
                 maintainAspectRatio: false,
                 onClick: handleCategoryClick,
                 plugins: {
+                  title: { display: false },
                   legend: { display: false },
                   tooltip: {
                     callbacks: {
@@ -165,7 +166,7 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
                     beginAtZero: true,
                     grid: { color: 'rgba(232, 212, 230, 0.1)' },
                     ticks: {
-                      color: '#8b5cf6',
+                      color: '#10b981',
                       callback: function(value: any) {
                         return '$' + (value/1000).toFixed(0) + 'K';
                       }
@@ -174,7 +175,7 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
                   x: {
                     grid: { display: false },
                     ticks: {
-                      color: '#8b5cf6',
+                      color: '#10b981',
                       maxRotation: 45,
                       minRotation: 45
                     }
@@ -183,12 +184,12 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
               }}
             />
           </div>
-          </Card>
+          </ChartCard>
         </div>
 
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Category Treemap</h3>
-          <Card
+          <ChartCard
             onShiftClick={(event) => {
               shiftClickManager.addPoint({
                 label: "Category Treemap",
@@ -206,7 +207,7 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
                   plot_bgcolor: 'transparent',
                   font: {
                     family: 'Inter, system-ui, -apple-system',
-                    color: '#8b5cf6'
+                    color: '#10b981'
                   },
                   height: 320,
                   width: undefined,
@@ -230,14 +231,14 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
               </div>
             )}
           </div>
-          </Card>
+          </ChartCard>
         </div>
       </div>
 
       {productData && (
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Top Products</h3>
-          <Card
+          <ChartCard
             onShiftClick={(event) => {
               shiftClickManager.addPoint({
                 label: "Top Products",
@@ -253,23 +254,24 @@ export function ProductPreferences({ data, loading }: ProductPreferencesProps) {
                 maintainAspectRatio: false,
                 indexAxis: 'y' as const,
                 plugins: {
+                  title: { display: false },
                   legend: { display: false }
                 },
                 scales: {
                   x: {
                     beginAtZero: true,
                     grid: { color: 'rgba(232, 212, 230, 0.1)' },
-                    ticks: { color: '#8b5cf6' }
+                    ticks: { color: '#10b981' }
                   },
                   y: {
                     grid: { display: false },
-                    ticks: { color: '#8b5cf6' }
+                    ticks: { color: '#10b981' }
                   }
                 }
               }}
             />
           </div>
-          </Card>
+          </ChartCard>
         </div>
       )}
     </div>

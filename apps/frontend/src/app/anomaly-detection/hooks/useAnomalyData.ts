@@ -11,8 +11,8 @@ interface AnomalyFilters {
 
 async function fetchAnomalyData(filters: AnomalyFilters) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-  
-  const response = await fetch(`${apiUrl}/anomaly-detection/summary`, {
+
+  const response = await fetch(`${apiUrl}/anomaly/summary`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(filters)
@@ -46,8 +46,10 @@ export function useAnomalyData(filters: AnomalyFilters) {
         totalAnomalies: 0,
         highSeverityCount: 0,
         anomalyRate: 0,
-        avgAnomalyScore: 0,
-        severityDistribution: 0
+        meanAnomalyScore: 0,
+        severityDistribution: 0,
+        topAnomalousFeature: 'Unknown',
+        newAnomalies: 0
       };
     }
     return data.kpiMetrics;
@@ -63,6 +65,7 @@ export function useAnomalyData(filters: AnomalyFilters) {
     featureImportance: data.featureImportance || [],
     featureContribution: data.featureContribution || [],
     timeSeriesAnomalies: data.timeSeriesAnomalies || [],
+    insights: data.insights || [],
     kpiMetrics,
     hasNoData
   };

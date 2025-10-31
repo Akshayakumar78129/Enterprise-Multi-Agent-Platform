@@ -166,6 +166,33 @@ export function PerformanceExplorer({
     return <Skeleton className="h-96" />;
   }
 
+  // Empty state
+  if (!currentData || currentData.length === 0) {
+    return (
+      <div className="relative">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground">Performance Explorer</h3>
+          <select
+            value={selectedKPI}
+            onChange={(e) => onKPISelect(e.target.value)}
+            className="px-3 py-1.5 text-sm bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
+          >
+            {availableKPIs.map(kpi => (
+              <option key={kpi} value={kpi}>
+                {kpi.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="h-96 flex items-center justify-center text-muted-foreground border border-border rounded-lg">
+          <div className="text-center">
+            <p className="text-lg">No performance data available</p>
+            <p className="text-sm mt-2">Try adjusting your filters or selecting a different KPI</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">

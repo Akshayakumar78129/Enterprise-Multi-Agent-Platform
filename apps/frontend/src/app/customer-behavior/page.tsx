@@ -9,8 +9,6 @@ import {
 import {
   BehaviorKPIs,
   PurchasePatterns,
-  ProductPreferences,
-  ChannelUsage,
   EngagementMetrics,
   CustomerTable
 } from './components';
@@ -24,8 +22,6 @@ export default function CustomerBehaviorPage() {
     loading,
     error,
     purchasePatterns,
-    productPreferences,
-    channelUsage,
     engagementMetrics,
     topCustomers,
     hasNoData,
@@ -78,27 +74,12 @@ export default function CustomerBehaviorPage() {
           />
         </DashboardSection>
 
-        {/* Product Preferences Section */}
-        <DashboardSection>
-          <ProductPreferences
-            data={productPreferences}
-            loading={false}
-          />
-        </DashboardSection>
-
-        {/* Channel Usage Section */}
-        <DashboardSection>
-          <ChannelUsage
-            data={channelUsage}
-            loading={false}
-          />
-        </DashboardSection>
-
         {/* Engagement Metrics Section */}
         <DashboardSection>
           <EngagementMetrics
             data={engagementMetrics}
             loading={false}
+            purchasePatternsData={purchasePatterns}
           />
         </DashboardSection>
 

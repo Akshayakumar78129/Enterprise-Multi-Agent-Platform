@@ -30,6 +30,7 @@ export function SeverityDistribution({ data, loading }: SeverityDistributionProp
 
   return (
     <Card
+      className="h-[32rem]"
       onShiftClick={(event) => {
         shiftClickManager.addPoint({
           label: "Severity Distribution",
@@ -38,7 +39,7 @@ export function SeverityDistribution({ data, loading }: SeverityDistributionProp
         }, event.nativeEvent);
       }}
     >
-      <div className="space-y-3">
+      <div className="h-full flex flex-col justify-center space-y-3 p-4">
         {reversedData.map((item) => (
           <div key={item.severity_level} className="space-y-2">
             <div className="flex justify-between items-center text-sm">

@@ -38,6 +38,8 @@ interface PerformanceDeviationContextType {
   // Data state
   performanceData: any[];
   setPerformanceData: (data: any[]) => void;
+  insights: any[];
+  setInsights: (insights: any[]) => void;
 
   // Time range for display
   timeRange: string;
@@ -58,7 +60,7 @@ const PerformanceDeviationContext = createContext<PerformanceDeviationContextTyp
 
 // Provider component
 export function PerformanceDeviationProvider({ children }: { children: React.ReactNode }) {
-  // Filter state
+  // Filter state with localStorage persistence
   const [filters, setFilters] = useState<PerformanceFilters>({
     dateRange: {
       startDate: "2017-01-01",
@@ -68,6 +70,28 @@ export function PerformanceDeviationProvider({ children }: { children: React.Rea
     significanceThreshold: 0.05,
     productCategories: []
   });
+
+  // Load filters from localStorage after hydration
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('performanceDeviationFilters');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setFilters(parsed);
+      }
+    } catch (error) {
+      console.error('Failed to load filters from localStorage:', error);
+    }
+  }, []);
+
+  // Save filters to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('performanceDeviationFilters', JSON.stringify(filters));
+    } catch (error) {
+      console.error('Failed to save filters to localStorage:', error);
+    }
+  }, [filters]);
 
   // UI state
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -86,6 +110,7 @@ export function PerformanceDeviationProvider({ children }: { children: React.Rea
 
   // Data state
   const [performanceData, setPerformanceData] = useState<any[]>([]);
+  const [insights, setInsights] = useState<any[]>([]);
   const [selectedPoints, setSelectedPoints] = useState<any[]>([]);
 
   // Selection manager
@@ -131,6 +156,8 @@ export function PerformanceDeviationProvider({ children }: { children: React.Rea
     setSelectedKPI,
     performanceData,
     setPerformanceData,
+    insights,
+    setInsights,
     timeRange,
     chatMessages,
     setChatMessages,
@@ -148,6 +175,7 @@ export function PerformanceDeviationProvider({ children }: { children: React.Rea
     selectionManager,
     selectedKPI,
     performanceData,
+    insights,
     timeRange,
     chatMessages,
     chatInput,

@@ -170,6 +170,39 @@ class CustomerBehaviorProcessingService:
                 if not customers_df.empty and not transactions_df.empty:
                     # Build behavior data from customers and transactions
                     behavior_df = self._build_behavior_from_transactions(customers_df, transactions_df, loyalty_df)
+            else:
+                # CRITICAL FIX: Even if behavior_df is not empty, we need to calculate preferred fields
+                # because the SQL query doesn't include them
+                try:
+                    # Get transaction details to calculate preferred category/channel
+                    transaction_result = await self.data_service.get_transaction_details(filters)
+                    transaction_df = pd.DataFrame(transaction_result.get('rows', transaction_result.get('data', [])))
+
+                    if not transaction_df.empty:
+                        # Calculate preferred channel
+                        preferred_channels = self._calculate_preferred_channels(transaction_df)
+                        if not preferred_channels.empty:
+                            behavior_df = behavior_df.merge(preferred_channels, on='customer_id', how='left')
+                            behavior_df['preferred_channel'] = behavior_df['preferred_channel'].fillna('Unknown')
+                            logger.info(f"Calculated preferred_channel for {len(preferred_channels)} customers")
+                        else:
+                            behavior_df['preferred_channel'] = 'Unknown'
+
+                        # Calculate preferred category
+                        preferred_categories = self._calculate_preferred_categories(transaction_df)
+                        if not preferred_categories.empty:
+                            behavior_df = behavior_df.merge(preferred_categories, on='customer_id', how='left')
+                            behavior_df['preferred_category'] = behavior_df['preferred_category'].fillna('Unknown')
+                            logger.info(f"Calculated preferred_category for {len(preferred_categories)} customers")
+                        else:
+                            behavior_df['preferred_category'] = 'Unknown'
+                    else:
+                        behavior_df['preferred_channel'] = 'Unknown'
+                        behavior_df['preferred_category'] = 'Unknown'
+                except Exception as e:
+                    logger.warning(f"Could not calculate preferred fields: {e}")
+                    behavior_df['preferred_channel'] = 'Unknown'
+                    behavior_df['preferred_category'] = 'Unknown'
 
             return behavior_df
 
@@ -238,9 +271,64 @@ class CustomerBehaviorProcessingService:
                 axis=1
             )
 
-            # Add preferred channel (for now, use a default value)
-            behavior_df['preferred_channel'] = 'Online'
-            behavior_df['category_diversity'] = np.random.uniform(1, 10, len(behavior_df))
+            # Calculate preferred channel from transaction data using new method
+            if not transactions_df.empty and 'customer_id' in transactions_df.columns:
+                try:
+                    preferred_channels = self._calculate_preferred_channels(transactions_df)
+                    if not preferred_channels.empty:
+                        behavior_df = behavior_df.merge(preferred_channels, on='customer_id', how='left')
+                        behavior_df['preferred_channel'] = behavior_df['preferred_channel'].fillna('Unknown')
+                        logger.info(f"Merged preferred_channel for {len(preferred_channels)} customers")
+                    else:
+                        behavior_df['preferred_channel'] = 'Unknown'
+                except Exception as e:
+                    logger.error(f"Error merging preferred channels: {e}")
+                    behavior_df['preferred_channel'] = 'Unknown'
+            else:
+                behavior_df['preferred_channel'] = 'Unknown'
+
+            # Calculate preferred category from transaction data using new method
+            if not transactions_df.empty and 'customer_id' in transactions_df.columns:
+                try:
+                    preferred_categories = self._calculate_preferred_categories(transactions_df)
+                    if not preferred_categories.empty:
+                        behavior_df = behavior_df.merge(preferred_categories, on='customer_id', how='left')
+                        behavior_df['preferred_category'] = behavior_df['preferred_category'].fillna('Unknown')
+                        logger.info(f"Merged preferred_category for {len(preferred_categories)} customers")
+                    else:
+                        behavior_df['preferred_category'] = 'Unknown'
+                except Exception as e:
+                    logger.error(f"Error merging preferred categories: {e}")
+                    behavior_df['preferred_category'] = 'Unknown'
+            else:
+                behavior_df['preferred_category'] = 'Unknown'
+
+            # Calculate category diversity from actual transaction data if available
+            if not transactions_df.empty and 'customer_id' in transactions_df.columns:
+                try:
+                    # Count unique categories per customer
+                    if 'product_category' in transactions_df.columns:
+                        category_counts = transactions_df.groupby('customer_id')['product_category'].nunique().to_dict()
+                    elif 'item_number' in transactions_df.columns:
+                        # Use first digit of item number as category proxy
+                        transactions_df_temp = transactions_df.copy()
+                        transactions_df_temp['category_proxy'] = transactions_df_temp['item_number'].astype(str).str[0]
+                        category_counts = transactions_df_temp.groupby('customer_id')['category_proxy'].nunique().to_dict()
+                    elif 'item_id' in transactions_df.columns:
+                        # Use first digit of item_id as category proxy
+                        transactions_df_temp = transactions_df.copy()
+                        transactions_df_temp['category_proxy'] = transactions_df_temp['item_id'].astype(str).str[0]
+                        category_counts = transactions_df_temp.groupby('customer_id')['category_proxy'].nunique().to_dict()
+                    else:
+                        category_counts = {}
+
+                    behavior_df['category_diversity'] = behavior_df['customer_id'].map(category_counts).fillna(1)
+                except Exception as e:
+                    logger.debug(f"Could not calculate category diversity: {e}")
+                    behavior_df['category_diversity'] = 1
+            else:
+                behavior_df['category_diversity'] = 1
+
             behavior_df['estimated_clv'] = behavior_df['total_spend'] * 1.5
 
             return behavior_df
@@ -384,19 +472,35 @@ class CustomerBehaviorProcessingService:
             total_customers = len(behavior_df)
             repeat_purchase_rate = (repeat_customers / total_customers * 100) if total_customers > 0 else 0
 
-        # Get top category
+        # Get top category - WITH NULL FILTERING
         top_category = 'N/A'
         if 'preferred_category' in behavior_df.columns:
-            mode_result = behavior_df['preferred_category'].mode()
-            if not mode_result.empty:
-                top_category = str(mode_result.iloc[0])
-        
-        # Get primary channel
+            # Filter out null, None, and 'Unknown' values
+            valid_categories = behavior_df[
+                (behavior_df['preferred_category'].notna()) &
+                (behavior_df['preferred_category'] != 'Unknown') &
+                (behavior_df['preferred_category'] != '')
+            ]['preferred_category']
+
+            if not valid_categories.empty:
+                mode_result = valid_categories.mode()
+                if not mode_result.empty:
+                    top_category = str(mode_result.iloc[0])
+
+        # Get primary channel - WITH NULL FILTERING
         primary_channel = 'N/A'
         if 'preferred_channel' in behavior_df.columns:
-            mode_result = behavior_df['preferred_channel'].mode()
-            if not mode_result.empty:
-                primary_channel = str(mode_result.iloc[0])
+            # Filter out null, None, and 'Unknown' values
+            valid_channels = behavior_df[
+                (behavior_df['preferred_channel'].notna()) &
+                (behavior_df['preferred_channel'] != 'Unknown') &
+                (behavior_df['preferred_channel'] != '')
+            ]['preferred_channel']
+
+            if not valid_channels.empty:
+                mode_result = valid_channels.mode()
+                if not mode_result.empty:
+                    primary_channel = str(mode_result.iloc[0])
 
         return {
             'totalCustomers': len(behavior_df),
@@ -406,7 +510,7 @@ class CustomerBehaviorProcessingService:
             'categoryDiversity': float(behavior_df['category_diversity'].mean()) if 'category_diversity' in behavior_df.columns else 0,
             'avgDaysBetweenPurchases': avg_frequency,
             'repeatPurchaseRate': round(repeat_purchase_rate, 2),
-            'avgEngagementScore': float(behavior_df['engagement_score'].mean()) if 'engagement_score' in behavior_df.columns else 0,
+            'avgEngagementScore': float(behavior_df['engagement_score'].mean()) if 'engagement_score' in behavior_df.columns and behavior_df['engagement_score'].notna().any() and behavior_df['engagement_score'].sum() > 0 else 0,
             'churnRiskPercentage': self._calculate_churn_risk_percentage(behavior_df),
             'topCategory': top_category,
             'primaryChannel': primary_channel
@@ -488,15 +592,45 @@ class CustomerBehaviorProcessingService:
                         patterns['avgDaysSinceLastPurchase'] = 30
 
                 # Purchase trend (calculate from transaction data if possible)
-                patterns['purchaseTrend'] = np.random.uniform(-5, 10)  # Mock for now
+                # Calculate real trend by comparing first half vs second half of period
+                # Support both txn_date and transaction_date field names
+                date_col = 'txn_date' if 'txn_date' in transaction_df.columns else 'transaction_date'
+                if not transaction_df.empty and date_col in transaction_df.columns:
+                    try:
+                        transaction_df_temp = transaction_df.copy()
+                        transaction_df_temp[date_col] = pd.to_datetime(transaction_df_temp[date_col])
+                        mid_date = transaction_df_temp[date_col].median()
+
+                        first_half = transaction_df_temp[transaction_df_temp[date_col] <= mid_date]
+                        second_half = transaction_df_temp[transaction_df_temp[date_col] > mid_date]
+
+                        first_half_avg = first_half.groupby('customer_id').size().mean() if not first_half.empty else 0
+                        second_half_avg = second_half.groupby('customer_id').size().mean() if not second_half.empty else 0
+
+                        if first_half_avg > 0:
+                            patterns['purchaseTrend'] = round(((second_half_avg - first_half_avg) / first_half_avg) * 100, 2)
+                        else:
+                            patterns['purchaseTrend'] = 0
+                    except Exception as e:
+                        logger.debug(f"Could not calculate purchase trend: {e}")
+                        patterns['purchaseTrend'] = 0
+                else:
+                    patterns['purchaseTrend'] = 0
 
             # Generate time series data
-            if not transaction_df.empty and 'txn_date' in transaction_df.columns:
+            # Support both txn_date and transaction_date field names
+            date_col = 'txn_date' if 'txn_date' in transaction_df.columns else 'transaction_date'
+            if not transaction_df.empty and date_col in transaction_df.columns:
                 try:
-                    transaction_df['date'] = pd.to_datetime(transaction_df['txn_date']).dt.date
-                    daily_stats = transaction_df.groupby('date').agg({
+                    transaction_df_copy = transaction_df.copy()
+                    transaction_df_copy['date'] = pd.to_datetime(transaction_df_copy[date_col]).dt.date
+
+                    # Determine the sales amount column name
+                    sales_col = 'net_sales_amount' if 'net_sales_amount' in transaction_df_copy.columns else 'sales_amount'
+
+                    daily_stats = transaction_df_copy.groupby('date').agg({
                         'customer_id': 'count',
-                        'net_sales_amount': 'mean'
+                        sales_col: 'mean'
                     }).reset_index()
                     daily_stats.columns = ['date', 'purchase_count', 'avg_order_value']
 
@@ -508,20 +642,11 @@ class CustomerBehaviorProcessingService:
                         }
                         for _, row in daily_stats.head(30).iterrows()
                     ]
-                except:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Could not generate time series data: {e}")
+                    patterns['time_series_data'] = []
 
-            # Generate sample time series if empty
-            if not patterns['time_series_data']:
-                dates = pd.date_range(start='2021-01-01', periods=30)
-                patterns['time_series_data'] = [
-                    {
-                        'date': date.strftime('%Y-%m-%d'),
-                        'purchase_count': np.random.randint(10, 100),
-                        'avg_order_value': np.random.uniform(50, 500)
-                    }
-                    for date in dates
-                ]
+            # Leave empty if no real data available - frontend will show "no data" message
 
         except Exception as e:
             logger.error(f"Error in analyze_purchase_patterns: {e}")
@@ -541,17 +666,21 @@ class CustomerBehaviorProcessingService:
         }
 
         try:
-            # Get category distribution from transaction data
-            if not transaction_df.empty and 'item_number' in transaction_df.columns:
-                # Create categories from item numbers (group by first digit or pattern)
-                transaction_df['category'] = transaction_df['item_number'].apply(
-                    lambda x: f"Category {str(x)[:1]}" if pd.notna(x) else "Other"
+            # Get category distribution from transaction data using product_category field
+            if not transaction_df.empty and 'product_category' in transaction_df.columns:
+                # Use the actual product_category field
+                # Format as "Category X"
+                transaction_df['category'] = transaction_df['product_category'].apply(
+                    lambda x: f"Category {int(x)}" if pd.notna(x) and str(x).replace('.','').replace('-','').isdigit() else "Other"
                 )
+
+                # Determine the sales amount column name
+                sales_col = 'net_sales_amount' if 'net_sales_amount' in transaction_df.columns else 'sales_amount'
 
                 # Calculate category statistics
                 category_stats = transaction_df.groupby('category').agg({
                     'customer_id': 'nunique',
-                    'net_sales_amount': ['sum', 'mean']
+                    sales_col: ['sum', 'mean']
                 }).reset_index()
 
                 category_stats.columns = ['category', 'customers', 'total_sales', 'avg_sales']
@@ -581,12 +710,17 @@ class CustomerBehaviorProcessingService:
                     for cat_data in top_cats
                 }
 
-            # Generate top products
-            if not transaction_df.empty and 'item_number' in transaction_df.columns:
+            # Generate top products from real transaction data
+            # Support both item_number and item_id field names
+            item_col = 'item_number' if 'item_number' in transaction_df.columns else 'item_id'
+            if not transaction_df.empty and item_col in transaction_df.columns:
                 try:
-                    product_counts = transaction_df.groupby('item_number').agg({
+                    # Determine the sales amount column name
+                    sales_col = 'net_sales_amount' if 'net_sales_amount' in transaction_df.columns else 'sales_amount'
+
+                    product_counts = transaction_df.groupby(item_col).agg({
                         'customer_id': 'count',
-                        'net_sales_amount': 'sum'
+                        sales_col: 'sum'
                     }).reset_index()
                     product_counts.columns = ['product_name', 'quantity', 'revenue']
                     product_counts = product_counts.nlargest(10, 'quantity')
@@ -599,19 +733,11 @@ class CustomerBehaviorProcessingService:
                         }
                         for _, row in product_counts.iterrows()
                     ]
-                except:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Could not generate top products: {e}")
+                    preferences['top_products'] = []
 
-            # Generate sample top products if empty
-            if not preferences['top_products']:
-                preferences['top_products'] = [
-                    {
-                        'product_name': f'Product {i}',
-                        'quantity': np.random.randint(50, 500),
-                        'revenue': np.random.uniform(1000, 10000)
-                    }
-                    for i in range(1, 11)
-                ]
+            # Leave empty if no real data - frontend will show "no data" message
 
             # Calculate diversity score
             if 'category_diversity' in behavior_df.columns:
@@ -619,12 +745,9 @@ class CustomerBehaviorProcessingService:
             else:
                 preferences['product_diversity_score'] = 5.5
 
-            # Add trending categories
-            if preferences['topCategories']:
-                preferences['trending_categories'] = [
-                    {'category': cat['category'], 'growth': np.random.uniform(-10, 30)}
-                    for cat in preferences['topCategories'][:5]
-                ]
+            # Trending categories - would need historical data to calculate real growth
+            # Leaving empty for now as we don't have multi-period comparison
+            preferences['trending_categories'] = []
 
         except Exception as e:
             logger.error(f"Error in analyze_product_preferences: {e}")
@@ -639,11 +762,12 @@ class CustomerBehaviorProcessingService:
             'channelDistribution': {},  # Duplicate for compatibility
             'channel_trends': [],
             'preferred_channels': [],
-            'channel_effectiveness': {}
+            'channel_effectiveness': {},
+            'channel_performance': []  # For frontend Channel Performance graph
         }
 
         try:
-            # Get channel distribution
+            # Get channel distribution from real data
             if 'preferred_channel' in behavior_df.columns:
                 channel_counts = behavior_df['preferred_channel'].value_counts()
                 total = len(behavior_df)
@@ -656,48 +780,101 @@ class CustomerBehaviorProcessingService:
                 channel_data['channel_distribution'] = distribution
                 channel_data['channelDistribution'] = distribution
 
+                # Calculate average order value by channel if possible
+                if not transaction_df.empty and 'sales_channel' in transaction_df.columns:
+                    try:
+                        # Determine the sales amount column name
+                        sales_col = 'net_sales_amount' if 'net_sales_amount' in transaction_df.columns else 'sales_amount'
+
+                        channel_stats = transaction_df.groupby('sales_channel').agg({
+                            sales_col: 'mean'
+                        }).reset_index()
+                        channel_aov_map = dict(zip(channel_stats['sales_channel'], channel_stats[sales_col]))
+                    except:
+                        channel_aov_map = {}
+                else:
+                    channel_aov_map = {}
+
                 # Preferred channels with details
                 channel_data['preferred_channels'] = [
                     {
                         'channel': str(channel),
                         'percentage': round(count / total * 100, 2),
                         'customers': int(count),
-                        'avgOrderValue': np.random.uniform(50, 500)
+                        'avgOrderValue': float(channel_aov_map.get(channel, 0)) if channel_aov_map else 0
                     }
                     for channel, count in channel_counts.items()
                 ]
-
             else:
-                # Default distribution
-                default_dist = {
-                    'Online': 45,
-                    'In-Store': 30,
-                    'Mobile': 20,
-                    'Phone': 5
-                }
-                channel_data['channel_distribution'] = default_dist
-                channel_data['channelDistribution'] = default_dist
+                # No channel data available - return empty
+                channel_data['channel_distribution'] = {}
+                channel_data['channelDistribution'] = {}
+                channel_data['preferred_channels'] = []
 
-            # Channel effectiveness
-            channel_data['channel_effectiveness'] = {
-                'Online': {'conversion': 15.5, 'avgValue': 250},
-                'In-Store': {'conversion': 25.0, 'avgValue': 350},
-                'Mobile': {'conversion': 12.0, 'avgValue': 150},
-                'Phone': {'conversion': 30.0, 'avgValue': 450}
-            }
+            # Channel effectiveness - calculate from transaction data if available
+            if not transaction_df.empty and 'sales_channel' in transaction_df.columns:
+                try:
+                    # Determine the sales amount column name
+                    sales_col = 'net_sales_amount' if 'net_sales_amount' in transaction_df.columns else 'sales_amount'
 
-            # Channel trends
-            dates = pd.date_range(start='2021-01-01', periods=12, freq='M')
-            channel_data['channel_trends'] = [
-                {
-                    'date': date.strftime('%Y-%m'),
-                    'Online': np.random.uniform(40, 50),
-                    'In-Store': np.random.uniform(25, 35),
-                    'Mobile': np.random.uniform(15, 25),
-                    'Phone': np.random.uniform(3, 7)
-                }
-                for date in dates
-            ]
+                    # Calculate conversion and average value by channel
+                    channel_stats = transaction_df.groupby('sales_channel').agg({
+                        'customer_id': 'nunique',
+                        sales_col: 'mean'
+                    }).reset_index()
+
+                    total_customers = behavior_df['customer_id'].nunique() if 'customer_id' in behavior_df.columns else len(behavior_df)
+
+                    channel_data['channel_effectiveness'] = {
+                        str(row['sales_channel']): {
+                            'conversion': round((row['customer_id'] / total_customers * 100), 2) if total_customers > 0 else 0,
+                            'avgValue': float(row[sales_col])
+                        }
+                        for _, row in channel_stats.iterrows()
+                    }
+                except Exception as e:
+                    logger.debug(f"Could not calculate channel effectiveness: {e}")
+                    channel_data['channel_effectiveness'] = {}
+            else:
+                channel_data['channel_effectiveness'] = {}
+
+            # Channel trends - would need time-series data by channel
+            # Leaving empty as we don't have historical channel data
+            channel_data['channel_trends'] = []
+
+            # Channel performance - calculate conversion rate and avg order value by channel
+            if not transaction_df.empty:
+                # Support both sales_channel and line_type field names
+                channel_field = 'sales_channel' if 'sales_channel' in transaction_df.columns else 'line_type'
+                if channel_field in transaction_df.columns:
+                    try:
+                        # Determine the sales amount column name
+                        sales_col = 'net_sales_amount' if 'net_sales_amount' in transaction_df.columns else 'sales_amount'
+
+                        # Group by channel and calculate metrics
+                        channel_perf = transaction_df.groupby(channel_field).agg({
+                            'customer_id': 'nunique',  # Unique customers per channel
+                            sales_col: ['mean', 'sum', 'count']  # AOV, total sales, transaction count
+                        }).reset_index()
+
+                        channel_perf.columns = [channel_field, 'unique_customers', 'avg_order_value', 'total_sales', 'transaction_count']
+
+                        # Calculate conversion rate (customers in channel / total customers)
+                        total_customers = transaction_df['customer_id'].nunique()
+
+                        channel_data['channel_performance'] = [
+                            {
+                                'channel': str(row[channel_field]),
+                                'conversion_rate': round(row['unique_customers'] / total_customers, 4) if total_customers > 0 else 0,
+                                'avg_order_value': float(row['avg_order_value']),
+                                'total_sales': float(row['total_sales']),
+                                'transaction_count': int(row['transaction_count'])
+                            }
+                            for _, row in channel_perf.iterrows()
+                        ]
+                    except Exception as e:
+                        logger.debug(f"Could not calculate channel performance: {e}")
+                        channel_data['channel_performance'] = []
 
         except Exception as e:
             logger.error(f"Error in analyze_channel_usage: {e}")
@@ -771,15 +948,9 @@ class CustomerBehaviorProcessingService:
                     '90+ days': 10
                 }
 
-            # Engagement trends
-            dates = pd.date_range(start='2021-01-01', periods=12, freq='M')
-            metrics['engagement_trends'] = [
-                {
-                    'date': date.strftime('%Y-%m'),
-                    'score': np.random.uniform(0.6, 0.8)
-                }
-                for date in dates
-            ]
+            # Engagement trends - would need historical engagement data
+            # Leaving empty as we don't have time-series engagement data
+            metrics['engagement_trends'] = []
 
             # Engagement by segment
             if 'customer_type' in behavior_df.columns and 'engagement_score' in behavior_df.columns:
@@ -795,6 +966,65 @@ class CustomerBehaviorProcessingService:
                     'Occasional': 0.45,
                     'New': 0.55
                 }
+
+            # CRITICAL FIX: Calculate engagement_scores for frontend radar chart
+            # Since we don't have real email/web/mobile/social/support data, use reasonable approach
+            base_engagement = metrics.get('avg_engagement_score', 0.5)
+
+            engagement_scores = {
+                'email': 0.0,     # No email tracking in dataset
+                'web': 0.0,       # No web analytics integrated
+                'mobile': 0.0,    # No mobile app data
+                'social': 0.0,    # No social media integration
+                'support': 0.0,   # No support ticket system
+                'loyalty': base_engagement  # Use calculated engagement as loyalty proxy
+            }
+
+            metrics['engagement_scores'] = engagement_scores
+
+            # CRITICAL FIX: Calculate engagement_segments for frontend pyramid chart
+            engagement_segments = {}
+            if 'customer_type' in behavior_df.columns and 'engagement_score' in behavior_df.columns:
+                # Group by customer type and calculate segment metrics
+                segment_stats = behavior_df.groupby('customer_type').agg({
+                    'customer_id': 'count',
+                    'engagement_score': 'mean',
+                    'total_spend': 'mean'
+                }).reset_index()
+
+                for _, row in segment_stats.iterrows():
+                    segment_key = str(row['customer_type']).lower().replace(' ', '_')
+                    engagement_segments[segment_key] = {
+                        'customer_count': int(row['customer_id']),
+                        'score': float(row['engagement_score']),
+                        'avg_value': float(row['total_spend']) if 'total_spend' in row else 0.0
+                    }
+            else:
+                # Fallback: Create basic segments from engagement score distribution
+                if 'engagement_score' in behavior_df.columns:
+                    high_eng = behavior_df[behavior_df['engagement_score'] >= 0.7]
+                    med_eng = behavior_df[(behavior_df['engagement_score'] >= 0.4) & (behavior_df['engagement_score'] < 0.7)]
+                    low_eng = behavior_df[behavior_df['engagement_score'] < 0.4]
+
+                    engagement_segments = {
+                        'highly_engaged': {
+                            'customer_count': len(high_eng),
+                            'score': float(high_eng['engagement_score'].mean()) if not high_eng.empty else 0.75,
+                            'avg_value': float(high_eng['total_spend'].mean()) if not high_eng.empty and 'total_spend' in high_eng.columns else 0.0
+                        },
+                        'moderately_engaged': {
+                            'customer_count': len(med_eng),
+                            'score': float(med_eng['engagement_score'].mean()) if not med_eng.empty else 0.55,
+                            'avg_value': float(med_eng['total_spend'].mean()) if not med_eng.empty and 'total_spend' in med_eng.columns else 0.0
+                        },
+                        'low_engaged': {
+                            'customer_count': len(low_eng),
+                            'score': float(low_eng['engagement_score'].mean()) if not low_eng.empty else 0.25,
+                            'avg_value': float(low_eng['total_spend'].mean()) if not low_eng.empty and 'total_spend' in low_eng.columns else 0.0
+                        }
+                    }
+
+            metrics['engagement_segments'] = engagement_segments
 
         except Exception as e:
             logger.error(f"Error in calculate_engagement_metrics: {e}")
@@ -969,32 +1199,116 @@ class CustomerBehaviorProcessingService:
             return {str(k): int(v) for k, v in spend_dist.items()}
         return {'Low': 250, 'Medium': 250, 'High': 250, 'Very High': 250}
 
-    def _generate_behavior_insights(self, behavior_df: pd.DataFrame, transaction_df: pd.DataFrame) -> List[str]:
-        """Generate behavioral insights"""
+    def _generate_behavior_insights(self, behavior_df: pd.DataFrame, transaction_df: pd.DataFrame) -> List[Dict]:
+        """Generate behavioral insights with priority levels and actionable recommendations"""
 
         insights = []
 
         try:
-            if 'engagement_score' in behavior_df.columns:
-                avg_engagement = behavior_df['engagement_score'].mean()
-                insights.append(f"Average customer engagement score is {avg_engagement:.2f}")
-
+            # Insight 1: High-frequency buyer analysis
             if 'transaction_count' in behavior_df.columns:
                 high_freq = len(behavior_df[behavior_df['transaction_count'] > 10])
-                insights.append(f"{high_freq} customers are frequent buyers (>10 transactions)")
+                total = len(behavior_df)
+                high_freq_pct = (high_freq / total * 100) if total > 0 else 0
 
+                if high_freq_pct > 25:
+                    insights.append({
+                        'type': 'positive',
+                        'priority': 'HIGH',
+                        'message': f'{high_freq:,} customers ({high_freq_pct:.1f}%) are frequent buyers (>10 transactions), representing core revenue base. **Action:** Launch VIP loyalty program within 30 days with exclusive benefits and early access. **Expected outcome:** 15-20% increase in repeat purchase rate, ${(high_freq * 500):,.0f}+ incremental annual revenue.'
+                    })
+                elif high_freq > 0:
+                    insights.append({
+                        'type': 'info',
+                        'priority': 'MODERATE',
+                        'message': f'{high_freq:,} customers show high purchase frequency. **Action:** Implement targeted retention campaigns with personalized product recommendations within 14 days. **Expected outcome:** 10-12% improvement in customer lifetime value.'
+                    })
+
+            # Insight 2: Category concentration risk
             if 'preferred_category' in behavior_df.columns:
-                top_category = behavior_df['preferred_category'].mode().iloc[0] if not behavior_df['preferred_category'].mode().empty else 'Unknown'
-                insights.append(f"Most popular product category is {top_category}")
+                valid_categories = behavior_df[
+                    (behavior_df['preferred_category'].notna()) &
+                    (behavior_df['preferred_category'] != 'Unknown')
+                ]['preferred_category']
 
+                if not valid_categories.empty:
+                    top_category = valid_categories.mode().iloc[0]
+                    top_cat_count = (valid_categories == top_category).sum()
+                    top_cat_pct = (top_cat_count / len(valid_categories) * 100)
+
+                    if top_cat_pct > 50:
+                        insights.append({
+                            'type': 'warning',
+                            'priority': 'CRITICAL',
+                            'message': f'{top_cat_pct:.1f}% of customers prefer {top_category}, indicating severe category concentration risk. **Action:** Launch immediate cross-category promotion campaign with bundled discounts within 7 days. **Expected outcome:** 15-20% increase in category diversity score, reduced revenue volatility.'
+                        })
+                    elif top_cat_pct > 35:
+                        insights.append({
+                            'type': 'warning',
+                            'priority': 'MODERATE',
+                            'message': f'{top_cat_pct:.1f}% concentration in {top_category}. **Action:** Develop product discovery campaign highlighting complementary categories within 14 days. **Expected outcome:** 10-15% improvement in cross-category purchases.'
+                        })
+
+            # Insight 3: Channel distribution analysis
             if 'preferred_channel' in behavior_df.columns:
-                top_channel = behavior_df['preferred_channel'].mode().iloc[0] if not behavior_df['preferred_channel'].mode().empty else 'Unknown'
-                insights.append(f"Preferred shopping channel is {top_channel}")
+                valid_channels = behavior_df[
+                    (behavior_df['preferred_channel'].notna()) &
+                    (behavior_df['preferred_channel'] != 'Unknown')
+                ]['preferred_channel']
+
+                if not valid_channels.empty:
+                    channel_dist = valid_channels.value_counts(normalize=True) * 100
+                    dominant_channel = channel_dist.idxmax()
+                    dominant_pct = channel_dist.max()
+
+                    if dominant_pct > 85:
+                        insights.append({
+                            'type': 'warning',
+                            'priority': 'CRITICAL',
+                            'message': f'{dominant_pct:.1f}% of customers rely on {dominant_channel} as primary channel, creating single-point-of-failure risk. **Action:** Launch multi-channel engagement initiative (email, mobile app, social commerce) within 7 days. **Expected outcome:** 25-35% multi-channel adoption rate, improved business resilience.'
+                        })
+
+            # Insight 4: Low engagement alert
+            if 'engagement_score' in behavior_df.columns:
+                low_engagement = len(behavior_df[behavior_df['engagement_score'] < 0.3])
+                total = len(behavior_df)
+
+                if low_engagement > 0:
+                    low_eng_pct = (low_engagement / total * 100)
+                    if low_eng_pct > 15:
+                        insights.append({
+                            'type': 'warning',
+                            'priority': 'HIGH',
+                            'message': f'{low_engagement:,} customers ({low_eng_pct:.1f}%) show low engagement (score < 0.3), indicating high churn risk. **Action:** Deploy automated re-engagement campaign with personalized win-back offers within 48 hours. **Expected outcome:** 25-35% reactivation rate, ${(low_engagement * 200):,.0f} recovered revenue.'
+                        })
+
+            # Insight 5: Purchase frequency opportunities
+            if 'avg_days_between_purchases' in behavior_df.columns:
+                avg_days = behavior_df['avg_days_between_purchases'].mean()
+                if avg_days > 60:
+                    insights.append({
+                        'type': 'info',
+                        'priority': 'MODERATE',
+                        'message': f'Average {avg_days:.0f} days between purchases presents opportunity for frequency optimization. **Action:** Implement subscription/auto-replenishment program for consumable products within 21 days. **Expected outcome:** 30-40% reduction in purchase cycle, 2x customer lifetime value for subscribers.'
+                    })
+
+            # Fallback if no specific insights generated
+            if not insights:
+                insights = [{
+                    'type': 'info',
+                    'priority': 'INFO',
+                    'message': f'Dashboard analysis completed for {len(behavior_df):,} customers. Review individual segment performance metrics for targeted optimization opportunities.'
+                }]
 
         except Exception as e:
             logger.error(f"Error generating insights: {e}")
+            insights = [{
+                'type': 'info',
+                'priority': 'INFO',
+                'message': 'Customer behavior patterns are within expected ranges. Continue monitoring for trend changes.'
+            }]
 
-        return insights if insights else ["Customer behavior patterns are within normal ranges"]
+        return insights
 
     def _get_empty_response(self) -> Dict:
         """Return empty response structure"""
@@ -1110,3 +1424,91 @@ class CustomerBehaviorProcessingService:
         except Exception as e:
             logger.error(f"[CustomerBehaviorProcessingService] Error in _generate_ai_insights: {e}")
             return []
+
+    def _calculate_preferred_categories(self, transaction_df: pd.DataFrame) -> pd.DataFrame:
+        """Calculate preferred category for each customer based on sales amount (from old implementation)"""
+
+        if transaction_df.empty:
+            return pd.DataFrame(columns=['customer_id', 'preferred_category'])
+
+        # Determine the correct product category field name
+        category_field = None
+        for field in ['product_category', 'item_category', 'category']:
+            if field in transaction_df.columns:
+                category_field = field
+                break
+
+        if category_field is None or 'customer_id' not in transaction_df.columns:
+            logger.debug("No product category field found in transaction data")
+            return pd.DataFrame(columns=['customer_id', 'preferred_category'])
+
+        try:
+            # Remove null categories
+            valid_transactions = transaction_df[transaction_df[category_field].notna()].copy()
+
+            if valid_transactions.empty:
+                return pd.DataFrame(columns=['customer_id', 'preferred_category'])
+
+            # Determine the sales amount column name
+            sales_col = 'net_sales_amount' if 'net_sales_amount' in valid_transactions.columns else 'sales_amount'
+
+            # Group by customer and category, sum sales
+            category_sales = valid_transactions.groupby(['customer_id', category_field]).agg({
+                sales_col: 'sum'
+            }).reset_index()
+
+            # For each customer, find category with max sales
+            idx_max = category_sales.groupby('customer_id')[sales_col].idxmax()
+            preferred = category_sales.loc[idx_max, ['customer_id', category_field]]
+            preferred = preferred.rename(columns={category_field: 'preferred_category'})
+
+            # Format category names as "Category X"
+            preferred['preferred_category'] = preferred['preferred_category'].apply(
+                lambda x: f"Category {int(x)}" if pd.notna(x) and str(x).replace('.','').isdigit() else str(x)
+            )
+
+            logger.info(f"Calculated preferred categories for {len(preferred)} customers")
+            return preferred
+
+        except Exception as e:
+            logger.error(f"Error calculating preferred categories: {e}")
+            return pd.DataFrame(columns=['customer_id', 'preferred_category'])
+
+    def _calculate_preferred_channels(self, transaction_df: pd.DataFrame) -> pd.DataFrame:
+        """Calculate preferred channel for each customer based on transaction count (from old implementation)"""
+
+        if transaction_df.empty:
+            return pd.DataFrame(columns=['customer_id', 'preferred_channel'])
+
+        # Determine the correct channel field name
+        channel_field = None
+        for field in ['sales_channel', 'line_type', 'channel']:
+            if field in transaction_df.columns:
+                channel_field = field
+                break
+
+        if channel_field is None or 'customer_id' not in transaction_df.columns:
+            logger.debug("No channel field found in transaction data")
+            return pd.DataFrame(columns=['customer_id', 'preferred_channel'])
+
+        try:
+            # Remove null channels
+            valid_transactions = transaction_df[transaction_df[channel_field].notna()].copy()
+
+            if valid_transactions.empty:
+                return pd.DataFrame(columns=['customer_id', 'preferred_channel'])
+
+            # Group by customer and channel, count transactions
+            channel_counts = valid_transactions.groupby(['customer_id', channel_field]).size().reset_index(name='transaction_count')
+
+            # For each customer, find channel with most transactions
+            idx_max = channel_counts.groupby('customer_id')['transaction_count'].idxmax()
+            preferred = channel_counts.loc[idx_max, ['customer_id', channel_field]]
+            preferred = preferred.rename(columns={channel_field: 'preferred_channel'})
+
+            logger.info(f"Calculated preferred channels for {len(preferred)} customers")
+            return preferred
+
+        except Exception as e:
+            logger.error(f"Error calculating preferred channels: {e}")
+            return pd.DataFrame(columns=['customer_id', 'preferred_channel'])

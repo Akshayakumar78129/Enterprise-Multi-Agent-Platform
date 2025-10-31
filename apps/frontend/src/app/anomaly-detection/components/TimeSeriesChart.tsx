@@ -135,6 +135,7 @@ export function TimeSeriesChart({ data, loading }: TimeSeriesChartProps) {
 
   return (
     <Card
+      className="h-[32rem]"
       onShiftClick={(event) => {
         shiftClickManager.addPoint({
           label: "Anomaly Trend",
@@ -143,7 +144,7 @@ export function TimeSeriesChart({ data, loading }: TimeSeriesChartProps) {
         }, event.nativeEvent);
       }}
     >
-      <div className="h-80 p-4">
+      <div className="h-[30rem] p-4">
         <Line data={chartData} options={options} />
       </div>
     </Card>

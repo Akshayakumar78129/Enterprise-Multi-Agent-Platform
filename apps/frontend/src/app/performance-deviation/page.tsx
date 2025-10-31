@@ -6,7 +6,6 @@ import {
   KPIRow,
   Skeleton,
   ChartCard,
-  InsightCard,
   PageLoader,
   getShiftClickManager
 } from "components";
@@ -28,15 +27,17 @@ export default function PerformanceDeviationPage() {
     selectedKPI,
     setSelectedKPI,
     setPerformanceData,
+    setInsights,
     selectionManager
   } = usePerformanceDeviationContext();
   const shiftClickManager = getShiftClickManager();
 
-  const [activeInsight, setActiveInsight] = React.useState<any>(null);
-  const [insightPosition, setInsightPosition] = React.useState({ x: 0, y: 0 });
+  const prevPerformanceDataRef = React.useRef<any[]>([]);
+  const prevInsightsRef = React.useRef<any[]>([]);
 
   const {
     loading,
+    error,
     data,
     featureImportance,
     varianceDecomposition,
@@ -44,12 +45,14 @@ export default function PerformanceDeviationPage() {
     kpis,
     businessComparison,
     deviationPatterns,
-    factorCorrelations
+    factorCorrelations,
+    insights,
+    insightsMetadata,
+    hasNoData
   } = usePerformanceData(filters);
 
   // Prepare KPI data for tiles
   const kpiTiles = React.useMemo(() => {
-    console.log('KPIs data:', kpis);
     if (!kpis || Object.keys(kpis).length === 0) {
       console.log('No KPI data available');
       return [];
@@ -100,33 +103,55 @@ export default function PerformanceDeviationPage() {
         value: kpis.anomalyCount?.value ? String(kpis.anomalyCount.value) : "0",
         change: kpis.anomalyCount?.change_percentage || 0,
         trend: kpis.anomalyCount?.trend > 0 ? "up" : "down" as const
-      },
-      {
-        id: "top-factor",
-        title: "Top Factor",
-        value: kpis.topFactor?.value ? String(kpis.topFactor.value).replace(/_/g, " ") : "Loading...",
-        change: 0,
-        trend: "up" as const
-      },
-      {
-        id: "explanation-power",
-        title: "Explained",
-        value: kpis.explanationPower?.value ? `${(kpis.explanationPower.value * 100).toFixed(0)}%` : "0%",
-        change: 0,
-        trend: "up" as const
       }
+      // Commented out as per user request:
+      // {
+      //   id: "top-factor",
+      //   title: "Top Factor",
+      //   value: kpis.topFactor?.value ? String(kpis.topFactor.value).replace(/_/g, " ") : "Loading...",
+      //   change: 0,
+      //   trend: "up" as const
+      // },
+      // {
+      //   id: "explanation-power",
+      //   title: "Explained",
+      //   value: kpis.explanationPower?.value ? `${(kpis.explanationPower.value * 100).toFixed(0)}%` : "0%",
+      //   change: 0,
+      //   trend: "up" as const
+      // }
     ];
   }, [kpis]);
 
   // Update performance data for BI panel
+  // CRITICAL FIX: Use ref to prevent infinite loop - only update if data actually changed
   useEffect(() => {
-    if (data && data.data) {
-      // Use actual data instead of generating fake records
-      setPerformanceData(data.data || []);
-    } else {
-      setPerformanceData([]);
+    const currentData = data || [];
+    if (JSON.stringify(currentData) !== JSON.stringify(prevPerformanceDataRef.current)) {
+      prevPerformanceDataRef.current = currentData;
+      setPerformanceData(currentData);
     }
-  }, [data, selectedKPI, setPerformanceData]);
+  }, [data, setPerformanceData]);
+
+  // Update insights for BI panel
+  useEffect(() => {
+    const currentInsights = insights || [];
+    if (JSON.stringify(currentInsights) !== JSON.stringify(prevInsightsRef.current)) {
+      prevInsightsRef.current = currentInsights;
+      setInsights(currentInsights);
+    }
+  }, [insights, setInsights]);
+
+  // Error state handling
+  if (error && !loading && hasNoData) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <p className="text-lg text-muted-foreground mb-2">Unable to load data</p>
+          <p className="text-sm text-muted-foreground">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <PageLoader
@@ -143,7 +168,7 @@ export default function PerformanceDeviationPage() {
         {kpiTiles.length > 0 ? (
           <KPIRow
             kpis={kpiTiles}
-            columns={6}
+            columns={kpiTiles.length}
             animationDelay={50}
             onKPIShiftClick={(kpi, event) => {
               shiftClickManager.addPoint({
@@ -162,12 +187,23 @@ export default function PerformanceDeviationPage() {
 
       {/* Performance Explorer */}
       <DashboardSection>
-        <PerformanceExplorer
-          data={performanceExplorer}
-          selectedKPI={selectedKPI}
-          onKPISelect={setSelectedKPI}
-          loading={false}
-        />
+        <ChartCard
+          className="glass-card card-hover"
+          onShiftClick={(event) => {
+            shiftClickManager.addPoint({
+              label: "Performance Explorer",
+              value: `${selectedKPI} performance analysis`,
+              source: 'Performance Deviation - Explorer'
+            }, event.nativeEvent);
+          }}
+        >
+          <PerformanceExplorer
+            data={performanceExplorer}
+            selectedKPI={selectedKPI}
+            onKPISelect={setSelectedKPI}
+            loading={false}
+          />
+        </ChartCard>
       </DashboardSection>
 
       {/* Analysis Section */}
@@ -220,130 +256,6 @@ export default function PerformanceDeviationPage() {
           loading={false}
         />
       </DashboardSection>
-
-      {/* AI Insights Section */}
-      <DashboardSection>
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
-          {/* Feature Importance in ChartCard */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">AI Feature Importance</h3>
-            <ChartCard
-              className="glass-card card-hover"
-              onShiftClick={(event) => {
-                shiftClickManager.addPoint({
-                  label: "AI Feature Importance",
-                  value: `Feature importance analysis`,
-                  source: 'Performance Deviation Dashboard - AI Feature Importance'
-                }, event.nativeEvent);
-              }}
-            >
-            {featureImportance?.aggregated?.length > 0 ? (
-              <div className="space-y-3">
-                {featureImportance.aggregated.slice(0, 8).map((feature: any, index: number) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <span className="text-sm">{feature.feature.replace(/_/g, ' ')}</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-32 bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-accent h-2 rounded-full"
-                          style={{ width: `${(feature.avg_importance || 0) * 100}%` }}
-                        />
-                      </div>
-                      <span className="text-sm font-medium">
-                        {((feature.avg_importance || 0) * 100).toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">No feature importance data available</div>
-            )}
-            </ChartCard>
-          </div>
-
-          {/* AI-Generated Insights in ChartCard */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">AI-Generated Analysis</h3>
-            <ChartCard
-              className="glass-card card-hover"
-              onShiftClick={(event) => {
-                shiftClickManager.addPoint({
-                  label: "AI-Generated Analysis",
-                  value: `AI insights and recommendations`,
-                  source: 'Performance Deviation Dashboard - AI Analysis'
-                }, event.nativeEvent);
-              }}
-            >
-            <div className="space-y-4">
-                <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                  <h4 className="font-semibold text-red-900 dark:text-red-100 mb-2">
-                    Critical Performance Deviation Detected
-                  </h4>
-                  <p className="text-sm text-red-800 dark:text-red-200">
-                    Analysis shows significant deviations in {selectedKPI.replace(/_/g, ' ')}.
-                    Top influencing factor: {featureImportance?.aggregated?.[0]?.feature?.replace(/_/g, ' ') || 'Unknown'}.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <h5 className="font-medium text-sm">Key Insights:</h5>
-                  <ul className="space-y-2">
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-accent mt-1">•</span>
-                      <span>
-                        Primary driver: {featureImportance?.aggregated?.[0]?.feature?.replace(/_/g, ' ') || 'Unknown'} with
-                        {' '}{ ((featureImportance?.aggregated?.[0]?.avg_importance || 0) * 100).toFixed(1)}% impact
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-accent mt-1">•</span>
-                      <span>
-                        Variance decomposition shows {((varianceDecomposition?.components?.[0]?.share || 0) * 100).toFixed(1)}%
-                        {' '}explained by {varianceDecomposition?.components?.[0]?.name || 'model'}
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm">
-                      <span className="text-accent mt-1">•</span>
-                      <span>
-                        {deviationPatterns?.patterns?.filter((p: any) => p.is_significant).length || 0} significant
-                        {' '}deviation patterns detected
-                      </span>
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="space-y-2">
-                  <h5 className="font-medium text-sm">Recommended Actions:</h5>
-                  <ul className="space-y-1">
-                    <li className="text-sm text-muted-foreground">→ Review top influencing factors for optimization</li>
-                    <li className="text-sm text-muted-foreground">→ Investigate significant deviation patterns</li>
-                    <li className="text-sm text-muted-foreground">→ Implement targeted interventions</li>
-                    <li className="text-sm text-muted-foreground">→ Monitor KPIs during intervention period</li>
-                  </ul>
-                </div>
-              </div>
-            </ChartCard>
-          </div>
-        </div>
-      </DashboardSection>
-
-      {/* Insight Card */}
-      {activeInsight && (
-        <InsightCard
-          data={activeInsight}
-          position={insightPosition}
-          isVisible={!!activeInsight}
-          onClose={() => setActiveInsight(null)}
-          onDrillDown={() => {
-            console.log("Drill down:", activeInsight);
-            setActiveInsight(null);
-          }}
-          onExport={() => {
-            console.log("Export:", activeInsight);
-          }}
-        />
-      )}
       </>
     </PageLoader>
   );

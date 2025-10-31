@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
-import { Card, Skeleton, getShiftClickManager } from "components/index";
+import { ChartCard, Skeleton, getShiftClickManager } from "components/index";
 import { useBehaviorContext } from "../context";
 import { Chart, registerables } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
@@ -35,7 +35,7 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
       {
         data: Object.values(data.channel_distribution),
         backgroundColor: [
-          '#8b5cf6',
+          '#f59e0b',
           '#d8b4fe',
           '#c084fc',
           '#e8d4e6',
@@ -71,7 +71,7 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
           legend: {
             position: 'bottom',
             labels: {
-              color: '#8b5cf6',
+              color: '#f59e0b',
               padding: 20,
               font: {
                 size: 13,
@@ -140,7 +140,7 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
         label: 'Conversion Rate',
         data: data.channel_performance.map((c: any) => c.conversion_rate * 100),
         backgroundColor: 'rgba(139, 92, 246, 0.8)',
-        borderColor: '#8b5cf6',
+        borderColor: '#f59e0b',
         borderWidth: 1
       },
       {
@@ -174,19 +174,19 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
 
   if (loading) {
     return (
-      <Card>
+      <ChartCard>
         <Skeleton className="h-80" />
-      </Card>
+      </ChartCard>
     );
   }
 
   if (!data || !data.channel_distribution) {
     return (
-      <Card>
+      <ChartCard>
         <div className="h-80 flex items-center justify-center text-muted-foreground">
           No channel usage data available
         </div>
-      </Card>
+      </ChartCard>
     );
   }
 
@@ -195,7 +195,7 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Channel Distribution</h3>
-          <Card
+          <ChartCard
             onShiftClick={(event) => {
               shiftClickManager.addPoint({
                 label: "Channel Distribution",
@@ -214,12 +214,12 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
               </div>
             )}
           </div>
-          </Card>
+          </ChartCard>
         </div>
 
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Channel Performance</h3>
-          <Card
+          <ChartCard
             onShiftClick={(event) => {
               shiftClickManager.addPoint({
                 label: "Channel Performance",
@@ -235,9 +235,10 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
+                  title: { display: false },
                   legend: {
                     position: 'top' as const,
-                    labels: { color: '#8b5cf6' }
+                    labels: { color: '#f59e0b' }
                   },
                   tooltip: {
                     callbacks: {
@@ -255,11 +256,11 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
                   y: {
                     beginAtZero: true,
                     grid: { color: 'rgba(232, 212, 230, 0.1)' },
-                    ticks: { color: '#8b5cf6' }
+                    ticks: { color: '#f59e0b' }
                   },
                   x: {
                     grid: { display: false },
-                    ticks: { color: '#8b5cf6' }
+                    ticks: { color: '#f59e0b' }
                   }
                 }
               }}
@@ -270,68 +271,8 @@ export function ChannelUsage({ data, loading }: ChannelUsageProps) {
               </div>
             )}
           </div>
-          </Card>
+          </ChartCard>
         </div>
-      </div>
-
-      <div>
-        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Cross-Channel Journey</h3>
-        <Card
-          onShiftClick={(event) => {
-            shiftClickManager.addPoint({
-              label: "Cross-Channel Journey",
-              value: `Customer journey across channels`,
-              source: 'Behavior Dashboard - Cross-Channel'
-            }, event.nativeEvent);
-          }}>
-        <div className="space-y-4">
-          {data?.cross_channel_journey && data.cross_channel_journey.length > 0 ? (
-            data.cross_channel_journey.map((journey: any, idx: number) => (
-              <div
-                key={idx}
-                className="flex items-center space-x-4 p-3 bg-background/50 rounded-lg hover:bg-background/70 transition-colors cursor-pointer"
-                onClick={(e) => {
-                  selectionManager.addPoint({
-                    label: `Journey: ${journey.path}`,
-                    value: `${journey.customer_count} customers`,
-                    source: 'Cross-Channel Journey',
-                    metadata: journey
-                  }, e.shiftKey);
-                }}
-              >
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2">
-                    {journey.path.split(' → ').map((channel: string, i: number) => (
-                      <React.Fragment key={i}>
-                        <span className="px-2 py-1 bg-primary/20 text-primary rounded text-xs font-medium">
-                          {channel}
-                        </span>
-                        {i < journey.path.split(' → ').length - 1 && (
-                          <span className="text-muted-foreground">→</span>
-                        )}
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-medium">{journey.customer_count}</div>
-                  <div className="text-xs text-muted-foreground">customers</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-medium text-green-400">
-                    ${journey.avg_value?.toFixed(2)}
-                  </div>
-                  <div className="text-xs text-muted-foreground">avg value</div>
-                </div>
-              </div>
-          ))
-          ) : (
-            <div className="text-center text-muted-foreground py-8">
-              No cross-channel journey data available
-            </div>
-          )}
-        </div>
-        </Card>
       </div>
     </div>
   );

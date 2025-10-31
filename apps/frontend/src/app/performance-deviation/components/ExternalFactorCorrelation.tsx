@@ -32,6 +32,7 @@ export function ExternalFactorCorrelation({
   loading
 }: ExternalFactorCorrelationProps) {
   const shiftClickManager = getShiftClickManager();
+
   // Transform correlation data for bar chart
   const chartData = useMemo(() => {
     const series = data?.series || {};
@@ -58,13 +59,20 @@ export function ExternalFactorCorrelation({
 
     // Group by factor for better visualization
     const factorMap = new Map();
+    const kpiSet = new Set<string>();
+
+    // First pass: collect all KPI names
+    correlations.forEach(item => kpiSet.add(item.kpi));
+
+    // Second pass: group by factor
     correlations.slice(0, 10).forEach(item => {
       if (!factorMap.has(item.factor)) {
-        factorMap.set(item.factor, {
-          factor: item.factor,
-          'Daily Revenue': 0,
-          'Daily Orders': 0
+        const entry: any = { factor: item.factor };
+        // Initialize all KPIs with 0
+        kpiSet.forEach(kpi => {
+          entry[kpi] = 0;
         });
+        factorMap.set(item.factor, entry);
       }
       const entry = factorMap.get(item.factor);
       entry[item.kpi] = item.correlation;
@@ -99,6 +107,37 @@ export function ExternalFactorCorrelation({
       </ChartCard>
     );
   }
+
+  // Get unique KPI names from chartData for dynamic bars
+  const kpiNames = React.useMemo(() => {
+    if (chartData.length === 0) return [];
+    const firstItem = chartData[0];
+    return Object.keys(firstItem).filter(key => key !== 'factor');
+  }, [chartData]);
+
+  // Empty state
+  if (chartData.length === 0) {
+    return (
+      <ChartCard
+        onShiftClick={(event) => {
+          shiftClickManager.addPoint({
+            label: "External Factor Correlation",
+            value: `Correlation coefficients between KPIs and external factors`,
+            source: 'Performance Deviation - External Factors'
+          }, event.nativeEvent);
+        }}
+      >
+        <div className="h-80 flex items-center justify-center text-muted-foreground">
+          <div className="text-center">
+            <p className="text-lg">No correlation data available</p>
+            <p className="text-sm mt-2">Try adjusting your filters or check back later</p>
+          </div>
+        </div>
+      </ChartCard>
+    );
+  }
+
+  const barColors = [COLORS.kpi, COLORS.factor1, COLORS.factor2, COLORS.factor3];
 
   return (
     <ChartCard
@@ -139,14 +178,13 @@ export function ExternalFactorCorrelation({
               verticalAlign="top"
               height={36}
             />
-            <Bar
-              dataKey="Daily Revenue"
-              fill={COLORS.kpi}
-            />
-            <Bar
-              dataKey="Daily Orders"
-              fill={COLORS.factor1}
-            />
+            {kpiNames.map((kpiName, index) => (
+              <Bar
+                key={kpiName}
+                dataKey={kpiName}
+                fill={barColors[index % barColors.length]}
+              />
+            ))}
           </BarChart>
         </ResponsiveContainer>
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Card, BarChart, Skeleton, getShiftClickManager } from "components/index";
+import { ChartCard, BarChart, Skeleton, getShiftClickManager } from "components/index";
 import { useBehaviorContext } from "../context";
 import { Line } from "react-chartjs-2";
 
@@ -21,7 +21,7 @@ function RadarChart({ data, color, size = 200 }: { data: any[], color: string, s
   }).join(' ') + ' Z';
 
   return (
-    <svg width={size} height={size} className="overflow-visible">
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="max-w-full max-h-full">
       {/* Grid circles */}
       {[20, 40, 60, 80, 100].map(percentage => (
         <circle
@@ -90,7 +90,7 @@ function RadarChart({ data, color, size = 200 }: { data: any[], color: string, s
             y={y}
             textAnchor="middle"
             dominantBaseline="middle"
-            fill="#8b5cf6"
+            fill="#3b82f6"
             fontSize="11"
             fontWeight="500"
           >
@@ -113,9 +113,9 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
 
   if (loading) {
     return (
-      <Card>
+      <ChartCard>
         <Skeleton className="h-80" />
-      </Card>
+      </ChartCard>
     );
   }
 
@@ -126,7 +126,7 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
       {
         label: 'Purchase Count',
         data: data.time_series_data.map((d: any) => d.purchase_count),
-        borderColor: '#8b5cf6',
+        borderColor: '#3b82f6',
         backgroundColor: 'rgba(139, 92, 246, 0.1)',
         tension: 0.4
       },
@@ -186,23 +186,28 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
   const radarData = hasRadarData ? [
     {
       label: 'Frequency',
-      value: Math.min(100, ((30 / (data?.avgDaysBetweenPurchases || 30)) * 100))
+      // Normalize: 1 purchase/day = 100%, 1 purchase/month (30 days) = 33%, 1 purchase/year = 3%
+      value: Math.min(100, Math.max(0, (365 / Math.max(1, data?.avgDaysBetweenPurchases || 365)) * 10))
     },
     {
       label: 'Recency',
-      value: Math.max(0, 100 - ((data?.avgDaysSinceLastPurchase || 0) / 365) * 100)
+      // Normalize: 0 days since last = 100%, 180 days = 50%, 365+ days = 0%
+      value: Math.min(100, Math.max(0, 100 - ((data?.avgDaysSinceLastPurchase || 0) / 365) * 100))
     },
     {
       label: 'Value',
-      value: Math.min(100, ((data?.avgOrderValue || 0) / 500) * 100)
+      // Normalize: $0 = 0%, $5000 = 100% (adjusted baseline for better visual balance)
+      value: Math.min(100, Math.max(0, ((data?.avgOrderValue || 0) / 5000) * 100))
     },
     {
       label: 'Loyalty',
-      value: Math.min(100, ((data?.repeatPurchaseRate || 0) * 100))
+      // Already 0-1 scale, multiply by 100
+      value: Math.min(100, Math.max(0, ((data?.repeatPurchaseRate || 0) * 100)))
     },
     {
       label: 'Trend',
-      value: 50 + ((data?.purchaseTrend || 0) * 50)
+      // Normalize: -100% trend = 0, 0% trend = 50, +100% trend = 100
+      value: Math.min(100, Math.max(0, 50 + ((data?.purchaseTrend || 0) / 2)))
     }
   ] : [];
 
@@ -211,7 +216,7 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Purchase Timeline</h3>
-          <Card
+          <ChartCard
             onShiftClick={(event) => {
               shiftClickManager.addPoint({
                 label: "Purchase Timeline",
@@ -232,9 +237,10 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
                 },
                 onClick: handlePointClick,
                 plugins: {
+                  title: { display: false },
                   legend: {
                     position: 'top' as const,
-                    labels: { color: '#8b5cf6' }
+                    labels: { color: '#3b82f6' }
                   },
                   tooltip: {
                     callbacks: {
@@ -251,18 +257,18 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
                 scales: {
                   x: {
                     grid: { color: 'rgba(232, 212, 230, 0.1)' },
-                    ticks: { color: '#8b5cf6' }
+                    ticks: { color: '#3b82f6' }
                   },
                   y: {
                     type: 'linear' as const,
                     display: true,
                     position: 'left' as const,
                     grid: { color: 'rgba(232, 212, 230, 0.1)' },
-                    ticks: { color: '#8b5cf6' },
+                    ticks: { color: '#3b82f6' },
                     title: {
                       display: true,
                       text: 'Purchase Count',
-                      color: '#8b5cf6'
+                      color: '#3b82f6'
                     }
                   },
                   y1: {
@@ -271,13 +277,13 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
                     position: 'right' as const,
                     grid: { drawOnChartArea: false },
                     ticks: {
-                      color: '#8b5cf6',
+                      color: '#3b82f6',
                       callback: (value: any) => `$${value}`
                     },
                     title: {
                       display: true,
                       text: 'Order Value',
-                      color: '#8b5cf6'
+                      color: '#3b82f6'
                     }
                   }
                 }
@@ -289,12 +295,12 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
               </div>
             )}
           </div>
-          </Card>
+          </ChartCard>
         </div>
 
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Purchase Pattern Analysis</h3>
-          <Card
+          <ChartCard
             onShiftClick={(event) => {
               shiftClickManager.addPoint({
                 label: "Purchase Pattern Analysis",
@@ -302,65 +308,42 @@ export function PurchasePatterns({ data, loading }: PurchasePatternsProps) {
                 source: 'Behavior Dashboard - Pattern Analysis'
               }, event.nativeEvent);
             }}>
-          <div className="h-80 flex items-center justify-center">
+          <div className="h-80 flex items-center justify-center p-4">
             {radarData.length > 0 ? (
-              <RadarChart
-                data={radarData}
-                color="#8b5cf6"
-                size={280}
-              />
+              <div className="w-full h-full flex items-center justify-center">
+                <RadarChart
+                  data={radarData}
+                  color="#3b82f6"
+                  size={240}
+                />
+              </div>
             ) : (
               <div className="text-center text-muted-foreground">
                 <p>No pattern data available</p>
               </div>
             )}
           </div>
-          </Card>
+          </ChartCard>
         </div>
       </div>
-
-      {frequencyData && (
-        <div>
-          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Purchase Frequency Distribution</h3>
-          <Card
-            onShiftClick={(event) => {
-              shiftClickManager.addPoint({
-                label: "Purchase Frequency Distribution",
-                value: `Customer distribution by purchase frequency`,
-                source: 'Behavior Dashboard - Frequency'
-              }, event.nativeEvent);
-            }}>
-          <div className="h-64">
-            <BarChart
-              data={frequencyData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: { display: false }
-                },
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(232, 212, 230, 0.1)' },
-                    ticks: { color: '#8b5cf6' }
-                  },
-                  x: {
-                    grid: { display: false },
-                    ticks: { color: '#8b5cf6' },
-                    title: {
-                      display: true,
-                      text: 'Days Between Purchases',
-                      color: '#8b5cf6'
-                    }
-                  }
-                }
-              }}
-            />
-          </div>
-          </Card>
-        </div>
-      )}
     </div>
   );
+}
+
+// Export frequencyData for use in other components
+export function useFrequencyData(data: any) {
+  const frequencyData = data?.frequency_distribution ? {
+    labels: Object.keys(data.frequency_distribution),
+    datasets: [
+      {
+        label: 'Customer Count',
+        data: Object.values(data.frequency_distribution),
+        backgroundColor: 'rgba(0, 224, 255, 0.8)',
+        borderColor: '#00e0ff',
+        borderWidth: 1
+      }
+    ]
+  } : null;
+
+  return frequencyData;
 }

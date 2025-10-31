@@ -46,6 +46,7 @@ function PerformanceDeviationLayoutContent({ children }: { children: React.React
     filters,
     timeRange,
     performanceData,
+    insights,
     chatMessages,
     setChatMessages,
     chatInput,
@@ -100,6 +101,7 @@ function PerformanceDeviationLayoutContent({ children }: { children: React.React
     <PerformanceBIPanel
       onClose={() => setIsBIModalOpen(false)}
       performanceData={performanceData}
+      insights={insights}
     />
   );
 

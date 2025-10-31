@@ -45,6 +45,30 @@ export function VarianceDecomposition({
     );
   }
 
+  // Empty state
+  if (!components || components.length === 0) {
+    return (
+      <ChartCard
+        title="Variance Decomposition"
+        className="glass-card card-hover"
+        onShiftClick={(event) => {
+          shiftClickManager.addPoint({
+            label: "Variance Decomposition",
+            value: `Variance component analysis`,
+            source: 'Performance Deviation - Variance'
+          }, event.nativeEvent);
+        }}
+      >
+        <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+          <div className="text-center">
+            <p className="text-lg">No variance data available</p>
+            <p className="text-sm mt-2">Try adjusting your filters or check back later</p>
+          </div>
+        </div>
+      </ChartCard>
+    );
+  }
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (

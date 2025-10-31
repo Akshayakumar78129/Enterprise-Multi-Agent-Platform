@@ -2,6 +2,7 @@
 
 import React from "react";
 import { FilterBar } from "components/index";
+import { RFM_SEGMENT_OPTIONS, LOYALTY_STATUS_OPTIONS } from "@/lib/constants/filterOptions";
 
 interface BehaviorFilters {
   dateRange: {
@@ -32,27 +33,12 @@ const TIME_PRESETS = [
   { value: '2021-10-01:2021-12-31', label: 'Q4 2021' }
 ];
 
-const SEGMENT_OPTIONS = [
-  { value: 'all', label: 'All Segments' },
-  { value: 'loyal', label: 'Loyal Customers' },
-  { value: 'at_risk', label: 'At Risk' },
-  { value: 'new', label: 'New Customers' },
-  { value: 'dormant', label: 'Dormant' },
-  { value: 'champions', label: 'Champions' }
-];
-
+// Behavior analysis types - these are specific to behavior dashboard
 const BEHAVIOR_TYPE_OPTIONS = [
   { value: 'purchase_patterns', label: 'Purchase Patterns' },
   { value: 'product_preferences', label: 'Product Preferences' },
   { value: 'channel_usage', label: 'Channel Usage' },
   { value: 'engagement_metrics', label: 'Engagement Metrics' }
-];
-
-const LOYALTY_OPTIONS = [
-  { value: 'platinum', label: 'Platinum' },
-  { value: 'gold', label: 'Gold' },
-  { value: 'silver', label: 'Silver' },
-  { value: 'bronze', label: 'Bronze' }
 ];
 
 export function BehaviorFilters({
@@ -75,7 +61,7 @@ export function BehaviorFilters({
       {
         id: 'segment',
         label: 'Customer Segment',
-        options: SEGMENT_OPTIONS.filter(opt => opt.value !== 'all'),
+        options: RFM_SEGMENT_OPTIONS as any,  // Using centralized RFM segment options
         value: filters.segmentIds || (filters.segmentId ? [filters.segmentId] : []),
         onChange: (values) => {
           onFiltersChange({
@@ -102,7 +88,7 @@ export function BehaviorFilters({
       {
         id: 'loyaltyStatus',
         label: 'Loyalty Status',
-        options: LOYALTY_OPTIONS,
+        options: LOYALTY_STATUS_OPTIONS as any,  // Using centralized loyalty status options
         value: filters.loyaltyStatus,
         onChange: (values) => {
           onFiltersChange({

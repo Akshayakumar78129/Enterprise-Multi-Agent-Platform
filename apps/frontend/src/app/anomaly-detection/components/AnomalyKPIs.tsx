@@ -18,13 +18,18 @@ interface AnomalyKPIsProps {
 export function AnomalyKPIs({ kpiMetrics, loading = false }: AnomalyKPIsProps) {
   const shiftClickManager = getShiftClickManager();
 
-  const anomalyRate = typeof kpiMetrics.anomalyRate === 'string'
-    ? parseFloat(kpiMetrics.anomalyRate)
-    : kpiMetrics.anomalyRate;
+  // Add null safety checks for all metrics
+  const anomalyRate = typeof kpiMetrics?.anomalyRate === 'string'
+    ? parseFloat(kpiMetrics.anomalyRate) || 0
+    : (kpiMetrics?.anomalyRate ?? 0);
 
-  const meanScore = typeof kpiMetrics.meanAnomalyScore === 'string'
-    ? parseFloat(kpiMetrics.meanAnomalyScore)
-    : kpiMetrics.meanAnomalyScore;
+  const meanScore = typeof kpiMetrics?.meanAnomalyScore === 'string'
+    ? parseFloat(kpiMetrics.meanAnomalyScore) || 0
+    : (kpiMetrics?.meanAnomalyScore ?? 0);
+
+  const highSeverityCount = kpiMetrics?.highSeverityCount ?? 0;
+  const topAnomalousFeature = kpiMetrics?.topAnomalousFeature ?? 'Unknown';
+  const newAnomalies = kpiMetrics?.newAnomalies ?? 0;
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -48,16 +53,16 @@ export function AnomalyKPIs({ kpiMetrics, loading = false }: AnomalyKPIsProps) {
 
       <AnimatedKPITile
         title="High Severity"
-        value={kpiMetrics.highSeverityCount.toString()}
+        value={highSeverityCount.toString()}
         subtitle="Severity 4-5"
         icon={AlertTriangle}
         loading={loading}
-        color={kpiMetrics.highSeverityCount > 20 ? 'red' : 'yellow'}
-        pulse={kpiMetrics.highSeverityCount > 30}
+        color={highSeverityCount > 20 ? 'red' : 'yellow'}
+        pulse={highSeverityCount > 30}
         onShiftClick={(event) => {
           shiftClickManager.addPoint({
             label: "High Severity",
-            value: kpiMetrics.highSeverityCount.toString(),
+            value: highSeverityCount.toString(),
             source: 'Anomaly KPIs'
           }, event.nativeEvent);
         }}
@@ -65,14 +70,14 @@ export function AnomalyKPIs({ kpiMetrics, loading = false }: AnomalyKPIsProps) {
 
       <KPICard
         title="Top Anomalous Feature"
-        value={kpiMetrics.topAnomalousFeature}
+        value={topAnomalousFeature}
         description="Most frequent deviation"
         icon={<Activity className="w-5 h-5 text-blue-400" />}
         loading={loading}
         onShiftClick={(event) => {
           shiftClickManager.addPoint({
             label: "Top Anomalous Feature",
-            value: kpiMetrics.topAnomalousFeature,
+            value: topAnomalousFeature,
             source: 'Anomaly KPIs'
           }, event.nativeEvent);
         }}
@@ -97,16 +102,15 @@ export function AnomalyKPIs({ kpiMetrics, loading = false }: AnomalyKPIsProps) {
 
       <AnimatedKPITile
         title="New Anomalies"
-        value={kpiMetrics.newAnomalies.toString()}
+        value={newAnomalies.toString()}
         subtitle="Last 24h"
         icon={Clock}
         loading={loading}
-        trend={kpiMetrics.newAnomalies > 10 ? 'up' : 'neutral'}
-        sparkline={[5, 8, 3, 12, 7, kpiMetrics.newAnomalies]}
+        trend={newAnomalies > 10 ? 'up' : 'neutral'}
         onShiftClick={(event) => {
           shiftClickManager.addPoint({
             label: "New Anomalies",
-            value: kpiMetrics.newAnomalies.toString(),
+            value: newAnomalies.toString(),
             source: 'Anomaly KPIs'
           }, event.nativeEvent);
         }}

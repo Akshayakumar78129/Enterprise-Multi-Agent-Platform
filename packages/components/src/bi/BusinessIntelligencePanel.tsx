@@ -178,6 +178,15 @@ const CONTEXT_CONFIGS: Record<string, ContextConfig> = {
       { id: 'recommendations', label: 'Actions' }
     ]
   },
+  performance_deviation: {
+    title: 'Decision Intelligence',
+    color: 'primary',
+    tabs: [
+      { id: 'insights', label: 'Insights' },
+      { id: 'analysis', label: 'Analysis' },
+      { id: 'recommendations', label: 'Actions' }
+    ]
+  },
   // Default fallback
   default: {
     title: 'Decision Intelligence',

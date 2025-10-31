@@ -41,10 +41,10 @@ export function DeviationPatternExplorer({
   // Process pattern data - MUST be before conditional returns
   const scatterData = useMemo(() => {
     const patterns = data?.patterns || [];
-    return patterns.map((p: any) => ({
-      x: p.date_numeric || 0,  // X-axis: time or sequence, default to 0 if missing
-      y: p.deviation || 0,                        // Y-axis: deviation value
-      size: Math.abs(p.deviation) * 10,          // Bubble size based on deviation magnitude
+    return patterns.map((p: any, index: number) => ({
+      x: index,  // X-axis: sequence index
+      y: p.deviation_magnitude || p.deviation || 0,  // Y-axis: deviation value
+      size: Math.abs(p.deviation_magnitude || p.deviation || 0) * 100,  // Bubble size
       pattern_type: p.pattern_type || 'normal',
       date: p.date,
       kpi: p.kpi,

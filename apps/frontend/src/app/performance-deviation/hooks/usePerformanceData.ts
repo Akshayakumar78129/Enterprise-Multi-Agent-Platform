@@ -2,16 +2,20 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 interface PerformanceFilters {
-  dateFrom: string;
-  dateTo: string;
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
   businessFunctions?: string[];
+  significanceThreshold?: number;
+  productCategories?: string[];
   kpis?: string[];
 }
 
 async function fetchPerformanceData(filters: PerformanceFilters) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-  
-  const response = await fetch(`${apiUrl}/performance-deviation/summary`, {
+
+  const response = await fetch(`${apiUrl}/performance/summary`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(filters)
@@ -26,13 +30,17 @@ async function fetchPerformanceData(filters: PerformanceFilters) {
 
 export function usePerformanceData(filters: PerformanceFilters) {
   const { data: rawData, isLoading, error: queryError } = useQuery({
-    queryKey: ['performance-deviation', filters],
+    queryKey: ['performance-deviation-v2', filters],
     queryFn: () => fetchPerformanceData(filters),
     staleTime: 3 * 60 * 1000, // 3 minutes
     refetchOnWindowFocus: false,
   });
 
   const data = useMemo(() => rawData || {}, [rawData]);
+
+  const hasNoData = useMemo(() => {
+    return !data.data || data.data.length === 0;
+  }, [data]);
 
   return {
     loading: isLoading,
@@ -44,6 +52,9 @@ export function usePerformanceData(filters: PerformanceFilters) {
     kpis: data.kpis || {},
     businessComparison: data.businessFunctionComparison || { radar: {} },
     deviationPatterns: data.deviationPatterns || { patterns: [], calendar: {}, monthlyStats: {} },
-    factorCorrelations: data.factorCorrelations || { series: {} }
+    factorCorrelations: data.factorCorrelations || { series: {} },
+    insights: data.insights || [],
+    insightsMetadata: data.insights_metadata || { rule_based_count: 0, ai_count: 0, total_count: 0, insights_version: 'unified_v2' },
+    hasNoData
   };
 }

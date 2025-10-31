@@ -13,12 +13,17 @@ interface PerformanceRecord {
 interface PerformanceBIPanelProps {
   onClose: () => void;
   performanceData: PerformanceRecord[];
+  insights?: any[];
 }
 
 export function PerformanceBIPanel({
   onClose,
-  performanceData
+  performanceData,
+  insights = []
 }: PerformanceBIPanelProps) {
+  console.log('[PerformanceBIPanel] Received insights:', insights);
+  console.log('[PerformanceBIPanel] Insights count:', insights.length);
+
   // Transform performance data to match churn customer format
   const transformedData = performanceData.map((record) => {
     // Calculate risk level based on deviation
@@ -51,6 +56,7 @@ export function PerformanceBIPanel({
     <BusinessIntelligencePanel
       onClose={onClose}
       customers={transformedData}
+      insights={insights}
       dashboardContext="performance_deviation"
     />
   );
