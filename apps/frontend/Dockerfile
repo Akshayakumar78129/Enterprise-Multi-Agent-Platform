@@ -1,6 +1,8 @@
-# Multi-stage build for Next.js frontend
-# Stage 1: Dependencies
-FROM node:18-alpine AS deps
+FROM node:18-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Install pnpm
@@ -8,58 +10,45 @@ RUN npm install -g pnpm@9.0.0
 
 # Copy package files
 COPY package.json pnpm-lock.yaml* ./
+RUN pnpm install
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile || pnpm install
-
-# Stage 2: Builder
-FROM node:18-alpine AS builder
+# Rebuild the source code only when needed
+FROM base AS builder
 WORKDIR /app
-
-# Install pnpm
-RUN npm install -g pnpm@9.0.0
-
-# Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
-
-# Copy source code
 COPY . .
 
-# Build Next.js application
+# Install pnpm for build
+RUN npm install -g pnpm@9.0.0
+
+# Set environment variable for standalone output
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm build
 
-# Stage 3: Runner (Production)
-FROM node:18-alpine AS runner
+# Production image, copy all the files and run next
+FROM base AS runner
 WORKDIR /app
 
-# Set production environment
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 # Copy built application
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
 
-# Change ownership to non-root user
-RUN chown -R nextjs:nodejs /app
+# Install pnpm in runner
+RUN npm install -g pnpm@9.0.0
 
-# Switch to non-root user
 USER nextjs
 
-# Expose port
 EXPOSE 3000
 
-# Set hostname to allow connections from any IP
-ENV HOSTNAME="0.0.0.0"
 ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
-# Start the application
-CMD ["node", "server.js"]
+CMD ["pnpm", "start"]
