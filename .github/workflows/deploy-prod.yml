@@ -156,7 +156,9 @@ jobs:
                 DEEPGRAM_API_KEY=secretref:deepgram-api-key \
                 PORT=8000 \
                 MODEL=gemini-2.5-flash \
-                GOOGLE_GENAI_USE_VERTEXAI=False
+                GOOGLE_GENAI_USE_VERTEXAI=False \
+                DATABASE_URL="postgresql://dbadmin:SecurePass12345@multiagent-prod-db.postgres.database.azure.com/postgres?sslmode=require" \
+                USE_POSTGRES=true
 
       - name: Update Frontend Container App
         uses: azure/CLI@v1
