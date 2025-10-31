@@ -11,7 +11,8 @@ const nextConfig = {
   },
   experimental: {
     externalDir: true,
-    optimizeCss: true,
+    // Disabled optimizeCss to avoid critters dependency issues
+    // optimizeCss: true,
     optimizePackageImports: ['plotly.js', 'react-plotly.js', 'd3', 'chart.js'],
   },
 
