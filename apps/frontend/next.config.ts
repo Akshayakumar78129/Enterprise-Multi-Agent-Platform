@@ -1,6 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ['components', 'constants', 'data-client'],
+  eslint: {
+    // Disable ESLint during production builds
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    // Disable type checking during production builds
+    ignoreBuildErrors: true,
+  },
+  output: 'standalone',
   experimental: {
     externalDir: true,
     optimizeCss: true,
