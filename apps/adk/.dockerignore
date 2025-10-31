@@ -20,18 +20,18 @@ env/
 .env.production
 *.env
 
-# Database files - ONLY customers.db is included in Docker image
-# Exclude ALL .db files
-*.db
-*.sqlite
-*.sqlite3
+# Database files - ONLY customers.db from orchestration_agent/database/ is included
+# Exclude .db files from cache directory
+cache/*.db
+cache/**/*.db
 
-# But include customers.db specifically
-!orchestration_agent/database/customers.db
-
-# Exclude temp database files
+# Exclude temp database files everywhere
 *.db-shm
 *.db-wal
+
+# Exclude .sqlite and .sqlite3 files everywhere
+*.sqlite
+*.sqlite3
 
 # Cache
 cache/
