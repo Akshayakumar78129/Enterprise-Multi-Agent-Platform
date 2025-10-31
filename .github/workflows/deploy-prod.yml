@@ -32,9 +32,10 @@ jobs:
         working-directory: ./apps/frontend
         run: pnpm install --frozen-lockfile
 
-      - name: Lint frontend
-        working-directory: ./apps/frontend
-        run: pnpm lint || true  # Continue even if lint fails
+      # Linting disabled - builds are configured to ignore lint/type errors
+      # - name: Lint frontend
+      #   working-directory: ./apps/frontend
+      #   run: pnpm lint || true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -47,12 +48,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Lint Python code (ADK)
-        working-directory: ./apps/adk
-        run: |
-          pip install black flake8
-          black --check . || true
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
+      # Python linting disabled - Docker build is the source of truth
+      # - name: Lint Python code (ADK)
+      #   working-directory: ./apps/adk
+      #   run: |
+      #     pip install black flake8
+      #     black --check . || true
+      #     flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
 
   # Job 2: Build and Push Docker Images
   build-push-images:
