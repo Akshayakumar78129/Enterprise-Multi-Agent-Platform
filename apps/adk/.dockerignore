@@ -20,25 +20,15 @@ env/
 .env.production
 *.env
 
-# Database files - ONLY customers.db is included
-# Exclude ALL other database files
-orchestration_agent/database/financial_agent.db
-orchestration_agent/database/sales_agent.db
-orchestration_agent/database/inventory.db
-orchestration_agent/database/*.db
-!orchestration_agent/database/customers.db
+# Database files - Include ALL database files for now
+# We will optimize this later to reduce image size
 
-# Exclude .db files from cache directory
+# Exclude .db files from cache directory only
 cache/*.db
-cache/**/*.db
 
 # Exclude temp database files everywhere
 *.db-shm
 *.db-wal
-
-# Exclude .sqlite and .sqlite3 files everywhere
-*.sqlite
-*.sqlite3
 
 # Cache
 cache/
