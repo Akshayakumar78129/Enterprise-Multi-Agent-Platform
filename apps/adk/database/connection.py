@@ -187,6 +187,10 @@ class DatabaseConnection:
         if params is None:
             params = []
 
+        # Convert SQLite ? placeholders to PostgreSQL %s placeholders
+        if self.db_type == 'postgres' and '?' in sql:
+            sql = sql.replace('?', '%s')
+
         with self.get_connection() as conn:
             if self.db_type == 'postgres':
                 # Use RealDictCursor for PostgreSQL to get dict results
@@ -233,6 +237,10 @@ class DatabaseConnection:
         """
         if params is None:
             params = []
+
+        # Convert SQLite ? placeholders to PostgreSQL %s placeholders
+        if self.db_type == 'postgres' and '?' in sql:
+            sql = sql.replace('?', '%s')
 
         with self.get_connection() as conn:
             cursor = conn.cursor()
