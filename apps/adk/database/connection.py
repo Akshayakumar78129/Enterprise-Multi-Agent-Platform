@@ -1,4 +1,6 @@
-"""Database connection management with connection pooling and optimization"""
+"""Database connection management with connection pooling and optimization
+Supports both SQLite (local) and PostgreSQL (production)
+"""
 
 import sqlite3
 import os
@@ -7,6 +9,14 @@ from typing import Dict, List, Any, Optional
 from contextlib import contextmanager
 from queue import Queue, Empty
 import time
+
+# Try to import psycopg2 for PostgreSQL support
+try:
+    import psycopg2
+    import psycopg2.extras
+    POSTGRES_AVAILABLE = True
+except ImportError:
+    POSTGRES_AVAILABLE = False
 
 
 class ConnectionPool:
