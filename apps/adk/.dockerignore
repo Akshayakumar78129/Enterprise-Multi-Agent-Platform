@@ -20,7 +20,14 @@ env/
 .env.production
 *.env
 
-# Database files - ONLY customers.db from orchestration_agent/database/ is included
+# Database files - ONLY customers.db is included
+# Exclude ALL other database files
+orchestration_agent/database/financial_agent.db
+orchestration_agent/database/sales_agent.db
+orchestration_agent/database/inventory.db
+orchestration_agent/database/*.db
+!orchestration_agent/database/customers.db
+
 # Exclude .db files from cache directory
 cache/*.db
 cache/**/*.db
