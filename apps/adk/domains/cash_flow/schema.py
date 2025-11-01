@@ -8,10 +8,10 @@ class CashFlowSchema(BaseSchema):
 
     # Table definitions - using same tables as sales_performance
     TABLES = {
-        'transaction': 'dbo_F_Sales_Transaction',
-        'customer': 'dbo_D_Customer',
-        'item': 'dbo_D_Item',
-        'region': 'dbo_D_Sales_Organization',
+        'transaction': '"dbo_F_Sales_Transaction"',
+        'customer': '"dbo_D_Customer"',
+        'item': '"dbo_D_Item"',
+        'region': '"dbo_D_Sales_Organization"',
     }
 
     # Table aliases

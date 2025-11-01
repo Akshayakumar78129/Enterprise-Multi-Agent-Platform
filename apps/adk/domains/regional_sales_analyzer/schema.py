@@ -8,8 +8,8 @@ class RegionalSalesAnalyzerSchema(BaseSchema):
 
     # Table definitions
     TABLES = {
-        'transaction': 'dbo_F_Sales_Transaction',
-        'customer': 'dbo_D_Customer',
+        'transaction': '"dbo_F_Sales_Transaction"',
+        'customer': '"dbo_D_Customer"',
     }
 
     # Table aliases

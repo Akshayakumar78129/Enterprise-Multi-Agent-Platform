@@ -8,9 +8,9 @@ class ChurnSchema(BaseSchema):
 
     # Table definitions
     TABLES = {
-        'customer': 'dbo_D_Customer',
-        'transaction': 'dbo_F_Sales_Transaction',
-        'loyalty': 'dbo_F_Customer_Loyalty',
+        'customer': '"dbo_D_Customer"',
+        'transaction': '"dbo_F_Sales_Transaction"',
+        'loyalty': '"dbo_F_Customer_Loyalty"',
     }
 
     # Aliases

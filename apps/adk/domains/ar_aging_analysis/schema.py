@@ -17,10 +17,10 @@ class ARAgingSchema:
     def __init__(self):
         # Table names
         self.TABLES = {
-            'ar_detail': 'dbo_F_AR_Detail',
-            'customer': 'dbo_D_Customer',
-            'transaction': 'dbo_F_Sales_Transaction',
-            'loyalty': 'dbo_F_Customer_Loyalty'
+            'ar_detail': '"dbo_F_AR_Detail"',
+            'customer': '"dbo_D_Customer"',
+            'transaction': '"dbo_F_Sales_Transaction"',
+            'loyalty': '"dbo_F_Customer_Loyalty"'
         }
 
         # Table aliases

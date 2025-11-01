@@ -6,10 +6,10 @@ class PerformanceSchema:
 
     # Table definitions
     TABLES = {
-        'sales': 'dbo_F_Sales_Transaction',
-        'loyalty': 'dbo_F_Customer_Loyalty',
-        'ar': 'dbo_F_AR_Detail',
-        'customers': 'dbo_D_Customer'
+        'sales': '"dbo_F_Sales_Transaction"',
+        'loyalty': '"dbo_F_Customer_Loyalty"',
+        'ar': '"dbo_F_AR_Detail"',
+        'customers': '"dbo_D_Customer"'
     }
 
     # Aliases for SQL joins

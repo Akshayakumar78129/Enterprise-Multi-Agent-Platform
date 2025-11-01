@@ -57,10 +57,10 @@ class RevenueForecastSchema:
     def __init__(self):
         # Table names
         self.TABLES = {
-            'gl_transaction': 'dbo_F_GL_Transaction',
-            'customer': 'dbo_D_Customer',
-            'item': 'dbo_D_Item',
-            'transaction': 'dbo_F_Sales_Transaction'
+            'gl_transaction': '"dbo_F_GL_Transaction"',
+            'customer': '"dbo_D_Customer"',
+            'item': '"dbo_D_Item"',
+            'transaction': '"dbo_F_Sales_Transaction"'
         }
 
         # Table aliases

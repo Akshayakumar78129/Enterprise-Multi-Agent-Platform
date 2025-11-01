@@ -11,11 +11,11 @@ class CustomerSegmentationSchema(BaseSchema):
 
     # Table definitions
     TABLES = {
-        'customer': 'dbo_D_Customer',
-        'transaction': 'dbo_F_Sales_Transaction',
-        'loyalty': 'dbo_F_Customer_Loyalty',
-        'product': 'dbo_D_Product',
-        'inventory': 'dbo_F_Inventory_Transaction',
+        'customer': '"dbo_D_Customer"',
+        'transaction': '"dbo_F_Sales_Transaction"',
+        'loyalty': '"dbo_F_Customer_Loyalty"',
+        'product': '"dbo_D_Product"',
+        'inventory': '"dbo_F_Inventory_Transaction"',
     }
 
     # Aliases
