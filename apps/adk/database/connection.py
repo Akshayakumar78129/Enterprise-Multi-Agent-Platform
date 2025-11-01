@@ -4,6 +4,7 @@ Supports both SQLite (local) and PostgreSQL (production)
 
 import sqlite3
 import os
+import re
 import threading
 from typing import Dict, List, Any, Optional
 from contextlib import contextmanager
@@ -187,9 +188,14 @@ class DatabaseConnection:
         if params is None:
             params = []
 
-        # Convert SQLite ? placeholders to PostgreSQL %s placeholders
-        if self.db_type == 'postgres' and '?' in sql:
-            sql = sql.replace('?', '%s')
+        # Convert SQL syntax for PostgreSQL
+        if self.db_type == 'postgres':
+            # Convert SQLite ? placeholders to PostgreSQL %s placeholders
+            if '?' in sql:
+                sql = sql.replace('?', '%s')
+
+            # Convert SQL Server [column] brackets to PostgreSQL "column" quotes
+            sql = re.sub(r'\[([^\]]+)\]', r'"\1"', sql)
 
         with self.get_connection() as conn:
             if self.db_type == 'postgres':
@@ -238,9 +244,14 @@ class DatabaseConnection:
         if params is None:
             params = []
 
-        # Convert SQLite ? placeholders to PostgreSQL %s placeholders
-        if self.db_type == 'postgres' and '?' in sql:
-            sql = sql.replace('?', '%s')
+        # Convert SQL syntax for PostgreSQL
+        if self.db_type == 'postgres':
+            # Convert SQLite ? placeholders to PostgreSQL %s placeholders
+            if '?' in sql:
+                sql = sql.replace('?', '%s')
+
+            # Convert SQL Server [column] brackets to PostgreSQL "column" quotes
+            sql = re.sub(r'\[([^\]]+)\]', r'"\1"', sql)
 
         with self.get_connection() as conn:
             cursor = conn.cursor()
