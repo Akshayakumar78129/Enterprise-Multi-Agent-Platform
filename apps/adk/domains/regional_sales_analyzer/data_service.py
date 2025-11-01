@@ -23,13 +23,13 @@ class RegionalSalesAnalyzerDataService:
         SELECT
             {self.schema.CUSTOMER.refs['country']} as country,
             {self.schema.CUSTOMER.refs['state']} as state,
-            ROUND(SUM({self.schema.TRANSACTION.refs['sales_amount']}), 2) as totalSales,
-            ROUND(SUM({self.schema.TRANSACTION.refs['net_sales_amount']}), 2) as netSales,
-            ROUND(SUM({self.schema.TRANSACTION.refs['sales_quantity']}), 2) as totalQuantity,
-            ROUND(SUM({self.schema.TRANSACTION.refs['gross_profit']}), 2) as grossProfit,
+            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['sales_amount']}) AS numeric), 2) as totalSales,
+            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['net_sales_amount']}) AS numeric), 2) as netSales,
+            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['sales_quantity']}) AS numeric), 2) as totalQuantity,
+            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['gross_profit']}) AS numeric), 2) as grossProfit,
             COUNT(DISTINCT {self.schema.TRANSACTION.refs['customer_key']}) as customerCount,
             COUNT(*) as transactionCount,
-            ROUND(AVG({self.schema.TRANSACTION.refs['sales_amount']}), 2) as avgTransactionValue,
+            ROUND(CAST(AVG({self.schema.TRANSACTION.refs['sales_amount']}) AS numeric), 2) as avgTransactionValue,
             MIN({self.schema.TRANSACTION.refs['date']}) as firstSaleDate,
             MAX({self.schema.TRANSACTION.refs['date']}) as lastSaleDate
         FROM {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
@@ -59,10 +59,10 @@ class RegionalSalesAnalyzerDataService:
         sql = f"""
         SELECT
             {self.schema.CUSTOMER.refs['country']} as country,
-            ROUND(SUM({self.schema.TRANSACTION.refs['sales_amount']}), 2) as totalSales,
-            ROUND(SUM({self.schema.TRANSACTION.refs['net_sales_amount']}), 2) as netSales,
-            ROUND(SUM({self.schema.TRANSACTION.refs['sales_quantity']}), 2) as totalQuantity,
-            ROUND(SUM({self.schema.TRANSACTION.refs['gross_profit']}), 2) as grossProfit,
+            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['sales_amount']}) AS numeric), 2) as totalSales,
+            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['net_sales_amount']}) AS numeric), 2) as netSales,
+            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['sales_quantity']}) AS numeric), 2) as totalQuantity,
+            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['gross_profit']}) AS numeric), 2) as grossProfit,
             ROUND(SUM({self.schema.TRANSACTION.refs['gross_profit']}) / NULLIF(SUM({self.schema.TRANSACTION.refs['sales_amount']}), 0) * 100, 2) as profitMargin,
             COUNT(DISTINCT {self.schema.TRANSACTION.refs['customer_key']}) as customerCount,
             COUNT(*) as transactionCount,
@@ -102,10 +102,10 @@ class RegionalSalesAnalyzerDataService:
             {period_expression} as period,
             {self.schema.CUSTOMER.refs['country']} as country,
             {self.schema.CUSTOMER.refs['state']} as state,
-            ROUND(SUM({self.schema.TRANSACTION.refs['sales_amount']}), 2) as totalSales,
-            ROUND(SUM({self.schema.TRANSACTION.refs['net_sales_amount']}), 2) as netSales,
-            ROUND(SUM({self.schema.TRANSACTION.refs['sales_quantity']}), 2) as totalQuantity,
-            ROUND(SUM({self.schema.TRANSACTION.refs['gross_profit']}), 2) as grossProfit,
+            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['sales_amount']}) AS numeric), 2) as totalSales,
+            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['net_sales_amount']}) AS numeric), 2) as netSales,
+            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['sales_quantity']}) AS numeric), 2) as totalQuantity,
+            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['gross_profit']}) AS numeric), 2) as grossProfit,
             COUNT(DISTINCT {self.schema.TRANSACTION.refs['customer_key']}) as customerCount,
             COUNT(*) as transactionCount
         FROM {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
@@ -125,14 +125,14 @@ class RegionalSalesAnalyzerDataService:
 
         sql = f"""
         SELECT
-            ROUND(SUM({self.schema.TRANSACTION.refs['sales_amount']}), 2) as totalSales,
-            ROUND(SUM({self.schema.TRANSACTION.refs['net_sales_amount']}), 2) as netSales,
-            ROUND(SUM({self.schema.TRANSACTION.refs['gross_profit']}), 2) as grossProfit,
+            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['sales_amount']}) AS numeric), 2) as totalSales,
+            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['net_sales_amount']}) AS numeric), 2) as netSales,
+            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['gross_profit']}) AS numeric), 2) as grossProfit,
             COUNT(DISTINCT {self.schema.CUSTOMER.refs['country']}) as countryCount,
             COUNT(DISTINCT {self.schema.CUSTOMER.refs['state']}) as stateCount,
             COUNT(DISTINCT {self.schema.TRANSACTION.refs['customer_key']}) as customerCount,
             COUNT(*) as transactionCount,
-            ROUND(AVG({self.schema.TRANSACTION.refs['sales_amount']}), 2) as avgTransactionValue
+            ROUND(CAST(AVG({self.schema.TRANSACTION.refs['sales_amount']}) AS numeric), 2) as avgTransactionValue
         FROM {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
         JOIN {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
             ON {self.schema.TRANSACTION.refs['customer_key']} = {self.schema.CUSTOMER.refs['key']}
@@ -171,7 +171,7 @@ class RegionalSalesAnalyzerDataService:
         SELECT
             {self.schema.CUSTOMER.refs['country']} as country,
             {self.schema.CUSTOMER.refs['state']} as state,
-            ROUND(SUM({self.schema.TRANSACTION.refs['sales_amount']}), 2) as totalSales,
+            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['sales_amount']}) AS numeric), 2) as totalSales,
             ROUND(SUM({self.schema.TRANSACTION.refs['gross_profit']}) / NULLIF(SUM({self.schema.TRANSACTION.refs['sales_amount']}), 0) * 100, 2) as profitMargin
         FROM {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
         JOIN {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
@@ -206,7 +206,7 @@ class RegionalSalesAnalyzerDataService:
             SELECT
                 {self.schema.CUSTOMER.refs['country']} as country,
                 {self.schema.CUSTOMER.refs['state']} as state,
-                ROUND(SUM({self.schema.TRANSACTION.refs['sales_amount']}), 2) as totalSales,
+                ROUND(CAST(SUM({self.schema.TRANSACTION.refs['sales_amount']}) AS numeric), 2) as totalSales,
                 COUNT(DISTINCT {self.schema.TRANSACTION.refs['customer_key']}) as customerCount
             FROM {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
             JOIN {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
@@ -232,11 +232,11 @@ class RegionalSalesAnalyzerDataService:
         SELECT
             {self.schema.CUSTOMER.refs['country']} as country,
             {self.schema.CUSTOMER.refs['state']} as state,
-            ROUND(SUM({self.schema.TRANSACTION.refs['sales_amount']}), 2) as totalSales,
-            ROUND(SUM({self.schema.TRANSACTION.refs['gross_profit']}), 2) as grossProfit,
+            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['sales_amount']}) AS numeric), 2) as totalSales,
+            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['gross_profit']}) AS numeric), 2) as grossProfit,
             COUNT(DISTINCT {self.schema.TRANSACTION.refs['customer_key']}) as customerCount,
             COUNT(*) as transactionCount,
-            ROUND(AVG({self.schema.TRANSACTION.refs['sales_amount']}), 2) as avgTransactionValue
+            ROUND(CAST(AVG({self.schema.TRANSACTION.refs['sales_amount']}) AS numeric), 2) as avgTransactionValue
         FROM {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
         JOIN {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
             ON {self.schema.TRANSACTION.refs['customer_key']} = {self.schema.CUSTOMER.refs['key']}

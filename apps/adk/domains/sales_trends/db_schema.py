@@ -8,9 +8,9 @@ class SalesTrendsSchema(BaseSchema):
 
     # Table definitions
     TABLES = {
-        'transaction': 'dbo_F_Sales_Transaction',
-        'customer': 'dbo_D_Customer',
-        'item': 'dbo_D_Item',
+        'transaction': '\"dbo_F_Sales_Transaction\"',
+        'customer': '\"dbo_D_Customer\"',
+        'item': '\"dbo_D_Item\"',
     }
 
     # Table aliases
@@ -22,7 +22,7 @@ class SalesTrendsSchema(BaseSchema):
 
     # Transaction schema
     TRANSACTION = TableSchema(
-        table_name='dbo_F_Sales_Transaction',
+        table_name="dbo_F_Sales_Transaction",
         alias='t',
         columns={
             'date': '[Txn Date]',
@@ -67,7 +67,7 @@ class SalesTrendsSchema(BaseSchema):
 
     # Customer schema
     CUSTOMER = TableSchema(
-        table_name='dbo_D_Customer',
+        table_name="dbo_D_Customer",
         alias='c',
         columns={
             'key': '[Customer Key]',
@@ -94,7 +94,7 @@ class SalesTrendsSchema(BaseSchema):
 
     # Item schema
     ITEM = TableSchema(
-        table_name='dbo_D_Item',
+        table_name="dbo_D_Item",
         alias='i',
         columns={
             'key': '[Item Key]',

@@ -1,6 +1,7 @@
 """Processing service for AR Aging Analysis - Main business logic"""
 
 from typing import Dict, Any, List
+from decimal import Decimal
 import logging
 from datetime import datetime, timedelta
 from .data_service import ARAgingDataService
@@ -16,6 +17,14 @@ from .models import (
     TrendDirection
 )
 from domains.common.dashboard_cache import cache_dashboard_endpoint
+
+
+def to_float(value):
+    """Convert Decimal/None to float for arithmetic"""
+    if value is None:
+        return 0.0
+    return float(value)
+
 
 logger = logging.getLogger(__name__)
 
