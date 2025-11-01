@@ -28,7 +28,7 @@ class InventoryLevelDataService:
                 SUM(t."Net Sales Amount") as total_value,
                 COUNT(DISTINCT t."Txn Date") as active_days,
                 COUNT(*) as transactions
-            FROM dbo_F_Sales_Transaction t
+            FROM "dbo_F_Sales_Transaction" t
             WHERE 1=1
             GROUP BY t."Item Number", t."Product Posting Group"
         )
@@ -83,7 +83,7 @@ class InventoryLevelDataService:
                 SUM(t."Net Sales Amount") as total_value,
                 AVG(t."Net Sales Quantity") as avg_quantity,
                 COUNT(DISTINCT t."Txn Date") as active_days
-            FROM dbo_F_Sales_Transaction t
+            FROM "dbo_F_Sales_Transaction" t
             WHERE 1=1
             GROUP BY t."Item Number", t."Product Posting Group"
         )
@@ -130,7 +130,7 @@ class InventoryLevelDataService:
             SUM(CASE WHEN t."Net Sales Quantity" < 0 THEN ABS(t."Net Sales Quantity") ELSE 0 END) as outbound,
             SUM(t."Net Sales Quantity") as net_movement,
             COUNT(*) as transaction_count
-        FROM dbo_F_Sales_Transaction t
+        FROM "dbo_F_Sales_Transaction" t
         WHERE 1=1
         GROUP BY DATE(t."Txn Date")
         ORDER BY period DESC
@@ -170,7 +170,7 @@ class InventoryLevelDataService:
                 t."Product Posting Group" as category,
                 SUM(t."Net Sales Quantity") as current_stock,
                 AVG(t."Net Sales Quantity") as avg_daily_usage
-            FROM dbo_F_Sales_Transaction t
+            FROM "dbo_F_Sales_Transaction" t
             WHERE 1=1
             GROUP BY t."Item Number", t."Product Posting Group"
             HAVING SUM(t."Net Sales Quantity") < AVG(t."Net Sales Quantity") * 7

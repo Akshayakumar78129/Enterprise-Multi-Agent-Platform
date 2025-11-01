@@ -27,7 +27,7 @@ class StockOptimizationDataService:
                 SUM(t."Net Sales Quantity") as total_quantity,
                 AVG(t."Net Sales Amount") as avg_value,
                 COUNT(*) as transaction_count
-            FROM dbo_F_Sales_Transaction t
+            FROM "dbo_F_Sales_Transaction" t
             WHERE 1=1
         )
         SELECT * FROM MetricsData
@@ -62,7 +62,7 @@ class StockOptimizationDataService:
             SUM(t."Net Sales Quantity") as quantity,
             SUM(t."Net Sales Amount") as value,
             COUNT(*) as transactions
-        FROM dbo_F_Sales_Transaction t
+        FROM "dbo_F_Sales_Transaction" t
         WHERE 1=1
         GROUP BY t."Item Number", t."Product Posting Group"
         ORDER BY value DESC
