@@ -197,6 +197,18 @@ class DatabaseConnection:
             # Convert SQL Server [column] brackets to PostgreSQL "column" quotes
             sql = re.sub(r'\[([^\]]+)\]', r'"\1"', sql)
 
+            # Fix ROUND function for PostgreSQL - requires numeric type
+            # Convert ROUND(expression, N) to ROUND((expression)::numeric, N)
+            def fix_round(match):
+                expr = match.group(1).strip()
+                precision = match.group(2).strip()
+                # Don't double-cast if already has ::numeric or CAST
+                if '::numeric' in expr.lower() or 'cast(' in expr.lower():
+                    return f'ROUND({expr}, {precision})'
+                return f'ROUND(({expr})::numeric, {precision})'
+
+            sql = re.sub(r'ROUND\s*\(\s*([^,]+),\s*(\d+)\s*\)', fix_round, sql, flags=re.IGNORECASE)
+
         with self.get_connection() as conn:
             if self.db_type == 'postgres':
                 # Use RealDictCursor for PostgreSQL to get dict results
@@ -252,6 +264,18 @@ class DatabaseConnection:
 
             # Convert SQL Server [column] brackets to PostgreSQL "column" quotes
             sql = re.sub(r'\[([^\]]+)\]', r'"\1"', sql)
+
+            # Fix ROUND function for PostgreSQL - requires numeric type
+            # Convert ROUND(expression, N) to ROUND((expression)::numeric, N)
+            def fix_round(match):
+                expr = match.group(1).strip()
+                precision = match.group(2).strip()
+                # Don't double-cast if already has ::numeric or CAST
+                if '::numeric' in expr.lower() or 'cast(' in expr.lower():
+                    return f'ROUND({expr}, {precision})'
+                return f'ROUND(({expr})::numeric, {precision})'
+
+            sql = re.sub(r'ROUND\s*\(\s*([^,]+),\s*(\d+)\s*\)', fix_round, sql, flags=re.IGNORECASE)
 
         with self.get_connection() as conn:
             cursor = conn.cursor()
