@@ -29,7 +29,7 @@ class CustomerInsightsDataService:
                 MAX(date(o.[Order Date])) as last_order_date,
                 CASE
                     WHEN MAX(date(o.[Order Date])) IS NULL THEN 999
-                    ELSE julianday('2021-12-31') - julianday(MAX(date(o.[Order Date])))
+                    ELSE EXTRACT(EPOCH FROM ('2021-12-31'::date - MAX(o.[Order Date]::date))) / 86400
                 END as days_since_last_order
             FROM Customer c
             LEFT JOIN [Order] o ON c.[Customer Key] = o.[Customer Key]
@@ -188,11 +188,11 @@ class CustomerInsightsDataService:
                     WHEN o.[Order Key] IS NOT NULL THEN c.[Customer Key]
                 END) as engaged_customers,
                 COUNT(DISTINCT CASE
-                    WHEN julianday('2021-12-31') - julianday(MAX(o.[Order Date])) > 90 THEN c.[Customer Key]
+                    WHEN EXTRACT(EPOCH FROM ('2021-12-31'::date - MAX(o.[Order Date]::date))) / 86400 > 90 THEN c.[Customer Key]
                 END) as at_risk_customers,
                 AVG(CASE
                     WHEN o.[Order Key] IS NOT NULL
-                    THEN julianday('2021-12-31') - julianday(o.[Order Date])
+                    THEN EXTRACT(EPOCH FROM ('2021-12-31'::date - o.[Order Date]::date)) / 86400
                     ELSE NULL
                 END) as avg_days_since_order
             FROM Customer c

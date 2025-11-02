@@ -16,27 +16,53 @@ class SalesTrendsDataService:
         self.schema = SalesTrendsSchema()
         self.filter_engine = FilterEngine()
 
+    def _date_part(self, date_ref: str, part: str) -> str:
+        """Extract a date part (year, month, etc.)"""
+        if self.db.db_type == 'postgres':
+            if part == 'year':
+                return f"TO_CHAR({date_ref}, 'YYYY')"
+            elif part == 'month':
+                return f"TO_CHAR({date_ref}, 'MM')"
+        else:  # sqlite
+            if part == 'year':
+                return f"strftime('%Y', {date_ref})"
+            elif part == 'month':
+                return f"strftime('%m', {date_ref})"
+        return date_ref
+
     def _get_time_group_expression(self, granularity: str) -> str:
         """Get SQL expression for time grouping"""
         date_ref = self.schema.TRANSACTION.refs['date']
 
-        if granularity == 'daily':
-            return f"date({date_ref})"
-        elif granularity == 'weekly':
-            return f"strftime('%Y-W%W', {date_ref})"
-        elif granularity == 'quarterly':
-            # Q1: Jan-Mar (months 1-3), Q2: Apr-Jun (4-6), Q3: Jul-Sep (7-9), Q4: Oct-Dec (10-12)
-            return f"""strftime('%Y-Q', {date_ref}) ||
-                     CASE
-                         WHEN CAST(strftime('%m', {date_ref}) AS INTEGER) <= 3 THEN '1'
-                         WHEN CAST(strftime('%m', {date_ref}) AS INTEGER) <= 6 THEN '2'
-                         WHEN CAST(strftime('%m', {date_ref}) AS INTEGER) <= 9 THEN '3'
-                         ELSE '4'
-                     END"""
-        elif granularity == 'annual':
-            return f"strftime('%Y', {date_ref})"
-        else:  # monthly (default)
-            return f"strftime('%Y-%m', {date_ref})"
+        if self.db.db_type == 'postgres':
+            if granularity == 'daily':
+                return f"TO_CHAR({date_ref}, 'YYYY-MM-DD')"
+            elif granularity == 'weekly':
+                return f"TO_CHAR({date_ref}, 'IYYY-IW')"
+            elif granularity == 'quarterly':
+                return f"TO_CHAR({date_ref}, 'YYYY') || '-Q' || TO_CHAR({date_ref}, 'Q')"
+            elif granularity == 'annual':
+                return f"TO_CHAR({date_ref}, 'YYYY')"
+            else:  # monthly (default)
+                return f"TO_CHAR({date_ref}, 'YYYY-MM')"
+        else:  # sqlite
+            if granularity == 'daily':
+                return f"date({date_ref})"
+            elif granularity == 'weekly':
+                return f"strftime('%Y-W%W', {date_ref})"
+            elif granularity == 'quarterly':
+                # Q1: Jan-Mar (months 1-3), Q2: Apr-Jun (4-6), Q3: Jul-Sep (7-9), Q4: Oct-Dec (10-12)
+                return f"""strftime('%Y-Q', {date_ref}) ||
+                         CASE
+                             WHEN CAST(strftime('%m', {date_ref}) AS INTEGER) <= 3 THEN '1'
+                             WHEN CAST(strftime('%m', {date_ref}) AS INTEGER) <= 6 THEN '2'
+                             WHEN CAST(strftime('%m', {date_ref}) AS INTEGER) <= 9 THEN '3'
+                             ELSE '4'
+                         END"""
+            elif granularity == 'annual':
+                return f"strftime('%Y', {date_ref})"
+            else:  # monthly (default)
+                return f"strftime('%Y-%m', {date_ref})"
 
     async def get_kpi_summary(self, filters: Dict[str, Any] = {}) -> Dict[str, Any]:
         """Get KPI summary metrics"""
@@ -129,11 +155,13 @@ class SalesTrendsDataService:
     async def get_seasonality_data(self, filters: Dict[str, Any] = {}) -> List[Dict[str, Any]]:
         """Get seasonality analysis data by year and month"""
         date_ref = self.schema.TRANSACTION.refs['date']
+        year_expr = self._date_part(date_ref, 'year')
+        month_expr = self._date_part(date_ref, 'month')
 
         sql = f"""
             SELECT
-                strftime('%Y', {date_ref}) AS year,
-                strftime('%m', {date_ref}) AS month,
+                {year_expr} AS year,
+                {month_expr} AS month,
                 SUM({self.schema.TRANSACTION.refs['net_sales_amount']}) AS revenue
             FROM {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
             LEFT JOIN {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}

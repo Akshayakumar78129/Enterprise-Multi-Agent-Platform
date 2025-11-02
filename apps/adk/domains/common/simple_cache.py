@@ -18,6 +18,9 @@ from pathlib import Path
 class SimpleMemoryCache:
     """Simple in-memory LRU cache implementation"""
 
+    # CACHE VERSION - increment to invalidate all caches
+    CACHE_VERSION = "v2_20251102_2130"
+
     def __init__(self, max_size: int = 100 * 1024 * 1024, default_ttl: int = 300):
         self.max_size = max_size
         self.default_ttl = default_ttl
@@ -103,6 +106,7 @@ def generate_cache_key(dashboard_type: str, endpoint: str, filters: Dict[str, An
                 normalized_filters[key] = value
 
     key_data = {
+        'version': SimpleMemoryCache.CACHE_VERSION,
         'dashboard': dashboard_type,
         'endpoint': endpoint,
         'filters': normalized_filters

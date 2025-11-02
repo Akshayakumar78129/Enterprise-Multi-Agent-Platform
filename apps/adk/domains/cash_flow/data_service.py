@@ -16,6 +16,31 @@ class CashFlowDataService:
         self.schema = CashFlowSchema()
         self.filter_engine = FilterEngine()
 
+    def _date_format(self, date_ref: str, format_type: str) -> str:
+        """Generate database-specific date formatting SQL
+
+        Args:
+            date_ref: Column reference for the date
+            format_type: Format type ('year_month', 'year', 'month')
+
+        Returns:
+            SQL expression for date formatting
+        """
+        if self.db.db_type == 'postgres':
+            format_map = {
+                'year_month': f"TO_CHAR({date_ref}, 'YYYY-MM')",
+                'year': f"TO_CHAR({date_ref}, 'YYYY')",
+                'month': f"TO_CHAR({date_ref}, 'MM')"
+            }
+            return format_map.get(format_type, f"TO_CHAR({date_ref}, 'YYYY-MM')")
+        else:  # sqlite
+            format_map = {
+                'year_month': f"strftime('%Y-%m', {date_ref})",
+                'year': f"strftime('%Y', {date_ref})",
+                'month': f"strftime('%m', {date_ref})"
+            }
+            return format_map.get(format_type, f"strftime('%Y-%m', {date_ref})")
+
     async def get_cash_flow_summary(self, filters: Dict[str, Any] = {}) -> Dict:
         """Get cash flow summary KPIs"""
 
@@ -122,9 +147,11 @@ class CashFlowDataService:
     async def get_cash_flow_trends(self, filters: Dict[str, Any] = {}) -> List[Dict]:
         """Get cash flow trends over time (monthly aggregation)"""
 
+        month_expr = self._date_format(self.schema.TRANSACTION.refs['date'], 'year_month')
+
         sql = f"""
         SELECT
-            strftime('%Y-%m', {self.schema.TRANSACTION.refs['date']}) as month,
+            {month_expr} as month,
             SUM({self.schema.TRANSACTION.refs['amount']}) as total_flow,
             COUNT(*) as transaction_count,
             AVG({self.schema.TRANSACTION.refs['amount']}) as avg_flow
@@ -135,7 +162,7 @@ class CashFlowDataService:
             ON {self.schema.TRANSACTION.refs['region_key']} = {self.schema.REGION.refs['key']}
         WHERE {self.schema.TRANSACTION.refs['deleted_flag']} = 0
             AND {self.schema.TRANSACTION.refs['excluded_flag']} = 0
-        GROUP BY strftime('%Y-%m', {self.schema.TRANSACTION.refs['date']})
+        GROUP BY {month_expr}
         ORDER BY month
         """
 

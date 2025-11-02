@@ -16,6 +16,27 @@ class RegionalSalesAnalyzerDataService:
         self.schema = RegionalSalesAnalyzerSchema()
         self.filter_engine = FilterEngine()
 
+    def _get_period_expression(self, date_ref: str, aggregation: str) -> str:
+        """Generate database-specific period expression based on aggregation type"""
+        if self.db.db_type == 'postgres':
+            if aggregation == 'day':
+                return f"TO_CHAR({date_ref}, 'YYYY-MM-DD')"
+            elif aggregation == 'week':
+                return f"TO_CHAR({date_ref}, 'IYYY-IW')"
+            elif aggregation == 'quarter':
+                return f"TO_CHAR({date_ref}, 'YYYY') || '-Q' || TO_CHAR({date_ref}, 'Q')"
+            else:  # month
+                return f"TO_CHAR({date_ref}, 'YYYY-MM')"
+        else:  # sqlite
+            if aggregation == 'day':
+                return f"strftime('%Y-%m-%d', {date_ref})"
+            elif aggregation == 'week':
+                return f"strftime('%Y-W%W', {date_ref})"
+            elif aggregation == 'quarter':
+                return f"strftime('%Y', {date_ref}) || '-Q' || (CASE WHEN CAST(strftime('%m', {date_ref}) AS INTEGER) <= 3 THEN '1' WHEN CAST(strftime('%m', {date_ref}) AS INTEGER) <= 6 THEN '2' WHEN CAST(strftime('%m', {date_ref}) AS INTEGER) <= 9 THEN '3' ELSE '4' END)"
+            else:  # month
+                return f"strftime('%Y-%m', {date_ref})"
+
     async def get_regional_sales_data(self, filters: Dict[str, Any] = {}) -> List[Dict]:
         """Get regional sales data grouped by country and state"""
 
@@ -84,18 +105,8 @@ class RegionalSalesAnalyzerDataService:
 
         aggregation = filters.get('aggregation', 'month')
 
-        # Determine date format based on aggregation
-        if aggregation == 'day':
-            date_format = '%Y-%m-%d'
-            period_expression = f"strftime('{date_format}', {self.schema.TRANSACTION.refs['date']})"
-        elif aggregation == 'week':
-            date_format = '%Y-W%W'
-            period_expression = f"strftime('{date_format}', {self.schema.TRANSACTION.refs['date']})"
-        elif aggregation == 'quarter':
-            period_expression = f"strftime('%Y', {self.schema.TRANSACTION.refs['date']}) || '-Q' || (CASE WHEN CAST(strftime('%m', {self.schema.TRANSACTION.refs['date']}) AS INTEGER) <= 3 THEN '1' WHEN CAST(strftime('%m', {self.schema.TRANSACTION.refs['date']}) AS INTEGER) <= 6 THEN '2' WHEN CAST(strftime('%m', {self.schema.TRANSACTION.refs['date']}) AS INTEGER) <= 9 THEN '3' ELSE '4' END)"
-        else:  # month
-            date_format = '%Y-%m'
-            period_expression = f"strftime('{date_format}', {self.schema.TRANSACTION.refs['date']})"
+        # Get database-specific period expression
+        period_expression = self._get_period_expression(self.schema.TRANSACTION.refs['date'], aggregation)
 
         sql = f"""
         SELECT

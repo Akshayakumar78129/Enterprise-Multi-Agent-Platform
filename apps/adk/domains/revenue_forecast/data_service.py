@@ -15,6 +15,43 @@ class RevenueForecastDataService:
         self.db = DatabaseConnection(use_pool=False)
         self.schema = RevenueForecastSchema()
 
+    def _date_format(self, date_ref: str, format_type: str) -> str:
+        """Generate database-specific date formatting SQL"""
+        if self.db.db_type == 'postgres':
+            format_map = {
+                'year_month': f"TO_CHAR({date_ref}, 'YYYY-MM')",
+                'year': f"TO_CHAR({date_ref}, 'YYYY')",
+                'month': f"TO_CHAR({date_ref}, 'MM')"
+            }
+            return format_map.get(format_type, f"TO_CHAR({date_ref}, 'YYYY-MM')")
+        else:  # sqlite
+            format_map = {
+                'year_month': f"strftime('%Y-%m', {date_ref})",
+                'year': f"strftime('%Y', {date_ref})",
+                'month': f"strftime('%m', {date_ref})"
+            }
+            return format_map.get(format_type, f"strftime('%Y-%m', {date_ref})")
+
+    def _substring(self, string_ref: str, start: int, length: int = None) -> str:
+        """Generate database-specific substring SQL"""
+        if self.db.db_type == 'postgres':
+            if length:
+                return f"SUBSTRING({string_ref}, {start}, {length})"
+            else:
+                return f"SUBSTRING({string_ref}, {start})"
+        else:  # sqlite
+            if length:
+                return f"substr({string_ref}, {start}, {length})"
+            else:
+                return f"substr({string_ref}, {start})"
+
+    def _add_month(self, month_string_ref: str) -> str:
+        """Generate SQL to add 1 month to a YYYY-MM format string"""
+        if self.db.db_type == 'postgres':
+            return f"TO_CHAR(({month_string_ref} || '-01')::date + INTERVAL '1 month', 'YYYY-MM')"
+        else:  # sqlite
+            return f"strftime('%Y-%m', date({month_string_ref} || '-01', '+1 month'))"
+
     async def get_kpi_data(self, filters: Dict[str, Any]) -> Dict[str, Any]:
         """
         Get KPI metrics for revenue forecast
@@ -159,15 +196,18 @@ class RevenueForecastDataService:
         date_to = filters.get('dateTo', '2021-12-31')
         company_code = filters.get('companyCode', 'all')
 
+        month_expr = self._date_format(self.schema.GL_TRANSACTION.refs['txn_date'], 'year_month')
+        account_prefix = self._substring(self.schema.GL_TRANSACTION.refs['gl_account'], 1, 2)
+
         query = f"""
         WITH monthly_revenue AS (
             SELECT
-                strftime('%Y-%m', {self.schema.GL_TRANSACTION.refs['txn_date']}) as month,
-                SUM(CASE WHEN substr({self.schema.GL_TRANSACTION.refs['gl_account']}, 1, 2) IN ('41', '42')
+                {month_expr} as month,
+                SUM(CASE WHEN {account_prefix} IN ('41', '42')
                     THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END) as revenue,
-                SUM(CASE WHEN substr({self.schema.GL_TRANSACTION.refs['gl_account']}, 1, 2) = '41'
+                SUM(CASE WHEN {account_prefix} = '41'
                     THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END) as product_revenue,
-                SUM(CASE WHEN substr({self.schema.GL_TRANSACTION.refs['gl_account']}, 1, 2) = '42'
+                SUM(CASE WHEN {account_prefix} = '42'
                     THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END) as service_revenue
             FROM {self.schema.TABLES['gl_transaction']} {self.schema.ALIASES['gl_transaction']}
             WHERE {self.schema.GL_TRANSACTION.refs['txn_date']} BETWEEN ? AND ?
@@ -204,13 +244,17 @@ class RevenueForecastDataService:
         date_to = filters.get('dateTo', '2021-12-31')
 
         # Use document number prefix (first 6 chars) as customer proxy since Cost Center is empty
+        month_expr = self._date_format(self.schema.GL_TRANSACTION.refs['txn_date'], 'year_month')
+        doc_prefix = self._substring(self.schema.GL_TRANSACTION.refs['document_number'], 1, 6)
+        account_prefix = self._substring(self.schema.GL_TRANSACTION.refs['gl_account'], 1, 2)
+
         query = f"""
         WITH customer_first_purchase AS (
             SELECT
-                substr({self.schema.GL_TRANSACTION.refs['document_number']}, 1, 6) as customer_proxy,
-                MIN(strftime('%Y-%m', {self.schema.GL_TRANSACTION.refs['txn_date']})) as cohort_month
+                {doc_prefix} as customer_proxy,
+                MIN({month_expr}) as cohort_month
             FROM {self.schema.TABLES['gl_transaction']} {self.schema.ALIASES['gl_transaction']}
-            WHERE substr({self.schema.GL_TRANSACTION.refs['gl_account']}, 1, 2) IN ('41', '42')
+            WHERE {account_prefix} IN ('41', '42')
                 AND {self.schema.GL_TRANSACTION.refs['txn_date']} BETWEEN ? AND ?
             GROUP BY customer_proxy
             HAVING COUNT(*) > 1  -- Only customers with multiple transactions
@@ -218,13 +262,13 @@ class RevenueForecastDataService:
         cohort_revenue AS (
             SELECT
                 cfp.cohort_month,
-                strftime('%Y-%m', {self.schema.GL_TRANSACTION.refs['txn_date']}) as revenue_month,
+                {month_expr} as revenue_month,
                 SUM(ABS({self.schema.GL_TRANSACTION.refs['txn_amount']})) as cohort_revenue,
-                COUNT(DISTINCT substr({self.schema.GL_TRANSACTION.refs['document_number']}, 1, 6)) as customer_count
+                COUNT(DISTINCT {doc_prefix}) as customer_count
             FROM {self.schema.TABLES['gl_transaction']} {self.schema.ALIASES['gl_transaction']}
             INNER JOIN customer_first_purchase cfp
-                ON substr({self.schema.GL_TRANSACTION.refs['document_number']}, 1, 6) = cfp.customer_proxy
-            WHERE substr({self.schema.GL_TRANSACTION.refs['gl_account']}, 1, 2) IN ('41', '42')
+                ON {doc_prefix} = cfp.customer_proxy
+            WHERE {account_prefix} IN ('41', '42')
                 AND {self.schema.GL_TRANSACTION.refs['txn_date']} BETWEEN ? AND ?
             GROUP BY cfp.cohort_month, revenue_month
         ),
@@ -264,12 +308,16 @@ class RevenueForecastDataService:
         date_to = filters.get('dateTo', '2021-12-31')
 
         # Use Company Code as segment since Division Code is empty
+        month_expr = self._date_format(self.schema.GL_TRANSACTION.refs['txn_date'], 'year_month')
+        account_prefix = self._substring(self.schema.GL_TRANSACTION.refs['gl_account'], 1, 2)
+        next_month_expr = self._add_month('sr2.month')
+
         query = f"""
         WITH segment_revenue AS (
             SELECT
                 COALESCE({self.schema.GL_TRANSACTION.refs['company_code']}, 'Unknown') as segment,
-                strftime('%Y-%m', {self.schema.GL_TRANSACTION.refs['txn_date']}) as month,
-                SUM(CASE WHEN substr({self.schema.GL_TRANSACTION.refs['gl_account']}, 1, 2) IN ('41', '42')
+                {month_expr} as month,
+                SUM(CASE WHEN {account_prefix} IN ('41', '42')
                     THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END) as revenue,
                 COUNT(DISTINCT {self.schema.GL_TRANSACTION.refs['document_number']}) as transaction_count
             FROM {self.schema.TABLES['gl_transaction']} {self.schema.ALIASES['gl_transaction']}
@@ -301,7 +349,7 @@ class RevenueForecastDataService:
             FROM segment_revenue sr1
             LEFT JOIN segment_revenue sr2
                 ON sr1.segment = sr2.segment
-                AND sr1.month = strftime('%Y-%m', date(sr2.month || '-01', '+1 month'))
+                AND sr1.month = {next_month_expr}
             WHERE sr2.revenue IS NOT NULL
             GROUP BY sr1.segment
         )

@@ -19,6 +19,9 @@ from orchestration_agent.utils.caching import multi_cache, CacheConfig
 class DashboardCacheConfig:
     """Configuration for dashboard-specific caching"""
 
+    # CACHE VERSION - increment to invalidate all caches
+    CACHE_VERSION = "v3_20251102_2200"
+
     # Default TTLs for different dashboard types (in seconds)
     DEFAULT_TTL = 300  # 5 minutes default
 
@@ -72,7 +75,7 @@ def generate_dashboard_cache_key(
         'dashboard': dashboard_type,
         'endpoint': endpoint,
         'filters': normalized_filters,
-        'version': 'v1'  # Version for cache invalidation on schema changes
+        'version': DashboardCacheConfig.CACHE_VERSION  # Version for cache invalidation on schema changes
     }
 
     # Generate hash for the key
