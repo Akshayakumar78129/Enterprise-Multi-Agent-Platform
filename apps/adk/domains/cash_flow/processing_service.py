@@ -437,7 +437,7 @@ class CashFlowProcessingService:
             })
 
         # Category insights
-        if by_category:
+        if by_category and len(by_category) > 0:
             top_category = by_category[0]
             insights.append({
                 'type': 'info',

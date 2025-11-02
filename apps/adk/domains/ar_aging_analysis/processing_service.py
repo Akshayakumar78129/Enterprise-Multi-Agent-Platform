@@ -112,25 +112,25 @@ class ARAgingProcessingService:
             '90+': {'range': '90+ days', 'min': 91, 'max': 99999, 'color': '#e930ff'}
         }
 
-        total_ar = sum(inv.get('balance_due_amount', 0) for inv in ar_invoices)
+        total_ar = sum(to_float(inv.get('balance_due_amount', 0)) for inv in ar_invoices)
 
         result = []
         for key, bucket_def in buckets.items():
             # Filter invoices for this bucket
             bucket_invoices = [
                 inv for inv in ar_invoices
-                if bucket_def['min'] <= inv.get('days_overdue', 0) <= bucket_def['max']
+                if bucket_def['min'] <= to_float(inv.get('days_overdue', 0)) <= bucket_def['max']
             ]
 
-            amount = sum(inv.get('balance_due_amount', 0) for inv in bucket_invoices)
+            amount = sum(to_float(inv.get('balance_due_amount', 0)) for inv in bucket_invoices)
             count = len(bucket_invoices)
 
             # Calculate NPV adjustment
             avg_days = (
-                sum(inv.get('days_overdue', 0) * inv.get('balance_due_amount', 0) for inv in bucket_invoices) / amount
+                sum(to_float(inv.get('days_overdue', 0)) * to_float(inv.get('balance_due_amount', 0)) for inv in bucket_invoices) / amount
                 if amount > 0 else 0
             )
-            npv_adjusted = amount / (1 + (wacc / 100 / 365) * avg_days) if avg_days > 0 else amount
+            npv_adjusted = amount / (1.0 + (wacc / 100.0 / 365.0) * avg_days) if avg_days > 0 else amount
             value_erosion = amount - npv_adjusted
 
             result.append({

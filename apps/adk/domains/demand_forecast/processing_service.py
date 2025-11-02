@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 import logging
 from domains.common.simple_cache import cache_dashboard_endpoint
 from .data_service import DemandForecastDataService
-from .models import *
 
 logger = logging.getLogger(__name__)
 

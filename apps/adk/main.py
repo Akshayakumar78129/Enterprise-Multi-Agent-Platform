@@ -51,6 +51,7 @@ from domains.inventory_level.processing_service import InventoryLevelProcessingS
 from domains.cash_flow.processing_service import CashFlowProcessingService
 from domains.ar_aging_analysis.processing_service import ARAgingProcessingService
 from domains.revenue_forecast.processing_service import RevenueForecastProcessingService
+from domains.demand_forecast.processing_service import DemandForecastProcessingService
 
 from customer.agent import root_agent as customer_agent
 from finance.agent import root_agent as finance_agent
@@ -83,6 +84,7 @@ from api.routers.inventory_level_router import router as inventory_level_router
 from api.routers.cash_flow_router import router as cash_flow_router
 from api.routers.ar_aging_router import router as ar_aging_router
 from api.routers.revenue_forecast_router import router as revenue_forecast_router
+from api.routers.demand_forecast_router import router as demand_forecast_router
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +134,7 @@ inventory_level_service = InventoryLevelProcessingService()
 cash_flow_service = CashFlowProcessingService()
 ar_aging_service = ARAgingProcessingService()
 revenue_forecast_service = RevenueForecastProcessingService()
+demand_forecast_service = DemandForecastProcessingService()
 
 app.add_middleware(
     CORSMiddleware,
@@ -170,6 +173,7 @@ app.include_router(inventory_level_router)
 app.include_router(cash_flow_router)
 app.include_router(ar_aging_router)
 app.include_router(revenue_forecast_router)
+app.include_router(demand_forecast_router)
 
 # Simple in-memory session storage for fallback
 simple_sessions: Dict[str, Dict[str, Any]] = {}
@@ -213,6 +217,7 @@ async def startup_event():
     app.state.product_performance_service = product_performance_service
     app.state.ar_aging_service = ar_aging_service
     app.state.revenue_forecast_service = revenue_forecast_service
+    app.state.demand_forecast_service = demand_forecast_service
 
     print("[Main Server] All services initialized")
 
