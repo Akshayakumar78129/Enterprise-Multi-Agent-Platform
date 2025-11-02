@@ -151,21 +151,21 @@ class ARAgingProcessingService:
         Returns:
             Dictionary with 5 KPIs: totalAR, dso, overdueAmount, collectionEfficiency, riskExposure
         """
-        total_ar = aging_summary.get('total_ar', 0) or 0
-        total_overdue = aging_summary.get('total_overdue', 0) or 0
-        avg_days_overdue = aging_summary.get('avg_days_overdue', 0) or 0
+        total_ar = to_float(aging_summary.get('total_ar', 0) or 0)
+        total_overdue = to_float(aging_summary.get('total_overdue', 0) or 0)
+        avg_days_overdue = to_float(aging_summary.get('avg_days_overdue', 0) or 0)
 
         # Calculate DSO (Days Sales Outstanding)
         # Simplified: using average days overdue as proxy
         dso = round(avg_days_overdue, 1)
 
         # Collection efficiency (current / total)
-        current_amount = aging_summary.get('current_amount', 0) or 0
+        current_amount = to_float(aging_summary.get('current_amount', 0) or 0)
         collection_efficiency = round((current_amount / total_ar * 100) if total_ar > 0 else 0, 1)
 
         # Risk exposure (90+ days / total)
         bucket_90_plus = next((b for b in aging_buckets if b['range'] == '90+ days'), None)
-        risk_exposure = bucket_90_plus['amount'] if bucket_90_plus else 0
+        risk_exposure = to_float(bucket_90_plus['amount'] if bucket_90_plus else 0)
 
         # Calculate status indicators safely (avoid division by zero)
         total_ar_status = 'good'

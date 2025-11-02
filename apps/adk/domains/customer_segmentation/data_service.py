@@ -101,7 +101,7 @@ class CustomerSegmentationDataService:
                 COALESCE(CAST({self.schema.ALIASES['loyalty']}."Number Sales Txns" AS INTEGER), 0) AS frequency,
                 {self.schema.LOYALTY.refs['lifetime_sales']} AS monetary_value,
                 COALESCE(CAST({self.schema.ALIASES['loyalty']}."Avg Sales Amount" AS FLOAT), 0) AS avg_order_value,
-                JULIANDAY('now') - JULIANDAY({self.schema.ALIASES['loyalty']}."First Activity Date") AS customer_lifetime_days,
+                EXTRACT(EPOCH FROM (CURRENT_DATE - {self.schema.ALIASES['loyalty']}."First Activity Date"::date)) / 86400 AS customer_lifetime_days,
                 {self.schema.LOYALTY.refs['loyalty_status']} AS loyalty_status,
                 {self.schema.ALIASES['loyalty']}."Recency Band" AS recency_band,
                 {self.schema.ALIASES['loyalty']}."Frequency Band" AS frequency_band,

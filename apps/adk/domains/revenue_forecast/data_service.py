@@ -234,7 +234,7 @@ class RevenueForecastDataService:
                 revenue_month,
                 cohort_revenue,
                 customer_count,
-                CAST(ROUND((julianday(revenue_month || '-01') - julianday(cohort_month || '-01')) / 30.0, 0) AS INTEGER) as months_since_cohort
+                CAST(ROUND(EXTRACT(EPOCH FROM ((revenue_month || '-01')::date - (cohort_month || '-01')::date)) / (30.0 * 86400), 0) AS INTEGER) as months_since_cohort
             FROM cohort_revenue
         )
         SELECT
