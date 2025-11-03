@@ -157,7 +157,7 @@ export function CustomerDetailModal({
               <div className="mt-2 flex items-center gap-6 text-sm text-muted-foreground">
                 <span>{summaryStats.totalCustomers} customers</span>
                 <span>Avg LTV: {formatCurrency(summaryStats.avgLTV)}</span>
-                <span>Avg RFM: {summaryStats.avgRFMScore.toFixed(1)}</span>
+                <span>Avg RFM: {Number(summaryStats.avgRFMScore).toFixed(1)}</span>
               </div>
             )}
           </div>

@@ -151,9 +151,9 @@ export function EngagementKPIs({ metrics, loading }: { metrics: any; loading?: b
     } else if (typeof trendValue === 'number') {
       // Handle numeric percentage values
       trendText = trendValue > 0
-        ? `+${trendValue.toFixed(1)}%`
+        ? `+${Number(trendValue).toFixed(1)}%`
         : trendValue < 0
-        ? `${trendValue.toFixed(1)}%`
+        ? `${Number(trendValue).toFixed(1)}%`
         : "Stable";
       trendColor = trendValue > 0 ? "#10b981" : trendValue < 0 ? "#ef4444" : "#3b82f6"; // Emerald : Red : Blue
     }
@@ -654,7 +654,7 @@ export function OpportunityFinder({ data, loading }: {
       const potentialValue = (opportunity.customer_count || 0) * (opportunity.avg_customer_value || 0);
       shiftClickManager.addPoint({
         label: `Opportunity: ${opportunity.engagement_level}`,
-        value: `${opportunity.customer_count} customers, $${potentialValue.toFixed(0)} potential`,
+        value: `${opportunity.customer_count} customers, $${Number(potentialValue).toFixed(0)} potential`,
         source: 'Opportunity Finder'
       }, event.nativeEvent);
     } else {
@@ -708,10 +708,10 @@ export function OpportunityFinder({ data, loading }: {
                   {opportunity.customer_count?.toLocaleString() || 0}
                 </td>
                 <td className="text-right py-3 text-sm">
-                  ${opportunity.avg_customer_value?.toFixed(0) || 0}
+                  ${Number(opportunity.avg_customer_value || 0).toFixed(0)}
                 </td>
                 <td className="text-right py-3 text-sm">
-                  {opportunity.avg_transactions?.toFixed(1) || 0}
+                  {Number(opportunity.avg_transactions || 0).toFixed(1)}
                 </td>
                 <td className="text-right py-3 text-sm">
                   {opportunity.avg_days_inactive || 0}
@@ -763,7 +763,7 @@ export function EngagementDistribution({ data, loading }: { data: any; loading?:
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium">{level.name}</span>
               <span className="text-sm text-muted-foreground">
-                {level.value} customers ({level.percentage?.toFixed(1)}%)
+                {level.value} customers ({Number(level.percentage || 0).toFixed(1)}%)
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2.5">
@@ -777,8 +777,8 @@ export function EngagementDistribution({ data, loading }: { data: any; loading?:
               />
             </div>
             <div className="text-xs text-muted-foreground">
-              Avg Transactions: {level.avgTransactions?.toFixed(0)} |
-              Avg Value: ${level.avgPurchaseValue?.toFixed(0)}
+              Avg Transactions: {Number(level.avgTransactions || 0).toFixed(0)} |
+              Avg Value: ${Number(level.avgPurchaseValue || 0).toFixed(0)}
             </div>
           </div>
         ))}
@@ -845,7 +845,7 @@ export function CustomerClassification({ data, loading }: { data: any; loading?:
                       // Shift+click: Add to global shift+click selection
                       shiftClickManager.addPoint({
                         label: `RFM: ${level} R${item['Recency Band']}-F${item['Frequency Band']}-M${item['Monetary Band']}`,
-                        value: `${item.customer_count} customers (Score: ${item.avg_rfm_score?.toFixed(1)})`,
+                        value: `${item.customer_count} customers (Score: ${Number(item.avg_rfm_score || 0).toFixed(1)})`,
                         source: 'Customer Classification'
                       }, e.nativeEvent);
                     }
@@ -853,7 +853,7 @@ export function CustomerClassification({ data, loading }: { data: any; loading?:
                 >
                   R{item['Recency Band']}-F{item['Frequency Band']}-M{item['Monetary Band']}: {' '}
                   <span className="font-medium">{item.customer_count} customers</span>
-                  {' '}(Score: {item.avg_rfm_score?.toFixed(1)})
+                  {' '}(Score: {Number(item.avg_rfm_score || 0).toFixed(1)})
                 </div>
               ))}
               {items.length > 3 && (
@@ -916,7 +916,7 @@ export function EngagementScore({ data, loading }: { data: any; loading?: boolea
           </svg>
           {/* Score text */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="text-3xl font-bold">{score.toFixed(1)}</div>
+            <div className="text-3xl font-bold">{Number(score).toFixed(1)}</div>
             <div className="text-xs text-muted-foreground">out of 10</div>
           </div>
         </div>
@@ -929,7 +929,7 @@ export function EngagementScore({ data, loading }: { data: any; loading?: boolea
         }`}>
           {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→'}
           {' '}
-          {Math.abs(change).toFixed(1)} from previous period
+          {Number(Math.abs(change)).toFixed(1)} from previous period
         </div>
     </div>
   );

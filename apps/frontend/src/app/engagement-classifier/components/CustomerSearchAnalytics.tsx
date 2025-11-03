@@ -183,7 +183,7 @@ export function CustomerSearchAnalytics({ onCustomerSelect }: CustomerSearchAnal
             // Shift+click: Add to global shift+click selection
             shiftClickManager.addPoint({
               label: `Customer: ${row.name}`,
-              value: `${row.engagementLevel} Engagement | LTV: $${row.ltv.toFixed(0)} | ${row.transactions} transactions`,
+              value: `${row.engagementLevel} Engagement | LTV: $${Number(row.ltv).toFixed(0)} | ${row.transactions} transactions`,
               source: 'Customer Table'
             }, event?.nativeEvent || event);
           }

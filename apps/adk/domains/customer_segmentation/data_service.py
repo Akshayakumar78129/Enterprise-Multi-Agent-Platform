@@ -17,6 +17,15 @@ class CustomerSegmentationDataService:
         self.schema = CustomerSegmentationSchema()
         self.filter_engine = FilterEngine()
 
+    def _days_since_date(self, date_column: str) -> str:
+        """Calculate days since a date column - database-agnostic"""
+        if self.db.db_type == 'postgres':
+            # PostgreSQL: use EXTRACT with epoch and handle NULL dates
+            return f"EXTRACT(EPOCH FROM (CURRENT_DATE - COALESCE({date_column}::date, CURRENT_DATE))) / 86400"
+        else:  # sqlite
+            # SQLite: use julianday and handle NULL dates
+            return f"CAST(julianday('now') - julianday(COALESCE({date_column}, date('now'))) AS INTEGER)"
+
     async def get_customers(self, filters: Dict[str, Any] = {}) -> Dict:
         """Get customer data with filters"""
 
@@ -101,7 +110,7 @@ class CustomerSegmentationDataService:
                 COALESCE(CAST({self.schema.ALIASES['loyalty']}."Number Sales Txns" AS INTEGER), 0) AS frequency,
                 {self.schema.LOYALTY.refs['lifetime_sales']} AS monetary_value,
                 COALESCE(CAST({self.schema.ALIASES['loyalty']}."Avg Sales Amount" AS FLOAT), 0) AS avg_order_value,
-                EXTRACT(EPOCH FROM (CURRENT_DATE - COALESCE({self.schema.ALIASES['loyalty']}."First Activity Date"::date, CURRENT_DATE))) / 86400 AS customer_lifetime_days,
+                {self._days_since_date(f'{self.schema.ALIASES["loyalty"]}."First Activity Date"')} AS customer_lifetime_days,
                 {self.schema.LOYALTY.refs['loyalty_status']} AS loyalty_status,
                 {self.schema.ALIASES['loyalty']}."Recency Band" AS recency_band,
                 {self.schema.ALIASES['loyalty']}."Frequency Band" AS frequency_band,
