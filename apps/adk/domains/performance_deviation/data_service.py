@@ -35,11 +35,19 @@ class PerformanceDataService:
             filters['dateTo'] = '2021-12-31'
 
         if filters.get('dateFrom'):
-            where_conditions.append(f"{self.schema.SALES.refs['date']} >= ?")
+            # Cast TEXT date column to DATE for PostgreSQL compatibility
+            if self.db.db_type == 'postgres':
+                where_conditions.append(f"CAST({self.schema.SALES.refs['date']} AS DATE) >= ?")
+            else:
+                where_conditions.append(f"{self.schema.SALES.refs['date']} >= ?")
             params.append(filters['dateFrom'])
 
         if filters.get('dateTo'):
-            where_conditions.append(f"{self.schema.SALES.refs['date']} <= ?")
+            # Cast TEXT date column to DATE for PostgreSQL compatibility
+            if self.db.db_type == 'postgres':
+                where_conditions.append(f"CAST({self.schema.SALES.refs['date']} AS DATE) <= ?")
+            else:
+                where_conditions.append(f"{self.schema.SALES.refs['date']} <= ?")
             params.append(filters['dateTo'])
 
         if filters.get('customerIds'):
@@ -112,11 +120,19 @@ class PerformanceDataService:
             filters['dateTo'] = '2021-12-31'
 
         if filters.get('dateFrom'):
-            where_conditions.append(f"{self.schema.LOYALTY.refs['date']} >= ?")
+            # Cast TEXT date column to DATE for PostgreSQL compatibility
+            if self.db.db_type == 'postgres':
+                where_conditions.append(f"CAST({self.schema.LOYALTY.refs['date']} AS DATE) >= ?")
+            else:
+                where_conditions.append(f"{self.schema.LOYALTY.refs['date']} >= ?")
             params.append(filters['dateFrom'])
 
         if filters.get('dateTo'):
-            where_conditions.append(f"{self.schema.LOYALTY.refs['date']} <= ?")
+            # Cast TEXT date column to DATE for PostgreSQL compatibility
+            if self.db.db_type == 'postgres':
+                where_conditions.append(f"CAST({self.schema.LOYALTY.refs['date']} AS DATE) <= ?")
+            else:
+                where_conditions.append(f"{self.schema.LOYALTY.refs['date']} <= ?")
             params.append(filters['dateTo'])
 
         if filters.get('customerSegments'):
@@ -171,11 +187,19 @@ class PerformanceDataService:
             filters['dateTo'] = '2021-12-31'
 
         if filters.get('dateFrom'):
-            where_conditions.append(f"{self.schema.AR.refs['date']} >= ?")
+            # Cast TEXT date column to DATE for PostgreSQL compatibility
+            if self.db.db_type == 'postgres':
+                where_conditions.append(f"CAST({self.schema.AR.refs['date']} AS DATE) >= ?")
+            else:
+                where_conditions.append(f"{self.schema.AR.refs['date']} >= ?")
             params.append(filters['dateFrom'])
 
         if filters.get('dateTo'):
-            where_conditions.append(f"{self.schema.AR.refs['date']} <= ?")
+            # Cast TEXT date column to DATE for PostgreSQL compatibility
+            if self.db.db_type == 'postgres':
+                where_conditions.append(f"CAST({self.schema.AR.refs['date']} AS DATE) <= ?")
+            else:
+                where_conditions.append(f"{self.schema.AR.refs['date']} <= ?")
             params.append(filters['dateTo'])
 
         if filters.get('customerIds'):

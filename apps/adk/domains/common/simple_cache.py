@@ -19,7 +19,7 @@ class SimpleMemoryCache:
     """Simple in-memory LRU cache implementation"""
 
     # CACHE VERSION - increment to invalidate all caches
-    CACHE_VERSION = "v8_20251103_1220"  # Fix demand forecast frontend to call real API
+    CACHE_VERSION = "v9_20251103_1230"  # Fix performance deviation date TEXT column comparisons for PostgreSQL
 
     def __init__(self, max_size: int = 100 * 1024 * 1024, default_ttl: int = 300):
         self.max_size = max_size
