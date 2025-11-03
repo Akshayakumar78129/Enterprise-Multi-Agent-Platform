@@ -23,12 +23,25 @@ class RevenueForecastProcessingService:
             # Convert Pydantic model to dict if needed
             filters_dict = filters.dict() if hasattr(filters, 'dict') else filters
 
-            # Fetch all required data
-            kpi_data = await self.data_service.get_kpi_data(filters_dict)
-            growth_decomp = await self.data_service.get_revenue_growth_decomposition(filters_dict)
-            cohort_data = await self.data_service.get_cohort_retention_data(filters_dict)
-            segment_data = await self.data_service.get_segment_forecast_data(filters_dict)
-            customer_econ = await self.data_service.get_customer_economics_data(filters_dict)
+            # Fetch all required data - handle empty database gracefully
+            kpi_data = await self.data_service.get_kpi_data(filters_dict) or {}
+            growth_decomp = await self.data_service.get_revenue_growth_decomposition(filters_dict) or []
+            cohort_data = await self.data_service.get_cohort_retention_data(filters_dict) or []
+            segment_data = await self.data_service.get_segment_forecast_data(filters_dict) or []
+            customer_econ = await self.data_service.get_customer_economics_data(filters_dict) or {}
+
+            # Check if database is completely empty
+            has_no_data = (
+                not kpi_data and
+                not growth_decomp and
+                not cohort_data and
+                not segment_data and
+                not customer_econ
+            )
+
+            if has_no_data:
+                logger.warning("No data available in database for revenue forecast")
+                return self._empty_response(filters_dict)
 
             # Calculate KPIs
             kpi_metrics = self._calculate_kpis(kpi_data, customer_econ)
@@ -273,3 +286,30 @@ class RevenueForecastProcessingService:
                 )
 
         return insights
+
+    def _empty_response(self, filters_dict: Dict[str, Any]) -> Dict[str, Any]:
+        """Return empty response when database has no data"""
+        return {
+            'kpiMetrics': {
+                'ruleOf40': {'value': 0.0, 'change': 0.0, 'trend': 'neutral', 'benchmark': 40.0, 'status': 'warning', 'formatted_value': None},
+                'netRevenueRetention': {'value': 100.0, 'change': 0.0, 'trend': 'neutral', 'benchmark': 110.0, 'status': 'warning', 'formatted_value': None},
+                'ltvCacRatio': {'value': 0.0, 'change': 0.0, 'trend': 'neutral', 'benchmark': 3.0, 'status': 'warning', 'formatted_value': None},
+                'revenueQuality': {'value': 0.0, 'change': 0.0, 'trend': 'neutral', 'benchmark': 70.0, 'status': 'warning', 'formatted_value': None},
+                'marketMomentum': {'value': 0.0, 'change': 0.0, 'trend': 'neutral', 'benchmark': 0.0, 'status': 'warning', 'formatted_value': None}
+            },
+            'mainData': {
+                'growthDecomposition': [],
+                'cohortRetention': [],
+                'segmentForecast': [],
+                'customerEconomics': {},
+                'monthlyTrend': []
+            },
+            'insights': ['No data available for the selected period. Please check database connection and data availability.'],
+            'metadata': {
+                'generated_at': datetime.now().isoformat(),
+                'filters_applied': filters_dict,
+                'forecast_horizon': filters_dict.get('forecastHorizon', 12),
+                'confidence_level': filters_dict.get('confidenceLevel', 80.0),
+                'has_data': False
+            }
+        }

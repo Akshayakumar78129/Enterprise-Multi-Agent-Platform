@@ -9,7 +9,7 @@ from domains.common.dashboard_cache import cache_dashboard_endpoint
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/segmentation", tags=["customer-segmentation"])
+router = APIRouter(prefix="/api/customer-segmentation", tags=["customer-segmentation"])
 service = CustomerSegmentationService()
 
 @router.post("/summary")

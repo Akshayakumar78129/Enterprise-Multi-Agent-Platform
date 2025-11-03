@@ -157,11 +157,11 @@ class ARAgingProcessingService:
 
         # Calculate DSO (Days Sales Outstanding)
         # Simplified: using average days overdue as proxy
-        dso = round(avg_days_overdue, 1)
+        dso = float(round(avg_days_overdue, 1))
 
         # Collection efficiency (current / total)
         current_amount = to_float(aging_summary.get('current_amount', 0) or 0)
-        collection_efficiency = round((current_amount / total_ar * 100) if total_ar > 0 else 0, 1)
+        collection_efficiency = float(round((current_amount / total_ar * 100) if total_ar > 0 else 0, 1))
 
         # Risk exposure (90+ days / total)
         bucket_90_plus = next((b for b in aging_buckets if b['range'] == '90+ days'), None)
@@ -185,31 +185,31 @@ class ARAgingProcessingService:
 
         return {
             'totalAR': {
-                'value': round(total_ar, 2),  # Raw number - frontend will format
+                'value': float(round(total_ar, 2)),  # Raw number - frontend will format
                 'change': 1.2,  # Placeholder - would need historical data
                 'trend': 'up',
                 'status': total_ar_status
             },
             'dso': {
-                'value': dso,  # Raw number - frontend will format
+                'value': dso,  # Already float from line 160
                 'change': -2.1,  # Placeholder
                 'trend': 'down',
                 'status': 'good' if dso < 45 else 'warning' if dso < 60 else 'critical'
             },
             'overdueAmount': {
-                'value': round(total_overdue, 2),  # Raw number - frontend will format
+                'value': float(round(total_overdue, 2)),  # Raw number - frontend will format
                 'change': 3.5,  # Placeholder
                 'trend': 'up',
                 'status': overdue_status
             },
             'collectionEfficiency': {
-                'value': collection_efficiency,  # Raw number - frontend will format
+                'value': collection_efficiency,  # Already float from line 164
                 'change': 2.8,  # Placeholder
                 'trend': 'up',
                 'status': 'good' if collection_efficiency > 70 else 'warning'
             },
             'riskExposure': {
-                'value': round(risk_exposure, 2),  # Raw number - frontend will format
+                'value': float(round(risk_exposure, 2)),  # Raw number - frontend will format
                 'change': -1.2,  # Placeholder
                 'trend': 'down',
                 'status': risk_status
@@ -259,13 +259,13 @@ class ARAgingProcessingService:
             result.append({
                 'customerId': str(customer.get('customer_id', '')),
                 'customerName': customer.get('customer_name', 'Unknown'),
-                'outstandingAmount': round(outstanding, 2),
-                'daysPastDue': round(avg_days_overdue, 1),
-                'riskScore': round(risk_score, 1),
-                'clv': round(clv, 2),
-                'paymentRiskScore': round(risk_score, 1),
-                'profitability': round(clv - outstanding, 2),
-                'collectionProbability': round(collection_prob, 1),
+                'outstandingAmount': float(round(outstanding, 2)),
+                'daysPastDue': float(round(avg_days_overdue, 1)),
+                'riskScore': float(round(risk_score, 1)),
+                'clv': float(round(clv, 2)),
+                'paymentRiskScore': float(round(risk_score, 1)),
+                'profitability': float(round(clv - outstanding, 2)),
+                'collectionProbability': float(round(collection_prob, 1)),
                 'segment': segment.value,
                 'region': customer.get('region', 'Unknown'),
                 'customerType': customer.get('customer_type', 'Unknown'),
@@ -337,12 +337,12 @@ class ARAgingProcessingService:
         daily_erosion_rate = total_erosion / days_in_period if days_in_period > 0 else 0
 
         return {
-            'totalValueErosion': round(total_erosion, 2),
-            'dailyErosionRate': round(daily_erosion_rate, 2),
+            'totalValueErosion': float(round(total_erosion, 2)),
+            'dailyErosionRate': float(round(daily_erosion_rate, 2)),
             'waccUsed': wacc,
-            'totalArBookValue': round(total_book_value, 2),
-            'totalArNpvAdjusted': round(total_npv_adjusted, 2),
-            'erosionPercentage': round((total_erosion / total_book_value * 100) if total_book_value > 0 else 0, 2)
+            'totalArBookValue': float(round(total_book_value, 2)),
+            'totalArNpvAdjusted': float(round(total_npv_adjusted, 2)),
+            'erosionPercentage': float(round((total_erosion / total_book_value * 100) if total_book_value > 0 else 0, 2))
         }
 
     def _prepare_aging_table(self, customer_details: List[Dict]) -> List[Dict]:
@@ -354,8 +354,8 @@ class ARAgingProcessingService:
         return [{
             'customerId': str(c.get('customer_id', '')),
             'customerName': c.get('customer_name', 'Unknown'),
-            'totalOutstanding': round(c.get('total_outstanding', 0) or 0, 2),
-            'avgDaysOverdue': round(c.get('avg_days_overdue', 0) or 0, 1),
+            'totalOutstanding': float(round(c.get('total_outstanding', 0) or 0, 2)),
+            'avgDaysOverdue': float(round(c.get('avg_days_overdue', 0) or 0, 1)),
             'invoiceCount': c.get('invoice_count', 0) or 0,
             'region': c.get('region', 'Unknown'),
             'customerType': c.get('customer_type', 'Unknown')
