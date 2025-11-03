@@ -19,7 +19,7 @@ class SimpleMemoryCache:
     """Simple in-memory LRU cache implementation"""
 
     # CACHE VERSION - increment to invalidate all caches
-    CACHE_VERSION = "v2_20251102_2130"
+    CACHE_VERSION = "v3_20251103_1045"  # Invalidate all caches after database-agnostic SQL fixes
 
     def __init__(self, max_size: int = 100 * 1024 * 1024, default_ttl: int = 300):
         self.max_size = max_size
