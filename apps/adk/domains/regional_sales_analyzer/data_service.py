@@ -19,14 +19,15 @@ class RegionalSalesAnalyzerDataService:
     def _get_period_expression(self, date_ref: str, aggregation: str) -> str:
         """Generate database-specific period expression based on aggregation type"""
         if self.db.db_type == 'postgres':
+            # PostgreSQL requires explicit ::date cast for TO_CHAR
             if aggregation == 'day':
-                return f"TO_CHAR({date_ref}, 'YYYY-MM-DD')"
+                return f"TO_CHAR({date_ref}::date, 'YYYY-MM-DD')"
             elif aggregation == 'week':
-                return f"TO_CHAR({date_ref}, 'IYYY-IW')"
+                return f"TO_CHAR({date_ref}::date, 'IYYY-IW')"
             elif aggregation == 'quarter':
-                return f"TO_CHAR({date_ref}, 'YYYY') || '-Q' || TO_CHAR({date_ref}, 'Q')"
+                return f"TO_CHAR({date_ref}::date, 'YYYY') || '-Q' || TO_CHAR({date_ref}::date, 'Q')"
             else:  # month
-                return f"TO_CHAR({date_ref}, 'YYYY-MM')"
+                return f"TO_CHAR({date_ref}::date, 'YYYY-MM')"
         else:  # sqlite
             if aggregation == 'day':
                 return f"strftime('%Y-%m-%d', {date_ref})"
