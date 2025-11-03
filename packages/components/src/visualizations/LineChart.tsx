@@ -135,9 +135,10 @@ export const LineChart: React.FC<LineChartProps> = ({
   };
 
   // Apply default colors if not provided
+  // Handle empty or invalid data gracefully
   const chartData = {
-    ...data,
-    datasets: data.datasets.map((dataset, index) => ({
+    labels: data?.labels || [],
+    datasets: (data?.datasets || []).map((dataset, index) => ({
       ...dataset,
       borderColor: dataset.borderColor || `hsl(var(--primary) / ${1 - index * 0.2})`,
       backgroundColor: dataset.backgroundColor || `hsl(var(--primary) / ${0.1})`,
