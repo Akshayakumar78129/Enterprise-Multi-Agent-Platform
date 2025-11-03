@@ -102,13 +102,6 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({ isOpen, onClo
           description: 'Lifetime value analysis',
         },
         {
-          name: 'Customer Insights',
-          href: '/customer-insights',
-          icon: Lightbulb,
-          description: 'Comprehensive customer insights',
-          isNew: true,
-        },
-        {
           name: 'Anomaly Detection',
           href: '/anomaly-detection',
           icon: ShieldAlert,
@@ -164,7 +157,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({ isOpen, onClo
       icon: BarChart3,
       children: [
         {
-          name: 'Sales Performance',
+          name: 'Revenue Analysis',
           href: '/sales-performance',
           icon: TrendingUp,
           description: 'Track sales metrics',
@@ -177,23 +170,10 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({ isOpen, onClo
           isNew: true,
         },
         {
-          name: 'Revenue Analysis',
-          href: '/revenue-analysis',
-          icon: DollarSign,
-          description: 'Revenue insights',
-        },
-        {
           name: 'Sales Team',
           href: '/sales-team',
           icon: Users,
           description: 'Team performance metrics',
-          isNew: true,
-        },
-        {
-          name: 'Deal Pipeline',
-          href: '/deal-pipeline',
-          icon: GitBranch,
-          description: 'Monitor deal stages',
           isNew: true,
         },
         {
@@ -268,13 +248,6 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({ isOpen, onClo
       name: 'Finance Analytics',
       icon: DollarSign,
       children: [
-        {
-          name: 'Financial Overview',
-          href: '/financial-overview',
-          icon: FileBarChart,
-          description: 'P&L and balance sheet',
-          isNew: true,
-        },
         {
           name: 'Revenue Metrics',
           href: '/revenue-metrics',
