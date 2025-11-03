@@ -135,11 +135,11 @@ class ARAgingProcessingService:
 
             result.append({
                 'range': bucket_def['range'],
-                'amount': round(amount, 2),
-                'npvAdjustedAmount': round(npv_adjusted, 2),
+                'amount': float(round(amount, 2)),
+                'npvAdjustedAmount': float(round(npv_adjusted, 2)),
                 'count': count,
-                'percentOfTotal': round((amount / total_ar * 100) if total_ar > 0 else 0, 2),
-                'valueErosion': round(value_erosion, 2),
+                'percentOfTotal': float(round((amount / total_ar * 100) if total_ar > 0 else 0, 2)),
+                'valueErosion': float(round(value_erosion, 2)),
                 'color': bucket_def['color']
             })
 

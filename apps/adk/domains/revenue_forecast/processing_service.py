@@ -186,6 +186,10 @@ class RevenueForecastProcessingService:
             # Sort by months since cohort
             sorted_points = sorted(data_points, key=lambda x: x.get('months_since_cohort', 0))
 
+            # Double-check after sorting (should never happen but safety first)
+            if not sorted_points or len(sorted_points) == 0:
+                continue
+
             initial_revenue = sorted_points[0].get('cohort_revenue', 0)
             if initial_revenue == 0:
                 continue

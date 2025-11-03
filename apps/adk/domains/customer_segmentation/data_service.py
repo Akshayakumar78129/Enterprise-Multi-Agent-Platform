@@ -20,9 +20,9 @@ class CustomerSegmentationDataService:
     def _days_since_date(self, date_column: str) -> str:
         """Calculate days since a date column - database-agnostic"""
         if self.db.db_type == 'postgres':
-            # PostgreSQL: use EXTRACT with epoch and handle NULL dates
-            # Cast the entire COALESCE result to ensure type consistency
-            return f"CAST(EXTRACT(EPOCH FROM (CURRENT_DATE - COALESCE(CAST({date_column} AS DATE), CURRENT_DATE))) / 86400 AS INTEGER)"
+            # PostgreSQL: use EXTRACT with epoch and handle NULL/invalid dates
+            # NULLIF converts empty strings to NULL before casting to DATE
+            return f"COALESCE(CAST(EXTRACT(EPOCH FROM (CURRENT_DATE - CAST(NULLIF(TRIM({date_column}), '') AS DATE))) / 86400 AS INTEGER), 0)"
         else:  # sqlite
             # SQLite: use julianday and handle NULL dates
             return f"CAST(julianday('now') - julianday(COALESCE({date_column}, date('now'))) AS INTEGER)"

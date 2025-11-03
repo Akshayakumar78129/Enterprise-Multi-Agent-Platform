@@ -10,7 +10,7 @@ import {
   ChartCard
 } from 'components/index';
 import { useDemandforecastContext } from './context';
-import { useDemandforecastData } from './hooks/useDemandforecastData';
+import { useDemandforecastData } from './hooks/useDemandForecastData';
 
 export default function DemandforecastPage() {
   const { filters } = useDemandforecastContext();
