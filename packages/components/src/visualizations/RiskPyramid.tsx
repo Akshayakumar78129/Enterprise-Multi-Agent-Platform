@@ -111,7 +111,7 @@ export const RiskPyramid: React.FC<RiskPyramidProps> = ({
                     },
                     {
                       label: "Percentage",
-                      value: `${(level.percentage || 0).toFixed(1)}%`,
+                      value: `${Number(level.percentage || 0).toFixed(1)}%`,
                     },
                   ];
                   // Use mouse cursor position
@@ -169,7 +169,7 @@ export const RiskPyramid: React.FC<RiskPyramidProps> = ({
                     fontSize={Math.max(9, Math.min(12, segmentHeight / 4))}
                     opacity={0.95}
                   >
-                    {level.count === 0 ? "0" : `${level.count} (${(level.percentage || 0).toFixed(1)}%)`}
+                    {level.count === 0 ? "0" : `${level.count} (${Number(level.percentage || 0).toFixed(1)}%)`}
                   </text>
                 )}
 

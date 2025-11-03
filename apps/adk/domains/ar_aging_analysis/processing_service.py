@@ -281,7 +281,7 @@ class ARAgingProcessingService:
         Returns:
             List of forecast data points with confidence intervals
         """
-        total_ar = sum(inv.get('balance_due_amount', 0) for inv in ar_invoices)
+        total_ar = sum(to_float(inv.get('balance_due_amount', 0)) for inv in ar_invoices)
 
         # Simple collection rate assumptions by aging bucket
         collection_rates = {

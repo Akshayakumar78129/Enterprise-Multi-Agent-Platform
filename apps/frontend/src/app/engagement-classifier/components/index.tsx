@@ -273,7 +273,7 @@ export function EngagementPyramid({ data, loading, onLevelClick }: {
     // Shift+click: Add to selection for chat using the new ShiftClickSelectionManager
     shiftClickManager.addPoint({
       label: `Engagement: ${level.level}`,
-      value: `${level.count} customers (${level.percentage.toFixed(1)}%)`,
+      value: `${level.count} customers (${Number(level.percentage).toFixed(1)}%)`,
       source: 'Engagement Pyramid'
     }, event.nativeEvent);
   };

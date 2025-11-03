@@ -20,6 +20,20 @@ class PerformanceDataService:
         where_conditions = []
         params = []
 
+        # Extract dateRange if provided by frontend (Performance Deviation sends nested dateRange object)
+        if filters.get('dateRange'):
+            date_range = filters['dateRange']
+            if not filters.get('dateFrom'):
+                filters['dateFrom'] = date_range.get('startDate')
+            if not filters.get('dateTo'):
+                filters['dateTo'] = date_range.get('endDate')
+
+        # Add default dates as fallback
+        if not filters.get('dateFrom'):
+            filters['dateFrom'] = '2017-01-01'
+        if not filters.get('dateTo'):
+            filters['dateTo'] = '2021-12-31'
+
         if filters.get('dateFrom'):
             where_conditions.append(f"{self.schema.SALES.refs['date']} >= ?")
             params.append(filters['dateFrom'])
@@ -83,6 +97,20 @@ class PerformanceDataService:
         where_conditions = []
         params = []
 
+        # Extract dateRange if provided by frontend (Performance Deviation sends nested dateRange object)
+        if filters.get('dateRange'):
+            date_range = filters['dateRange']
+            if not filters.get('dateFrom'):
+                filters['dateFrom'] = date_range.get('startDate')
+            if not filters.get('dateTo'):
+                filters['dateTo'] = date_range.get('endDate')
+
+        # Add default dates as fallback
+        if not filters.get('dateFrom'):
+            filters['dateFrom'] = '2017-01-01'
+        if not filters.get('dateTo'):
+            filters['dateTo'] = '2021-12-31'
+
         if filters.get('dateFrom'):
             where_conditions.append(f"{self.schema.LOYALTY.refs['date']} >= ?")
             params.append(filters['dateFrom'])
@@ -127,6 +155,20 @@ class PerformanceDataService:
         # Build where clause
         where_conditions = []
         params = []
+
+        # Extract dateRange if provided by frontend (Performance Deviation sends nested dateRange object)
+        if filters.get('dateRange'):
+            date_range = filters['dateRange']
+            if not filters.get('dateFrom'):
+                filters['dateFrom'] = date_range.get('startDate')
+            if not filters.get('dateTo'):
+                filters['dateTo'] = date_range.get('endDate')
+
+        # Add default dates as fallback
+        if not filters.get('dateFrom'):
+            filters['dateFrom'] = '2017-01-01'
+        if not filters.get('dateTo'):
+            filters['dateTo'] = '2021-12-31'
 
         if filters.get('dateFrom'):
             where_conditions.append(f"{self.schema.AR.refs['date']} >= ?")

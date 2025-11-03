@@ -28,11 +28,11 @@ class CashFlowDataService:
         """
         if self.db.db_type == 'postgres':
             format_map = {
-                'year_month': f"TO_CHAR({date_ref}, 'YYYY-MM')",
-                'year': f"TO_CHAR({date_ref}, 'YYYY')",
-                'month': f"TO_CHAR({date_ref}, 'MM')"
+                'year_month': f"TO_CHAR({date_ref}::date, 'YYYY-MM')",
+                'year': f"TO_CHAR({date_ref}::date, 'YYYY')",
+                'month': f"TO_CHAR({date_ref}::date, 'MM')"
             }
-            return format_map.get(format_type, f"TO_CHAR({date_ref}, 'YYYY-MM')")
+            return format_map.get(format_type, f"TO_CHAR({date_ref}::date, 'YYYY-MM')")
         else:  # sqlite
             format_map = {
                 'year_month': f"strftime('%Y-%m', {date_ref})",

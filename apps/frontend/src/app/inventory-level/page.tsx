@@ -35,7 +35,7 @@ export default function InventorylevelPage() {
     <div className="space-y-6">
       {/* KPIs Section */}
       <DashboardSection title="Key Metrics">
-        <KPIRow metrics={kpiMetrics} loading={loading} />
+        <KPIRow kpis={kpiMetrics} loading={loading} />
       </DashboardSection>
 
       {/* Chatbot & BI Panel Section - Following Churn Pattern */}

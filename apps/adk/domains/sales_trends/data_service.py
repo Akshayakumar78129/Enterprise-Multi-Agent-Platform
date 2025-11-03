@@ -20,9 +20,9 @@ class SalesTrendsDataService:
         """Extract a date part (year, month, etc.)"""
         if self.db.db_type == 'postgres':
             if part == 'year':
-                return f"TO_CHAR({date_ref}, 'YYYY')"
+                return f"TO_CHAR({date_ref}::date, 'YYYY')"
             elif part == 'month':
-                return f"TO_CHAR({date_ref}, 'MM')"
+                return f"TO_CHAR({date_ref}::date, 'MM')"
         else:  # sqlite
             if part == 'year':
                 return f"strftime('%Y', {date_ref})"
@@ -36,15 +36,15 @@ class SalesTrendsDataService:
 
         if self.db.db_type == 'postgres':
             if granularity == 'daily':
-                return f"TO_CHAR({date_ref}, 'YYYY-MM-DD')"
+                return f"TO_CHAR({date_ref}::date, 'YYYY-MM-DD')"
             elif granularity == 'weekly':
-                return f"TO_CHAR({date_ref}, 'IYYY-IW')"
+                return f"TO_CHAR({date_ref}::date, 'IYYY-IW')"
             elif granularity == 'quarterly':
-                return f"TO_CHAR({date_ref}, 'YYYY') || '-Q' || TO_CHAR({date_ref}, 'Q')"
+                return f"TO_CHAR({date_ref}::date, 'YYYY') || '-Q' || TO_CHAR({date_ref}::date, 'Q')"
             elif granularity == 'annual':
-                return f"TO_CHAR({date_ref}, 'YYYY')"
+                return f"TO_CHAR({date_ref}::date, 'YYYY')"
             else:  # monthly (default)
-                return f"TO_CHAR({date_ref}, 'YYYY-MM')"
+                return f"TO_CHAR({date_ref}::date, 'YYYY-MM')"
         else:  # sqlite
             if granularity == 'daily':
                 return f"date({date_ref})"
