@@ -102,7 +102,7 @@ function SalesPerformanceLayoutContent({ children }: { children: React.ReactNode
   return (
     <>
       <AppLayout
-        title="Sales Performance"
+        title="Revenue Analysis"
         mainContent={mainContent}
         chatPanel={isChatOpen ? chatPanelContent : undefined}
         biPanel={isBIModalOpen ? biPanelContent : undefined}

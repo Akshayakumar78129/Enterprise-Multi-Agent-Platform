@@ -47,17 +47,17 @@ export default function SalesPerformancePage() {
     <PageLoader
       isLoading={loading}
       loaderProps={{
-        title: "Sales Performance",
+        title: "Revenue Analysis",
       }}
     >
       {error && hasNoData ? (
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <h2 className="text-xl font-semibold text-foreground mb-2">
-              No Sales Performance Data Available
+              No Revenue Analysis Data Available
             </h2>
             <p className="text-muted-foreground">
-              There's no sales performance data to display for the selected filters.
+              There's no revenue analysis data to display for the selected filters.
             </p>
           </div>
         </div>
