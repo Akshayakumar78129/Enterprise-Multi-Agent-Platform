@@ -299,13 +299,13 @@ class ARAgingProcessingService:
             forecast_date = today + timedelta(weeks=week)
 
             # Calculate expected collections
-            predicted_amount = 0
+            predicted_amount = 0.0  # Initialize as float to avoid Decimal + float errors
             for bucket in aging_buckets:
                 bucket_range = bucket['range']
                 collection_rate = collection_rates.get(bucket_range, 0.5)
                 # Collections decrease over time
                 weekly_rate = collection_rate / 8
-                predicted_amount += bucket['amount'] * weekly_rate * (9 - week) / 8
+                predicted_amount += to_float(bucket['amount']) * weekly_rate * (9 - week) / 8
 
             # Add confidence intervals (±20%)
             confidence = 85  # 85% confidence

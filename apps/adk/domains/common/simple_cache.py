@@ -19,7 +19,7 @@ class SimpleMemoryCache:
     """Simple in-memory LRU cache implementation"""
 
     # CACHE VERSION - increment to invalidate all caches
-    CACHE_VERSION = "v4_20251103_1115"  # Invalidate after PostgreSQL type casting fixes
+    CACHE_VERSION = "v5_20251103_1200"  # Final comprehensive PostgreSQL compatibility fix
 
     def __init__(self, max_size: int = 100 * 1024 * 1024, default_ttl: int = 300):
         self.max_size = max_size

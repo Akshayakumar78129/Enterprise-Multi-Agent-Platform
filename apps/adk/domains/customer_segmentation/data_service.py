@@ -27,6 +27,22 @@ class CustomerSegmentationDataService:
             # SQLite: use julianday and handle NULL dates
             return f"CAST(julianday('now') - julianday(COALESCE({date_column}, date('now'))) AS INTEGER)"
 
+    def _cast_to_integer(self, expr: str, default: int = 0) -> str:
+        """Cast expression to integer - PostgreSQL safe (handles TEXT/unknown types)"""
+        if self.db.db_type == 'postgres':
+            # PostgreSQL requires explicit TEXT cast first for unknown types, then NUMERIC, then INTEGER
+            return f"COALESCE(CAST(NULLIF(CAST({expr} AS TEXT), '')::NUMERIC AS INTEGER), {default})"
+        else:  # sqlite
+            return f"COALESCE(CAST({expr} AS INTEGER), {default})"
+
+    def _cast_to_float(self, expr: str, default: float = 0.0) -> str:
+        """Cast expression to float - PostgreSQL safe (handles TEXT/unknown types)"""
+        if self.db.db_type == 'postgres':
+            # PostgreSQL requires explicit TEXT cast first for unknown types, then NUMERIC (FLOAT is alias)
+            return f"COALESCE(CAST(NULLIF(CAST({expr} AS TEXT), '')::NUMERIC AS FLOAT), {default})"
+        else:  # sqlite
+            return f"COALESCE(CAST({expr} AS FLOAT), {default})"
+
     async def get_customers(self, filters: Dict[str, Any] = {}) -> Dict:
         """Get customer data with filters"""
 
@@ -108,9 +124,9 @@ class CustomerSegmentationDataService:
                 {self.schema.ALIASES['loyalty']}."RFM-RL Score" AS rfm_rl_score,
                 {self.schema.LOYALTY.refs['days_since_last_activity']} AS recency,
                 {self.schema.LOYALTY.refs['customer_number']} AS customer_number,
-                COALESCE(CAST({self.schema.ALIASES['loyalty']}."Number Sales Txns" AS INTEGER), 0) AS frequency,
+                {self._cast_to_integer(f'{self.schema.ALIASES["loyalty"]}."Number Sales Txns"')} AS frequency,
                 {self.schema.LOYALTY.refs['lifetime_sales']} AS monetary_value,
-                COALESCE(CAST({self.schema.ALIASES['loyalty']}."Avg Sales Amount" AS FLOAT), 0) AS avg_order_value,
+                {self._cast_to_float(f'{self.schema.ALIASES["loyalty"]}."Avg Sales Amount"')} AS avg_order_value,
                 {self._days_since_date(f'{self.schema.ALIASES["loyalty"]}."First Activity Date"')} AS customer_lifetime_days,
                 {self.schema.LOYALTY.refs['loyalty_status']} AS loyalty_status,
                 {self.schema.ALIASES['loyalty']}."Recency Band" AS recency_band,
