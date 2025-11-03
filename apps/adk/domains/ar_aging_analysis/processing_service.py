@@ -328,8 +328,8 @@ class ARAgingProcessingService:
         Returns:
             NPV summary with total erosion and rates
         """
-        total_book_value = sum(b['amount'] for b in aging_buckets)
-        total_npv_adjusted = sum(b['npvAdjustedAmount'] for b in aging_buckets)
+        total_book_value = sum(to_float(b['amount']) for b in aging_buckets)
+        total_npv_adjusted = sum(to_float(b['npvAdjustedAmount']) for b in aging_buckets)
         total_erosion = total_book_value - total_npv_adjusted
 
         # Assume daily erosion continues at same rate

@@ -21,7 +21,8 @@ class CustomerSegmentationDataService:
         """Calculate days since a date column - database-agnostic"""
         if self.db.db_type == 'postgres':
             # PostgreSQL: use EXTRACT with epoch and handle NULL dates
-            return f"EXTRACT(EPOCH FROM (CURRENT_DATE - COALESCE({date_column}::date, CURRENT_DATE))) / 86400"
+            # Cast the entire COALESCE result to ensure type consistency
+            return f"CAST(EXTRACT(EPOCH FROM (CURRENT_DATE - COALESCE(CAST({date_column} AS DATE), CURRENT_DATE))) / 86400 AS INTEGER)"
         else:  # sqlite
             # SQLite: use julianday and handle NULL dates
             return f"CAST(julianday('now') - julianday(COALESCE({date_column}, date('now'))) AS INTEGER)"

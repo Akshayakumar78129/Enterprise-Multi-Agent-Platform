@@ -84,7 +84,7 @@ class RegionalSalesAnalyzerDataService:
             ROUND(CAST(SUM({self.schema.TRANSACTION.refs['net_sales_amount']}) AS numeric), 2) as netSales,
             ROUND(CAST(SUM({self.schema.TRANSACTION.refs['sales_quantity']}) AS numeric), 2) as totalQuantity,
             ROUND(CAST(SUM({self.schema.TRANSACTION.refs['gross_profit']}) AS numeric), 2) as grossProfit,
-            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['gross_profit']}) AS numeric) / NULLIF(SUM({self.schema.TRANSACTION.refs['sales_amount']}), 0) * 100, 2) as profitMargin,
+            ROUND(CAST(CAST(SUM({self.schema.TRANSACTION.refs['gross_profit']}) AS numeric) / NULLIF(SUM({self.schema.TRANSACTION.refs['sales_amount']}), 0) * 100 AS numeric), 2) as profitMargin,
             COUNT(DISTINCT {self.schema.TRANSACTION.refs['customer_key']}) as customerCount,
             COUNT(*) as transactionCount,
             COUNT(DISTINCT {self.schema.CUSTOMER.refs['state']}) as stateCount
@@ -183,7 +183,7 @@ class RegionalSalesAnalyzerDataService:
             {self.schema.CUSTOMER.refs['country']} as country,
             {self.schema.CUSTOMER.refs['state']} as state,
             ROUND(CAST(SUM({self.schema.TRANSACTION.refs['sales_amount']}) AS numeric), 2) as totalSales,
-            ROUND(SUM({self.schema.TRANSACTION.refs['gross_profit']}) / NULLIF(SUM({self.schema.TRANSACTION.refs['sales_amount']}), 0) * 100, 2) as profitMargin
+            ROUND(CAST(SUM({self.schema.TRANSACTION.refs['gross_profit']}) / NULLIF(SUM({self.schema.TRANSACTION.refs['sales_amount']}), 0) * 100 AS numeric), 2) as profitMargin
         FROM {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
         JOIN {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
             ON {self.schema.TRANSACTION.refs['customer_key']} = {self.schema.CUSTOMER.refs['key']}
