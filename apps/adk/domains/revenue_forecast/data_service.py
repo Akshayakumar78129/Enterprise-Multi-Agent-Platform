@@ -52,6 +52,15 @@ class RevenueForecastDataService:
         else:  # sqlite
             return f"strftime('%Y-%m', date({month_string_ref} || '-01', '+1 month'))"
 
+    def _months_between(self, month1: str, month2: str) -> str:
+        """Calculate months between two YYYY-MM format strings"""
+        if self.db.db_type == 'postgres':
+            # PostgreSQL: use EXTRACT for date arithmetic
+            return f"CAST(ROUND(EXTRACT(EPOCH FROM (({month1} || '-01')::date - ({month2} || '-01')::date)) / (30.0 * 86400), 0) AS INTEGER)"
+        else:  # sqlite
+            # SQLite: use julianday for date arithmetic
+            return f"CAST(ROUND((julianday({month1} || '-01') - julianday({month2} || '-01')) / 30.0, 0) AS INTEGER)"
+
     async def get_kpi_data(self, filters: Dict[str, Any]) -> Dict[str, Any]:
         """
         Get KPI metrics for revenue forecast
@@ -278,7 +287,7 @@ class RevenueForecastDataService:
                 revenue_month,
                 cohort_revenue,
                 customer_count,
-                CAST(ROUND(EXTRACT(EPOCH FROM ((revenue_month || '-01')::date - (cohort_month || '-01')::date)) / (30.0 * 86400), 0) AS INTEGER) as months_since_cohort
+                {self._months_between('revenue_month', 'cohort_month')} as months_since_cohort
             FROM cohort_revenue
         )
         SELECT
