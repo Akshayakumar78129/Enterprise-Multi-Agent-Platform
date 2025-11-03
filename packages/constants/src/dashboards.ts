@@ -102,16 +102,6 @@ export const DASHBOARDS: Dashboard[] = [
     status: 'development',
   },
   {
-    id: 'customer-insights',
-    name: 'Customer Insights',
-    path: '/customer-insights',
-    domain: 'customer',
-    description: 'Comprehensive customer insights and analytics',
-    icon: '💡',
-    features: ['kpi', 'filters', 'charts', 'table'],
-    status: 'development',
-  },
-  {
     id: 'retention-planning',
     name: 'Retention Planning',
     path: '/retention-planning',
@@ -125,10 +115,10 @@ export const DASHBOARDS: Dashboard[] = [
   // Sales Domain Dashboards
   {
     id: 'sales-performance',
-    name: 'Sales Performance',
+    name: 'Revenue Analysis',
     path: '/sales-performance',
     domain: 'sales',
-    description: 'Track and analyze sales performance metrics',
+    description: 'Track and analyze revenue performance metrics',
     icon: '💼',
     features: ['kpi', 'filters', 'charts', 'table', 'export'],
     status: 'development',
@@ -170,16 +160,6 @@ export const DASHBOARDS: Dashboard[] = [
     domain: 'sales',
     description: 'Forecast product demand using predictive analytics',
     icon: '🔮',
-    features: ['kpi', 'filters', 'charts', 'table'],
-    status: 'development',
-  },
-  {
-    id: 'sales-pipeline',
-    name: 'Sales Pipeline',
-    path: '/sales-pipeline',
-    domain: 'sales',
-    description: 'Manage and track sales pipeline stages',
-    icon: '🚀',
     features: ['kpi', 'filters', 'charts', 'table'],
     status: 'development',
   },
@@ -266,16 +246,6 @@ export const DASHBOARDS: Dashboard[] = [
     icon: '📈',
     features: ['kpi', 'filters', 'charts', 'table', 'forecast'],
     status: 'active',
-  },
-  {
-    id: 'financial-health',
-    name: 'Financial Health Metrics',
-    path: '/financial-health',
-    domain: 'finance',
-    description: 'Monitor key financial health indicators',
-    icon: '❤️',
-    features: ['kpi', 'filters', 'charts', 'table'],
-    status: 'development',
   },
 ];
 
