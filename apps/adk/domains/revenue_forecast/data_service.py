@@ -70,27 +70,29 @@ class RevenueForecastDataService:
         date_to = filters.get('dateTo', '2021-12-31')
         company_code = filters.get('companyCode', 'all')
 
+        account_prefix = self._substring(self.schema.GL_TRANSACTION.refs['gl_account'], 1, 2)
+
         query = f"""
         WITH revenue_metrics AS (
             SELECT
                 -- Revenue components
-                COALESCE(SUM(CASE WHEN substr({self.schema.GL_TRANSACTION.refs['gl_account']}, 1, 2) IN ('41', '42')
+                COALESCE(SUM(CASE WHEN {account_prefix} IN ('41', '42')
                     THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END), 0) as total_revenue,
-                COALESCE(SUM(CASE WHEN substr({self.schema.GL_TRANSACTION.refs['gl_account']}, 1, 2) = '41'
+                COALESCE(SUM(CASE WHEN {account_prefix} = '41'
                     THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END), 0) as product_revenue,
-                COALESCE(SUM(CASE WHEN substr({self.schema.GL_TRANSACTION.refs['gl_account']}, 1, 2) = '42'
+                COALESCE(SUM(CASE WHEN {account_prefix} = '42'
                     THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END), 0) as service_revenue,
 
                 -- Cost components for profitability metrics
-                COALESCE(SUM(CASE WHEN substr({self.schema.GL_TRANSACTION.refs['gl_account']}, 1, 2) IN ('51', '52')
+                COALESCE(SUM(CASE WHEN {account_prefix} IN ('51', '52')
                     THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END), 0) as cogs,
-                COALESCE(SUM(CASE WHEN substr({self.schema.GL_TRANSACTION.refs['gl_account']}, 1, 2) IN ('61', '62', '63', '64', '65', '66')
+                COALESCE(SUM(CASE WHEN {account_prefix} IN ('61', '62', '63', '64', '65', '66')
                     THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END), 0) as opex,
 
                 -- Customer metrics (simulated based on transaction patterns)
                 COUNT(DISTINCT {self.schema.GL_TRANSACTION.refs['txn_date']}) as transaction_days,
                 COUNT(DISTINCT {self.schema.GL_TRANSACTION.refs['document_number']}) as unique_transactions,
-                COUNT(DISTINCT CASE WHEN substr({self.schema.GL_TRANSACTION.refs['gl_account']}, 1, 2) IN ('41', '42')
+                COUNT(DISTINCT CASE WHEN {account_prefix} IN ('41', '42')
                     THEN {self.schema.GL_TRANSACTION.refs['document_number']} END) as revenue_transactions
             FROM {self.schema.TABLES['gl_transaction']} {self.schema.ALIASES['gl_transaction']}
             WHERE {self.schema.GL_TRANSACTION.refs['txn_date']} BETWEEN ? AND ?
@@ -98,7 +100,7 @@ class RevenueForecastDataService:
         ),
         prior_period_metrics AS (
             SELECT
-                COALESCE(SUM(CASE WHEN substr({self.schema.GL_TRANSACTION.refs['gl_account']}, 1, 2) IN ('41', '42')
+                COALESCE(SUM(CASE WHEN {account_prefix} IN ('41', '42')
                     THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END), 0) as prior_revenue
             FROM {self.schema.TABLES['gl_transaction']} {self.schema.ALIASES['gl_transaction']}
             WHERE {self.schema.GL_TRANSACTION.refs['txn_date']} BETWEEN date(?, '-1 year') AND date(?, '-1 year')
@@ -393,19 +395,21 @@ class RevenueForecastDataService:
         date_from = filters.get('dateFrom', '2017-01-01')
         date_to = filters.get('dateTo', '2021-12-31')
 
+        account_prefix = self._substring(self.schema.GL_TRANSACTION.refs['gl_account'], 1, 2)
+
         query = f"""
         WITH customer_metrics AS (
             SELECT
                 -- Revenue metrics
-                SUM(CASE WHEN substr({self.schema.GL_TRANSACTION.refs['gl_account']}, 1, 2) IN ('41', '42')
+                SUM(CASE WHEN {account_prefix} IN ('41', '42')
                     THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END) as total_revenue,
 
                 -- Marketing/Sales costs (OpEx accounts 61-63)
-                SUM(CASE WHEN substr({self.schema.GL_TRANSACTION.refs['gl_account']}, 1, 2) IN ('61', '62', '63')
+                SUM(CASE WHEN {account_prefix} IN ('61', '62', '63')
                     THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END) as sales_marketing_cost,
 
                 -- COGS
-                SUM(CASE WHEN substr({self.schema.GL_TRANSACTION.refs['gl_account']}, 1, 2) IN ('51', '52')
+                SUM(CASE WHEN {account_prefix} IN ('51', '52')
                     THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END) as cogs,
 
                 -- Unique customers (proxy using cost centers)
