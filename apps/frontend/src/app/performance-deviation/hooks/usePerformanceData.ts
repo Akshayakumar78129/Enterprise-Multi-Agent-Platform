@@ -15,10 +15,20 @@ interface PerformanceFilters {
 async function fetchPerformanceData(filters: PerformanceFilters) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
+  // Flatten dateRange structure to match backend expectations
+  const payload = {
+    dateFrom: filters.dateRange.startDate,
+    dateTo: filters.dateRange.endDate,
+    businessFunctions: filters.businessFunctions,
+    significanceThreshold: filters.significanceThreshold,
+    productCategories: filters.productCategories,
+    kpis: filters.kpis
+  };
+
   const response = await fetch(`${apiUrl}/performance/summary`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(filters)
+    body: JSON.stringify(payload)
   });
 
   if (!response.ok) {
