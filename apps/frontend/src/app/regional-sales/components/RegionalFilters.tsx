@@ -1,40 +1,23 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { FilterBar } from "components/index";
 import { RegionalSalesFiltersState } from "../context";
-import { regionalSalesService } from "../services/regionalSalesService";
 
 interface RegionalFiltersProps {
   filters: RegionalSalesFiltersState;
   onFiltersChange: (filters: RegionalSalesFiltersState) => void;
   onReset: () => void;
-}
-
-export function RegionalFilters({ filters, onFiltersChange, onReset }: RegionalFiltersProps) {
-  const [filterOptions, setFilterOptions] = useState<{
+  filterOptions?: {
     countries: string[];
     states: Array<{ country: string; state: string }>;
-  }>({
-    countries: [],
-    states: []
-  });
+  };
+}
 
-  // Fetch filter options on mount
-  useEffect(() => {
-    const fetchOptions = async () => {
-      try {
-        const options = await regionalSalesService.getFilterOptions();
-        setFilterOptions(options);
-      } catch (error) {
-        // Error fetching filter options
-      }
-    };
-    fetchOptions();
-  }, []);
-
-  // Get unique countries
-  const countries = filterOptions.countries || [];
+export function RegionalFilters({ filters, onFiltersChange, onReset, filterOptions }: RegionalFiltersProps) {
+  // Use filter options from summary API (via prop) or empty defaults
+  const countries = filterOptions?.countries || [];
+  const statesData = filterOptions?.states || [];
 
   // Get states filtered by selected countries
   const getAvailableStates = () => {
@@ -43,7 +26,7 @@ export function RegionalFilters({ filters, onFiltersChange, onReset }: RegionalF
       return [];
     }
     // Filter states by selected countries
-    const filteredStates = filterOptions.states
+    const filteredStates = statesData
       .filter(s => filters.countries.includes(s.country))
       .map(s => s.state);
 
@@ -79,7 +62,7 @@ export function RegionalFilters({ filters, onFiltersChange, onReset }: RegionalF
             onChange: (values) => {
               // Reset states if countries change
               const newStates = filters.states.filter(state => {
-                const stateCountries = filterOptions.states
+                const stateCountries = statesData
                   .filter(s => s.state === state)
                   .map(s => s.country);
                 return stateCountries.some(c => values.includes(c));

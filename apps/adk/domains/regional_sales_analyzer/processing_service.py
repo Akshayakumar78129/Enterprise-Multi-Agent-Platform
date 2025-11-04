@@ -50,6 +50,9 @@ class RegionalSalesAnalyzerProcessingService:
         # Combine into single unified insights array
         combined_insights = rule_based_insights + ai_insights
 
+        # Get available filter options for dropdowns (countries, states)
+        filter_options = await self.data_service.get_available_regions()
+
         # Create response structure
         return {
             'kpiMetrics': {
@@ -80,7 +83,8 @@ class RegionalSalesAnalyzerProcessingService:
             },
             'metadata': {
                 'filtersApplied': normalized_filters,
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'filterOptions': filter_options  # Include filter options in summary response
             }
         }
 

@@ -10,7 +10,11 @@ import { RegionalFilters } from "./components";
 import { RegionalSalesProvider, useRegionalSalesContext } from "./context";
 
 function HeaderFilters() {
-  const { filters, setFilters } = useRegionalSalesContext();
+  const { filters, setFilters, regionalSalesData } = useRegionalSalesContext();
+
+  // Extract filter options from summary data
+  const filterOptions = regionalSalesData?.metadata?.filterOptions;
+
   return (
     <RegionalFilters
       filters={filters}
@@ -25,6 +29,7 @@ function HeaderFilters() {
           states: []
         })
       }
+      filterOptions={filterOptions}
     />
   );
 }
