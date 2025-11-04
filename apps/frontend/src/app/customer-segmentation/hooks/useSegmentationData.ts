@@ -14,7 +14,7 @@ interface SegmentationFilters {
 async function fetchSegmentationSummary(filterParams: Record<string, any>) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
-  const response = await fetch(`${apiUrl}/segmentation/summary`, {
+  const response = await fetch(`${apiUrl}/customer-segmentation/summary`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(filterParams),
