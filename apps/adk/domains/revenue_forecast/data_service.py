@@ -75,15 +75,20 @@ class RevenueForecastDataService:
         Get KPI metrics for revenue forecast
         Returns: Rule of 40, NRR, LTV/CAC, Revenue Quality Score, Market Share Momentum
         """
+        from datetime import datetime, timedelta
+        from dateutil.relativedelta import relativedelta
+
         date_from = filters.get('dateFrom', '2017-01-01')
         date_to = filters.get('dateTo', '2021-12-31')
         company_code = filters.get('companyCode', 'all')
 
         account_prefix = self._substring(self.schema.GL_TRANSACTION.refs['gl_account'], 1, 2)
 
-        # Build database-specific prior year date expressions
-        prior_year_from = self._subtract_years('?', 1)
-        prior_year_to = self._subtract_years('?', 1)
+        # Calculate prior year dates in Python instead of SQL to avoid psycopg2 issues
+        date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
+        date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
+        prior_year_from_str = (date_from_obj - relativedelta(years=1)).strftime('%Y-%m-%d')
+        prior_year_to_str = (date_to_obj - relativedelta(years=1)).strftime('%Y-%m-%d')
 
         query = f"""
         WITH revenue_metrics AS (
@@ -116,7 +121,7 @@ class RevenueForecastDataService:
                 COALESCE(SUM(CASE WHEN {account_prefix} IN ('41', '42')
                     THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END), 0) as prior_revenue
             FROM {self.schema.TABLES['gl_transaction']} {self.schema.ALIASES['gl_transaction']}
-            WHERE {self.schema.GL_TRANSACTION.refs['txn_date']} BETWEEN {prior_year_from} AND {prior_year_to}
+            WHERE {self.schema.GL_TRANSACTION.refs['txn_date']} BETWEEN ? AND ?
             {"AND " + self.schema.GL_TRANSACTION.refs['company_code'] + " = ?" if company_code and company_code != 'all' else ""}
         )
         SELECT
@@ -202,7 +207,8 @@ class RevenueForecastDataService:
         CROSS JOIN prior_period_metrics ppm
         """
 
-        params = [date_from, date_to, date_from, date_to]
+        # Pass calculated prior year dates as parameters (avoids psycopg2 issues with date arithmetic)
+        params = [date_from, date_to, prior_year_from_str, prior_year_to_str]
         if company_code and company_code != 'all':
             params.extend([company_code, company_code])
 
