@@ -19,7 +19,7 @@ class SimpleMemoryCache:
     """Simple in-memory LRU cache implementation"""
 
     # CACHE VERSION - increment to invalidate all caches
-    CACHE_VERSION = "v14_20251104_1800"  # PostgreSQL Decimal handling: convert to float before numpy/Pydantic
+    CACHE_VERSION = "v15_20251104_1830"  # Revenue Forecast: fix psycopg2 parser with CAST instead of ::
 
     def __init__(self, max_size: int = 100 * 1024 * 1024, default_ttl: int = 300):
         self.max_size = max_size

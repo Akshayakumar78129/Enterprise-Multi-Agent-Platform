@@ -64,7 +64,9 @@ class RevenueForecastDataService:
     def _subtract_years(self, date_ref: str, years: int = 1) -> str:
         """Generate SQL to subtract years from a date - database-specific"""
         if self.db.db_type == 'postgres':
-            return f"({date_ref}::date - INTERVAL '{years} year')"
+            # Use CAST() instead of :: to avoid psycopg2 parameter parser confusion
+            # When ? becomes %s, the sequence %s::date confuses psycopg2 (%s: looks like named param)
+            return f"(CAST({date_ref} AS DATE) - INTERVAL '{years} year')"
         else:  # sqlite
             return f"date({date_ref}, '-{years} year')"
 
