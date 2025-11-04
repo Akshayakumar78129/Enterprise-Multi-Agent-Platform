@@ -19,7 +19,7 @@ class SimpleMemoryCache:
     """Simple in-memory LRU cache implementation"""
 
     # CACHE VERSION - increment to invalidate all caches
-    CACHE_VERSION = "v16_20251104_1850"  # Revenue Forecast: calculate prior year dates in Python
+    CACHE_VERSION = "v17_20251104_1910"  # Revenue Forecast: use %s placeholders directly
 
     def __init__(self, max_size: int = 100 * 1024 * 1024, default_ttl: int = 300):
         self.max_size = max_size
