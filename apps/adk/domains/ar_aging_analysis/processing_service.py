@@ -234,10 +234,11 @@ class ARAgingProcessingService:
 
         result = []
         for customer in customer_details:
-            clv = customer.get('lifetime_sales', 0) or 0
-            outstanding = customer.get('total_outstanding', 0) or 0
-            avg_days_overdue = customer.get('avg_days_overdue', 0) or 0
-            rfm_score = customer.get('rfm_score', 500) or 500
+            # Convert Decimal types from PostgreSQL to float to avoid arithmetic errors
+            clv = to_float(customer.get('lifetime_sales', 0) or 0)
+            outstanding = to_float(customer.get('total_outstanding', 0) or 0)
+            avg_days_overdue = to_float(customer.get('avg_days_overdue', 0) or 0)
+            rfm_score = customer.get('rfm_score', 500) or 500  # Integer, no conversion needed
 
             # Calculate risk score (0-100)
             # Higher days overdue + lower RFM = higher risk
@@ -314,9 +315,9 @@ class ARAgingProcessingService:
 
             forecast.append({
                 'date': forecast_date.strftime('%Y-%m-%d'),
-                'predictedAmount': round(predicted_amount, 2),
-                'upperBound': round(upper_bound, 2),
-                'lowerBound': round(lower_bound, 2),
+                'predictedAmount': float(round(predicted_amount, 2)),
+                'upperBound': float(round(upper_bound, 2)),
+                'lowerBound': float(round(lower_bound, 2)),
                 'confidence': confidence
             })
 

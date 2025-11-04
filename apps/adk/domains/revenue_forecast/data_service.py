@@ -61,6 +61,13 @@ class RevenueForecastDataService:
             # SQLite: use julianday for date arithmetic
             return f"CAST(ROUND((julianday({month1} || '-01') - julianday({month2} || '-01')) / 30.0, 0) AS INTEGER)"
 
+    def _subtract_years(self, date_ref: str, years: int = 1) -> str:
+        """Generate SQL to subtract years from a date - database-specific"""
+        if self.db.db_type == 'postgres':
+            return f"({date_ref}::date - INTERVAL '{years} year')"
+        else:  # sqlite
+            return f"date({date_ref}, '-{years} year')"
+
     async def get_kpi_data(self, filters: Dict[str, Any]) -> Dict[str, Any]:
         """
         Get KPI metrics for revenue forecast
@@ -71,6 +78,10 @@ class RevenueForecastDataService:
         company_code = filters.get('companyCode', 'all')
 
         account_prefix = self._substring(self.schema.GL_TRANSACTION.refs['gl_account'], 1, 2)
+
+        # Build database-specific prior year date expressions
+        prior_year_from = self._subtract_years('?', 1)
+        prior_year_to = self._subtract_years('?', 1)
 
         query = f"""
         WITH revenue_metrics AS (
@@ -103,7 +114,7 @@ class RevenueForecastDataService:
                 COALESCE(SUM(CASE WHEN {account_prefix} IN ('41', '42')
                     THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END), 0) as prior_revenue
             FROM {self.schema.TABLES['gl_transaction']} {self.schema.ALIASES['gl_transaction']}
-            WHERE {self.schema.GL_TRANSACTION.refs['txn_date']} BETWEEN date(?, '-1 year') AND date(?, '-1 year')
+            WHERE {self.schema.GL_TRANSACTION.refs['txn_date']} BETWEEN {prior_year_from} AND {prior_year_to}
             {"AND " + self.schema.GL_TRANSACTION.refs['company_code'] + " = ?" if company_code and company_code != 'all' else ""}
         )
         SELECT
