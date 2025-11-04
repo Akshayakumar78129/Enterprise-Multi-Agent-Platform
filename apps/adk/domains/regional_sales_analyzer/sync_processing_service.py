@@ -30,8 +30,8 @@ class SyncRegionalSalesAnalyzerProcessingService:
             return asyncio.run(coro)
 
     def get_dashboard_data(self, filters: Dict[str, Any] = {}) -> Dict:
-        """Synchronous wrapper for get_dashboard_summary"""
-        return self._run_async(self.async_service.get_dashboard_summary(filters))
+        """Synchronous wrapper for get_dashboard_data"""
+        return self._run_async(self.async_service.get_dashboard_data(filters))
 
     def get_regional_summary(self, filters: Dict[str, Any] = {}) -> Dict:
         """Get regional sales summary with KPIs and insights"""
