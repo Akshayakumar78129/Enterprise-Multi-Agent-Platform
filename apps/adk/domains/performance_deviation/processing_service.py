@@ -494,7 +494,8 @@ class PerformanceProcessingService:
 
         # Simple linear trend
         x = np.arange(len(series))
-        y = series.values
+        # Convert to float64 to handle Decimal types from PostgreSQL
+        y = pd.to_numeric(series, errors='coerce').values
 
         # Remove NaN values
         mask = ~np.isnan(y)
@@ -513,9 +514,12 @@ class PerformanceProcessingService:
         if len(series) < 2:
             return 0.0
 
+        # Convert to numeric to handle Decimal types from PostgreSQL
+        numeric_series = pd.to_numeric(series, errors='coerce')
+
         # Get first and last valid values
-        first = series.iloc[0]
-        last = series.iloc[-1]
+        first = float(numeric_series.iloc[0]) if pd.notna(numeric_series.iloc[0]) else 0.0
+        last = float(numeric_series.iloc[-1]) if pd.notna(numeric_series.iloc[-1]) else 0.0
 
         if first == 0:
             return 0.0

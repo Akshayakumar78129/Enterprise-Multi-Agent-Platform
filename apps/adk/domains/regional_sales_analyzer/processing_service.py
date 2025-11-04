@@ -114,8 +114,9 @@ class RegionalSalesAnalyzerProcessingService:
             prev_filters = self._get_previous_period_filters(filters)
             prev_summary = await self.data_service.get_regional_summary(prev_filters)
 
-            prev_total_sales = prev_summary.get('totalSales', 0) or 0
-            curr_total_sales = summary.get('totalSales', 0) or 0
+            # Convert Decimal to float for arithmetic (PostgreSQL compatibility)
+            prev_total_sales = float(prev_summary.get('totalSales', 0) or 0)
+            curr_total_sales = float(summary.get('totalSales', 0) or 0)
 
             if prev_total_sales > 0:
                 growth_rate = round(
@@ -123,16 +124,17 @@ class RegionalSalesAnalyzerProcessingService:
                     2
                 )
 
+        # Convert all Decimal types to float for Pydantic model (PostgreSQL compatibility)
         return RegionalKPI(
-            totalSales=summary.get('totalSales', 0) or 0,
-            netSales=summary.get('netSales', 0) or 0,
-            grossProfit=summary.get('grossProfit', 0) or 0,
-            profitMargin=summary.get('profitMargin', 0) or 0,
-            countryCount=summary.get('countryCount', 0) or 0,
-            stateCount=summary.get('stateCount', 0) or 0,
-            customerCount=summary.get('customerCount', 0) or 0,
-            transactionCount=summary.get('transactionCount', 0) or 0,
-            avgTransactionValue=summary.get('avgTransactionValue', 0) or 0,
+            totalSales=float(summary.get('totalSales', 0) or 0),
+            netSales=float(summary.get('netSales', 0) or 0),
+            grossProfit=float(summary.get('grossProfit', 0) or 0),
+            profitMargin=float(summary.get('profitMargin', 0) or 0),
+            countryCount=int(summary.get('countryCount', 0) or 0),
+            stateCount=int(summary.get('stateCount', 0) or 0),
+            customerCount=int(summary.get('customerCount', 0) or 0),
+            transactionCount=int(summary.get('transactionCount', 0) or 0),
+            avgTransactionValue=float(summary.get('avgTransactionValue', 0) or 0),
             growthRate=growth_rate
         )
 
@@ -141,18 +143,19 @@ class RegionalSalesAnalyzerProcessingService:
 
         regions = await self.data_service.get_regional_sales_data(filters)
 
+        # Convert Decimal types to float for Pydantic models (PostgreSQL compatibility)
         return [
             RegionPerformance(
                 country=r.get('country', ''),
                 state=r.get('state', ''),
-                totalSales=r.get('totalSales', 0) or 0,
-                netSales=r.get('netSales', 0) or 0,
-                totalQuantity=r.get('totalQuantity', 0) or 0,
-                grossProfit=r.get('grossProfit', 0) or 0,
-                profitMargin=r.get('profitMargin', 0) or 0,
-                customerCount=r.get('customerCount', 0) or 0,
-                transactionCount=r.get('transactionCount', 0) or 0,
-                avgTransactionValue=r.get('avgTransactionValue', 0) or 0,
+                totalSales=float(r.get('totalSales', 0) or 0),
+                netSales=float(r.get('netSales', 0) or 0),
+                totalQuantity=float(r.get('totalQuantity', 0) or 0),
+                grossProfit=float(r.get('grossProfit', 0) or 0),
+                profitMargin=float(r.get('profitMargin', 0) or 0),
+                customerCount=int(r.get('customerCount', 0) or 0),
+                transactionCount=int(r.get('transactionCount', 0) or 0),
+                avgTransactionValue=float(r.get('avgTransactionValue', 0) or 0),
                 firstSaleDate=r.get('firstSaleDate'),
                 lastSaleDate=r.get('lastSaleDate')
             )
@@ -164,17 +167,18 @@ class RegionalSalesAnalyzerProcessingService:
 
         countries = await self.data_service.get_country_level_data(filters)
 
+        # Convert Decimal types to float for Pydantic models (PostgreSQL compatibility)
         return [
             CountryPerformance(
                 country=c.get('country', ''),
-                totalSales=c.get('totalSales', 0) or 0,
-                netSales=c.get('netSales', 0) or 0,
-                totalQuantity=c.get('totalQuantity', 0) or 0,
-                grossProfit=c.get('grossProfit', 0) or 0,
-                profitMargin=c.get('profitMargin', 0) or 0,
-                customerCount=c.get('customerCount', 0) or 0,
-                transactionCount=c.get('transactionCount', 0) or 0,
-                stateCount=c.get('stateCount', 0) or 0
+                totalSales=float(c.get('totalSales', 0) or 0),
+                netSales=float(c.get('netSales', 0) or 0),
+                totalQuantity=float(c.get('totalQuantity', 0) or 0),
+                grossProfit=float(c.get('grossProfit', 0) or 0),
+                profitMargin=float(c.get('profitMargin', 0) or 0),
+                customerCount=int(c.get('customerCount', 0) or 0),
+                transactionCount=int(c.get('transactionCount', 0) or 0),
+                stateCount=int(c.get('stateCount', 0) or 0)
             )
             for c in countries
         ]
@@ -184,17 +188,18 @@ class RegionalSalesAnalyzerProcessingService:
 
         series = await self.data_service.get_time_series_data(filters)
 
+        # Convert Decimal types to float for Pydantic models (PostgreSQL compatibility)
         return [
             TimeSeries(
                 period=s.get('period', ''),
                 country=s.get('country', ''),
                 state=s.get('state', ''),
-                totalSales=s.get('totalSales', 0) or 0,
-                netSales=s.get('netSales', 0) or 0,
-                totalQuantity=s.get('totalQuantity', 0) or 0,
-                grossProfit=s.get('grossProfit', 0) or 0,
-                customerCount=s.get('customerCount', 0) or 0,
-                transactionCount=s.get('transactionCount', 0) or 0
+                totalSales=float(s.get('totalSales', 0) or 0),
+                netSales=float(s.get('netSales', 0) or 0),
+                totalQuantity=float(s.get('totalQuantity', 0) or 0),
+                grossProfit=float(s.get('grossProfit', 0) or 0),
+                customerCount=int(s.get('customerCount', 0) or 0),
+                transactionCount=int(s.get('transactionCount', 0) or 0)
             )
             for s in series
         ]
@@ -204,19 +209,20 @@ class RegionalSalesAnalyzerProcessingService:
 
         opportunities = await self.data_service.get_opportunity_analysis(filters)
 
+        # Convert Decimal types to float for Pydantic models (PostgreSQL compatibility)
         return [
             OpportunityRegion(
                 country=o.get('country', ''),
                 state=o.get('state', ''),
-                totalSales=o.get('totalSales', 0) or 0,
-                grossProfit=o.get('grossProfit', 0) or 0,
-                customerCount=o.get('customerCount', 0) or 0,
-                transactionCount=o.get('transactionCount', 0) or 0,
-                avgTransactionValue=o.get('avgTransactionValue', 0) or 0,
+                totalSales=float(o.get('totalSales', 0) or 0),
+                grossProfit=float(o.get('grossProfit', 0) or 0),
+                customerCount=int(o.get('customerCount', 0) or 0),
+                transactionCount=int(o.get('transactionCount', 0) or 0),
+                avgTransactionValue=float(o.get('avgTransactionValue', 0) or 0),
                 opportunityCategory=o.get('opportunityCategory', 'Focus Area'),
-                salesVsAvg=o.get('salesVsAvg', 0) or 0,
-                customersVsAvg=o.get('customersVsAvg', 0) or 0,
-                profitMargin=o.get('profitMargin', 0) or 0
+                salesVsAvg=float(o.get('salesVsAvg', 0) or 0),
+                customersVsAvg=float(o.get('customersVsAvg', 0) or 0),
+                profitMargin=float(o.get('profitMargin', 0) or 0)
             )
             for o in opportunities
         ]
@@ -226,12 +232,13 @@ class RegionalSalesAnalyzerProcessingService:
 
         top = await self.data_service.get_top_regions(filters, limit=5)
 
+        # Convert Decimal types to float for Pydantic models (PostgreSQL compatibility)
         return [
             TopRegion(
                 country=t.get('country', ''),
                 state=t.get('state', ''),
-                totalSales=t.get('totalSales', 0) or 0,
-                profitMargin=t.get('profitMargin', 0) or 0
+                totalSales=float(t.get('totalSales', 0) or 0),
+                profitMargin=float(t.get('profitMargin', 0) or 0)
             )
             for t in top
         ]
