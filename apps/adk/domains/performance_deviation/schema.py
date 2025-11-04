@@ -43,7 +43,7 @@ class PerformanceSchema:
     class LOYALTY:
         refs = {
             'date': '"Last Activity Date"',
-            'customer_key': '"Customer Key"',
+            'customer_key': '"Entity Key"',
             'active_count': '"Active Customer Count"',
             'loyal_count': '"Loyal Customer Count"',
             'rfm_score': '"RFM Score"',

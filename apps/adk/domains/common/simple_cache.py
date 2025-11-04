@@ -19,7 +19,7 @@ class SimpleMemoryCache:
     """Simple in-memory LRU cache implementation"""
 
     # CACHE VERSION - increment to invalidate all caches
-    CACHE_VERSION = "v11_20251103_1400"  # Production fixes: router URL, empty DB handling, complete Decimal→float
+    CACHE_VERSION = "v12_20251103_1415"  # Performance Deviation: fix Customer Loyalty "Entity Key" column
 
     def __init__(self, max_size: int = 100 * 1024 * 1024, default_ttl: int = 300):
         self.max_size = max_size
