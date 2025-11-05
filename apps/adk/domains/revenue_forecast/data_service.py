@@ -113,16 +113,16 @@ class RevenueForecastDataService:
                 COUNT(DISTINCT CASE WHEN {account_prefix} IN ('41', '42')
                     THEN {self.schema.GL_TRANSACTION.refs['document_number']} END) as revenue_transactions
             FROM {self.schema.TABLES['gl_transaction']} {self.schema.ALIASES['gl_transaction']}
-            WHERE {self.schema.GL_TRANSACTION.refs['txn_date']} BETWEEN %s AND %s
-            {"AND " + self.schema.GL_TRANSACTION.refs['company_code'] + " = %s" if company_code and company_code != 'all' else ""}
+            WHERE {self.schema.GL_TRANSACTION.refs['txn_date']} BETWEEN ? AND ?
+            {"AND " + self.schema.GL_TRANSACTION.refs['company_code'] + " = ?" if company_code and company_code != 'all' else ""}
         ),
         prior_period_metrics AS (
             SELECT
                 COALESCE(SUM(CASE WHEN {account_prefix} IN ('41', '42')
                     THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END), 0) as prior_revenue
             FROM {self.schema.TABLES['gl_transaction']} {self.schema.ALIASES['gl_transaction']}
-            WHERE {self.schema.GL_TRANSACTION.refs['txn_date']} BETWEEN %s AND %s
-            {"AND " + self.schema.GL_TRANSACTION.refs['company_code'] + " = %s" if company_code and company_code != 'all' else ""}
+            WHERE {self.schema.GL_TRANSACTION.refs['txn_date']} BETWEEN ? AND ?
+            {"AND " + self.schema.GL_TRANSACTION.refs['company_code'] + " = ?" if company_code and company_code != 'all' else ""}
         )
         SELECT
             rm.*,
@@ -207,7 +207,8 @@ class RevenueForecastDataService:
         CROSS JOIN prior_period_metrics ppm
         """
 
-        # Pass calculated prior year dates as parameters (avoids psycopg2 issues with date arithmetic)
+        # Use ? placeholders (will be converted to %s by connection.py)
+        # This matches the pattern used by all other working dashboards
         params = [date_from, date_to, prior_year_from_str, prior_year_to_str]
         if company_code and company_code != 'all':
             params.extend([company_code, company_code])
