@@ -213,6 +213,9 @@ class RevenueForecastDataService:
         if company_code and company_code != 'all':
             params.extend([company_code, company_code])
 
+        # Convert to tuple for psycopg2 compatibility
+        params = tuple(params)
+
         try:
             result_dict = await self.db.query(query, params)
             rows = result_dict.get('rows', [])

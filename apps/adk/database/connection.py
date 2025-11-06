@@ -205,11 +205,18 @@ class DatabaseConnection:
                 cursor = conn.cursor()
 
             try:
+                # Count placeholders
+                placeholder_count = sql.count('%s')
+                param_count = len(params) if params else 0
+                print(f"[DEBUG] Placeholder count: {placeholder_count}, Param count: {param_count}")
+                print(f"[DEBUG] Params type: {type(params)}, Params: {params}")
+
                 cursor.execute(sql, params)
             except Exception as e:
                 print(f"[ERROR] SQL execution failed:")
                 print(f"[ERROR] SQL: {repr(sql)}")
                 print(f"[ERROR] Params: {params}")
+                print(f"[ERROR] Params type: {type(params)}")
                 print(f"[ERROR] Exception: {e}")
                 raise
 
