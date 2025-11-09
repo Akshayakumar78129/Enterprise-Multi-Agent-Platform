@@ -155,7 +155,7 @@ COMPONENT_SCHEMA = {
             }
         },
         "retention-planner": {
-            "components": ["kpiTiles", "churnRiskGauge", "valueRiskMatrix", "actionSankey", "roiWaterfall"],
+            "components": ["overview", "kpis", "riskDistribution", "valueRiskMatrix", "interventionROI", "lifecycleStages"],
             "parameters": {
                 "start_date": "date",
                 "end_date": "date",

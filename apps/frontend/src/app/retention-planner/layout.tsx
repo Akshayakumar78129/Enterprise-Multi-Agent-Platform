@@ -7,7 +7,6 @@ import {
 } from "components/index";
 import React from "react";
 import { RetentionPlannerProvider, useRetentionPlannerContext } from './context';
-import { useRetentionPlannerData } from './hooks/useRetentionPlannerData';
 
 function RetentionPlannerLayoutContent({ children }: { children: React.ReactNode }) {
   const {
@@ -25,10 +24,10 @@ function RetentionPlannerLayoutContent({ children }: { children: React.ReactNode
     isBusinessIntelligencePanelOpen,
     setIsBusinessIntelligencePanelOpen,
     selectionManager,
-    retentionData
+    retentionData,
+    insights,
+    kpiMetrics
   } = useRetentionPlannerContext();
-
-  const { insights, kpiMetrics } = useRetentionPlannerData(filters);
 
   // Get selected points from selection manager
   const [selectedPoints, setSelectedPoints] = React.useState<any[]>([]);
@@ -78,7 +77,7 @@ function RetentionPlannerLayoutContent({ children }: { children: React.ReactNode
 
   return (
     <AppLayout
-      title="Customer Retention Planning"
+      title="Retention Planning"
       mainContent={mainContent}
       chatPanel={isChatPanelOpen ? chatPanelContent : undefined}
       biPanel={isBusinessIntelligencePanelOpen ? biPanelContent : undefined}

@@ -2,39 +2,60 @@
 
 import React from 'react';
 import {
-  DashboardGrid,
   DashboardSection,
   PageLoader,
-  FilterBar
+  FilterBar,
+  ChartCard,
+  getShiftClickManager
 } from 'components/index';
 import {
   RetentionKPIs,
-  RetentionStrategies,
-  ChurnRiskAnalysis,
-  CustomerLifecycle,
-  RetentionCampaigns,
-  ROIProjections
+  ChurnRiskGauge,
+  ValueRiskMatrix,
+  InterventionROI,
+  LifecycleStages
 } from './components';
 import { useRetentionPlannerContext } from './context';
 import { useRetentionPlannerData } from './hooks/useRetentionPlannerData';
+import { LOYALTY_STATUS_OPTIONS, DEFAULT_DATE_RANGE } from '@/lib/constants/filterOptions';
 
 export default function RetentionPlannerPage() {
-  const { filters, setFilters, setRetentionData } = useRetentionPlannerContext();
+  const { filters, setFilters, setRetentionData, setInsights, setKpiMetrics } = useRetentionPlannerContext();
+  const shiftClickManager = getShiftClickManager();
+
+  // Initialize default filters
+  React.useEffect(() => {
+    if (!filters.dateRange) {
+      setFilters({
+        dateRange: DEFAULT_DATE_RANGE,
+        loyaltyStatus: [],
+        riskThreshold: 0.5
+      });
+    }
+  }, []);
 
   const {
     loading,
     error,
-    retentionStrategies,
-    churnRiskAnalysis,
-    customerLifecycle,
-    retentionCampaigns,
-    hasNoData,
-    kpiMetrics
+    kpiMetrics,
+    insights,
+    riskDistribution,
+    valueRiskMatrix,
+    interventionROI,
+    lifecycleStages,
+    hasNoData
   } = useRetentionPlannerData(filters);
 
   React.useEffect(() => {
-    setRetentionData({ retentionStrategies, churnRiskAnalysis });
-  }, [retentionStrategies, churnRiskAnalysis]); // setRetentionData is stable, no need in deps
+    setRetentionData({
+      riskDistribution,
+      valueRiskMatrix,
+      interventionROI,
+      lifecycleStages
+    });
+    setKpiMetrics(kpiMetrics);
+    setInsights(insights || []);
+  }, [riskDistribution, valueRiskMatrix, interventionROI, lifecycleStages, kpiMetrics, insights]); // setRetentionData, setKpiMetrics, setInsights are stable, no need in deps
 
   // Error state with proper UI
   if (error && !loading && hasNoData) {
@@ -50,7 +71,7 @@ export default function RetentionPlannerPage() {
             No Retention Planning Data Available
           </h2>
           <p className="text-muted-foreground mb-4">
-            {error || "There's no customer retention data to display for the selected filters. Try adjusting your filters or check back later."}
+            {error || "There's no retention planning data to display for the selected filters. Try adjusting your filters or check back later."}
           </p>
           <button
             onClick={() => window.location.reload()}
@@ -77,7 +98,7 @@ export default function RetentionPlannerPage() {
             config={{
               dateRange: {
                 enabled: true,
-                value: filters.dateRange || { startDate: '2017-01-01', endDate: '2021-12-31' },
+                value: filters.dateRange || DEFAULT_DATE_RANGE,
                 onChange: (range) => {
                   if (range?.startDate && range?.endDate) {
                     setFilters({
@@ -90,13 +111,45 @@ export default function RetentionPlannerPage() {
                   }
                 }
               },
+              multiSelect: [
+                {
+                  id: 'loyaltyStatus',
+                  label: 'Loyalty Status',
+                  options: LOYALTY_STATUS_OPTIONS,
+                  value: filters.loyaltyStatus || [],
+                  onChange: (values) => setFilters({ ...filters, loyaltyStatus: values }),
+                  placeholder: 'Select loyalty status...'
+                }
+              ],
+              customFilters: (
+                <div className="w-full">
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Risk Threshold
+                  </label>
+                  <div className="w-full px-3 py-2 bg-surface border-0 rounded-lg min-h-[48px] flex flex-col justify-center">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-muted">0.0</span>
+                      <span className="text-sm font-medium text-foreground">{(filters.riskThreshold || 0.5).toFixed(2)}</span>
+                      <span className="text-xs text-muted">1.0</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={filters.riskThreshold || 0.5}
+                      onChange={(e) => setFilters({ ...filters, riskThreshold: parseFloat(e.target.value) })}
+                      className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                    />
+                  </div>
+                </div>
+              )
             }}
             onReset={() => {
               setFilters({
-                dateRange: {
-                  startDate: '2017-01-01',
-                  endDate: '2021-12-31'
-                }
+                dateRange: DEFAULT_DATE_RANGE,
+                loyaltyStatus: [],
+                riskThreshold: 0.5
               });
             }}
             showResetButton={true}
@@ -105,37 +158,88 @@ export default function RetentionPlannerPage() {
 
         <div id="key-metrics" />
         <DashboardSection>
-          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Customer Retention Planning Overview</h3>
-          <RetentionKPIs metrics={kpiMetrics} loading={loading} />
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Key Metrics</h3>
+          <RetentionKPIs
+            data={kpiMetrics}
+            loading={loading}
+            onKPIShiftClick={(kpi, event) => {
+              shiftClickManager.addPoint({
+                label: kpi.label,
+                value: kpi.value,
+                source: 'Retention Planning - KPIs'
+              }, event.nativeEvent);
+            }}
+          />
         </DashboardSection>
 
       <div id="retention-analysis" />
-      <DashboardGrid>
-        <DashboardSection>
-          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Retention Strategies</h3>
-          <RetentionStrategies data={retentionStrategies} loading={loading} />
-        </DashboardSection>
+      <DashboardSection>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
+          <div>
+            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Churn Risk Distribution</h3>
+            <ChartCard
+              className="glass-card card-hover"
+              onShiftClick={(event) => {
+                shiftClickManager.addPoint({
+                  label: "Churn Risk Distribution",
+                  value: `Risk distribution visualization`,
+                  source: 'Retention Planning - Risk Distribution'
+                }, event.nativeEvent);
+              }}
+            >
+              <ChurnRiskGauge data={riskDistribution} loading={loading} />
+            </ChartCard>
+          </div>
 
-        <DashboardSection>
-          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Churn Risk Analysis</h3>
-          <ChurnRiskAnalysis data={churnRiskAnalysis} loading={loading} />
-        </DashboardSection>
+          <div>
+            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Customer Lifecycle Stages</h3>
+            <ChartCard
+              className="glass-card card-hover"
+              onShiftClick={(event) => {
+                shiftClickManager.addPoint({
+                  label: "Customer Lifecycle Stages",
+                  value: `Lifecycle stages visualization`,
+                  source: 'Retention Planning - Lifecycle'
+                }, event.nativeEvent);
+              }}
+            >
+              <LifecycleStages data={lifecycleStages} loading={loading} />
+            </ChartCard>
+          </div>
+        </div>
+      </DashboardSection>
 
-        <DashboardSection>
-          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Customer Lifecycle</h3>
-          <CustomerLifecycle data={customerLifecycle} loading={loading} />
-        </DashboardSection>
+      <DashboardSection>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Customer Value-Risk Matrix</h3>
+        <ChartCard
+          className="glass-card card-hover"
+          onShiftClick={(event) => {
+            shiftClickManager.addPoint({
+              label: "Customer Value-Risk Matrix",
+              value: `Value-risk matrix visualization`,
+              source: 'Retention Planning - Value-Risk Matrix'
+            }, event.nativeEvent);
+          }}
+        >
+          <ValueRiskMatrix data={valueRiskMatrix} loading={loading} />
+        </ChartCard>
+      </DashboardSection>
 
-        <DashboardSection>
-          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Retention Campaigns</h3>
-          <RetentionCampaigns data={retentionCampaigns} loading={loading} />
-        </DashboardSection>
-
-        <DashboardSection className="col-span-2">
-          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">ROI Projections</h3>
-          <ROIProjections data={retentionStrategies} loading={loading} />
-        </DashboardSection>
-      </DashboardGrid>
+      <DashboardSection>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Intervention ROI Analysis</h3>
+        <ChartCard
+          className="glass-card card-hover"
+          onShiftClick={(event) => {
+            shiftClickManager.addPoint({
+              label: "Intervention ROI Analysis",
+              value: `ROI analysis visualization`,
+              source: 'Retention Planning - ROI'
+            }, event.nativeEvent);
+          }}
+        >
+          <InterventionROI data={interventionROI} loading={loading} />
+        </ChartCard>
+      </DashboardSection>
       </div>
     </PageLoader>
   );

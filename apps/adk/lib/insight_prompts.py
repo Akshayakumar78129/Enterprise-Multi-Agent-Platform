@@ -30,6 +30,8 @@ def get_prompt_template(dashboard_type: str) -> str:
         'next_purchase': NEXT_PURCHASE_PROMPT,
         'regional_sales': REGIONAL_SALES_PROMPT,
         'regional_sales_analyzer': REGIONAL_SALES_PROMPT,  # Alias
+        'retention_planning': RETENTION_PLANNING_PROMPT,
+        'retention_planner': RETENTION_PLANNING_PROMPT,  # Alias
     }
 
     if dashboard_type not in templates:
@@ -371,3 +373,63 @@ AVOID:
 - Ignoring local market dynamics and cultural factors
 
 Generate your regional sales insights now:"""
+
+
+# ============================================================================
+# RETENTION PLANNING PROMPT
+# ============================================================================
+
+RETENTION_PLANNING_PROMPT = """You are a senior customer retention strategist reviewing retention risk data for proactive intervention planning.
+
+CONTEXT:
+- Dashboard: Retention Planning & Strategy
+- Time Period: {time_period}
+- Total Customers: {total_customers:,}
+- At-Risk Customers: {at_risk_count} ({at_risk_pct:.1f}%)
+- At-Risk Customer Value: ${at_risk_value:,.0f}
+- Current Retention Rate: {retention_rate:.1f}%
+- Projected Cost Savings: ${cost_savings:,.0f}
+- Intervention Success Rate: {intervention_success:.0f}%
+
+RISK DISTRIBUTION:
+{segment_breakdown}
+
+LIFECYCLE PATTERNS:
+- Critical Stage: {critical_stage} shows highest risk concentration
+- Risk Threshold: {risk_threshold} (days inactive)
+- Customers in active lifecycle: {total_customers - at_risk_count}
+
+INSTRUCTIONS:
+As a retention strategist, generate 3-5 insights focused on proactive customer retention. Focus on:
+1. **Risk Prioritization**: WHY specific customer segments require immediate attention
+2. **Intervention Strategy**: SPECIFIC retention campaigns with timing and channels
+3. **Value Protection**: Preventing revenue loss from at-risk high-value customers
+4. **Lifecycle Optimization**: Moving customers from at-risk to engaged states
+5. **ROI Projection**: Expected outcomes from targeted retention efforts
+
+PRIORITY LEVELS:
+- CRITICAL: Immediate action required (high-value customers at imminent churn risk)
+- HIGH: Action needed within 7 days (significant at-risk value)
+- MODERATE: Plan intervention (trending toward risk)
+- INFO: Strategic context or longer-term retention strategy
+
+FORMAT REQUIREMENTS:
+- One insight per line
+- 2-3 sentences each
+- Start with priority label (CRITICAL:, HIGH:, MODERATE:, INFO:)
+- Include "**Action:**" section with specific intervention steps
+- Add expected outcomes with numbers (e.g., "Expected: 65% retention rate, $450k value saved")
+- Reference specific risk segments or lifecycle stages
+- Include intervention timelines (48h, 7 days, 2 weeks, etc.)
+
+EXAMPLE:
+CRITICAL: {at_risk_count} high-value customers representing ${at_risk_value:,.0f} show >90 days inactivity and declining engagement scores, indicating imminent churn risk. **Action:** Within 48 hours, launch personalized win-back campaign with dedicated account manager outreach, exclusive loyalty offers (15-20% discount), and VIP program enrollment. Simultaneously, deploy automated re-engagement email sequence for medium-risk customers. Expected: 60-70% high-value retention rate, ${at_risk_value * 0.65:,.0f} revenue protected, 30% overall churn reduction.
+
+AVOID:
+- Generic advice like "improve customer experience"
+- Stating obvious facts without strategic interpretation
+- Recommendations without retention metrics or value impact
+- Vague timelines like "soon" or "later"
+- Ignoring customer lifecycle stage data
+
+Generate your retention planning insights now:"""

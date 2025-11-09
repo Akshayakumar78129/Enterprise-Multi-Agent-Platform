@@ -1338,33 +1338,37 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
   // =============================
   // Retention Planner Components
   // =============================
-  'retention-planner.churnRiskGauge': (summary) => {
-    return {
-      risk: summary.churn_risk || summary.risk_score || 0,
-      threshold: summary.risk_threshold
-    };
-  },
+  // Retention Planner
+  // =============================
+  'retention-planner.kpis': (summary) => ({
+    data: summary.kpiMetrics || {},
+    loading: false
+  }),
 
-  'retention-planner.valueRiskMatrix': (summary) => {
-    return {
-      matrix: summary.value_risk_matrix || summary.risk_matrix || [],
-      segments: summary.segments
-    };
-  },
+  'retention-planner.overview': (summary) => ({
+    data: summary.mainData?.riskDistributionData || [],
+    loading: false
+  }),
 
-  'retention-planner.actionSankey': (summary) => {
-    return {
-      nodes: summary.action_nodes || [],
-      links: summary.action_links || []
-    };
-  },
+  'retention-planner.riskDistribution': (summary) => ({
+    data: summary.mainData?.riskDistributionData || [],
+    loading: false
+  }),
 
-  'retention-planner.roiWaterfall': (summary) => {
-    return {
-      data: summary.roi_waterfall || summary.roi_breakdown || [],
-      total: summary.total_roi
-    };
-  },
+  'retention-planner.valueRiskMatrix': (summary) => ({
+    data: summary.mainData?.valueRiskMatrixData || [],
+    loading: false
+  }),
+
+  'retention-planner.interventionROI': (summary) => ({
+    data: summary.mainData?.interventionroiData || [],
+    loading: false
+  }),
+
+  'retention-planner.lifecycleStages': (summary) => ({
+    data: summary.mainData?.customerLifecycleData || [],
+    loading: false
+  }),
 
   // =============================
   // Generic/Fallback Mappers

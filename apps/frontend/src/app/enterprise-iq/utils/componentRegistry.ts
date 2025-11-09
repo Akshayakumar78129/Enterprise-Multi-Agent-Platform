@@ -134,11 +134,12 @@ export const componentRegistry = {
   // Retention Planner components
   'retention-planner': {
     dashboard: dynamic(() => import('../retention-planner/page').catch(() => null), { ssr: false }),
-    kpiTiles: dynamic(() => import('components').then(mod => mod.KPITiles).catch(() => null), { ssr: false }),
-    churnRiskGauge: dynamic(() => import('components').then(mod => mod.ChurnRiskGauge).catch(() => null), { ssr: false }),
+    overview: dynamic(() => import('../retention-planner/page').catch(() => null), { ssr: false }),
+    kpis: dynamic(() => import('components').then(mod => mod.RetentionKPIs).catch(() => null), { ssr: false }),
+    riskDistribution: dynamic(() => import('components').then(mod => mod.ChurnRiskGauge).catch(() => null), { ssr: false }),
     valueRiskMatrix: dynamic(() => import('components').then(mod => mod.ValueRiskMatrix).catch(() => null), { ssr: false }),
-    actionSankey: dynamic(() => import('components').then(mod => mod.ActionSankey).catch(() => null), { ssr: false }),
-    roiWaterfall: dynamic(() => import('components').then(mod => mod.ROIWaterfall).catch(() => null), { ssr: false }),
+    interventionROI: dynamic(() => import('components').then(mod => mod.InterventionROI).catch(() => null), { ssr: false }),
+    lifecycleStages: dynamic(() => import('components').then(mod => mod.LifecycleStages).catch(() => null), { ssr: false }),
   },
 };
 

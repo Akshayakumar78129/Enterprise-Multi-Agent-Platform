@@ -66,12 +66,16 @@ const componentRegistry: any = {
     heatmap: dynamic(() => import('./components/Visualizations/IntervalHeatmap')),
   },
   'retention-planner': {
-    kpiTiles: dynamic(() => import('components').then(mod => mod.KPITiles)),
-    dashboard: dynamic(() => import('./components/Visualizations/FrequencyHistogram')), // Using histogram as placeholder
-    churnRiskGauge: dynamic(() => import('./components/Visualizations/IntervalHeatmap')), // Using heatmap as placeholder
-    valueRiskMatrix: dynamic(() => import('./components/Visualizations/IntervalHeatmap')), // Using heatmap as placeholder
-    actionSankey: dynamic(() => import('./components/Visualizations/FrequencyHistogram')), // Using histogram as placeholder
-    roiWaterfall: dynamic(() => import('./components/Visualizations/FrequencyHistogram')) // Using histogram as placeholder
+    kpis: dynamic(() => import('../retention-planner/components').then(mod => mod.RetentionKPIs)),
+    overview: dynamic(() => import('../retention-planner/components').then(mod => mod.ChurnRiskGauge)),
+    churnRiskGauge: dynamic(() => import('../retention-planner/components').then(mod => mod.ChurnRiskGauge)),
+    valueRiskMatrix: dynamic(() => import('../retention-planner/components').then(mod => mod.ValueRiskMatrix)),
+    interventionROI: dynamic(() => import('../retention-planner/components').then(mod => mod.InterventionROI)),
+    lifecycleStages: dynamic(() => import('../retention-planner/components').then(mod => mod.LifecycleStages)),
+    risk: dynamic(() => import('../retention-planner/components').then(mod => mod.ChurnRiskGauge)),
+    matrix: dynamic(() => import('../retention-planner/components').then(mod => mod.ValueRiskMatrix)),
+    roi: dynamic(() => import('../retention-planner/components').then(mod => mod.InterventionROI)),
+    lifecycle: dynamic(() => import('../retention-planner/components').then(mod => mod.LifecycleStages))
   },
   'sales-performance': {
     kpis: dynamic(() => import('../sales-performance/components/SalesKPIs')),

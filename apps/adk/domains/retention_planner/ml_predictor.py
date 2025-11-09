@@ -95,7 +95,7 @@ class RetentionPlannerMLPredictor:
         return 5  # Default
 
     def _analyze_segments(self, df: pd.DataFrame, features_df: pd.DataFrame) -> List[Dict]:
-        """Analyze characteristics of each segment"""
+        """Analyze characteristics of each segment with retention-specific risk levels"""
 
         segments = []
 
@@ -103,12 +103,32 @@ class RetentionPlannerMLPredictor:
             segment_data = df[df['segment'] == segment_id]
             segment_features = features_df[df['segment'] == segment_id]
 
+            avg_revenue = float(segment_data.get('total_revenue', 0).mean()) if 'total_revenue' in segment_data else 0
+            avg_days_inactive = float(segment_data.get('days_since_last_activity', 0).mean()) if 'days_since_last_activity' in segment_data else 0
+
+            # Determine risk level based on inactivity
+            if avg_days_inactive > 180:
+                risk_level = 'High'
+                recommended_action = 'Immediate re-engagement campaign'
+            elif avg_days_inactive > 90:
+                risk_level = 'Medium'
+                recommended_action = 'Proactive outreach and engagement'
+            else:
+                risk_level = 'Low'
+                recommended_action = 'Maintain engagement and loyalty'
+
+            # Calculate total value for the segment
+            total_value = float(segment_data.get('total_revenue', 0).sum()) if 'total_revenue' in segment_data else 0
+
             segment_info = {
                 'segment_id': int(segment_id),
                 'size': len(segment_data),
                 'percentage': len(segment_data) / len(df) * 100,
-                'avg_revenue': float(segment_data.get('total_revenue', 0).mean()),
-                'avg_transactions': float(segment_data.get('transaction_count', 0).mean()),
+                'avg_revenue': avg_revenue,
+                'avg_transactions': float(segment_data.get('transaction_count', 0).mean()) if 'transaction_count' in segment_data else 0,
+                'risk_level': risk_level,
+                'recommended_action': recommended_action,
+                'total_value': total_value,
                 'characteristics': {
                     col: float(segment_features[col].mean())
                     for col in segment_features.columns

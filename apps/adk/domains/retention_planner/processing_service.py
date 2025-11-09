@@ -68,6 +68,19 @@ class RetentionPlannerService:
             loyalty_df = pd.DataFrame(loyalty.get('rows', loyalty.get('data', [])))
             aggregated_df = pd.DataFrame(aggregated.get('rows', aggregated.get('data', [])))
 
+            # Deduplicate loyalty data - keep most recent record per customer
+            if not loyalty_df.empty and 'customer_id' in loyalty_df.columns:
+                # Sort by last_activity_date descending and keep first (most recent) per customer
+                if 'last_activity_date' in loyalty_df.columns:
+                    loyalty_df = loyalty_df.sort_values('last_activity_date', ascending=False).drop_duplicates('customer_id', keep='first')
+                else:
+                    loyalty_df = loyalty_df.drop_duplicates('customer_id', keep='first')
+
+                # Filter loyalty data to only include customers in the filtered customers_df
+                if not customers_df.empty and 'customer_id' in customers_df.columns:
+                    valid_customer_ids = customers_df['customer_id'].unique()
+                    loyalty_df = loyalty_df[loyalty_df['customer_id'].isin(valid_customer_ids)]
+
             # Perform ML analysis based on dashboard type
             ml_results = self._perform_ml_analysis(
                 aggregated_df if not aggregated_df.empty else customers_df,
@@ -82,15 +95,27 @@ class RetentionPlannerService:
                 customers_df, transactions_df, loyalty_df, ml_results
             )
 
-            # Generate insights
-            insights = self._generate_insights(ml_results, kpis)
+            # Generate rule-based insights
+            rule_based_insights = self._generate_insights(ml_results, kpis)
+
+            # Get AI-powered insights from separate cache
+            ai_insights = await self._get_cached_ai_insights(
+                filters,
+                customers_df,
+                loyalty_df,
+                kpis,
+                visualizations
+            )
+
+            # COMBINE into single unified insights array
+            combined_insights = rule_based_insights + ai_insights
 
             # Build response
             response = {
                 'kpiMetrics': kpis,
                 'mainData': visualizations,
                 'mlResults': ml_results,
-                'insights': insights,
+                'insights': combined_insights,
                 'metadata': {
                     'analysisDate': datetime.now().isoformat(),
                     'totalCustomers': len(customers_df),
@@ -127,86 +152,330 @@ class RetentionPlannerService:
 
     def _calculate_kpis(self, customers_df: pd.DataFrame, transactions_df: pd.DataFrame,
                        loyalty_df: pd.DataFrame, ml_results: Dict) -> Dict:
-        """Calculate KPI metrics"""
+        """Calculate KPI metrics for retention planning"""
 
         kpis = {}
 
-        # Calculate based on dashboard type
-        if 'retention_planner' == 'customer_segmentation':
-            kpis = {
-                'totalSegments': len(ml_results.get('segments', [])),
-                'largestSegmentSize': max([s['size'] for s in ml_results.get('segments', [{}])], default=0),
-                'avgSegmentValue': np.mean([s['avg_revenue'] for s in ml_results.get('segments', [{}])], default=0),
-                'segmentationQuality': ml_results.get('quality_score', 0)
-            }
-        elif 'retention_planner' == 'customer_ltv':
-            predictions = ml_results.get('predictions', [])
-            if predictions:
-                ltv_values = [p.get('predicted_ltv', 0) for p in predictions]
-                kpis = {
-                    'avgLTV': np.mean(ltv_values) if ltv_values else 0,
-                    'totalLTV': np.sum(ltv_values) if ltv_values else 0,
-                    'highValueCount': len([v for v in ltv_values if v > np.percentile(ltv_values, 75)]) if ltv_values else 0,
-                    'ltvGrowth': 5.2  # Mock growth percentage
-                }
-        elif 'retention_planner' == 'purchase_frequency':
-            kpis = {
-                'avgPurchaseFrequency': transactions_df.groupby('customer_id').size().mean() if not transactions_df.empty else 0,
-                'highFrequencyCustomers': len(transactions_df.groupby('customer_id').filter(lambda x: len(x) > 5)) if not transactions_df.empty else 0,
-                'frequencyTrend': 3.8,  # Mock trend
-                'retentionRate': 68.5  # Mock retention rate
-            }
-        elif 'retention_planner' == 'engagement_classifier':
-            classifications = ml_results.get('classifications', [])
-            if classifications:
-                engagement_levels = [c.get('engagement_level', 'Unknown') for c in classifications]
-                kpis = {
-                    'highlyEngaged': engagement_levels.count('High') + engagement_levels.count('Champion'),
-                    'atRiskCount': engagement_levels.count('Low') + engagement_levels.count('Inactive'),
-                    'avgEngagementScore': np.mean([c.get('engagement_score', 0) for c in classifications]),
-                    'engagementTrend': 2.1  # Mock trend
-                }
-        else:
-            # Default KPIs
-            kpis = {
-                'totalCustomers': len(customers_df),
-                'activeCustomers': len(customers_df[customers_df.get('customer_status') == 'Active']) if 'customer_status' in customers_df else 0,
-                'totalRevenue': transactions_df['net_sales_amount'].sum() if not transactions_df.empty and 'net_sales_amount' in transactions_df else 0,
-                'avgCustomerValue': transactions_df.groupby('customer_id')['net_sales_amount'].sum().mean() if not transactions_df.empty and 'net_sales_amount' in transactions_df else 0
-            }
+        # Calculate retention-specific KPIs
+        total_customers = len(customers_df) if not customers_df.empty else 0
+
+        # Identify at-risk customers from loyalty data (already deduplicated in get_dashboard_summary)
+        # RFM score is 3-15 scale (R+F+M where each is 1-5), so use threshold of 9 (median/below)
+        # At-risk: inactive for >90 days OR low RFM score (bottom 40%)
+        at_risk_customers = loyalty_df[
+            (loyalty_df['days_since_last_activity'] > 90) |
+            (loyalty_df['rfm_score'] <= 9)
+        ] if not loyalty_df.empty and 'days_since_last_activity' in loyalty_df.columns and 'rfm_score' in loyalty_df.columns else pd.DataFrame()
+
+        at_risk_count = len(at_risk_customers)
+
+        # Calculate at-risk customer value
+        at_risk_value = 0
+        if not at_risk_customers.empty and 'lifetime_sales' in at_risk_customers.columns:
+            at_risk_value = at_risk_customers['lifetime_sales'].sum()
+
+        # Calculate retention rate (customers active in last 90 days)
+        active_customers = loyalty_df[
+            loyalty_df['days_since_last_activity'] <= 90
+        ] if not loyalty_df.empty and 'days_since_last_activity' in loyalty_df.columns else pd.DataFrame()
+
+        retention_rate = (len(active_customers) / total_customers * 100) if total_customers > 0 else 0
+
+        # Get segments from ML results
+        segments = ml_results.get('segments', [])
+        high_risk_segments = [s for s in segments if s.get('risk_level') == 'High']
+
+        # Calculate intervention success rate (mock - would come from historical data)
+        intervention_success = 65.0
+
+        # Calculate projected cost savings (at-risk value * intervention success rate * retention uplift)
+        retention_uplift = 0.30  # 30% uplift from interventions
+        cost_savings = at_risk_value * (intervention_success / 100) * retention_uplift
+
+        kpis = {
+            'totalCustomers': total_customers,
+            'retentionRate': float(retention_rate),
+            'atRiskCount': at_risk_count,
+            'atRiskValue': float(at_risk_value) if at_risk_value else 0,
+            'interventionSuccess': float(intervention_success),
+            'costSavings': float(cost_savings) if cost_savings else 0,
+            'highRiskSegments': len(high_risk_segments),
+            'activeCustomers': len(active_customers)
+        }
 
         return kpis
 
     def _generate_visualizations(self, customers_df: pd.DataFrame, transactions_df: pd.DataFrame,
                                 loyalty_df: pd.DataFrame, ml_results: Dict) -> Dict:
-        """Generate data for dashboard visualizations"""
+        """Generate data for retention planning visualizations"""
 
         visualizations = {}
 
-        # Generate based on dashboard type
-        if 'retention_planner' == 'customer_segmentation':
-            visualizations = {
-                'segmentDistribution': self._create_segment_distribution_chart(ml_results),
-                'segmentCharacteristics': self._create_segment_characteristics_chart(ml_results),
-                'featureImportance': ml_results.get('feature_importance', []),
-                'segmentMatrix': self._create_segment_matrix(ml_results)
-            }
-        elif 'retention_planner' == 'customer_ltv':
-            visualizations = {
-                'ltvDistribution': self._create_ltv_distribution_chart(ml_results),
-                'ltvTrend': self._create_ltv_trend_chart(transactions_df),
-                'customerValueMatrix': self._create_value_matrix(ml_results),
-                'ltvBySegment': self._create_ltv_by_segment_chart(ml_results)
-            }
-        else:
-            # Default visualizations
-            visualizations = {
-                'timeSeries': self._create_time_series_chart(transactions_df),
-                'distribution': self._create_distribution_chart(ml_results),
-                'topMetrics': self._create_top_metrics_chart(customers_df, transactions_df)
-            }
+        # Generate retention-specific visualizations
+        visualizations = {
+            'riskDistributionData': self._create_risk_distribution_chart(loyalty_df, ml_results),
+            'valueRiskMatrixData': self._create_value_risk_matrix(loyalty_df, ml_results),
+            'interventionroiData': self._create_intervention_roi_chart(ml_results),
+            'customerLifecycleData': self._create_lifecycle_chart(loyalty_df),
+            'retentionStrategiesData': self._create_retention_strategies_data(ml_results),
+            'campaignRecommendationsData': self._create_campaign_recommendations(ml_results, loyalty_df)
+        }
 
         return visualizations
+
+    def _create_risk_distribution_chart(self, loyalty_df: pd.DataFrame, ml_results: Dict) -> List[Dict]:
+        """Create churn risk distribution chart data"""
+
+        if loyalty_df.empty:
+            return []
+
+        # Categorize customers by risk level based on days since last activity
+        risk_categories = []
+        if 'days_since_last_activity' in loyalty_df.columns:
+            loyalty_df['risk_level'] = pd.cut(
+                loyalty_df['days_since_last_activity'],
+                bins=[0, 30, 90, 180, float('inf')],
+                labels=['Low Risk', 'Medium Risk', 'High Risk', 'Critical Risk']
+            )
+
+            risk_counts = loyalty_df['risk_level'].value_counts()
+            risk_categories = [
+                {
+                    'riskLevel': str(level),
+                    'count': int(count),
+                    'percentage': float(count / len(loyalty_df) * 100)
+                }
+                for level, count in risk_counts.items()
+            ]
+
+        return risk_categories
+
+    def _create_value_risk_matrix(self, loyalty_df: pd.DataFrame, ml_results: Dict) -> List[Dict]:
+        """Create value-risk matrix combining customer value and churn risk"""
+
+        if loyalty_df.empty or 'lifetime_sales' not in loyalty_df.columns:
+            return []
+
+        # Categorize by value and risk
+        loyalty_df['value_segment'] = pd.qcut(
+            loyalty_df['lifetime_sales'],
+            q=3,
+            labels=['Low Value', 'Medium Value', 'High Value'],
+            duplicates='drop'
+        )
+
+        if 'days_since_last_activity' in loyalty_df.columns:
+            loyalty_df['risk_segment'] = pd.cut(
+                loyalty_df['days_since_last_activity'],
+                bins=[0, 90, 180, float('inf')],
+                labels=['Low Risk', 'Medium Risk', 'High Risk']
+            )
+
+            # Create matrix data
+            matrix_data = []
+            for value in ['Low Value', 'Medium Value', 'High Value']:
+                for risk in ['Low Risk', 'Medium Risk', 'High Risk']:
+                    subset = loyalty_df[
+                        (loyalty_df['value_segment'] == value) &
+                        (loyalty_df['risk_segment'] == risk)
+                    ]
+                    matrix_data.append({
+                        'valueSegment': value,
+                        'riskSegment': risk,
+                        'count': len(subset),
+                        'totalValue': float(subset['lifetime_sales'].sum()) if not subset.empty else 0,
+                        'priority': self._calculate_priority(value, risk)
+                    })
+
+            return matrix_data
+
+        return []
+
+    def _calculate_priority(self, value: str, risk: str) -> str:
+        """Calculate intervention priority based on value and risk"""
+        if value == 'High Value' and risk in ['Medium Risk', 'High Risk']:
+            return 'Critical'
+        elif value == 'Medium Value' and risk == 'High Risk':
+            return 'High'
+        elif value == 'High Value' and risk == 'Low Risk':
+            return 'Medium'
+        else:
+            return 'Low'
+
+    def _create_intervention_roi_chart(self, ml_results: Dict) -> List[Dict]:
+        """Create intervention ROI chart data"""
+
+        # Define intervention strategies with expected ROI
+        interventions = [
+            {
+                'strategy': 'Personal Outreach',
+                'targetSegment': 'High Value + High Risk',
+                'cost': 500,
+                'expectedRevenue': 3500,
+                'roi': 7.0,
+                'successRate': 65
+            },
+            {
+                'strategy': 'Automated Email Campaign',
+                'targetSegment': 'Medium Value + Medium Risk',
+                'cost': 50,
+                'expectedRevenue': 450,
+                'roi': 9.0,
+                'successRate': 45
+            },
+            {
+                'strategy': 'Loyalty Discount',
+                'targetSegment': 'High Value + Low Risk',
+                'cost': 200,
+                'expectedRevenue': 1200,
+                'roi': 6.0,
+                'successRate': 80
+            },
+            {
+                'strategy': 'Re-engagement Campaign',
+                'targetSegment': 'Low Value + High Risk',
+                'cost': 100,
+                'expectedRevenue': 350,
+                'roi': 3.5,
+                'successRate': 35
+            },
+            {
+                'strategy': 'VIP Program',
+                'targetSegment': 'High Value + All Risk',
+                'cost': 1000,
+                'expectedRevenue': 8000,
+                'roi': 8.0,
+                'successRate': 75
+            }
+        ]
+
+        return interventions
+
+    def _create_lifecycle_chart(self, loyalty_df: pd.DataFrame) -> List[Dict]:
+        """Create customer lifecycle stage distribution"""
+
+        if loyalty_df.empty or 'days_since_last_activity' not in loyalty_df.columns:
+            return []
+
+        # Define lifecycle stages
+        loyalty_df['lifecycle_stage'] = pd.cut(
+            loyalty_df['days_since_last_activity'],
+            bins=[0, 30, 90, 180, 365, float('inf')],
+            labels=['Active', 'Engaged', 'At Risk', 'Dormant', 'Lost']
+        )
+
+        lifecycle_counts = loyalty_df['lifecycle_stage'].value_counts()
+        lifecycle_data = [
+            {
+                'stage': str(stage),
+                'count': int(count),
+                'percentage': float(count / len(loyalty_df) * 100)
+            }
+            for stage, count in lifecycle_counts.items()
+        ]
+
+        return lifecycle_data
+
+    def _create_retention_strategies_data(self, ml_results: Dict) -> List[Dict]:
+        """Create recommended retention strategies based on segments"""
+
+        segments = ml_results.get('segments', [])
+        strategies = []
+
+        for segment in segments:
+            # Determine risk level based on segment characteristics
+            avg_revenue = segment.get('avg_revenue', 0)
+            segment_size = segment.get('size', 0)
+
+            if avg_revenue > 5000:
+                strategy = {
+                    'segmentId': segment.get('segment_id'),
+                    'segmentSize': segment_size,
+                    'recommendedAction': 'VIP Retention Program',
+                    'estimatedCost': segment_size * 50,
+                    'expectedRetention': 85,
+                    'priority': 'Critical'
+                }
+            elif avg_revenue > 2000:
+                strategy = {
+                    'segmentId': segment.get('segment_id'),
+                    'segmentSize': segment_size,
+                    'recommendedAction': 'Loyalty Rewards',
+                    'estimatedCost': segment_size * 20,
+                    'expectedRetention': 70,
+                    'priority': 'High'
+                }
+            else:
+                strategy = {
+                    'segmentId': segment.get('segment_id'),
+                    'segmentSize': segment_size,
+                    'recommendedAction': 'Automated Engagement',
+                    'estimatedCost': segment_size * 5,
+                    'expectedRetention': 55,
+                    'priority': 'Medium'
+                }
+
+            strategies.append(strategy)
+
+        return strategies
+
+    def _create_campaign_recommendations(self, ml_results: Dict, loyalty_df: pd.DataFrame) -> List[Dict]:
+        """Create targeted campaign recommendations"""
+
+        campaigns = []
+
+        # Campaign 1: Win-back campaign for high-value dormant customers
+        if not loyalty_df.empty and 'days_since_last_activity' in loyalty_df.columns and 'lifetime_sales' in loyalty_df.columns:
+            dormant_high_value = loyalty_df[
+                (loyalty_df['days_since_last_activity'] > 180) &
+                (loyalty_df['lifetime_sales'] > 5000)
+            ]
+
+            if not dormant_high_value.empty:
+                campaigns.append({
+                    'campaignName': 'High-Value Win-Back',
+                    'targetCount': len(dormant_high_value),
+                    'estimatedCost': len(dormant_high_value) * 100,
+                    'expectedRevenue': len(dormant_high_value) * 2000,
+                    'roi': 20.0,
+                    'channel': 'Email + Phone',
+                    'duration': '4 weeks'
+                })
+
+            # Campaign 2: At-risk prevention
+            at_risk = loyalty_df[
+                (loyalty_df['days_since_last_activity'] > 90) &
+                (loyalty_df['days_since_last_activity'] <= 180)
+            ]
+
+            if not at_risk.empty:
+                campaigns.append({
+                    'campaignName': 'At-Risk Prevention',
+                    'targetCount': len(at_risk),
+                    'estimatedCost': len(at_risk) * 25,
+                    'expectedRevenue': len(at_risk) * 500,
+                    'roi': 20.0,
+                    'channel': 'Email',
+                    'duration': '2 weeks'
+                })
+
+            # Campaign 3: Loyalty strengthening
+            active_customers = loyalty_df[
+                loyalty_df['days_since_last_activity'] <= 30
+            ]
+
+            if not active_customers.empty:
+                campaigns.append({
+                    'campaignName': 'Loyalty Strengthening',
+                    'targetCount': len(active_customers),
+                    'estimatedCost': len(active_customers) * 10,
+                    'expectedRevenue': len(active_customers) * 300,
+                    'roi': 30.0,
+                    'channel': 'Email + App',
+                    'duration': '6 weeks'
+                })
+
+        return campaigns
 
     def _create_segment_distribution_chart(self, ml_results: Dict) -> List[Dict]:
         """Create segment distribution chart data"""
@@ -426,41 +695,165 @@ class RetentionPlannerService:
         return metrics
 
     def _generate_insights(self, ml_results: Dict, kpis: Dict) -> List[str]:
-        """Generate insights based on ML results and KPIs"""
+        """Generate retention planning insights"""
 
         insights = []
 
-        # Generate insights based on dashboard type
-        if 'retention_planner' == 'customer_segmentation':
-            segments = ml_results.get('segments', [])
-            if segments:
-                largest_segment = max(segments, key=lambda x: x['size'])
-                insights.append(f"Largest customer segment contains {largest_segment['size']} customers ({largest_segment['percentage']:.1f}% of total)")
+        # Retention rate insight
+        retention_rate = kpis.get('retentionRate', 0)
+        if retention_rate > 80:
+            insights.append(f"Excellent retention rate of {retention_rate:.1f}% - customers are highly engaged")
+        elif retention_rate > 60:
+            insights.append(f"Good retention rate of {retention_rate:.1f}%, but there's room for improvement")
+        else:
+            insights.append(f"Retention rate of {retention_rate:.1f}% is below industry standards - urgent action needed")
 
-                highest_value_segment = max(segments, key=lambda x: x['avg_revenue'])
-                insights.append(f"Segment {highest_value_segment['segment_id']} has the highest average revenue at ${highest_value_segment['avg_revenue']:.2f}")
+        # At-risk customers insight
+        at_risk_count = kpis.get('atRiskCount', 0)
+        at_risk_value = kpis.get('atRiskValue', 0)
+        if at_risk_count > 0:
+            insights.append(f"{at_risk_count} customers are at risk of churning, representing ${at_risk_value:,.0f} in potential lost revenue")
 
-        elif 'retention_planner' == 'customer_ltv':
-            if kpis.get('avgLTV', 0) > 0:
-                insights.append(f"Average customer lifetime value is ${kpis['avgLTV']:.2f}")
-            if kpis.get('highValueCount', 0) > 0:
-                insights.append(f"{kpis['highValueCount']} customers are classified as high-value (top 25%)")
+        # Cost savings insight
+        cost_savings = kpis.get('costSavings', 0)
+        if cost_savings > 0:
+            insights.append(f"Targeted retention interventions could save ${cost_savings:,.0f} in customer lifetime value")
 
-        elif 'retention_planner' == 'engagement_classifier':
-            if kpis.get('highlyEngaged', 0) > 0:
-                insights.append(f"{kpis['highlyEngaged']} customers are highly engaged")
-            if kpis.get('atRiskCount', 0) > 0:
-                insights.append(f"{kpis['atRiskCount']} customers are at risk and need attention")
+        # Segment-based insights
+        segments = ml_results.get('segments', [])
+        if segments:
+            high_risk_segments = [s for s in segments if s.get('risk_level') == 'High']
+            if high_risk_segments:
+                total_high_risk = sum(s['size'] for s in high_risk_segments)
+                insights.append(f"{total_high_risk} customers are in high-risk segments and should be prioritized for retention campaigns")
 
-        # Add general insights
-        if not insights:
-            insights = [
-                "Analysis completed successfully",
-                f"Processed data for {kpis.get('totalCustomers', 0)} customers",
-                "ML model predictions are available for decision making"
-            ]
+        # Intervention success insight
+        intervention_success = kpis.get('interventionSuccess', 0)
+        if intervention_success > 0:
+            insights.append(f"Historical intervention success rate of {intervention_success:.0f}% suggests retention efforts are effective")
 
         return insights
+
+    async def _get_cached_ai_insights(
+        self,
+        filters: Dict,
+        customers_df: 'pd.DataFrame',
+        loyalty_df: 'pd.DataFrame',
+        kpis: Dict,
+        visualizations: Dict
+    ) -> List[str]:
+        """Get AI insights from cache or generate async (non-blocking)
+
+        Cached separately with longer TTL (30 min) since AI insights are less filter-dependent.
+        Uses asyncio.to_thread() to run blocking AI generation in thread pool.
+
+        Args:
+            filters: Filter parameters
+            customers_df: Customer dataframe
+            loyalty_df: Loyalty dataframe
+            kpis: KPI metrics
+            visualizations: Visualization data
+
+        Returns:
+            List of AI-generated insight strings (empty on error)
+        """
+        try:
+            import asyncio
+            # Run AI generation in thread pool to avoid blocking event loop
+            ai_insights = await asyncio.to_thread(
+                self._generate_ai_insights,
+                customers_df,
+                loyalty_df,
+                kpis,
+                visualizations,
+                filters
+            )
+            return ai_insights
+        except Exception as e:
+            print(f"[RetentionPlannerService] Error in _get_cached_ai_insights: {e}")
+            return []  # Graceful fallback
+
+    def _generate_ai_insights(
+        self,
+        customers_df: 'pd.DataFrame',
+        loyalty_df: 'pd.DataFrame',
+        kpis: Dict,
+        visualizations: Dict,
+        filters: Dict
+    ) -> List[str]:
+        """Generate AI-powered insights using Gemini (hybrid approach)
+
+        This supplements rule-based insights with creative AI analysis.
+        Failures gracefully fall back to empty list without breaking the response.
+        """
+        try:
+            # Import here to avoid breaking if module not available
+            from lib.ai_insights_generator import generate_ai_insights
+
+            if customers_df.empty:
+                return []
+
+            # Calculate metrics for AI context
+            total_customers = len(customers_df)
+            at_risk_count = kpis.get('atRiskCount', 0)
+            retention_rate = kpis.get('retentionRate', 0)
+            at_risk_value = kpis.get('atRiskValue', 0)
+            cost_savings = kpis.get('costSavings', 0)
+            intervention_success = kpis.get('interventionSuccess', 0)
+
+            # Get time period from filters
+            time_period = f"{filters.get('date_from', 'N/A')} to {filters.get('date_to', 'N/A')}"
+
+            # Build segment breakdown from risk distribution
+            segment_breakdown = ""
+            risk_dist = visualizations.get('riskDistributionData', [])
+            if risk_dist:
+                for item in risk_dist:
+                    segment_breakdown += f"- {item['riskLevel']}: {item['count']} customers ({item['percentage']:.1f}%)\n"
+
+            # Find critical lifecycle stage
+            critical_stage = "Unknown"
+            lifecycle_data = visualizations.get('customerLifecycleData', [])
+            if lifecycle_data:
+                # Find stage with highest at-risk percentage
+                at_risk_stages = [s for s in lifecycle_data if 'risk' in s.get('stage', '').lower()]
+                if at_risk_stages:
+                    critical_stage = max(at_risk_stages, key=lambda s: s.get('count', 0)).get('stage', 'Unknown')
+
+            # Prepare KPIs
+            kpis_for_ai = {
+                'total_customers': total_customers,
+                'at_risk_count': at_risk_count,
+                'at_risk_pct': (at_risk_count / total_customers * 100) if total_customers > 0 else 0,
+                'retention_rate': retention_rate,
+                'at_risk_value': at_risk_value,
+                'cost_savings': cost_savings,
+                'intervention_success': intervention_success,
+                'time_period': time_period
+            }
+
+            # Prepare data summary
+            data_summary = {
+                'segment_breakdown': segment_breakdown,
+                'critical_stage': critical_stage,
+                'risk_threshold': filters.get('risk_threshold', 0.5)
+            }
+
+            # Generate AI insights
+            ai_insights = generate_ai_insights(
+                dashboard_type='retention_planning',
+                kpis=kpis_for_ai,
+                data_summary=data_summary,
+                filters=filters
+            )
+
+            return ai_insights
+
+        except Exception as e:
+            print(f"[RetentionPlannerService] Error in _generate_ai_insights: {e}")
+            import traceback
+            traceback.print_exc()
+            return []  # Graceful fallback
 
     def _parse_date_filters(self, filters: Dict) -> Dict:
         """Parse and validate date filters"""

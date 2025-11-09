@@ -12,7 +12,23 @@ export function useRetentionPlannerData(filters: Record<string, any>) {
       setError(null);
 
       try {
-        const response = await retentionPlannerService.getDashboardSummary(filters);
+        // Map frontend filters to backend format
+        const apiFilters: any = {};
+
+        if (filters.dateRange) {
+          apiFilters.date_from = filters.dateRange.startDate;
+          apiFilters.date_to = filters.dateRange.endDate;
+        }
+
+        if (filters.loyaltyStatus && filters.loyaltyStatus.length > 0) {
+          apiFilters.loyalty_status = filters.loyaltyStatus;
+        }
+
+        if (filters.riskThreshold !== undefined) {
+          apiFilters.risk_threshold = filters.riskThreshold;
+        }
+
+        const response = await retentionPlannerService.getDashboardSummary(apiFilters);
         setData(response);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch data');
@@ -27,21 +43,25 @@ export function useRetentionPlannerData(filters: Record<string, any>) {
   }, [filters]);
 
   // Memoize the returned values to prevent infinite loops in useEffect dependencies
-  const retentionStrategies = useMemo(() => data?.mainData?.retentionStrategies || {}, [data?.mainData?.retentionStrategies]);
-  const churnRiskAnalysis = useMemo(() => data?.mainData?.churnRiskAnalysis || {}, [data?.mainData?.churnRiskAnalysis]);
-  const customerLifecycle = useMemo(() => data?.mainData?.customerLifecycle || {}, [data?.mainData?.customerLifecycle]);
-  const retentionCampaigns = useMemo(() => data?.mainData?.retentionCampaigns || {}, [data?.mainData?.retentionCampaigns]);
   const kpiMetrics = useMemo(() => data?.kpiMetrics || {}, [data?.kpiMetrics]);
+  const riskDistribution = useMemo(() => data?.mainData?.riskDistributionData || [], [data?.mainData?.riskDistributionData]);
+  const valueRiskMatrix = useMemo(() => data?.mainData?.valueRiskMatrixData || [], [data?.mainData?.valueRiskMatrixData]);
+  const interventionROI = useMemo(() => data?.mainData?.interventionroiData || [], [data?.mainData?.interventionroiData]);
+  const lifecycleStages = useMemo(() => data?.mainData?.customerLifecycleData || [], [data?.mainData?.customerLifecycleData]);
+  const retentionStrategies = useMemo(() => data?.mainData?.retentionStrategiesData || [], [data?.mainData?.retentionStrategiesData]);
+  const campaignRecommendations = useMemo(() => data?.mainData?.campaignRecommendationsData || [], [data?.mainData?.campaignRecommendationsData]);
   const insights = useMemo(() => data?.insights || [], [data?.insights]);
 
   return {
     loading,
     error,
-    retentionStrategies,
-    churnRiskAnalysis,
-    customerLifecycle,
-    retentionCampaigns,
     kpiMetrics,
+    riskDistribution,
+    valueRiskMatrix,
+    interventionROI,
+    lifecycleStages,
+    retentionStrategies,
+    campaignRecommendations,
     insights,
     hasNoData: !data?.mainData || Object.keys(data?.mainData || {}).length === 0
   };
