@@ -55,6 +55,12 @@ export function ChatPanel({
     const contextMessages: Record<string, string> = {
       churn_prediction: "Hello! I'm your AI assistant. How can I help you analyze your churn prediction data today?",
       performance_deviation: "Hello! I'm your AI assistant. How can I help you analyze your performance deviation data today?",
+      purchase_frequency: "Hello! I'm your AI assistant. How can I help you analyze your purchase frequency data today?",
+      retention_planner: "Hello! I'm your AI assistant. How can I help you analyze your retention planning data today?",
+      sales_performance: "Hello! I'm your AI assistant. How can I help you analyze your sales performance data today?",
+      customer_segmentation: "Hello! I'm your AI assistant. How can I help you analyze your customer segmentation data today?",
+      product_performance: "Hello! I'm your AI assistant. How can I help you analyze your product performance data today?",
+      customer_ltv: "Hello! I'm your AI assistant. How can I help you analyze your customer lifetime value data today?",
       general: "Hello! I'm your AI assistant. How can I help you today?"
     };
     return contextMessages[dashboardContext] || contextMessages.general;

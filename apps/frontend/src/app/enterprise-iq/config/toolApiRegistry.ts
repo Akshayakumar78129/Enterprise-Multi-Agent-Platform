@@ -38,7 +38,7 @@ export const toolApiRegistry: Record<string, ToolApiConfig> = {
 
   // Customer Behaviour Dashboard
   'customer-behaviour': {
-    endpoint: '/api/customer/behaviour/summary',
+    endpoint: '/api/customer-behavior/summary',
     method: 'POST',
     description: 'Customer behavior patterns and insights'
   },
@@ -139,6 +139,13 @@ export const toolApiRegistry: Record<string, ToolApiConfig> = {
     endpoint: '/api/cash-flow/summary',
     method: 'POST',
     description: 'Cash flow analysis with operating, investing, and financing breakdowns'
+  },
+
+  // Purchase Frequency Dashboard
+  'purchase-frequency': {
+    endpoint: '/api/purchase-frequency/summary',
+    method: 'POST',
+    description: 'Customer purchase frequency patterns, behaviors, and RFM segmentation'
   },
 
   // Add more dashboard endpoints as they are implemented

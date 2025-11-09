@@ -21,8 +21,10 @@ def identify_customer_segments(
     include_visualization: bool = True
 ) -> str:
     """
-    Identifies and defines customer segments using ML clustering.
-    Now uses the shared processing service for consistency with dashboards.
+    Identifies and defines CUSTOMER SEGMENTS using RFM, behavioral, or value-based clustering.
+
+    This tool focuses on SEGMENTING customers into groups, NOT analyzing frequency.
+    Use analyze_purchase_frequency for purchase frequency analysis!
 
     Args:
         segmentation_method: Method for segmentation (rfm, behavioral, value_based, etc.)

@@ -38,6 +38,7 @@ from domains.transaction_patterns.processing_service import TransactionPatternsS
 from domains.engagement_classifier.processing_service import EngagementClassifierService
 from domains.next_purchase.processing_service import NextPurchaseService
 from domains.retention_planner.processing_service import RetentionPlannerService
+from domains.purchase_frequency.processing_service import PurchaseFrequencyProcessingService
 from domains.customer_insights.processing_service import CustomerInsightsService
 
 # Import sales domain services
@@ -69,6 +70,7 @@ from api.routers.transaction_patterns_router import router as transaction_patter
 from api.routers.engagement_classifier_router import router as engagement_classifier_router
 from api.routers.next_purchase_router import router as next_purchase_router
 from api.routers.retention_planner_router import router as retention_planner_router
+from api.routers.purchase_frequency_router import router as purchase_frequency_router
 from api.routers.customer_insights_router import router as customer_insights_router
 
 # Import sales API router
@@ -127,6 +129,7 @@ transaction_patterns_service = TransactionPatternsService()
 engagement_classifier_service = EngagementClassifierService()
 next_purchase_service = NextPurchaseService()
 retention_planner_service = RetentionPlannerService()
+purchase_frequency_service = PurchaseFrequencyProcessingService()
 customer_insights_service = CustomerInsightsService()
 sales_performance_service = SalesPerformanceProcessingService()
 product_performance_service = ProductPerformanceProcessingService()
@@ -164,6 +167,7 @@ app.include_router(transaction_patterns_router)
 app.include_router(engagement_classifier_router)
 app.include_router(next_purchase_router)
 app.include_router(retention_planner_router)
+app.include_router(purchase_frequency_router)
 app.include_router(customer_insights_router)
 app.include_router(sales_performance_router)
 app.include_router(product_performance_router)
@@ -212,6 +216,7 @@ async def startup_event():
     app.state.engagement_classifier_service = engagement_classifier_service
     app.state.next_purchase_service = next_purchase_service
     app.state.retention_planner_service = retention_planner_service
+    app.state.purchase_frequency_service = purchase_frequency_service
     app.state.customer_insights_service = customer_insights_service
     app.state.sales_performance_service = sales_performance_service
     app.state.product_performance_service = product_performance_service

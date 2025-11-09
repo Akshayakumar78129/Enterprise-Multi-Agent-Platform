@@ -154,7 +154,7 @@ export function DataTable<T extends { id?: string | number }>({
           <thead>
             <tr className="border-b border-border">
               {selectable && (
-                <th className="p-4 text-left">
+                <th key="select-all" className="p-4 text-left">
                   <input
                     type="checkbox"
                     checked={selectedRows.length === paginatedData.length && paginatedData.length > 0}

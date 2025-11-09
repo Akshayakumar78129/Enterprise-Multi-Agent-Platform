@@ -4,6 +4,7 @@ import logging
 from datetime import datetime, timedelta
 import os
 import sys
+import json
 
 # Add parent directories to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -20,8 +21,15 @@ def analyze_customer_behavior(
     include_visualization: bool = False
 ) -> str:
     """
-    Analyze customer behavior patterns using the shared processing service.
-    This ensures consistency with the dashboard data.
+    Analyze CUSTOMER BEHAVIOR - product preferences, channel usage, and engagement.
+
+    This tool focuses on WHAT customers buy and HOW they engage, NOT how often:
+    - Product preferences (top categories, product diversity)
+    - Channel usage (Item, Unknown, etc.)
+    - Engagement metrics (recency, engagement scores)
+    - Customer segments (Business segments)
+
+    NOTE: For purchase FREQUENCY (how often customers buy), use analyze_purchase_frequency instead!
 
     Args:
         time_period: Analysis period ('last_30_days', 'last_90_days', 'last_180_days', 'last_year', or date range)
@@ -212,6 +220,32 @@ Purchase Frequency Distribution:
 
 This analysis uses the same data processing service as the Customer Behavior Dashboard,
 ensuring complete consistency between agent responses and dashboard visualizations.
+"""
+
+        # Add visualization metadata for Enterprise-IQ
+        viz_metadata = {
+            "toolname": "customer-behaviour",
+            "componentName": "overview",  # Default to overview (purchase patterns)
+            "body": {
+                "dateFrom": filters.get('dateFrom'),
+                "dateTo": filters.get('dateTo'),
+                "segmentId": segment_id,
+                "behaviorTypes": filters.get('behavior_types', [])
+            }
+        }
+
+        # Append visualization metadata
+        result += f"""
+
+## Visualization Data (Machine-Readable)
+```json
+{json.dumps(viz_metadata, indent=2)}
+```
+
+<output>
+{json.dumps(viz_metadata)}
+</output>
+<is_visualisation>true</is_visualisation>
 """
 
         return result

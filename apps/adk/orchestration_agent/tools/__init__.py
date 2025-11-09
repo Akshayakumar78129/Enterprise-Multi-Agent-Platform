@@ -9,6 +9,7 @@ from orchestration_agent.tools.customer_segmentation import identify_customer_se
 from orchestration_agent.tools.churn_prediction import predict_churn_risk
 from orchestration_agent.tools.performance_deviation import analyze_performance_deviations
 from orchestration_agent.tools.inventory_level import analyze_inventory_levels
+from orchestration_agent.tools.purchase_frequency import analyze_purchase_frequency
 
 __all__ = [
     'analyze_customer_behavior',
@@ -19,5 +20,6 @@ __all__ = [
     'identify_customer_segments',
     'predict_churn_risk',
     'analyze_performance_deviations',
-    'analyze_inventory_levels'
+    'analyze_inventory_levels',
+    'analyze_purchase_frequency'
 ] 

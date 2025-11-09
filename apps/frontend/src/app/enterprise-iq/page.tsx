@@ -146,6 +146,16 @@ const componentRegistry: any = {
     marginAnalysis: dynamic(() => import('../product-performance/components').then(mod => mod.MarginAnalysisScatter)),
     priceBands: dynamic(() => import('../product-performance/components').then(mod => mod.PriceBandDistribution))
   },
+  'purchase-frequency': {
+    // Full names
+    kpis: dynamic(() => import('../purchase-frequency/components').then(mod => mod.PurchaseFrequencyKPIs)),
+    overview: dynamic(() => import('../purchase-frequency/components').then(mod => mod.FrequencyDistribution)),
+    distribution: dynamic(() => import('../purchase-frequency/components').then(mod => mod.FrequencyDistribution)),
+    segmentation: dynamic(() => import('../purchase-frequency/components').then(mod => mod.CustomerSegmentChart)),
+    intervals: dynamic(() => import('../purchase-frequency/components').then(mod => mod.PurchaseIntervalChart)),
+    lifecycle: dynamic(() => import('../purchase-frequency/components').then(mod => mod.LifecycleStagesChart)),
+    table: dynamic(() => import('../purchase-frequency/components').then(mod => mod.FrequencyTable))
+  },
   'sales-trends': {
     kpis: dynamic(() => import('../sales-trends/components').then(mod => mod.SalesTrendsKPIs)),
     kpiTiles: dynamic(() => import('../sales-trends/components').then(mod => mod.SalesTrendsKPIs)),
@@ -177,6 +187,30 @@ const componentRegistry: any = {
     forecast: dynamic(() => import('../ar-aging-analysis/components').then(mod => mod.CollectionForecast)),
     riskHeatmap: dynamic(() => import('../ar-aging-analysis/components').then(mod => mod.RiskHeatmap)),
     agingBreakdown: dynamic(() => import('../ar-aging-analysis/components').then(mod => mod.AgingTable))
+  },
+  'customer-behaviour': {
+    kpis: dynamic(() => import('../customer-behavior/components').then(mod => mod.BehaviorKPIs)),
+    patterns: dynamic(() => import('../customer-behavior/components').then(mod => mod.PurchasePatterns)),
+    engagement: dynamic(() => import('../customer-behavior/components').then(mod => mod.EngagementMetrics)),
+    segments: dynamic(() => import('../customer-behavior/components').then(mod => mod.CustomerSegments)),
+    table: dynamic(() => import('../customer-behavior/components').then(mod => mod.CustomerTable)),
+    // Aliases
+    overview: dynamic(() => import('../customer-behavior/components').then(mod => mod.PurchasePatterns)),
+    purchasePatterns: dynamic(() => import('../customer-behavior/components').then(mod => mod.PurchasePatterns)),
+    engagementMetrics: dynamic(() => import('../customer-behavior/components').then(mod => mod.EngagementMetrics)),
+    customerSegments: dynamic(() => import('../customer-behavior/components').then(mod => mod.CustomerSegments))
+  },
+  'customer-behavior': {
+    kpis: dynamic(() => import('../customer-behavior/components').then(mod => mod.BehaviorKPIs)),
+    patterns: dynamic(() => import('../customer-behavior/components').then(mod => mod.PurchasePatterns)),
+    engagement: dynamic(() => import('../customer-behavior/components').then(mod => mod.EngagementMetrics)),
+    segments: dynamic(() => import('../customer-behavior/components').then(mod => mod.CustomerSegments)),
+    table: dynamic(() => import('../customer-behavior/components').then(mod => mod.CustomerTable)),
+    // Aliases
+    overview: dynamic(() => import('../customer-behavior/components').then(mod => mod.PurchasePatterns)),
+    purchasePatterns: dynamic(() => import('../customer-behavior/components').then(mod => mod.PurchasePatterns)),
+    engagementMetrics: dynamic(() => import('../customer-behavior/components').then(mod => mod.EngagementMetrics)),
+    customerSegments: dynamic(() => import('../customer-behavior/components').then(mod => mod.CustomerSegments))
   }
 };
 

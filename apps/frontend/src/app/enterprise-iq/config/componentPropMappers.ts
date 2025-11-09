@@ -709,66 +709,132 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
   // =============================
   // Customer Behaviour Components
   // =============================
-  'customer-behaviour.radar': (summary) => {
+  'customer-behaviour.kpis': (summary) => {
     return {
-      data: summary.behavior_metrics || summary.radar_data || [],
-      categories: summary.categories
+      metrics: summary.kpiMetrics || {},
+      loading: false
     };
   },
 
-  'customer-behaviour.histogram': (summary) => {
+  'customer-behaviour.patterns': (summary) => {
     return {
-      data: summary.histogram_data || summary.distribution || [],
-      bins: summary.bins
+      data: summary.mainData?.purchasePatterns || {},
+      loading: false
     };
   },
 
-  'customer-behaviour.treemap': (summary) => {
-    // Map product preferences or category data to treemap
+  'customer-behaviour.overview': (summary) => {
     return {
-      data: summary.product_preferences || summary.treemap_data || [],
-      categories: summary.categories
+      data: summary.mainData?.purchasePatterns || {},
+      loading: false
     };
   },
 
-  'customer-behaviour.donut': (summary) => {
-    // Map channel usage or segment distribution to donut
+  'customer-behaviour.purchasePatterns': (summary) => {
     return {
-      data: summary.channel_usage || summary.donut_data || [],
-      labels: summary.labels
+      data: summary.mainData?.purchasePatterns || {},
+      loading: false
+    };
+  },
+
+  'customer-behaviour.engagement': (summary) => {
+    return {
+      data: summary.mainData?.engagementMetrics || {},
+      loading: false
+    };
+  },
+
+  'customer-behaviour.engagementMetrics': (summary) => {
+    return {
+      data: summary.mainData?.engagementMetrics || {},
+      loading: false
+    };
+  },
+
+  'customer-behaviour.segments': (summary) => {
+    return {
+      data: summary.mainData?.customerSegments || [],
+      loading: false
+    };
+  },
+
+  'customer-behaviour.customerSegments': (summary) => {
+    return {
+      data: summary.mainData?.customerSegments || [],
+      loading: false
+    };
+  },
+
+  'customer-behaviour.table': (summary) => {
+    return {
+      data: summary.mainData?.topCustomers || [],
+      loading: false
     };
   },
 
   // =============================
   // Customer Behavior Components (alternate name without hyphen)
   // =============================
-  'customer-behavior.radar': (summary) => {
+  'customer-behavior.kpis': (summary) => {
     return {
-      data: summary.behavior_metrics || summary.radar_data || [],
-      categories: summary.categories
+      metrics: summary.kpiMetrics || {},
+      loading: false
     };
   },
 
-  'customer-behavior.histogram': (summary) => {
+  'customer-behavior.patterns': (summary) => {
     return {
-      data: summary.histogram_data || summary.distribution || [],
-      bins: summary.bins
+      data: summary.mainData?.purchasePatterns || {},
+      loading: false
     };
   },
 
-  'customer-behavior.treemap': (summary) => {
-    // Map product preferences or category data to treemap
+  'customer-behavior.overview': (summary) => {
     return {
-      data: summary.product_preferences || summary.treemap_data || [],
-      categories: summary.categories
+      data: summary.mainData?.purchasePatterns || {},
+      loading: false
     };
   },
 
-  'customer-behavior.donut': (summary) => {
-    // Map channel usage or segment distribution to donut
+  'customer-behavior.purchasePatterns': (summary) => {
     return {
-      data: summary.channel_usage || summary.donut_data || [],
-      labels: summary.labels
+      data: summary.mainData?.purchasePatterns || {},
+      loading: false
+    };
+  },
+
+  'customer-behavior.engagement': (summary) => {
+    return {
+      data: summary.mainData?.engagementMetrics || {},
+      loading: false
+    };
+  },
+
+  'customer-behavior.engagementMetrics': (summary) => {
+    return {
+      data: summary.mainData?.engagementMetrics || {},
+      loading: false
+    };
+  },
+
+  'customer-behavior.segments': (summary) => {
+    return {
+      data: summary.mainData?.customerSegments || [],
+      loading: false
+    };
+  },
+
+  'customer-behavior.customerSegments': (summary) => {
+    return {
+      data: summary.mainData?.customerSegments || [],
+      loading: false
+    };
+  },
+
+  'customer-behavior.table': (summary) => {
+    return {
+      data: summary.mainData?.topCustomers || [],
+      loading: false
     };
   },
 
@@ -1417,6 +1483,66 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
   'next-purchase.confidenceMatrix': (summary) => {
     return {
       data: summary.mainData?.confidenceMatrix || { matrix: [], products: [], segments: [] },
+      loading: false
+    };
+  },
+
+  // =============================
+  // Purchase Frequency Components
+  // =============================
+  'purchase-frequency.kpis': (summary) => {
+    return {
+      data: summary.kpiMetrics || {
+        total_customers: 0,
+        avg_frequency: 0,
+        high_frequency_customers: 0,
+        medium_frequency_customers: 0,
+        low_frequency_customers: 0,
+        total_revenue: 0
+      },
+      loading: false
+    };
+  },
+
+  'purchase-frequency.overview': (summary) => {
+    // Overview shows frequency distribution chart
+    return {
+      data: summary.frequencyDistribution || [],
+      loading: false
+    };
+  },
+
+  'purchase-frequency.distribution': (summary) => {
+    return {
+      data: summary.frequencyDistribution || [],
+      loading: false
+    };
+  },
+
+  'purchase-frequency.segmentation': (summary) => {
+    return {
+      data: summary.customerSegmentation || [],
+      loading: false
+    };
+  },
+
+  'purchase-frequency.intervals': (summary) => {
+    return {
+      data: summary.purchaseIntervals || [],
+      loading: false
+    };
+  },
+
+  'purchase-frequency.lifecycle': (summary) => {
+    return {
+      data: summary.lifecycleStages || [],
+      loading: false
+    };
+  },
+
+  'purchase-frequency.table': (summary) => {
+    return {
+      data: summary.customerDetails || [],
       loading: false
     };
   }

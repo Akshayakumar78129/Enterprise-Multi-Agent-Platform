@@ -16,6 +16,27 @@ from .ml_predictor import RetentionPlannerMLPredictor
 logger = logging.getLogger(__name__)
 
 
+def convert_numpy_types(obj):
+    """
+    Recursively convert numpy types to native Python types for JSON serialization.
+    Handles numpy.int64, numpy.float64, etc.
+    """
+    if isinstance(obj, dict):
+        return {key: convert_numpy_types(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(item) for item in obj]
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif pd.isna(obj):
+        return None
+    else:
+        return obj
+
+
 class RetentionPlannerService:
     """Processing service for Customer retention strategy planning and optimization"""
 
@@ -64,7 +85,8 @@ class RetentionPlannerService:
             # Generate insights
             insights = self._generate_insights(ml_results, kpis)
 
-            return {
+            # Build response
+            response = {
                 'kpiMetrics': kpis,
                 'mainData': visualizations,
                 'mlResults': ml_results,
@@ -77,6 +99,9 @@ class RetentionPlannerService:
                     'dataQuality': self._assess_data_quality(customers_df, transactions_df)
                 }
             }
+
+            # Convert all numpy types to native Python types for JSON serialization
+            return convert_numpy_types(response)
 
         except Exception as e:
             logger.error(f"Error in get_dashboard_summary: {str(e)}", exc_info=True)

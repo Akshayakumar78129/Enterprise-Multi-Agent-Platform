@@ -127,7 +127,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
       )}
 
       {/* Chart content */}
-      <div className={cn("w-full", noPadding && "-mx-4 sm:-mx-6")}>
+      <div className={cn("w-full h-full", noPadding && "-mx-4 sm:-mx-6")}>
         {children}
       </div>
     </div>
