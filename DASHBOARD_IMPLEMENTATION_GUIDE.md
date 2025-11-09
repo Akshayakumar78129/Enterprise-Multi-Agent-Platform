@@ -269,6 +269,149 @@ export function FloatingActionButtons({
 
 ---
 
+#### 7. Database Query Compatibility Standards (PostgreSQL & SQLite)
+
+**Problem**: Application needs to work with both PostgreSQL (Azure production) and SQLite (local development), but different SQL dialects can cause compatibility issues.
+
+**Solution**: Write queries that work with both database systems using standardized patterns.
+
+**CRITICAL RULES**:
+
+1. **Use `?` Placeholders (SQLite-style)**
+   - ✅ **CORRECT**: `WHERE date >= ? AND date <= ?`
+   - ❌ **WRONG**: `WHERE date >= %s AND date <= %s` (PostgreSQL)
+   - ❌ **WRONG**: `WHERE date >= $1 AND date <= $2` (PostgreSQL)
+   - **Why**: Both databases support `?`, making it universally compatible
+
+2. **Always Use Parameterized Queries**
+   ```python
+   # ✅ CORRECT - Parameterized
+   query = "WHERE customer_id = ? AND date >= ?"
+   params = [customer_id, date_from]
+   result = await self.db_connection.query(query, params)
+
+   # ❌ WRONG - String interpolation (SQL injection risk)
+   query = f"WHERE customer_id = {customer_id} AND date >= '{date_from}'"
+   ```
+
+3. **Use Schema References**
+   ```python
+   # ✅ CORRECT - Schema-based references
+   sql = f"""
+     SELECT
+       {self.schema.CUSTOMER.refs['id']} as customer_id,
+       {self.schema.CUSTOMER.refs['name']} as customer_name
+     FROM {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
+     WHERE {self.schema.CUSTOMER.refs['id']} = ?
+   """
+
+   # ❌ WRONG - Hardcoded table/column names
+   sql = 'SELECT "Customer Key", "Customer Name" FROM dbo_D_Customer WHERE "Customer Key" = ?'
+   ```
+
+4. **Use Filter Engine for Dynamic Filtering**
+   ```python
+   # ✅ CORRECT - Filter engine handles compatibility
+   base_sql = """
+     SELECT * FROM customers
+     WHERE customer_id > 0
+   """
+   query, params = self.filter_engine.apply_filters(base_sql, filters, self.schema)
+   result = await self.db.query(query, params)
+   ```
+
+5. **Default Date Range: 2017-01-01 to 2021-12-31**
+   ```python
+   # Always use consistent default for dataset
+   filters = {
+     'dateFrom': filters.get('dateFrom', '2017-01-01'),
+     'dateTo': filters.get('dateTo', '2021-12-31')
+   }
+   ```
+
+6. **Avoid PostgreSQL-Specific Operators**
+   ```python
+   # ❌ WRONG - PostgreSQL casting
+   query = "WHERE sales::numeric > 1000"
+   query = "WHERE date::date = '2021-01-01'"
+
+   # ✅ CORRECT - Standard SQL
+   query = "WHERE CAST(sales AS DECIMAL) > 1000"
+   query = "WHERE date = '2021-01-01'"
+   ```
+
+7. **Date Functions - Use Compatible Alternatives**
+   ```python
+   # For date manipulation, use strftime() which works in both:
+   # ✅ CORRECT - strftime works in SQLite and PostgreSQL (via extension)
+   query = "WHERE strftime('%Y', date) = '2021'"
+
+   # Or use simple date comparison:
+   # ✅ CORRECT - Standard date comparison
+   query = "WHERE date >= ? AND date < ?"
+   params = ['2021-01-01', '2022-01-01']
+   ```
+
+**Standard Data Service Pattern**:
+```python
+# apps/adk/domains/{dashboard_name}/data_service.py
+
+from typing import Dict, List, Any
+from database.connection import DatabaseConnection
+from database.filter_engine import FilterEngine
+from .schema import {Dashboard}Schema
+
+class {Dashboard}DataService:
+    def __init__(self):
+        self.db = DatabaseConnection()
+        self.schema = {Dashboard}Schema()
+        self.filter_engine = FilterEngine()
+
+    async def get_data(self, filters: Dict[str, Any] = {}) -> Dict:
+        """Get dashboard data with compatible queries"""
+
+        # Base SQL using schema references
+        sql = f"""
+        SELECT
+            {self.schema.CUSTOMER.refs['id']} AS customer_id,
+            {self.schema.CUSTOMER.refs['name']} AS customer_name,
+            COUNT(*) as purchase_count
+        FROM {self.schema.TABLES['transaction']} {self.schema.ALIASES['transaction']}
+        LEFT JOIN {self.schema.TABLES['customer']} {self.schema.ALIASES['customer']}
+            ON {self.schema.CUSTOMER.refs['id']} = {self.schema.TRANSACTION.refs['customer_id']}
+        WHERE {self.schema.TRANSACTION.refs['customer_id']} > 0
+        GROUP BY
+            {self.schema.CUSTOMER.refs['id']},
+            {self.schema.CUSTOMER.refs['name']}
+        """
+
+        # Apply dynamic filters (dateRange, segments, etc.)
+        query, params = self.filter_engine.apply_filters(sql, filters, self.schema)
+
+        # Execute query (works with both PostgreSQL and SQLite)
+        return await self.db.query(query, params)
+```
+
+**Testing Checklist**:
+- [ ] Queries tested with SQLite (local dev)
+- [ ] Queries tested with PostgreSQL (Azure deployment)
+- [ ] Same results from both databases
+- [ ] No SQL syntax errors in either database
+- [ ] No use of `%s` or `$1` placeholders
+- [ ] No PostgreSQL-specific operators (`::`, `ILIKE`, etc.)
+- [ ] All user inputs parameterized (no SQL injection risk)
+- [ ] Filter engine used for dynamic filters
+- [ ] Schema references used for tables/columns
+
+**Benefits**:
+- ✅ Single codebase works with both databases
+- ✅ Easy local development with SQLite
+- ✅ Seamless Azure PostgreSQL deployment
+- ✅ SQL injection protection via parameterization
+- ✅ Consistent query patterns across dashboards
+
+---
+
 ## Implementation Phases
 
 ### Phase 1: Backend ADK Tool (2-3 hours)
