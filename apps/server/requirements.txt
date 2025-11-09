@@ -1,8 +1,0 @@
-fastapi
-dotenv
-requests
-uvicorn
-httpx
-pandas
-scikit-learn
-numpy
