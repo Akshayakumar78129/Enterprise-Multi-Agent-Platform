@@ -215,17 +215,32 @@ class DatabaseConnection:
                 raise
 
             # Fetch all rows
-            rows = cursor.fetchall()
+            try:
+                rows = cursor.fetchall()
+            except Exception as e:
+                print(f"[ERROR] Failed to fetch rows:")
+                print(f"[ERROR] SQL: {sql[:500]}...")
+                print(f"[ERROR] Exception: {e}")
+                return {'rows': [], 'rowCount': 0}
 
             # Convert to dictionaries
             result_rows = []
-            if self.db_type == 'postgres':
-                # PostgreSQL with RealDictCursor already returns dicts
-                result_rows = [dict(row) for row in rows]
-            else:
-                # SQLite Row objects need conversion
-                for row in rows:
-                    result_rows.append(dict(row))
+            try:
+                if self.db_type == 'postgres':
+                    # PostgreSQL with RealDictCursor already returns dicts
+                    result_rows = [dict(row) for row in rows]
+                else:
+                    # SQLite Row objects need conversion
+                    for row in rows:
+                        result_rows.append(dict(row))
+            except (IndexError, KeyError, TypeError, AttributeError) as e:
+                print(f"[ERROR] Row conversion failed:")
+                print(f"[ERROR] SQL: {sql[:500]}...")
+                print(f"[ERROR] Rows count: {len(rows) if rows else 'N/A'}")
+                print(f"[ERROR] First row type: {type(rows[0]) if rows else 'N/A'}")
+                print(f"[ERROR] Exception: {e}")
+                # Return empty results instead of crashing
+                return {'rows': [], 'rowCount': 0}
 
             return {
                 'rows': result_rows,

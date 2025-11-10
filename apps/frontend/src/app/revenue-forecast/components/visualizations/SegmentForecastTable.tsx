@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { ChartCard, getShiftClickManager } from 'components/index';
+import { DataTable, getShiftClickManager } from 'components/index';
 
 interface SegmentForecastTableProps {
   data: any[];
@@ -11,87 +11,93 @@ interface SegmentForecastTableProps {
 export function SegmentForecastTable({ data, loading }: SegmentForecastTableProps) {
   const shiftClickManager = getShiftClickManager();
 
-  if (loading) {
-    return (
-      <ChartCard loading={loading}>
-        <div className="h-64 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </ChartCard>
-    );
-  }
-
-  if (!data || data.length === 0) {
-    return (
-      <ChartCard>
-        <div className="h-64 flex items-center justify-center text-muted">
-          No segment forecast data available
-        </div>
-      </ChartCard>
-    );
-  }
-
-  const totalRevenue = data.reduce((sum, seg) => sum + (seg.total_revenue || 0), 0);
+  const columns = [
+    {
+      id: 'segment',
+      header: 'Segment',
+      accessor: 'segment',
+      sortable: true,
+      cell: (row: any) => (
+        <span className="font-medium text-foreground">{row.segment}</span>
+      )
+    },
+    {
+      id: 'avg_monthly_revenue',
+      header: 'Avg Monthly Revenue',
+      accessor: 'avg_monthly_revenue',
+      sortable: true,
+      align: 'right' as const,
+      cell: (row: any) => (
+        <span className="text-foreground">
+          ${(row.avg_monthly_revenue || 0).toLocaleString(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+          })}
+        </span>
+      )
+    },
+    {
+      id: 'total_revenue',
+      header: 'Total Revenue',
+      accessor: 'total_revenue',
+      sortable: true,
+      align: 'right' as const,
+      cell: (row: any) => (
+        <span className="text-foreground">
+          ${(row.total_revenue || 0).toLocaleString(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+          })}
+        </span>
+      )
+    },
+    {
+      id: 'month_count',
+      header: 'Months',
+      accessor: 'month_count',
+      sortable: true,
+      align: 'right' as const,
+      cell: (row: any) => (
+        <span className="text-muted">{row.month_count || 0}</span>
+      )
+    },
+    {
+      id: 'volatility_pct',
+      header: 'Volatility',
+      accessor: 'volatility_pct',
+      sortable: true,
+      align: 'right' as const,
+      cell: (row: any) => {
+        const volatility = row.volatility_pct || 0;
+        const colorClass = volatility > 50 ? 'text-error' :
+                          volatility > 25 ? 'text-warning' : 'text-success';
+        return (
+          <span className={colorClass}>
+            {volatility.toFixed(1)}%
+          </span>
+        );
+      }
+    }
+  ];
 
   return (
-    <ChartCard
-      onShiftClick={(event) => {
-        const topSegment = data[0];
-        shiftClickManager.addPoint({
-          label: "Segment Forecast Breakdown",
-          value: `${data.length} segments | Top: ${topSegment?.segment} ($${(topSegment?.total_revenue || 0).toLocaleString(undefined, { notation: 'compact' })})`,
-          source: 'Revenue Forecast - Segment Breakdown'
-        }, event.nativeEvent);
+    <DataTable
+      columns={columns}
+      data={data}
+      loading={loading}
+      searchable
+      exportable
+      exportFileName="revenue-forecast-segments"
+      searchPlaceholder="Search segments..."
+      onRowClick={(row, event) => {
+        if (event?.shiftKey) {
+          shiftClickManager.addPoint({
+            label: row.segment,
+            value: `Total: $${(row.total_revenue || 0).toLocaleString(undefined, { notation: 'compact' })} | Avg Monthly: $${(row.avg_monthly_revenue || 0).toLocaleString(undefined, { notation: 'compact' })}`,
+            source: 'Revenue Forecast - Segment Breakdown'
+          }, event.nativeEvent);
+        }
       }}
-    >
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Segment</th>
-              <th className="text-right py-3 px-4 text-sm font-semibold text-foreground">Avg Monthly Revenue</th>
-              <th className="text-right py-3 px-4 text-sm font-semibold text-foreground">Total Revenue</th>
-              <th className="text-right py-3 px-4 text-sm font-semibold text-foreground">Months</th>
-              <th className="text-right py-3 px-4 text-sm font-semibold text-foreground">Volatility</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((segment, index) => (
-              <tr
-                key={index}
-                className="border-b border-border/50 hover:bg-card/50 transition-colors"
-              >
-              <td className="py-3 px-4 text-sm font-medium text-foreground">
-                {segment.segment}
-              </td>
-              <td className="py-3 px-4 text-sm text-right text-foreground">
-                ${(segment.avg_monthly_revenue || 0).toLocaleString(undefined, {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0
-                })}
-              </td>
-              <td className="py-3 px-4 text-sm text-right text-foreground">
-                ${(segment.total_revenue || 0).toLocaleString(undefined, {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0
-                })}
-              </td>
-              <td className="py-3 px-4 text-sm text-right text-muted">
-                {segment.month_count || 0}
-              </td>
-              <td className="py-3 px-4 text-sm text-right">
-                <span className={`
-                  ${(segment.volatility_pct || 0) > 50 ? 'text-error' :
-                    (segment.volatility_pct || 0) > 25 ? 'text-warning' : 'text-success'}
-                `}>
-                  {(segment.volatility_pct || 0).toFixed(1)}%
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-    </ChartCard>
+    />
   );
 }

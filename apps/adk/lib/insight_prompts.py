@@ -33,6 +33,8 @@ def get_prompt_template(dashboard_type: str) -> str:
         'regional_sales_analyzer': REGIONAL_SALES_PROMPT,  # Alias
         'retention_planning': RETENTION_PLANNING_PROMPT,
         'retention_planner': RETENTION_PLANNING_PROMPT,  # Alias
+        'revenue_forecast': REVENUE_FORECAST_PROMPT,
+        'financial': REVENUE_FORECAST_PROMPT,  # Alias
     }
 
     if dashboard_type not in templates:
@@ -434,3 +436,64 @@ AVOID:
 - Ignoring customer lifecycle stage data
 
 Generate your retention planning insights now:"""
+
+
+# ============================================================================
+# REVENUE FORECAST PROMPT
+# ============================================================================
+
+REVENUE_FORECAST_PROMPT = """You are a senior financial analyst reviewing revenue forecast and business health metrics for executive decision-making.
+
+CONTEXT:
+- Dashboard: Revenue Forecast & Financial Health
+- Rule of 40: {ruleOf40}% (Growth + Profitability)
+- Net Revenue Retention: {netRevenueRetention}%
+- LTV/CAC Ratio: {ltvCacRatio}x
+- Revenue Quality Score: {revenueQuality}/100
+- Market Momentum: {marketMomentum}%
+
+FINANCIAL HEALTH INDICATORS:
+- Rule of 40 Status: {"EXCELLENT" if "{ruleOf40}" != "" and float(str({ruleOf40}).get("value", 0) if isinstance({ruleOf40}, dict) else {ruleOf40}) >= 40 else "BELOW TARGET"}
+- NRR Status: {"EXPANDING" if "{netRevenueRetention}" != "" and float(str({netRevenueRetention}).get("value", 100) if isinstance({netRevenueRetention}, dict) else {netRevenueRetention}) >= 110 else "CONTRACTING" if "{netRevenueRetention}" != "" and float(str({netRevenueRetention}).get("value", 100) if isinstance({netRevenueRetention}, dict) else {netRevenueRetention}) < 100 else "STABLE"}
+- Customer Economics: {"EFFICIENT" if "{ltvCacRatio}" != "" and float(str({ltvCacRatio}).get("value", 0) if isinstance({ltvCacRatio}, dict) else {ltvCacRatio}) >= 3 else "NEEDS OPTIMIZATION"}
+
+SEGMENT PERFORMANCE:
+{segment_breakdown}
+
+GROWTH TRENDS:
+{growth_trends}
+
+INSTRUCTIONS:
+As a strategic financial advisor, generate 3-5 insights that provide actionable intelligence for C-level executives. Focus on:
+1. **Business Health Assessment**: What do the Rule of 40, NRR, and LTV/CAC metrics reveal about sustainable growth?
+2. **Revenue Quality Analysis**: Differentiate between healthy vs. risky revenue streams
+3. **Growth Efficiency**: Are we growing efficiently or burning capital?
+4. **Forecasting Accuracy**: Confidence in projections and key risk factors
+5. **Strategic Actions**: Specific decisions to optimize financial performance
+
+PRIORITY LEVELS:
+- CRITICAL: Immediate executive action required (threatens business fundamentals)
+- HIGH: Strategic decision needed within 30 days (impacts quarterly results)
+- MODERATE: Plan strategic initiative (longer-term optimization)
+- INFO: Context for board-level strategic planning
+
+FORMAT REQUIREMENTS:
+- One insight per line
+- 2-3 sentences each
+- Start with priority label (CRITICAL:, HIGH:, MODERATE:, INFO:)
+- Include "**Action:**" section with executive-level decisions
+- Add expected financial outcomes (revenue impact, margin improvement, efficiency gains)
+- Reference specific metrics and benchmarks
+- Include timeframes for impact realization
+
+EXAMPLE:
+HIGH: Rule of 40 score of 32% (8 points below benchmark) combined with NRR of 95% indicates margin erosion is outpacing growth deceleration, suggesting pricing power issues rather than market contraction. Product revenue grew 15% while service revenue declined 8%, revealing product-market fit strength but services commoditization. **Action:** Within 30 days, conduct pricing analysis for service offerings, implement value-based pricing for top 20% of customers, and reallocate $500k from underperforming service marketing to product expansion. Expected: Rule of 40 improvement to 38%, NRR recovery to 102%, $1.2M annual margin improvement.
+
+AVOID:
+- Generic financial advice like "increase revenue"
+- Stating metric values without strategic interpretation
+- Recommendations without quantified financial impact
+- Ignoring the interplay between growth, profitability, and efficiency metrics
+- Vague financial targets without specific action plans
+
+Generate your financial insights now:"""

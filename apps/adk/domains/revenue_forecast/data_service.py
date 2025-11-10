@@ -126,7 +126,7 @@ class RevenueForecastDataService:
         )
         SELECT
             rm.*,
-            ppm.prior_revenue,
+            COALESCE(ppm.prior_revenue, 0) as prior_revenue,
             -- Calculate derived metrics
             ROUND((rm.total_revenue - rm.cogs), 2) as gross_profit,
             ROUND((rm.total_revenue - rm.cogs - rm.opex), 2) as ebitda,
@@ -134,8 +134,8 @@ class RevenueForecastDataService:
             -- Growth metrics
             ROUND(
                 CASE
-                    WHEN ppm.prior_revenue > 0 THEN
-                        ((rm.total_revenue - ppm.prior_revenue) / ppm.prior_revenue) * 100
+                    WHEN COALESCE(ppm.prior_revenue, 0) > 0 THEN
+                        ((rm.total_revenue - COALESCE(ppm.prior_revenue, 0)) / COALESCE(ppm.prior_revenue, 1)) * 100
                     ELSE 0
                 END, 2
             ) as revenue_growth_rate,
@@ -160,8 +160,8 @@ class RevenueForecastDataService:
             -- Rule of 40 (Growth Rate + EBITDA Margin)
             ROUND(
                 CASE
-                    WHEN ppm.prior_revenue > 0 AND rm.total_revenue > 0 THEN
-                        (((rm.total_revenue - ppm.prior_revenue) / ppm.prior_revenue) * 100) +
+                    WHEN COALESCE(ppm.prior_revenue, 0) > 0 AND rm.total_revenue > 0 THEN
+                        (((rm.total_revenue - COALESCE(ppm.prior_revenue, 0)) / COALESCE(ppm.prior_revenue, 1)) * 100) +
                         (((rm.total_revenue - rm.cogs - rm.opex) / rm.total_revenue) * 100)
                     ELSE 0
                 END, 2
@@ -170,7 +170,7 @@ class RevenueForecastDataService:
             -- Simulated NRR (Net Revenue Retention) - based on recurring patterns
             ROUND(
                 CASE
-                    WHEN rm.service_revenue > 0 THEN
+                    WHEN rm.service_revenue > 0 AND rm.total_revenue > 0 THEN
                         100 + ((rm.service_revenue / rm.total_revenue) * 20) -- Assume services have 20% expansion
                     ELSE 100
                 END, 2
@@ -190,21 +190,21 @@ class RevenueForecastDataService:
                 MIN(100,
                     (CASE WHEN rm.service_revenue > 0 AND rm.product_revenue > 0 THEN 30 ELSE 0 END) + -- Diversification
                     (CASE WHEN rm.revenue_transactions > 10 THEN 30 ELSE rm.revenue_transactions * 3 END) + -- Transaction volume
-                    (CASE WHEN ppm.prior_revenue > 0 AND rm.total_revenue > ppm.prior_revenue THEN 40 ELSE 20 END) -- Growth
+                    (CASE WHEN COALESCE(ppm.prior_revenue, 0) > 0 AND rm.total_revenue > COALESCE(ppm.prior_revenue, 0) THEN 40 ELSE 20 END) -- Growth
                 ), 0
             ) as revenue_quality_score,
 
             -- Market Share Momentum (simulated)
             ROUND(
                 CASE
-                    WHEN ppm.prior_revenue > 0 THEN
-                        ((rm.total_revenue - ppm.prior_revenue) / ppm.prior_revenue) * 10 -- Simplified momentum
+                    WHEN COALESCE(ppm.prior_revenue, 0) > 0 THEN
+                        ((rm.total_revenue - COALESCE(ppm.prior_revenue, 0)) / COALESCE(ppm.prior_revenue, 1)) * 10 -- Simplified momentum
                     ELSE 0
                 END, 2
             ) as market_share_momentum
 
         FROM revenue_metrics rm
-        CROSS JOIN prior_period_metrics ppm
+        LEFT JOIN prior_period_metrics ppm ON 1=1
         """
 
         # Use ? placeholders (will be converted to %s by connection.py)

@@ -4,6 +4,7 @@ import logging
 from typing import List, Dict, Any
 from datetime import datetime
 from .data_service import RevenueForecastDataService
+from ..common.dashboard_cache import cache_dashboard_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,7 @@ class RevenueForecastProcessingService:
     def __init__(self):
         self.data_service = RevenueForecastDataService()
 
+    @cache_dashboard_endpoint(dashboard_type='financial', ttl=600)
     async def get_revenue_forecast_summary(self, filters: Dict[str, Any]) -> Dict[str, Any]:
         """
         Main entry point for revenue forecast dashboard data
@@ -229,7 +231,23 @@ class RevenueForecastProcessingService:
         growth_components: List[Dict[str, Any]],
         cohort_metrics: List[Dict[str, Any]]
     ) -> List[str]:
-        """Generate AI-powered insights from the data"""
+        """Generate hybrid insights: rule-based + AI-powered analysis"""
+        # Start with rule-based insights (fast, always available)
+        rule_insights = self._generate_rule_based_insights(kpi_metrics, growth_components, cohort_metrics)
+
+        # Add AI insights (creative, strategic)
+        ai_insights = self._generate_ai_insights(kpi_metrics, growth_components, cohort_metrics)
+
+        # Combine both - rule-based first for immediate context, then AI for depth
+        return rule_insights + ai_insights
+
+    def _generate_rule_based_insights(
+        self,
+        kpi_metrics: Dict[str, Any],
+        growth_components: List[Dict[str, Any]],
+        cohort_metrics: List[Dict[str, Any]]
+    ) -> List[str]:
+        """Generate fast rule-based insights"""
         insights = []
 
         # Rule of 40 insights
@@ -286,6 +304,82 @@ class RevenueForecastProcessingService:
                 )
 
         return insights
+
+    def _generate_ai_insights(
+        self,
+        kpi_metrics: Dict[str, Any],
+        growth_components: List[Dict[str, Any]],
+        cohort_metrics: List[Dict[str, Any]]
+    ) -> List[str]:
+        """Generate AI-powered strategic insights using Gemini
+
+        Complements rule-based insights with creative, strategic analysis.
+        """
+        try:
+            from lib.ai_insights_generator import generate_ai_insights
+
+            # Prepare data summary for AI context
+            data_summary = {
+                'ruleOf40': kpi_metrics.get('ruleOf40', {}).get('value', 0),
+                'netRevenueRetention': kpi_metrics.get('netRevenueRetention', {}).get('value', 100),
+                'ltvCacRatio': kpi_metrics.get('ltvCacRatio', {}).get('value', 0),
+                'revenueQuality': kpi_metrics.get('revenueQuality', {}).get('value', 0),
+                'marketMomentum': kpi_metrics.get('marketMomentum', {}).get('value', 0),
+                'segment_breakdown': self._format_segment_summary(growth_components),
+                'growth_trends': self._format_growth_summary(growth_components, cohort_metrics)
+            }
+
+            # Generate AI insights
+            ai_insights = generate_ai_insights(
+                dashboard_type='revenue_forecast',
+                kpis=kpi_metrics,
+                data_summary=data_summary,
+                filters={}
+            )
+
+            return ai_insights
+
+        except Exception as e:
+            logger.warning(f"AI insights generation failed: {e}")
+            return []  # Graceful fallback - rule-based insights still available
+
+    def _format_segment_summary(self, growth_components: List[Dict[str, Any]]) -> str:
+        """Format segment data for AI prompt"""
+        if not growth_components:
+            return "No segment data available"
+
+        summary_lines = []
+        for comp in growth_components[:3]:  # Top 3 components
+            summary_lines.append(
+                f"- {comp.get('component_name', 'Unknown')}: "
+                f"${comp.get('value', 0):,.0f} ({comp.get('percentage', 0):.1f}% of total)"
+            )
+
+        return "\n".join(summary_lines) if summary_lines else "No significant components"
+
+    def _format_growth_summary(
+        self,
+        growth_components: List[Dict[str, Any]],
+        cohort_metrics: List[Dict[str, Any]]
+    ) -> str:
+        """Format growth trend data for AI prompt"""
+        summary_parts = []
+
+        # Growth composition
+        if growth_components:
+            organic_count = len([c for c in growth_components if c['category'] == 'organic'])
+            total_value = sum(c['value'] for c in growth_components)
+            summary_parts.append(
+                f"Total growth: ${total_value:,.0f} from {len(growth_components)} components "
+                f"({organic_count} organic)"
+            )
+
+        # Cohort retention
+        if cohort_metrics:
+            avg_retention = sum(c.get('retention_rate', 0) for c in cohort_metrics) / len(cohort_metrics)
+            summary_parts.append(f"Average cohort retention: {avg_retention:.1f}%")
+
+        return " | ".join(summary_parts) if summary_parts else "Limited growth trend data"
 
     def _empty_response(self, filters_dict: Dict[str, Any]) -> Dict[str, Any]:
         """Return empty response when database has no data"""

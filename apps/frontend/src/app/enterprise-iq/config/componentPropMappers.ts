@@ -1570,6 +1570,43 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
       data: summary.customerDetails || [],
       loading: false
     };
+  },
+
+  // =============================
+  // Revenue Forecast Components
+  // =============================
+  'revenue-forecast.kpiTiles': (summary) => {
+    return {
+      kpis: summary.kpiMetrics || {
+        ruleOf40: { value: 0, change: 0, trend: 'neutral', status: 'warning' },
+        netRevenueRetention: { value: 100, change: 0, trend: 'neutral', status: 'warning' },
+        ltvCacRatio: { value: 0, change: 0, trend: 'neutral', status: 'warning' },
+        revenueQuality: { value: 0, change: 0, trend: 'neutral', status: 'warning' },
+        marketMomentum: { value: 0, change: 0, trend: 'neutral', status: 'warning' }
+      },
+      loading: false
+    };
+  },
+
+  'revenue-forecast.monthlyTrend': (summary) => {
+    return {
+      data: summary.mainData?.monthlyTrend || summary.mainData?.growthDecomposition || [],
+      loading: false
+    };
+  },
+
+  'revenue-forecast.segmentForecast': (summary) => {
+    return {
+      data: summary.mainData?.segmentForecast || [],
+      loading: false
+    };
+  },
+
+  'revenue-forecast.cohortRetention': (summary) => {
+    return {
+      data: summary.mainData?.cohortRetention || [],
+      loading: false
+    };
   }
 };
 

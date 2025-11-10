@@ -126,9 +126,10 @@ export const componentRegistry = {
 
   'revenue-forecast': {
     dashboard: dynamic(() => import('../revenue-forecast/page').catch(() => null), { ssr: false }),
-    forecast: dynamic(() => import('components').then(mod => mod.RevenueForecast).catch(() => null), { ssr: false }),
-    confidence: dynamic(() => import('components').then(mod => mod.ForecastConfidence).catch(() => null), { ssr: false }),
-    scenarios: dynamic(() => import('components').then(mod => mod.ScenarioAnalysis).catch(() => null), { ssr: false }),
+    kpiTiles: dynamic(() => import('../../revenue-forecast/components').then(mod => mod.RevenueForecastKPIs).catch(() => null), { ssr: false }),
+    monthlyTrend: dynamic(() => import('../../revenue-forecast/components').then(mod => mod.MonthlyTrendChart).catch(() => null), { ssr: false }),
+    segmentForecast: dynamic(() => import('../../revenue-forecast/components').then(mod => mod.SegmentForecastTable).catch(() => null), { ssr: false }),
+    cohortRetention: dynamic(() => import('../../revenue-forecast/components').then(mod => mod.CohortRetentionChart).catch(() => null), { ssr: false }),
   },
 
   // Retention Planner components

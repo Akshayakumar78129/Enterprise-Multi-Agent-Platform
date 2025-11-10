@@ -107,33 +107,37 @@ export default function RevenueForecastPage() {
         </DashboardSection>
 
         {/* KPIs Section */}
-        <DashboardSection title="Key Metrics">
+        <DashboardSection>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Key Metrics</h3>
           <RevenueForecastKPIs metrics={kpiMetrics} loading={loading} />
         </DashboardSection>
 
         {/* Monthly Revenue Trend */}
-        <DashboardSection title="Monthly Revenue Trend">
+        <DashboardSection>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Monthly Revenue Trend</h3>
           <MonthlyTrendChart
             data={monthlyTrend}
             loading={loading}
           />
         </DashboardSection>
 
-        {/* Grid Layout: Cohort Retention + Segment Forecast */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <DashboardSection title="Cohort Revenue Retention">
-            <CohortRetentionChart
-              data={cohortRetention}
-              loading={loading}
-            />
-          </DashboardSection>
-          <DashboardSection title="Segment Forecast Breakdown">
-            <SegmentForecastTable
-              data={segmentForecast}
-              loading={loading}
-            />
-          </DashboardSection>
-        </div>
+        {/* Cohort Retention Chart */}
+        <DashboardSection>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Cohort Revenue Retention</h3>
+          <CohortRetentionChart
+            data={cohortRetention}
+            loading={loading}
+          />
+        </DashboardSection>
+
+        {/* Segment Forecast Table - Last */}
+        <DashboardSection>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Segment Forecast Breakdown</h3>
+          <SegmentForecastTable
+            data={segmentForecast}
+            loading={loading}
+          />
+        </DashboardSection>
       </div>
     </PageLoader>
   );
