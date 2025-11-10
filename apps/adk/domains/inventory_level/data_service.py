@@ -74,6 +74,11 @@ class InventoryLevelDataService:
     async def get_stock_levels(self, filters: Dict[str, Any] = {}, limit: int = 20) -> List[Dict]:
         """Get current stock levels by item"""
 
+        # Extract status filter to apply after calculation (make a copy to avoid modifying original)
+        filters_copy = filters.copy()
+        status_filter = filters_copy.pop('status', None)
+
+        # Build SQL with nested CTEs to calculate status first, then filter
         sql = f"""
         WITH StockData AS (
             SELECT
@@ -86,26 +91,48 @@ class InventoryLevelDataService:
             FROM "dbo_F_Sales_Transaction" t
             WHERE 1=1
             GROUP BY t."Item Number", t."Product Posting Group"
+        ),
+        StockWithStatus AS (
+            SELECT
+                item_name,
+                category,
+                total_quantity as current_stock,
+                avg_quantity * 7 as minimum_stock,
+                avg_quantity * 30 as maximum_stock,
+                total_value as stock_value,
+                CASE
+                    WHEN total_quantity < avg_quantity * 7 THEN 'low'
+                    WHEN total_quantity > avg_quantity * 30 THEN 'excess'
+                    ELSE 'normal'
+                END as status,
+                active_days as days_on_hand
+            FROM StockData
         )
         SELECT
             item_name,
             category,
-            total_quantity as current_stock,
-            avg_quantity * 7 as minimum_stock,
-            avg_quantity * 30 as maximum_stock,
-            total_value as stock_value,
-            CASE
-                WHEN total_quantity < avg_quantity * 7 THEN 'low'
-                WHEN total_quantity > avg_quantity * 30 THEN 'excess'
-                ELSE 'normal'
-            END as status,
-            active_days as days_on_hand
-        FROM StockData
-        ORDER BY total_value DESC
+            current_stock,
+            minimum_stock,
+            maximum_stock,
+            stock_value,
+            status,
+            days_on_hand
+        FROM StockWithStatus
+        WHERE 1=1
+        """
+
+        # Add status filter if provided
+        if status_filter and len(status_filter) > 0:
+            # Use proper SQL IN clause with parameterized values
+            status_placeholders = ', '.join([f"'{s}'" for s in status_filter])
+            sql += f" AND status IN ({status_placeholders})"
+
+        sql += f"""
+        ORDER BY stock_value DESC
         LIMIT {limit}
         """
 
-        query, params = self.filter_engine.apply_filters(sql, filters, self.schema)
+        query, params = self.filter_engine.apply_filters(sql, filters_copy, self.schema)
         result_dict = await self.db.query(query, params)
         result = result_dict.get('rows', [])
 
