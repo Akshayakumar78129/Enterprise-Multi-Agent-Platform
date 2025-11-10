@@ -86,6 +86,13 @@ export function RegionalSalesTrends({ data, loading }: RegionalSalesTrendsProps)
         display: false, // Hide legend to avoid the blue box
       },
       tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        borderColor: 'rgba(255, 255, 255, 0.2)',
+        borderWidth: 1,
+        padding: 12,
+        displayColors: true,
         callbacks: {
           label: function(context) {
             let label = context.dataset.label || '';
@@ -105,6 +112,14 @@ export function RegionalSalesTrends({ data, loading }: RegionalSalesTrendsProps)
     },
     scales: {
       x: {
+        title: {
+          display: true,
+          text: 'Period',
+          font: {
+            size: 12,
+            weight: 'bold'
+          }
+        },
         grid: {
           color: 'rgba(148, 163, 184, 0.1)',
         },
@@ -116,6 +131,14 @@ export function RegionalSalesTrends({ data, loading }: RegionalSalesTrendsProps)
         }
       },
       y: {
+        title: {
+          display: true,
+          text: 'Total Sales ($)',
+          font: {
+            size: 12,
+            weight: 'bold'
+          }
+        },
         grid: {
           color: 'rgba(148, 163, 184, 0.1)',
         },
