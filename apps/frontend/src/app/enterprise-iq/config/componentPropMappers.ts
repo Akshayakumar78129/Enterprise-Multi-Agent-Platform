@@ -1414,6 +1414,13 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
   // ============================================================================
   // NEXT PURCHASE PREDICTOR MAPPERS
   // ============================================================================
+  'next-purchase.overview': (summary) => {
+    return {
+      data: summary.mainData?.predictions || [],
+      loading: false
+    };
+  },
+
   'next-purchase.kpiTiles': (summary) => {
     return {
       metrics: summary.kpiMetrics || {},
@@ -1487,6 +1494,20 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
   'next-purchase.confidenceMatrix': (summary) => {
     return {
       data: summary.mainData?.confidenceMatrix || { matrix: [], products: [], segments: [] },
+      loading: false
+    };
+  },
+
+  'next-purchase.purchaseTiming': (summary) => {
+    return {
+      data: summary.mainData?.purchaseTimingData || summary.mainData?.purchaseTiming || [],
+      loading: false
+    };
+  },
+
+  'next-purchase.categoryPerformance': (summary) => {
+    return {
+      data: summary.mainData?.categoryPerformance || [],
       loading: false
     };
   },

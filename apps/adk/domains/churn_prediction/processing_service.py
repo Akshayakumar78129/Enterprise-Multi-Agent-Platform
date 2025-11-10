@@ -94,11 +94,10 @@ class ChurnProcessingService:
                 metrics = self.ml_predictor.train_model(features, labels, training_filters)
                 self.model_trained = True
                 self.ml_predictor.is_trained = True
-                print(f"[ChurnProcessingService] ML model trained/cached. ROC AUC: {metrics.get('roc_auc', 0):.3f}")
             else:
-                print(f"[ChurnProcessingService] No data available for training with filters: {training_filters}")
+                logger.warning(f"No data available for training with filters: {training_filters}")
         except Exception as e:
-            print(f"[ChurnProcessingService] Failed to train ML model: {e}")
+            logger.error(f"Failed to train ML model: {e}")
 
     @cache_dashboard_endpoint(dashboard_type='churn', ttl=300)
     async def get_dashboard_summary(self, filters: Dict) -> Dict:

@@ -14,12 +14,6 @@ function NextPurchaseLayoutContent({ children }: { children: React.ReactNode }) 
     filters,
     chatMessages,
     setChatMessages,
-    chatInput,
-    setChatInput,
-    chatIsLoading,
-    setChatIsLoading,
-    chatSessionId,
-    chatUserId,
     isChatPanelOpen,
     setIsChatPanelOpen,
     isBusinessIntelligencePanelOpen,
@@ -29,6 +23,12 @@ function NextPurchaseLayoutContent({ children }: { children: React.ReactNode }) 
   } = useNextPurchaseContext();
 
   const { insights, kpiMetrics } = useNextPurchaseData(filters);
+
+  // Chat panel local state (not shared globally)
+  const [chatInput, setChatInput] = React.useState("");
+  const [chatIsLoading, setChatIsLoading] = React.useState(false);
+  const [chatSessionId] = React.useState(() => `next-purchase-${Date.now()}`);
+  const [chatUserId] = React.useState(() => 'user-' + Math.random().toString(36).substr(2, 9));
 
   // Get selected points from selection manager
   const [selectedPoints, setSelectedPoints] = React.useState<any[]>([]);
@@ -51,7 +51,8 @@ function NextPurchaseLayoutContent({ children }: { children: React.ReactNode }) 
       onClose={() => setIsChatPanelOpen(false)}
       selectedPoints={selectedPoints}
       onClearSelection={() => selectionManager.clearAll()}
-      dashboardContext="next_purchase"additionalContext={{
+      dashboardContext="next_purchase"
+      additionalContext={{
         filters: filters,
         totalPredictions: predictionData.length
       }}

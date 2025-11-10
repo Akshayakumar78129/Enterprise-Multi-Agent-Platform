@@ -85,16 +85,6 @@ export function useNextPurchaseData(filters: NextPurchaseFilters | Record<string
     const mainData = rawData.mainData || {};
     const kpiMetrics = rawData.kpiMetrics || {};
 
-    // Debug: Log the raw API response structure
-    console.log('Raw API Response:', {
-      rawData,
-      mainData,
-      hasCustomerJourneys: !!mainData.customerJourneys,
-      hasCustomerTimeline: !!mainData.customerTimeline,
-      customerJourneysKeys: Object.keys(mainData.customerJourneys || {}),
-      customerTimelineKeys: Object.keys(mainData.customerTimeline || {})
-    });
-
     return {
       nextPurchasePredictions: mainData.nextPurchasePredictions || [],
       purchaseProbability: mainData.purchaseProbability || {},

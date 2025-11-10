@@ -155,10 +155,7 @@ class AnomalyMLPredictor:
                 if cached:
                     self.model, self.scaler, metadata = cached
                     self.model_trained = True
-                    logger.info(f"[AnomalyMLPredictor] Using cached model (anomalies: {metadata.get('n_anomalies', 0)}/{metadata.get('n_samples', 0)})")
                     return metadata.get('metrics', {'status': 'success'})
-
-            logger.info("[AnomalyMLPredictor] Training new model...")
 
             # Scale features
             features_scaled = self.scaler.fit_transform(features)
@@ -203,9 +200,7 @@ class AnomalyMLPredictor:
                     'trained_at': datetime.now().isoformat()
                 }
                 ml_model_cache.set_model('anomaly', filters, self.model, self.scaler, metadata, data_hash)
-                logger.info("[AnomalyMLPredictor] Model cached for future use")
 
-            logger.info(f"Model trained successfully. Anomalies: {n_anomalies}/{len(features)}")
             return metrics
 
         except Exception as e:

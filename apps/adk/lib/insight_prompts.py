@@ -28,6 +28,7 @@ def get_prompt_template(dashboard_type: str) -> str:
         'product_performance': PRODUCT_PERFORMANCE_PROMPT,
         'sales_performance': SALES_PERFORMANCE_PROMPT,
         'next_purchase': NEXT_PURCHASE_PROMPT,
+        'next_purchase_predictor': NEXT_PURCHASE_PROMPT,  # Alias
         'regional_sales': REGIONAL_SALES_PROMPT,
         'regional_sales_analyzer': REGIONAL_SALES_PROMPT,  # Alias
         'retention_planning': RETENTION_PLANNING_PROMPT,

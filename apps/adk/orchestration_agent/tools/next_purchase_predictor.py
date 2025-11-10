@@ -16,20 +16,28 @@ def predict_next_purchase(
     time_period: str = "default",
     customer_id: Optional[str] = None,
     include_product_recommendations: bool = True,
-    confidence_threshold: float = 0.7
+    confidence_threshold: float = 0.7,
+    component: str = "overview"
 ) -> str:
     """
-    Predict next purchase timing and products using ML models.
-    Now uses the shared processing service for consistency with dashboards.
+    Predict NEXT PURCHASE timing and products using ML models.
+
+    This tool focuses on:
+    - Predicting when customers will make their next purchase
+    - Product recommendation based on purchase history
+    - Purchase timing patterns and trends
+    - Customer segmentation by purchase behavior
+    - Revenue potential from predicted purchases
 
     Args:
-        time_period: Analysis period for historical data
+        time_period: Analysis period (e.g., "2021-01-01:2021-12-31" or "default")
         customer_id: Specific customer to predict for (optional)
         include_product_recommendations: Whether to include product recommendations
         confidence_threshold: Minimum confidence for predictions (0-1)
+        component: Component to display (overview, kpis, predictions, probability, timing, products, affinity, confidence)
 
     Returns:
-        Formatted next purchase predictions as a string.
+        Formatted next purchase predictions with visualization metadata.
     """
 
     # Initialize the sync service
@@ -151,7 +159,32 @@ def predict_next_purchase(
         output.append("- Offer incentives to customers with lower conversion probability")
         output.append("- Monitor customers with irregular purchase patterns for churn risk")
 
-        return "\n".join(output)
+        # Generate text report
+        text_report = "\n".join(output)
+
+        # Add visualization metadata for Enterprise-IQ
+        viz_metadata = {
+            "toolname": "next-purchase",
+            "componentName": component,
+            "body": {
+                "dateFrom": filters.get('date_from'),
+                "dateTo": filters.get('date_to'),
+                "confidenceThreshold": confidence_threshold,
+                "customerSegment": None,
+                "productCategory": None
+            }
+        }
+
+        # Append metadata at the end
+        final_output = f"""{text_report}
+
+## Visualization Data (Machine-Readable)
+<output>
+{json.dumps(viz_metadata)}
+</output>
+<is_visualisation>true</is_visualisation>
+"""
+        return final_output
 
     except Exception as e:
         return f"Error predicting next purchase: {str(e)}"

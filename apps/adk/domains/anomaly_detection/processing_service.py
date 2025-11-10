@@ -45,9 +45,8 @@ class AnomalyProcessingService:
             if len(customer_df) > 0:
                 metrics = self.ml_predictor.train_model(features)
                 self.model_trained = True
-                print(f"[AnomalyProcessingService] ML model trained successfully. Anomalies detected: {metrics.get('n_anomalies', 0)}/{metrics.get('n_samples', 0)}")
         except Exception as e:
-            print(f"[AnomalyProcessingService] Failed to train ML model: {e}")
+            logger.error(f"Failed to train ML model: {e}")
 
     @cache_dashboard_endpoint(dashboard_type='anomaly', ttl=300)
     async def get_dashboard_summary(self, filters: Dict) -> Dict:

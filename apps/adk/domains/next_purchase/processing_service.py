@@ -89,19 +89,22 @@ class NextPurchaseService:
             )
 
             # Generate hybrid insights (rule-based + AI)
-            insights = self._generate_insights(ml_results, kpis)
-            ai_insights = self._generate_ai_insights(ml_results, kpis, filters)
+            rule_based_insights = self._generate_insights(ml_results, kpis)
+            ai_insights = await self._get_cached_ai_insights(ml_results, kpis, filters)
+
+            # Combine into unified insights array (hybrid approach)
+            combined_insights = rule_based_insights + ai_insights
 
             result = {
                 'kpiMetrics': kpis,
                 'mainData': visualizations,
                 'mlResults': ml_results,
-                'insights': insights,  # Rule-based insights
-                'ai_insights': ai_insights,  # AI-powered insights
+                'insights': combined_insights,  # Unified hybrid insights
                 'insights_metadata': {
-                    'rule_based_count': len(insights),
-                    'ai_insights_count': len(ai_insights),
-                    'insights_version': 'hybrid_v1'
+                    'total_count': len(combined_insights),
+                    'rule_based_count': len(rule_based_insights),
+                    'ai_count': len(ai_insights),
+                    'insights_version': 'unified_v2'
                 },
                 'metadata': {
                     'analysisDate': datetime.now().isoformat(),
@@ -199,13 +202,30 @@ class NextPurchaseService:
 
         # Calculate average purchase window from transactions
         avg_purchase_window = 0
-        if not transactions_df.empty and 'customer_id' in transactions_df.columns and 'date' in transactions_df.columns:
+        date_col = 'txn_date' if 'txn_date' in transactions_df.columns else 'date'
+
+        if not transactions_df.empty and 'customer_id' in transactions_df.columns and date_col in transactions_df.columns:
             try:
-                transactions_df['date'] = pd.to_datetime(transactions_df['date'], errors='coerce')
-                customer_gaps = transactions_df.sort_values(['customer_id', 'date']).groupby('customer_id')['date'].diff().dt.days
-                avg_purchase_window = int(customer_gaps.median()) if not customer_gaps.empty else 0
+                # Make a copy to avoid modifying the original
+                txn_copy = transactions_df.copy()
+                txn_copy[date_col] = pd.to_datetime(txn_copy[date_col], errors='coerce')
+
+                # Remove rows with invalid dates
+                txn_copy = txn_copy.dropna(subset=[date_col])
+
+                if len(txn_copy) > 0:
+                    # Calculate gaps between consecutive purchases per customer
+                    customer_gaps = txn_copy.sort_values(['customer_id', date_col]).groupby('customer_id')[date_col].diff().dt.days
+
+                    # Filter out NaN values (first purchase per customer has no gap) and zero-day gaps (same-day purchases)
+                    valid_gaps = customer_gaps.dropna()
+                    valid_gaps = valid_gaps[valid_gaps > 0]  # Exclude same-day purchases
+
+                    if len(valid_gaps) > 0:
+                        median_gap = valid_gaps.median()
+                        avg_purchase_window = int(median_gap) if not pd.isna(median_gap) else 0
             except Exception as e:
-                logger.warning(f"Could not calculate avg purchase window: {e}")
+                logger.error(f"[Purchase Window] Error calculating: {e}", exc_info=True)
 
         kpis = {
             # Primary KPIs (for tiles - 7 total)
@@ -267,8 +287,8 @@ class NextPurchaseService:
             'featureImportance': ml_results.get('feature_importance', []),
 
             # Phase 7: Advanced visualizations
-            'affinityNetwork': self._create_product_affinity_network(predictions),
-            'productAffinityNetwork': self._create_product_affinity_network(predictions),  # Alias
+            'affinityNetwork': self._create_product_affinity_network(predictions, transactions_df),
+            'productAffinityNetwork': self._create_product_affinity_network(predictions, transactions_df),  # Alias
             'confidenceMatrix': self._create_confidence_matrix(predictions),
 
             # Category performance with sparklines
@@ -377,6 +397,9 @@ class NextPurchaseService:
             return []
 
         try:
+            # Check which amount column is available (schema uses 'net_sales_amount' as output alias)
+            amount_col = 'net_sales_amount' if 'net_sales_amount' in transactions_df.columns else 'net_amount'
+
             # Group predictions by product/category
             category_stats = {}
             for p in predictions:
@@ -394,11 +417,11 @@ class NextPurchaseService:
                 category_stats[cat]['customers'].add(p.get('customer_id'))
 
             # Get actual transaction data for categories
-            if 'item_number' in transactions_df.columns and 'net_amount' in transactions_df.columns:
+            if 'item_number' in transactions_df.columns and amount_col in transactions_df.columns:
                 for cat in category_stats.keys():
                     cat_txns = transactions_df[transactions_df['item_number'] == cat]
                     if not cat_txns.empty:
-                        category_stats[cat]['revenue'] = float(cat_txns['net_amount'].sum())
+                        category_stats[cat]['revenue'] = float(cat_txns[amount_col].sum())
                         category_stats[cat]['orders'] = int(len(cat_txns))
 
             # Calculate derived metrics
@@ -423,23 +446,35 @@ class NextPurchaseService:
             return sorted(result, key=lambda x: x['revenue'], reverse=True)[:10]
 
         except Exception as e:
-            logger.error(f"Error in _create_category_performance: {str(e)}")
+            logger.error(f"Error in _create_category_performance: {str(e)}", exc_info=True)
             return []
 
-    def _create_product_affinity_network(self, predictions: List[Dict]) -> Dict:
-        """Create product affinity network data for force-directed graph with strength values"""
+    def _create_product_affinity_network(self, predictions: List[Dict], transactions_df: pd.DataFrame = None) -> Dict:
+        """Create product affinity network data based on historical co-purchase patterns"""
         if not predictions:
             return {'nodes': [], 'links': []}
 
         try:
-            # Count co-occurrences of products (products bought by same customers)
-            product_customers = {}
-            for p in predictions:
-                product = p.get('predicted_product', 'Unknown')
-                customer = p.get('customer_id')
-                if product not in product_customers:
-                    product_customers[product] = set()
-                product_customers[product].add(customer)
+            # Use historical transaction data for co-purchase patterns if available
+            if transactions_df is not None and not transactions_df.empty and 'item_number' in transactions_df.columns:
+                # Count customers who bought each product (historical data)
+                product_customers = {}
+                for _, row in transactions_df.iterrows():
+                    product = row.get('item_number', 'Unknown')
+                    customer = row.get('customer_id')
+                    if product and customer:
+                        if product not in product_customers:
+                            product_customers[product] = set()
+                        product_customers[product].add(customer)
+            else:
+                # Fallback to predictions (will have no links since each customer has one predicted product)
+                product_customers = {}
+                for p in predictions:
+                    product = p.get('predicted_product', 'Unknown')
+                    customer = p.get('customer_id')
+                    if product not in product_customers:
+                        product_customers[product] = set()
+                    product_customers[product].add(customer)
 
             # Create nodes with proper sizing
             nodes = []
@@ -470,9 +505,15 @@ class NextPurchaseService:
                             'strength': strength  # Normalized strength 0-100
                         })
 
-            # Sort and limit
+            # Sort and limit nodes
             nodes_sorted = sorted(nodes, key=lambda x: x['value'], reverse=True)[:15]
-            links_sorted = sorted(links, key=lambda x: x['strength'], reverse=True)[:30]
+
+            # Get IDs of nodes that made it to the final list
+            final_node_ids = {node['id'] for node in nodes_sorted}
+
+            # Filter links to only include those connecting nodes in the final list
+            valid_links = [link for link in links if link['source'] in final_node_ids and link['target'] in final_node_ids]
+            links_sorted = sorted(valid_links, key=lambda x: x['strength'], reverse=True)[:30]
 
             return {
                 'nodes': nodes_sorted,
@@ -744,44 +785,76 @@ class NextPurchaseService:
         return metrics
 
     def _generate_insights(self, ml_results: Dict, kpis: Dict) -> List[str]:
-        """Generate insights based on ML results and KPIs"""
+        """Generate rule-based insights for Next Purchase Predictor"""
 
         insights = []
+        predictions = ml_results.get('predictions', [])
 
-        # Generate insights based on dashboard type
-        if 'next_purchase' == 'customer_segmentation':
-            segments = ml_results.get('segments', [])
-            if segments:
-                largest_segment = max(segments, key=lambda x: x['size'])
-                insights.append(f"Largest customer segment contains {largest_segment['size']} customers ({largest_segment['percentage']:.1f}% of total)")
+        # Insight 1: High-intent customers
+        high_intent_count = kpis.get('highIntentCustomers', kpis.get('highProbability', 0))
+        if high_intent_count > 0:
+            total_predictions = kpis.get('totalPredictions', len(predictions))
+            pct = (high_intent_count / total_predictions * 100) if total_predictions > 0 else 0
+            insights.append(f"{high_intent_count} customers ({pct:.1f}%) have high purchase intent (>70% probability)")
 
-                highest_value_segment = max(segments, key=lambda x: x['avg_revenue'])
-                insights.append(f"Segment {highest_value_segment['segment_id']} has the highest average revenue at ${highest_value_segment['avg_revenue']:.2f}")
+        # Insight 2: Near-term opportunities
+        customers_7d = kpis.get('customersWithin7d', 0)
+        if customers_7d > 0:
+            insights.append(f"{customers_7d} customers are likely to purchase within the next 7 days")
 
-        elif 'next_purchase' == 'customer_ltv':
-            if kpis.get('avgLTV', 0) > 0:
-                insights.append(f"Average customer lifetime value is ${kpis['avgLTV']:.2f}")
-            if kpis.get('highValueCount', 0) > 0:
-                insights.append(f"{kpis['highValueCount']} customers are classified as high-value (top 25%)")
+        # Insight 3: Revenue potential
+        revenue_30d = kpis.get('predictedRevenue30d', 0)
+        if revenue_30d > 0:
+            insights.append(f"Potential revenue of ${revenue_30d:,.2f} expected within 30 days")
 
-        elif 'next_purchase' == 'engagement_classifier':
-            if kpis.get('highlyEngaged', 0) > 0:
-                insights.append(f"{kpis['highlyEngaged']} customers are highly engaged")
-            if kpis.get('atRiskCount', 0) > 0:
-                insights.append(f"{kpis['atRiskCount']} customers are at risk and need attention")
+        # Insight 4: Average purchase timing
+        avg_days = kpis.get('avgPredictedDays', kpis.get('avgDays', 0))
+        if avg_days > 0:
+            insights.append(f"Average predicted time to next purchase is {int(avg_days)} days")
 
-        # Add general insights
+        # Insight 5: Confidence level
+        confidence = kpis.get('confidenceIndex', 0)
+        if confidence > 0:
+            conf_pct = confidence * 100
+            conf_level = "high" if conf_pct >= 70 else "moderate" if conf_pct >= 50 else "low"
+            insights.append(f"Model confidence is {conf_level} ({conf_pct:.1f}%) across all predictions")
+
+        # Fallback if no insights generated
         if not insights:
             insights = [
-                "Analysis completed successfully",
-                f"Processed data for {kpis.get('totalCustomers', 0)} customers",
-                "ML model predictions are available for decision making"
+                f"Generated {kpis.get('totalPredictions', 0)} next purchase predictions",
+                "Purchase prediction analysis completed successfully"
             ]
 
         return insights
 
+    async def _get_cached_ai_insights(self, ml_results: Dict, kpis: Dict, filters: Dict) -> List[str]:
+        """Get AI insights with separate caching (30-min TTL) - Non-blocking async wrapper
+
+        Args:
+            ml_results: ML prediction results
+            kpis: KPI metrics from dashboard
+            filters: Applied filters for context
+
+        Returns:
+            List of AI-generated insight strings (empty list on error)
+        """
+        try:
+            import asyncio
+            # Run AI generation in thread pool to avoid blocking
+            ai_insights = await asyncio.to_thread(
+                self._generate_ai_insights,
+                ml_results,
+                kpis,
+                filters
+            )
+            return ai_insights
+        except Exception as e:
+            logger.error(f"[NextPurchaseService] Error in async AI insights: {e}")
+            return []
+
     def _generate_ai_insights(self, ml_results: Dict, kpis: Dict, filters: Dict) -> List[str]:
-        """Generate AI-powered strategic insights using Gemini
+        """Generate AI-powered strategic insights using Gemini (synchronous)
 
         Complements rule-based insights with creative, strategic analysis.
         Uses dashboard-specific prompts for consistent, actionable recommendations.
@@ -841,7 +914,7 @@ class NextPurchaseService:
 
             # Generate AI insights
             ai_insights = generate_ai_insights(
-                dashboard_type='next_purchase',
+                dashboard_type='next_purchase_predictor',  # Updated to match AI insights generator
                 kpis=kpis_dict,
                 data_summary=data_summary,
                 filters=filters
@@ -960,12 +1033,17 @@ class NextPurchaseService:
             # Get unique categories from predictions
             categories = list(set([p.get('predicted_product', 'Unknown') for p in predictions]))[:10]
 
-            # Check if we have date and amount columns
-            if 'date' not in transactions_df.columns or 'net_amount' not in transactions_df.columns or 'item_number' not in transactions_df.columns:
+            # Check which columns are available (schema uses 'txn_date' and 'net_sales_amount' as output aliases)
+            date_col = 'txn_date' if 'txn_date' in transactions_df.columns else 'date'
+            amount_col = 'net_sales_amount' if 'net_sales_amount' in transactions_df.columns else 'net_amount'
+
+            # Check if we have required columns
+            if date_col not in transactions_df.columns or amount_col not in transactions_df.columns or 'item_number' not in transactions_df.columns:
+                logger.warning(f"Missing required columns. Available: {transactions_df.columns.tolist()}")
                 return []
 
             # Ensure date is datetime
-            transactions_df['date'] = pd.to_datetime(transactions_df['date'], errors='coerce')
+            transactions_df[date_col] = pd.to_datetime(transactions_df[date_col], errors='coerce')
 
             for category in categories:
                 # Get transactions for this category
@@ -973,8 +1051,8 @@ class NextPurchaseService:
 
                 if not cat_txns.empty:
                     # Group by month and sum revenue
-                    cat_txns['month'] = cat_txns['date'].dt.to_period('M')
-                    monthly = cat_txns.groupby('month')['net_amount'].sum().reset_index()
+                    cat_txns['month'] = cat_txns[date_col].dt.to_period('M')
+                    monthly = cat_txns.groupby('month')[amount_col].sum().reset_index()
 
                     # Get last 6 months
                     monthly_sorted = monthly.sort_values('month', ascending=False).head(6)
@@ -983,7 +1061,7 @@ class NextPurchaseService:
                     for _, row in monthly_sorted.iterrows():
                         points.append({
                             'month': str(row['month']),
-                            'revenue': float(row['net_amount'])
+                            'revenue': float(row[amount_col])
                         })
 
                     result.append({
@@ -994,7 +1072,7 @@ class NextPurchaseService:
             return result
 
         except Exception as e:
-            logger.error(f"Error in _create_category_revenue_series: {str(e)}")
+            logger.error(f"Error in _create_category_revenue_series: {str(e)}", exc_info=True)
             return []
 
     def _create_customer_timeline_data(self, predictions: List[Dict], transactions_df: pd.DataFrame) -> Dict:
@@ -1009,32 +1087,42 @@ class NextPurchaseService:
 
             result = {}
 
-            for cust_id in customer_ids:
+            # Check which date column is available (schema uses 'txn_date' as output alias)
+            date_col = 'txn_date' if 'txn_date' in transactions_df.columns else 'date'
+            amount_col = 'net_sales_amount' if 'net_sales_amount' in transactions_df.columns else 'net_amount'
+
+            for pred in top_customers:
+                cust_id = pred.get('customer_id')
+                customer_name = pred.get('customer_name', f'Customer {cust_id}')
+
                 # Get customer's transactions
                 cust_txns = transactions_df[transactions_df['customer_id'] == cust_id].copy()
 
                 if not cust_txns.empty:
                     # Sort by date descending and limit to last 20
-                    if 'date' in cust_txns.columns:
-                        cust_txns['date'] = pd.to_datetime(cust_txns['date'], errors='coerce')
-                        cust_txns = cust_txns.sort_values('date', ascending=False).head(20)
+                    if date_col in cust_txns.columns:
+                        cust_txns[date_col] = pd.to_datetime(cust_txns[date_col], errors='coerce')
+                        cust_txns = cust_txns.sort_values(date_col, ascending=False).head(20)
 
                         purchases = []
                         for _, txn in cust_txns.iterrows():
                             purchases.append({
-                                'date': txn['date'].isoformat() if pd.notna(txn['date']) else None,
+                                'date': txn[date_col].isoformat() if pd.notna(txn[date_col]) else None,
                                 'category': txn.get('item_number', 'Unknown'),
-                                'amount': float(txn.get('net_amount', 0)),
+                                'amount': float(txn.get(amount_col, 0)),
                                 'txn_id': str(txn.get('txn_id', ''))
                             })
 
-                        # Store keyed by customer_id for O(1) lookup
-                        result[int(cust_id)] = list(reversed(purchases))  # Chronological order
+                        # Store keyed by customer_id with customer_name for O(1) lookup
+                        result[int(cust_id)] = {
+                            'customer_name': customer_name,
+                            'purchases': list(reversed(purchases))  # Chronological order
+                        }
 
             return result
 
         except Exception as e:
-            logger.error(f"Error in _create_customer_timeline_data: {str(e)}")
+            logger.error(f"Error in _create_customer_timeline_data: {str(e)}", exc_info=True)
             return {}
 
     def _assess_data_quality(self, customers_df: pd.DataFrame, transactions_df: pd.DataFrame) -> Dict:

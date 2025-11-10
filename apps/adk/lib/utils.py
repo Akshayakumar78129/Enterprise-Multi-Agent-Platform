@@ -114,7 +114,7 @@ COMPONENT_SCHEMA = {
             }
         },
         "next-purchase": {
-            "components": ["kpis", "predictions", "probability", "timing", "products", "affinity", "confidence"],
+            "components": ["overview", "kpis", "kpiTiles", "predictions", "customerJourney", "probability", "timing", "purchaseTiming", "products", "affinity", "affinityNetwork", "confidence", "confidenceMatrix", "categoryPerformance"],
             "parameters": {
                 "start_date": "date",
                 "end_date": "date",

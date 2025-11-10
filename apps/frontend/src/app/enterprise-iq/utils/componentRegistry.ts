@@ -133,13 +133,32 @@ export const componentRegistry = {
 
   // Retention Planner components
   'retention-planner': {
-    dashboard: dynamic(() => import('../retention-planner/page').catch(() => null), { ssr: false }),
-    overview: dynamic(() => import('../retention-planner/page').catch(() => null), { ssr: false }),
-    kpis: dynamic(() => import('components').then(mod => mod.RetentionKPIs).catch(() => null), { ssr: false }),
-    riskDistribution: dynamic(() => import('components').then(mod => mod.ChurnRiskGauge).catch(() => null), { ssr: false }),
-    valueRiskMatrix: dynamic(() => import('components').then(mod => mod.ValueRiskMatrix).catch(() => null), { ssr: false }),
-    interventionROI: dynamic(() => import('components').then(mod => mod.InterventionROI).catch(() => null), { ssr: false }),
-    lifecycleStages: dynamic(() => import('components').then(mod => mod.LifecycleStages).catch(() => null), { ssr: false }),
+    dashboard: dynamic(() => import('../../retention-planner/page').catch(() => null), { ssr: false }),
+    overview: dynamic(() => import('../../retention-planner/page').catch(() => null), { ssr: false }),
+    kpis: dynamic(() => import('../../retention-planner/components').then(mod => mod.RetentionKPIs).catch(() => null), { ssr: false }),
+    riskDistribution: dynamic(() => import('../../retention-planner/components').then(mod => mod.ChurnRiskGauge).catch(() => null), { ssr: false }),
+    valueRiskMatrix: dynamic(() => import('../../retention-planner/components').then(mod => mod.ValueRiskMatrix).catch(() => null), { ssr: false }),
+    interventionROI: dynamic(() => import('../../retention-planner/components').then(mod => mod.InterventionROI).catch(() => null), { ssr: false }),
+    lifecycleStages: dynamic(() => import('../../retention-planner/components').then(mod => mod.LifecycleStages).catch(() => null), { ssr: false }),
+  },
+
+  // Next Purchase Predictor components
+  'next-purchase': {
+    dashboard: dynamic(() => import('../../next-purchase/page').catch(() => null), { ssr: false }),
+    overview: dynamic(() => import('../../next-purchase/page').catch(() => null), { ssr: false }),
+    kpis: dynamic(() => import('../../next-purchase/components').then(mod => mod.PredictionKPIs).catch(() => null), { ssr: false }),
+    kpiTiles: dynamic(() => import('../../next-purchase/components').then(mod => mod.PredictionKPIs).catch(() => null), { ssr: false }),
+    predictions: dynamic(() => import('../../next-purchase/components').then(mod => mod.NextPurchasePredictions).catch(() => null), { ssr: false }),
+    customerJourney: dynamic(() => import('../../next-purchase/components').then(mod => mod.CustomerPurchaseJourney).catch(() => null), { ssr: false }),
+    probability: dynamic(() => import('../../next-purchase/components').then(mod => mod.PurchaseProbability).catch(() => null), { ssr: false }),
+    timing: dynamic(() => import('../../next-purchase/components').then(mod => mod.TimingForecast).catch(() => null), { ssr: false }),
+    purchaseTiming: dynamic(() => import('../../next-purchase/components').then(mod => mod.PurchaseTimingPredictor).catch(() => null), { ssr: false }),
+    products: dynamic(() => import('../../next-purchase/components').then(mod => mod.RecommendedProducts).catch(() => null), { ssr: false }),
+    affinity: dynamic(() => import('../../next-purchase/components').then(mod => mod.ProductAffinityNetwork).catch(() => null), { ssr: false }),
+    affinityNetwork: dynamic(() => import('../../next-purchase/components').then(mod => mod.ProductAffinityNetwork).catch(() => null), { ssr: false }),
+    confidence: dynamic(() => import('../../next-purchase/components').then(mod => mod.PredictionConfidenceMatrix).catch(() => null), { ssr: false }),
+    confidenceMatrix: dynamic(() => import('../../next-purchase/components').then(mod => mod.PredictionConfidenceMatrix).catch(() => null), { ssr: false }),
+    categoryPerformance: dynamic(() => import('../../next-purchase/components').then(mod => mod.CategoryPerformanceOverview).catch(() => null), { ssr: false }),
   },
 };
 

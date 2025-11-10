@@ -16,6 +16,12 @@ export interface NextPurchaseFilters {
   };
 }
 
+// Message interface for chatbot
+export interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 interface NextPurchaseContextType {
   filters: NextPurchaseFilters;
   setFilters: React.Dispatch<React.SetStateAction<NextPurchaseFilters>>;
@@ -28,6 +34,8 @@ interface NextPurchaseContextType {
   isBusinessIntelligencePanelOpen: boolean;
   setIsBusinessIntelligencePanelOpen: React.Dispatch<React.SetStateAction<boolean>>;
   selectionManager: SelectionManager;
+  chatMessages: Message[];
+  setChatMessages: React.Dispatch<React.SetStateAction<Message[]>>;
 }
 
 const NextPurchaseContext = createContext<NextPurchaseContextType | undefined>(undefined);
@@ -39,6 +47,12 @@ export function NextPurchaseProvider({ children }: { children: React.ReactNode }
   // Panel states
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
   const [isBusinessIntelligencePanelOpen, setIsBusinessIntelligencePanelOpen] = useState(false);
+
+  // Chat messages state with welcome message
+  const [chatMessages, setChatMessages] = useState<Message[]>([{
+    role: "assistant",
+    content: "Hello! I'm your AI assistant. How can I help you analyze your next purchase prediction data today?"
+  }]);
 
   // Data sharing
   const [predictionData, setPredictionDataInternal] = useState<any[]>([]);
@@ -105,6 +119,8 @@ export function NextPurchaseProvider({ children }: { children: React.ReactNode }
       isBusinessIntelligencePanelOpen,
       setIsBusinessIntelligencePanelOpen,
       selectionManager,
+      chatMessages,
+      setChatMessages,
     }),
     [
       filters,
@@ -115,7 +131,8 @@ export function NextPurchaseProvider({ children }: { children: React.ReactNode }
       setKpiMetrics,
       isChatPanelOpen,
       isBusinessIntelligencePanelOpen,
-      selectionManager
+      selectionManager,
+      chatMessages
     ]
   );
 

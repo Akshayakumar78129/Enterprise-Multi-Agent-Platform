@@ -195,15 +195,8 @@ async def startup_event():
     print("[Main Server] Dashboard caching enabled")
 
     # Train ML models on startup to avoid retraining on every request
-    print("[Main Server] Training ML models on startup...")
-
-    # Train churn prediction model
     await churn_service._train_ml_model()
-    print("[Main Server] Churn ML model training complete")
-
-    # Train anomaly detection model
     await anomaly_service._train_ml_model()
-    print("[Main Server] Anomaly ML model training complete")
 
     # Store the service instances for use in routers
     app.state.churn_service = churn_service
@@ -223,8 +216,6 @@ async def startup_event():
     app.state.ar_aging_service = ar_aging_service
     app.state.revenue_forecast_service = revenue_forecast_service
     app.state.demand_forecast_service = demand_forecast_service
-
-    print("[Main Server] All services initialized")
 
 @app.get("/")
 def read_root():

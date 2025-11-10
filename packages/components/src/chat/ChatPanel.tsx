@@ -61,6 +61,7 @@ export function ChatPanel({
       customer_segmentation: "Hello! I'm your AI assistant. How can I help you analyze your customer segmentation data today?",
       product_performance: "Hello! I'm your AI assistant. How can I help you analyze your product performance data today?",
       customer_ltv: "Hello! I'm your AI assistant. How can I help you analyze your customer lifetime value data today?",
+      next_purchase: "Hello! I'm your AI assistant. How can I help you analyze your next purchase prediction data today?",
       general: "Hello! I'm your AI assistant. How can I help you today?"
     };
     return contextMessages[dashboardContext] || contextMessages.general;

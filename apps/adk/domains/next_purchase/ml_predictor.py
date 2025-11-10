@@ -78,7 +78,7 @@ class NextPurchaseMLPredictor:
                     'predicted_purchase_date': (pd.Timestamp.now() + pd.Timedelta(days=int(predictions_days[i]))).strftime('%Y-%m-%d'),
                     'predicted_product': product_rec['predicted_product'] if product_rec else 'Unknown',
                     'probability': float(product_rec['probability']) if product_rec else 0.5,
-                    'predicted_amount': float(row.get('avg_order_value', 0)) if row.get('avg_order_value') else 100.0,
+                    'predicted_amount': float(row.get('avg_transaction_value', 0)) if row.get('avg_transaction_value') else 100.0,
                     'total_purchases': int(row.get('transaction_count', 0)),
                     'is_cross_sell': False  # Would need more logic to determine this
                 })

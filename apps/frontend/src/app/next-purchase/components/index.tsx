@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { Card, Skeleton, FilterBar, KPIRow, MetricsRow } from 'components/index';
+import { Card, Skeleton, FilterBar, KPIRow, MetricsRow, getShiftClickManager } from 'components/index';
 
 // ========================================
 // Next Purchase Filters Component (Phase 8)
@@ -70,6 +70,8 @@ export function NextPurchaseFilters({ filters, onFiltersChange }: { filters: any
 // Prediction KPIs Component (5 Tiles) - Using shared KPIRow component
 // ========================================
 export function PredictionKPIs({ metrics, loading }: { metrics: any; loading?: boolean }) {
+  const shiftClickManager = getShiftClickManager();
+
   const kpis = useMemo(() => {
     if (!metrics) {
       return [
@@ -155,7 +157,7 @@ export function PredictionKPIs({ metrics, loading }: { metrics: any; loading?: b
       {
         id: "avg-days",
         title: "Avg Days to Purchase",
-        value: metrics.avgDaysToPurchase || 0,
+        value: metrics.avgPredictedDays || metrics.avgDays || 0,
         format: "number" as const,
         color: "#8b5cf6",
         suffix: "d",
@@ -169,19 +171,20 @@ export function PredictionKPIs({ metrics, loading }: { metrics: any; loading?: b
         subtitle: "30 days",
       },
       {
-        id: "coverage",
-        title: "Customer Coverage",
-        value: metrics.predictionCoverage || 0,
-        format: "percentage" as const,
-        color: "#06b6d4",
-      },
-      {
         id: "purchase-window",
         title: "Purchase Window",
         value: metrics.avgPurchaseWindow || 0,
         format: "number" as const,
         color: "#ec4899",
         subtitle: "median days",
+      },
+      {
+        id: "top-demand",
+        title: "Top Demand Product",
+        value: metrics.topDemandProduct || "N/A",
+        format: "text" as const,
+        color: "#14b8a6",
+        subtitle: `${metrics.topDemandShare || 0}% share`,
       },
     ];
   }, [metrics]);
@@ -196,7 +199,24 @@ export function PredictionKPIs({ metrics, loading }: { metrics: any; loading?: b
     );
   }
 
-  return <KPIRow kpis={kpis} columns={7} animationDelay={50} />;
+  return (
+    <KPIRow
+      kpis={kpis}
+      columns={7}
+      animationDelay={50}
+      onKPIShiftClick={(kpi, event) => {
+        shiftClickManager.addPoint({
+          label: kpi.title,
+          value: typeof kpi.value === 'number'
+            ? (kpi.format === 'percentage' ? `${kpi.value.toFixed(1)}%` :
+               kpi.format === 'currency' ? `$${kpi.value.toLocaleString()}` :
+               kpi.value.toString())
+            : kpi.value.toString(),
+          source: 'Next Purchase KPIs'
+        }, event.nativeEvent);
+      }}
+    />
+  );
 }
 
 // ========================================
@@ -215,7 +235,6 @@ export function AIInsightsChips({ metrics, onActionClick }: {
     if ((metrics.highIntentCustomers || 0) > 0) {
       items.push({
         id: 'high-intent',
-        icon: '🎯',
         title: 'Target High-Intent',
         description: `${metrics.highIntentCustomers} customers with >70% probability`,
         gradient: 'from-green-500/10 to-emerald-500/10',
@@ -228,7 +247,6 @@ export function AIInsightsChips({ metrics, onActionClick }: {
     if ((metrics.customersWithin7d || 0) > 0) {
       items.push({
         id: 'urgent-timing',
-        icon: '⚡',
         title: 'Urgent Opportunities',
         description: `${metrics.customersWithin7d} customers ready within 7 days`,
         gradient: 'from-orange-500/10 to-red-500/10',
@@ -241,7 +259,6 @@ export function AIInsightsChips({ metrics, onActionClick }: {
     if ((metrics.topDemandProduct || 'N/A') !== 'N/A') {
       items.push({
         id: 'cross-sell',
-        icon: '🔄',
         title: 'Cross-Sell Focus',
         description: `${metrics.topDemandProduct} trending (${metrics.topDemandShare}% share)`,
         gradient: 'from-blue-500/10 to-cyan-500/10',
@@ -255,7 +272,6 @@ export function AIInsightsChips({ metrics, onActionClick }: {
     if (coverage < 80) {
       items.push({
         id: 'expand-coverage',
-        icon: '📊',
         title: 'Expand Coverage',
         description: `${coverage.toFixed(0)}% of customers covered - optimize for more`,
         gradient: 'from-purple-500/10 to-pink-500/10',
@@ -284,7 +300,6 @@ export function AIInsightsChips({ metrics, onActionClick }: {
         >
           <div className="p-4">
             <div className="flex items-start gap-3">
-              <div className="text-2xl">{insight.icon}</div>
               <div className="flex-1 min-w-0">
                 <div className={`text-sm font-semibold ${insight.textColor} mb-1`}>
                   {insight.title}
@@ -324,52 +339,34 @@ export function ModelOpsPanel({ metrics, loading }: { metrics: any; loading?: bo
       label: 'Top Demand Product',
       value: metrics.topDemandProduct || 'N/A',
       subtitle: `${metrics.topDemandShare || 0}% of predictions`,
-      icon: '📦',
       color: 'text-primary',
     },
     {
       label: 'Prediction Coverage',
       value: `${(metrics.predictionCoverage || 0).toFixed(1)}%`,
       subtitle: `${metrics.totalCustomers || 0} total customers`,
-      icon: '📊',
       color: 'text-cyan-500',
     },
     {
       label: 'Avg Purchase Window',
       value: `${metrics.avgPurchaseWindow || 0} days`,
       subtitle: 'Median repeat purchase cycle',
-      icon: '⏱️',
       color: 'text-purple-500',
     },
   ];
 
   return (
     <div className="glass-card p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <div className="text-sm font-semibold">Model Operations</div>
-          <div className="text-xs text-muted-foreground mt-0.5">
-            Secondary metrics and model performance indicators
-          </div>
-        </div>
-        <div className="text-xs px-2 py-1 rounded-full bg-success/10 text-success border border-success/20">
-          Active
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {stats.map((stat, idx) => (
           <div
             key={idx}
             className="p-4 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors"
           >
-            <div className="flex items-start gap-3">
-              <div className="text-2xl">{stat.icon}</div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs text-muted-foreground mb-1">{stat.label}</div>
-                <div className={`text-xl font-bold ${stat.color} mb-1`}>{stat.value}</div>
-                <div className="text-xs text-muted-foreground">{stat.subtitle}</div>
-              </div>
+            <div className="flex flex-col">
+              <div className="text-xs text-muted-foreground mb-1">{stat.label}</div>
+              <div className={`text-xl font-bold ${stat.color} mb-1`}>{stat.value}</div>
+              <div className="text-xs text-muted-foreground">{stat.subtitle}</div>
             </div>
           </div>
         ))}
@@ -379,7 +376,7 @@ export function ModelOpsPanel({ metrics, loading }: { metrics: any; loading?: bo
 }
 
 // ========================================
-// Next Purchase Predictions Table (Phase 2 - Expandable Journey)
+// Next Purchase Predictions Table (Standard DataTable)
 // ========================================
 export function NextPurchasePredictions({
   data,
@@ -390,24 +387,12 @@ export function NextPurchasePredictions({
   customerJourneys?: Record<number, any[]>;
   loading?: boolean;
 }) {
-  // All hooks MUST be at the top, before any conditional returns
-  const [expandedRow, setExpandedRow] = React.useState<number | null>(null);
+  const { DataTable, Skeleton, getShiftClickManager } = require('components/index');
+  const shiftClickManager = getShiftClickManager();
 
-  if (loading) return <Skeleton className="h-64 w-full" />;
+  if (loading) return <Skeleton className="h-96 w-full" />;
 
   const predictions = Array.isArray(data) ? data : [];
-
-  // Debug: Log customerJourneys structure (only once when we have data)
-  if (predictions.length > 0 && Object.keys(customerJourneys).length > 0) {
-    console.log('Customer Journeys Data:', {
-      customerJourneys,
-      journeyKeys: Object.keys(customerJourneys),
-      firstPrediction: predictions[0],
-      firstCustomerId: predictions[0]?.customer_id,
-      firstJourneyByNumber: customerJourneys[predictions[0]?.customer_id],
-      firstJourneyByString: customerJourneys[String(predictions[0]?.customer_id)]
-    });
-  }
 
   if (predictions.length === 0) {
     return (
@@ -417,210 +402,82 @@ export function NextPurchasePredictions({
     );
   }
 
-  const toggleRow = (idx: number) => {
-    if (expandedRow === idx) {
-      setExpandedRow(null);
-    } else {
-      setExpandedRow(idx);
-    }
-  };
+  // Normalize predictions data for DataTable
+  const rows = predictions.map((prediction: any, index: number) => {
+    const probability = prediction.probability || 0;
+    const customerName = prediction.customer_name || prediction.customer_id || `Customer ${index + 1}`;
+
+    return {
+      id: prediction.customer_id || index,
+      customer_name: customerName,
+      predicted_product: prediction.predicted_product || 'Unknown',
+      probability,
+      days_to_purchase: prediction.days_to_purchase || 0,
+      predicted_amount: prediction.predicted_amount || 0
+    };
+  });
+
+  const tableColumns = [
+    {
+      id: "customer_name",
+      header: "Customer",
+      accessor: "customer_name" as const,
+      sortable: true,
+    },
+    {
+      id: "predicted_product",
+      header: "Predicted Product",
+      accessor: "predicted_product" as const,
+      sortable: true,
+    },
+    {
+      id: "probability",
+      header: "Confidence",
+      accessor: "probability" as const,
+      sortable: true,
+      render: (value: number) => {
+        const probColor = value >= 0.7 ? "text-success" : value >= 0.5 ? "text-primary" : "text-muted-foreground";
+        return (
+          <span className={`text-xs font-medium ${probColor}`}>
+            {(value * 100).toFixed(0)}%
+          </span>
+        );
+      },
+    },
+    {
+      id: "days_to_purchase",
+      header: "Days to Purchase",
+      accessor: "days_to_purchase" as const,
+      sortable: true,
+      render: (value: number) => `${value} days`,
+    },
+    {
+      id: "predicted_amount",
+      header: "Est. Amount",
+      accessor: "predicted_amount" as const,
+      sortable: true,
+      render: (value: number) => `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+    },
+  ];
 
   return (
-    <div className="glass-card p-6">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="text-left py-3 px-3 w-10">
-                <div className="text-xs font-medium text-muted-foreground">Expand</div>
-              </th>
-              <th className="text-left py-3 px-3">
-                <div className="text-xs font-medium text-muted-foreground">Customer ID</div>
-              </th>
-              <th className="text-left py-3 px-3">
-                <div className="text-xs font-medium text-muted-foreground">Product</div>
-              </th>
-              <th className="text-right py-3 px-3">
-                <div className="text-xs font-medium text-muted-foreground">Confidence</div>
-              </th>
-              <th className="text-right py-3 px-3">
-                <div className="text-xs font-medium text-muted-foreground">Days</div>
-              </th>
-              <th className="text-right py-3 px-3">
-                <div className="text-xs font-medium text-muted-foreground">Est. Amount</div>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {predictions.slice(0, 15).map((prediction: any, idx: number) => {
-              const probability = prediction.probability || 0;
-              const probColor =
-                probability >= 0.7 ? 'text-success' : probability >= 0.5 ? 'text-primary' : 'text-muted-foreground';
-              const customerId = prediction.customer_id;
-              const isExpanded = expandedRow === idx;
-              // Try both number and string keys
-              const purchases = customerJourneys[customerId] || customerJourneys[String(customerId)] || [];
-              const hasPurchases = purchases.length > 0;
-
-              return (
-                <React.Fragment key={idx}>
-                  <tr
-                    className={`
-                      border-b border-border/50 cursor-pointer transition-all
-                      ${isExpanded ? 'bg-primary/5' : 'hover:bg-muted/30'}
-                    `}
-                    onClick={() => toggleRow(idx)}
-                  >
-                    <td className="py-3 px-3">
-                      <div className={`
-                        flex items-center justify-center w-6 h-6 rounded-md
-                        transition-all duration-200
-                        ${isExpanded ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}
-                      `}>
-                        <svg
-                          className={`w-3 h-3 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </td>
-                    <td className="py-3 px-3">
-                      <div className="font-medium">{customerId || 'N/A'}</div>
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-primary/10 to-purple-500/10 text-primary border border-primary/20">
-                        {prediction.predicted_product || 'Unknown'}
-                      </span>
-                    </td>
-                    <td className={`py-3 px-3 text-right`}>
-                      <div className={`inline-flex items-center gap-1.5 font-semibold ${probColor}`}>
-                        <div className="flex gap-0.5">
-                          {[1, 2, 3, 4, 5].map((bar) => (
-                            <div
-                              key={bar}
-                              className={`w-1 rounded-full transition-all ${
-                                bar <= probability * 5 ? 'h-4 opacity-100' : 'h-2 opacity-30'
-                              }`}
-                              style={{
-                                backgroundColor: probability >= 0.7 ? '#22c55e' : probability >= 0.5 ? '#3b82f6' : '#6b7280'
-                              }}
-                            />
-                          ))}
-                        </div>
-                        {(probability * 100).toFixed(0)}%
-                      </div>
-                    </td>
-                    <td className="py-3 px-3 text-right">
-                      <div className="font-medium">{prediction.days_to_purchase || 0} days</div>
-                    </td>
-                    <td className="py-3 px-3 text-right">
-                      <div className="font-semibold text-success">
-                        ${(prediction.predicted_amount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                      </div>
-                    </td>
-                  </tr>
-
-                  {isExpanded && (
-                    <tr>
-                      <td colSpan={6} className="bg-gradient-to-br from-muted/20 to-background p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <div>
-                            <div className="text-sm font-semibold">Purchase Journey Timeline</div>
-                            <div className="text-xs text-muted-foreground mt-0.5">
-                              {purchases.length > 0
-                                ? `Showing last ${purchases.length} purchases`
-                                : 'Customer purchase history'}
-                            </div>
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Click row again to collapse
-                          </div>
-                        </div>
-
-                        {hasPurchases && (
-                          <div className="overflow-x-auto pb-2">
-                            <div className="flex gap-6 min-w-max">
-                              {purchases.map((purchase: any, i: number) => (
-                                <div key={i} className="relative flex-shrink-0">
-                                  <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-lg p-4 min-w-[140px] hover:shadow-lg transition-shadow">
-                                    <div className="flex items-start justify-between mb-2">
-                                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white text-xs font-bold">
-                                        #{i + 1}
-                                      </div>
-                                      <div className="text-xs font-medium text-blue-500">
-                                        {purchase.txn_id}
-                                      </div>
-                                    </div>
-                                    <div className="font-semibold text-sm text-foreground mb-1">
-                                      {purchase.category || 'Product'}
-                                    </div>
-                                    <div className="text-base font-bold text-success mb-2">
-                                      ${purchase.amount?.toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {purchase.date}
-                                    </div>
-                                  </div>
-                                  {i < purchases.length - 1 && (
-                                    <div className="absolute top-1/2 -right-5 flex items-center">
-                                      <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                      </svg>
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-
-                              {/* Prediction card at the end */}
-                              <div className="relative flex-shrink-0">
-                                <div className="absolute top-1/2 -left-5 flex items-center">
-                                  <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                  </svg>
-                                </div>
-                                <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-2 border-dashed border-purple-500/50 rounded-lg p-4 min-w-[140px]">
-                                  <div className="flex items-start justify-between mb-2">
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
-                                      ?
-                                    </div>
-                                    <div className="text-xs font-medium text-purple-500">
-                                      Predicted
-                                    </div>
-                                  </div>
-                                  <div className="font-semibold text-sm text-foreground mb-1">
-                                    {prediction.predicted_product}
-                                  </div>
-                                  <div className="text-base font-bold text-purple-500 mb-2">
-                                    ${prediction.predicted_amount?.toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    In ~{prediction.days_to_purchase || 0} days
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {!hasPurchases && (
-                          <div className="text-center py-8 px-4">
-                            <div className="text-sm text-muted-foreground">
-                              No purchase history available for this customer
-                            </div>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+    <div className="responsive-table">
+      <DataTable
+        data={rows}
+        columns={tableColumns}
+        searchable
+        selectable={false}
+        pageSize={10}
+        onRowClick={(row, event) => {
+          if (event?.shiftKey) {
+            shiftClickManager.addPoint({
+              label: `Customer: ${row.customer_name}`,
+              value: `Product: ${row.predicted_product} (${(row.probability * 100).toFixed(0)}%)`,
+              source: 'Next Purchase Predictions'
+            }, event.nativeEvent);
+          }
+        }}
+      />
     </div>
   );
 }
@@ -629,6 +486,8 @@ export function NextPurchasePredictions({
 // Purchase Probability Distribution
 // ========================================
 export function PurchaseProbability({ data, loading }: { data: any; loading?: boolean }) {
+  const shiftClickManager = getShiftClickManager();
+
   if (loading) return <Skeleton className="h-64 w-full" />;
 
   const bins = data?.bins || [];
@@ -654,7 +513,19 @@ export function PurchaseProbability({ data, loading }: { data: any; loading?: bo
             idx >= 4 ? 'bg-success' : idx >= 3 ? 'bg-primary' : idx >= 2 ? 'bg-warning' : 'bg-error';
 
           return (
-            <div key={idx}>
+            <div
+              key={idx}
+              onClick={(e) => {
+                if (e.shiftKey) {
+                  shiftClickManager.addPoint({
+                    label: `Probability: ${bin}`,
+                    value: `${count} customers`,
+                    source: 'Purchase Probability Distribution'
+                  }, e.nativeEvent);
+                }
+              }}
+              className="cursor-pointer"
+            >
               <div className="flex justify-between items-center mb-1">
                 <span className="text-sm font-medium">{bin}</span>
                 <span className="text-sm text-muted-foreground">{count} customers</span>
@@ -688,7 +559,10 @@ export function PurchaseProbability({ data, loading }: { data: any; loading?: bo
 // Recommended Products
 // ========================================
 export function RecommendedProducts({ data, loading }: { data: any; loading?: boolean }) {
-  if (loading) return <Skeleton className="h-64 w-full" />;
+  const { DataTable, Skeleton, getShiftClickManager } = require('components/index');
+  const shiftClickManager = getShiftClickManager();
+
+  if (loading) return <Skeleton className="h-96 w-full" />;
 
   const products = Array.isArray(data) ? data : [];
 
@@ -700,28 +574,69 @@ export function RecommendedProducts({ data, loading }: { data: any; loading?: bo
     );
   }
 
+  // Normalize products data for DataTable
+  const rows = products.map((product: any, index: number) => ({
+    id: product.product || `Product ${index + 1}`,
+    product: product.product || 'Unknown',
+    predictionCount: product.predictionCount || 0,
+    estimatedRevenue: product.estimatedRevenue || 0,
+    avgProbability: product.avgProbability || 0
+  }));
+
+  const tableColumns = [
+    {
+      id: "product",
+      header: "Product",
+      accessor: "product" as const,
+      sortable: true,
+    },
+    {
+      id: "predictionCount",
+      header: "Prediction Count",
+      accessor: "predictionCount" as const,
+      sortable: true,
+    },
+    {
+      id: "estimatedRevenue",
+      header: "Est. Revenue",
+      accessor: "estimatedRevenue" as const,
+      sortable: true,
+      render: (value: number) => `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+    },
+    {
+      id: "avgProbability",
+      header: "Avg Confidence",
+      accessor: "avgProbability" as const,
+      sortable: true,
+      render: (value: number) => {
+        const probColor = value >= 0.7 ? "text-success" : value >= 0.5 ? "text-primary" : "text-muted-foreground";
+        return (
+          <span className={`text-xs font-medium ${probColor}`}>
+            {(value * 100).toFixed(0)}%
+          </span>
+        );
+      },
+    },
+  ];
+
   return (
-    <div className="glass-card p-6">
-      <div className="space-y-3">
-        {products.slice(0, 5).map((product: any, idx: number) => (
-          <div key={idx} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer">
-            <div className="flex-1">
-              <div className="font-medium">{product.product || 'Unknown'}</div>
-              <div className="text-sm text-muted-foreground">
-                {product.predictionCount} predictions
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="font-semibold text-success">
-                ${(product.estimatedRevenue || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {((product.avgProbability || 0) * 100).toFixed(0)}% avg confidence
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+    <div className="responsive-table">
+      <DataTable
+        data={rows}
+        columns={tableColumns}
+        searchable
+        selectable={false}
+        pageSize={10}
+        onRowClick={(row, event) => {
+          if (event?.shiftKey) {
+            shiftClickManager.addPoint({
+              label: `Product: ${row.product}`,
+              value: `Revenue: $${row.estimatedRevenue.toLocaleString()} (${row.predictionCount} predictions)`,
+              source: 'Recommended Products'
+            }, event.nativeEvent);
+          }
+        }}
+      />
     </div>
   );
 }
@@ -730,6 +645,8 @@ export function RecommendedProducts({ data, loading }: { data: any; loading?: bo
 // Timing Forecast
 // ========================================
 export function TimingForecast({ data, loading }: { data: any; loading?: boolean }) {
+  const shiftClickManager = getShiftClickManager();
+
   if (loading) return <Skeleton className="h-64 w-full" />;
 
   const forecast = Array.isArray(data) ? data : [];
@@ -759,7 +676,19 @@ export function TimingForecast({ data, loading }: { data: any; loading?: boolean
           const percentage = maxCount > 0 ? ((item.count || 0) / maxCount) * 100 : 0;
 
           return (
-            <div key={idx}>
+            <div
+              key={idx}
+              onClick={(e) => {
+                if (e.shiftKey) {
+                  shiftClickManager.addPoint({
+                    label: `Timing: ${item.bucket}`,
+                    value: `${item.count} customers, $${(item.estimatedRevenue || 0).toLocaleString()}`,
+                    source: 'Timing Forecast'
+                  }, e.nativeEvent);
+                }
+              }}
+              className="cursor-pointer"
+            >
               <div className="flex justify-between items-center mb-1">
                 <span className="text-sm font-medium">{item.bucket}</span>
                 <span className="text-sm text-muted-foreground">{item.count} customers</span>
@@ -816,24 +745,25 @@ export function PredictionAccuracy({ data, loading }: { data: any; loading?: boo
 // Product Affinity Network (Phase 3.1 - Complete Rewrite)
 // ========================================
 export function ProductAffinityNetwork({ data, loading }: { data: any; loading?: boolean }) {
-  const [strengthFilter, setStrengthFilter] = React.useState(0);
+  const shiftClickManager = getShiftClickManager();
+  const [strengthFilter, setStrengthFilter] = React.useState(20); // Default to showing stronger connections
   const [selectedNode, setSelectedNode] = React.useState<string | null>(null);
   const [hoveredNode, setHoveredNode] = React.useState<string | null>(null);
 
-  if (loading) return <Skeleton className="h-96 w-full" />;
+  if (loading) return <Skeleton className="h-[500px] w-full" />;
 
   const nodes = data?.nodes || [];
   const links = data?.links || [];
 
   if (nodes.length === 0) {
     return (
-      <div className="glass-card p-8 text-center">
+      <div className="glass-card p-8 min-h-[500px] flex items-center justify-center">
         <div className="text-muted-foreground">No affinity network data available</div>
       </div>
     );
   }
 
-  // Filter links by strength
+  // Filter links by minimum strength threshold
   const filteredLinks = links.filter((link: any) => (link.strength || 0) >= strengthFilter);
 
   // Get connected nodes for highlighting
@@ -865,12 +795,12 @@ export function ProductAffinityNetwork({ data, loading }: { data: any; loading?:
   };
 
   return (
-    <div className="glass-card p-6">
+    <div className="glass-card p-6 min-h-[500px]">
       {/* Controls */}
       <div className="mb-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="text-sm font-medium">
-            Link Strength Filter: {strengthFilter}%
+            Minimum Strength: {strengthFilter}% ({filteredLinks.length} of {links.length} links)
           </div>
           <button
             onClick={() => setSelectedNode(null)}
@@ -891,9 +821,8 @@ export function ProductAffinityNetwork({ data, loading }: { data: any; loading?:
           }}
         />
         <div className="flex justify-between text-xs text-muted-foreground">
-          <span>Weak connections</span>
-          <span>{filteredLinks.length} links shown</span>
-          <span>Strong connections</span>
+          <span>Show all (0%)</span>
+          <span>Only strong connections (100%)</span>
         </div>
       </div>
 
@@ -978,7 +907,17 @@ export function ProductAffinityNetwork({ data, loading }: { data: any; loading?:
             return (
               <g
                 key={node.id}
-                onClick={() => setSelectedNode(isSelected ? null : node.id)}
+                onClick={(e) => {
+                  if (e.shiftKey) {
+                    shiftClickManager.addPoint({
+                      label: `Product: ${node.name}`,
+                      value: `${node.value} customers`,
+                      source: 'Product Affinity Network'
+                    }, e.nativeEvent);
+                  } else {
+                    setSelectedNode(isSelected ? null : node.id);
+                  }
+                }}
                 onMouseEnter={() => setHoveredNode(node.id)}
                 onMouseLeave={() => setHoveredNode(null)}
                 className="cursor-pointer transition-all duration-300"
@@ -998,9 +937,9 @@ export function ProductAffinityNetwork({ data, loading }: { data: any; loading?:
                   y={`${y}%`}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  className="text-xs font-bold fill-white pointer-events-none"
+                  className="text-[10px] font-bold fill-white pointer-events-none"
                 >
-                  {node.name.substring(0, 3).toUpperCase()}
+                  {node.name}
                 </text>
               </g>
             );
@@ -1026,14 +965,18 @@ export function ProductAffinityNetwork({ data, loading }: { data: any; loading?:
                 transform: 'translate(-50%, -120%)',
               }}
             >
-              <div className="bg-background/95 border border-border rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm">
+              <div className="bg-gray-900 text-white border border-gray-700 rounded-lg px-3 py-2 shadow-lg">
                 <div className="font-semibold text-sm whitespace-nowrap">{node.name}</div>
-                <div className="text-xs text-muted-foreground">{node.value} customers</div>
+                <div className="text-xs text-gray-300">{node.value} customers</div>
                 {selectedNode === node.id && (
-                  <div className="text-xs text-primary mt-1">
+                  <div className="text-xs text-blue-400 mt-1">
                     {getConnectedNodes(node.id).size - 1} connections
                   </div>
                 )}
+                {/* Arrow */}
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-px">
+                  <div className="border-8 border-transparent border-t-gray-900"></div>
+                </div>
               </div>
             </div>
           );
@@ -1061,10 +1004,11 @@ export function ProductAffinityNetwork({ data, loading }: { data: any; loading?:
 // Prediction Confidence Matrix (Phase 3.2 - Complete Rewrite)
 // ========================================
 export function PredictionConfidenceMatrix({ data, loading }: { data: any; loading?: boolean }) {
+  const shiftClickManager = getShiftClickManager();
   const [selectedCell, setSelectedCell] = React.useState<{ segment: string; product: string; value: number } | null>(null);
   const [hoveredCell, setHoveredCell] = React.useState<{ row: number; col: number } | null>(null);
 
-  if (loading) return <Skeleton className="h-96 w-full" />;
+  if (loading) return <Skeleton className="h-[500px] w-full" />;
 
   const matrix = data?.matrix || [];
   const products = data?.products || [];
@@ -1072,7 +1016,7 @@ export function PredictionConfidenceMatrix({ data, loading }: { data: any; loadi
 
   if (matrix.length === 0 || products.length === 0) {
     return (
-      <div className="glass-card p-8 text-center">
+      <div className="glass-card p-8 min-h-[500px] flex items-center justify-center">
         <div className="text-muted-foreground">No confidence matrix data available</div>
       </div>
     );
@@ -1151,13 +1095,21 @@ export function PredictionConfidenceMatrix({ data, loading }: { data: any; loadi
                         className="p-0 relative group"
                         onMouseEnter={() => setHoveredCell({ row: rowIdx, col: colIdx })}
                         onMouseLeave={() => setHoveredCell(null)}
-                        onClick={() => {
+                        onClick={(e) => {
                           if (value > 0) {
-                            setSelectedCell(
-                              isSelected
-                                ? null
-                                : { segment, product: products[colIdx], value }
-                            );
+                            if (e.shiftKey) {
+                              shiftClickManager.addPoint({
+                                label: `${segment} × ${products[colIdx]}`,
+                                value: `${value} predictions (${percentage}%)`,
+                                source: 'Confidence Matrix'
+                              }, e.nativeEvent);
+                            } else {
+                              setSelectedCell(
+                                isSelected
+                                  ? null
+                                  : { segment, product: products[colIdx], value }
+                              );
+                            }
                           }
                         }}
                       >
@@ -1178,14 +1130,18 @@ export function PredictionConfidenceMatrix({ data, loading }: { data: any; loadi
 
                         {/* Hover tooltip */}
                         {isHovered && value > 0 && (
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-background/95 border border-border rounded-lg shadow-xl z-30 whitespace-nowrap backdrop-blur-sm">
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white border border-gray-700 rounded-lg shadow-xl z-30 whitespace-nowrap pointer-events-none">
                             <div className="text-xs font-semibold">{segment}</div>
-                            <div className="text-xs text-muted-foreground">{products[colIdx]}</div>
-                            <div className="text-xs font-bold text-primary mt-1">
+                            <div className="text-xs text-gray-300">{products[colIdx]}</div>
+                            <div className="text-xs font-bold text-blue-400 mt-1">
                               {value} predictions ({percentage}%)
                             </div>
-                            <div className="text-xs text-muted-foreground mt-0.5">
+                            <div className="text-xs text-gray-400 mt-0.5">
                               Click to drill down
+                            </div>
+                            {/* Arrow */}
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-px">
+                              <div className="border-8 border-transparent border-t-gray-900"></div>
                             </div>
                           </div>
                         )}
@@ -1282,6 +1238,7 @@ export function CustomerPurchaseJourney({
   onTogglePredictions?: ((show: boolean) => void) | null;
   predictionRow?: any;
 }) {
+  const shiftClickManager = getShiftClickManager();
   const [hoveredPurchase, setHoveredPurchase] = React.useState<any>(null);
   const [spreadFactor, setSpreadFactor] = React.useState(1.15);
 
@@ -1290,11 +1247,6 @@ export function CustomerPurchaseJourney({
     if (!hasData) return null;
     return selectedCustomer ? data.find(d => d.customerId === selectedCustomer) : data[0];
   }, [hasData, data, selectedCustomer]);
-
-  const getProductIcon = (category: string) => {
-    const icons: Record<string, string> = { 'M': '👕', 'R': '🏃', 'default': '📦' };
-    return icons[category?.[0]] || icons.default;
-  };
 
   const futurePredictions = useMemo(() => {
     if (!showPredictions || !currentCustomer || !predictionRow) return [];
@@ -1315,8 +1267,8 @@ export function CustomerPurchaseJourney({
 
   const allItems = useMemo(() => currentCustomer ? [...(currentCustomer.purchases || []), ...futurePredictions] : [], [currentCustomer, futurePredictions]);
   const baseSpacing = 140 * spreadFactor;
-  const horizontalPadding = 220;
-  const trackWidth = Math.max(600, horizontalPadding * 2 + (allItems.length - 1) * baseSpacing);
+  const horizontalPadding = 100;
+  const trackWidth = allItems.length * baseSpacing + horizontalPadding * 2;
 
   if (loading) {
     return (
@@ -1339,62 +1291,38 @@ export function CustomerPurchaseJourney({
   }
 
   return (
-    <div className="glass-card p-6 min-h-[400px] relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-blue-500/10 to-transparent" />
-
-      <div className="relative z-10 flex justify-between items-start mb-4">
-        <div>
-          <h3 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
-            Customer Purchase Journey
-          </h3>
-          <div className="text-sm text-muted-foreground mt-1">
-            Customer {currentCustomer.customerId} • {currentCustomer.purchases.length} purchases
-            {showPredictions && ` + ${futurePredictions.length} predictions`}
-          </div>
-        </div>
-      </div>
-
+    <div className="glass-card p-6 min-h-[400px]">
       {/* Controls */}
-      <div className="flex flex-wrap gap-4 items-center mb-6 glass-card p-3 rounded-2xl border border-blue-500/30">
+      <div className="flex flex-wrap gap-4 items-center mb-6">
         <select
           value={currentCustomer.customerId}
           onChange={(e) => onCustomerChange && onCustomerChange(parseInt(e.target.value))}
           className="px-3 py-2 bg-background/80 border border-border rounded-xl text-sm cursor-pointer min-w-[150px]"
         >
-          {data.map(c => <option key={c.customerId} value={c.customerId}>Customer {c.customerId}</option>)}
+          {data.map(c => <option key={c.customerId} value={c.customerId}>{c.customerName || `Customer ${c.customerId}`}</option>)}
         </select>
 
         <button
           onClick={() => setSpreadFactor(f => Math.min(1.6, +(f + 0.1).toFixed(2)))}
-          className="px-3 py-2 bg-blue-500/15 border border-blue-500/40 text-blue-400 text-xs font-semibold rounded-lg hover:bg-blue-500/25 transition-colors"
+          className="px-3 py-2 bg-primary/10 border border-primary/40 text-primary text-xs font-semibold rounded-lg hover:bg-primary/20 transition-colors"
         >
           Spread +
         </button>
         <button
           onClick={() => setSpreadFactor(f => Math.max(0.8, +(f - 0.1).toFixed(2)))}
-          className="px-3 py-2 bg-purple-500/15 border border-purple-500/40 text-purple-400 text-xs font-semibold rounded-lg hover:bg-purple-500/25 transition-colors"
+          className="px-3 py-2 bg-primary/10 border border-primary/40 text-primary text-xs font-semibold rounded-lg hover:bg-primary/20 transition-colors"
         >
           Spread -
         </button>
-
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={showPredictions}
-            onChange={() => onTogglePredictions && onTogglePredictions(!showPredictions)}
-            className="rounded"
-          />
-          Show Predictions
-        </label>
 
         <div className="ml-auto text-xs text-muted-foreground">Spread: {spreadFactor.toFixed(2)}</div>
       </div>
 
       {/* Timeline */}
-      <div className="relative h-64 rounded-3xl p-6 overflow-x-auto overflow-y-hidden bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-border">
-        <div className="relative" style={{ width: `${trackWidth}px`, height: '100%', padding: `0 ${horizontalPadding}px` }}>
+      <div className="relative overflow-x-auto overflow-y-hidden" style={{ height: '300px', paddingTop: '100px', paddingBottom: '40px' }}>
+        <div className="relative mx-auto" style={{ width: `${trackWidth}px`, height: '160px', padding: `0 ${horizontalPadding}px` }}>
           {/* Track */}
-          <div className="absolute top-1/2 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 via-cyan-500 to-purple-500 transform -translate-y-1/2 rounded-full" />
+          <div className="absolute left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 via-cyan-500 to-purple-500 rounded-full z-0" style={{ top: '50%', transform: 'translateY(-50%)' }} />
 
           {/* Purchase nodes */}
           {allItems.map((item, index) => {
@@ -1404,26 +1332,50 @@ export function CustomerPurchaseJourney({
             return (
               <div
                 key={index}
-                className="absolute top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10"
-                style={{ left: `${leftPx}px` }}
+                className="absolute top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
+                style={{ left: `${leftPx}px`, zIndex: hoveredPurchase === item ? 100 : 10 }}
                 onMouseEnter={() => setHoveredPurchase(item)}
                 onMouseLeave={() => setHoveredPurchase(null)}
+                onClick={(e) => {
+                  if (e.shiftKey) {
+                    shiftClickManager.addPoint({
+                      label: `${isPrediction ? 'Predicted' : 'Purchase'}: ${item.category}`,
+                      value: `$${item.amount?.toLocaleString()} on ${new Date(item.date).toLocaleDateString()}${isPrediction ? ` (${Math.round(item.probability * 100)}%)` : ''}`,
+                      source: 'Purchase Journey'
+                    }, e.nativeEvent);
+                  }
+                }}
               >
-                <div className={`w-4 h-4 rounded-full mx-auto mb-2 ${isPrediction ? 'bg-pink-500/20 border-2 border-dashed border-pink-500' : 'bg-blue-500 border-2 border-blue-400'}`} />
+                <div className={`w-4 h-4 rounded-full mx-auto mb-2 relative ${isPrediction ? 'bg-pink-500/20 border-2 border-dashed border-pink-500' : 'bg-blue-500 border-2 border-blue-400'}`} />
 
-                <div className={`w-24 p-3 ${isPrediction ? 'bg-gradient-to-br from-pink-500/10 to-purple-500/10 border-pink-500/50' : 'bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/50'} border rounded-2xl text-center backdrop-blur-sm transition-all duration-300 ${hoveredPurchase === item ? 'scale-105 -translate-y-2 shadow-xl' : ''}`}>
-                  <div className="text-2xl mb-1">{getProductIcon(item.category)}</div>
+                <div className={`w-24 p-3 ${isPrediction ? 'bg-gradient-to-br from-pink-500/10 to-purple-500/10 border-pink-500/50' : 'bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/50'} border rounded-2xl text-center transition-all duration-300 ${hoveredPurchase === item ? 'scale-105 -translate-y-2 shadow-xl' : ''}`}>
                   <div className="text-xs font-bold">{item.category}</div>
                   <div className="text-xs text-muted-foreground mt-1">${item.amount?.toLocaleString()}</div>
                   {isPrediction && (
-                    <div className="text-xs mt-1 font-semibold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                    <div className="text-xs mt-1 font-semibold text-pink-500">
                       {Math.round(item.probability * 100)}%
                     </div>
                   )}
                 </div>
 
-                <div className={`text-xs mt-3 transform -rotate-30 whitespace-nowrap font-medium ${isPrediction ? 'text-pink-500' : 'text-muted-foreground'}`}>
+                <div className={`text-xs mt-3 transform -rotate-30 whitespace-nowrap font-medium ${isPrediction ? 'text-pink-500' : 'text-blue-500'}`}>
                   {new Date(item.date).toLocaleDateString()}
+                </div>
+
+                {/* Tooltip */}
+                <div
+                  className="invisible group-hover:visible opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg transition-all duration-200 whitespace-nowrap pointer-events-none"
+                  style={{ zIndex: 1000 }}
+                >
+                  <div className="font-bold mb-1">{isPrediction ? 'Predicted Purchase' : 'Historical Purchase'}</div>
+                  <div><strong>Product:</strong> {item.category}</div>
+                  <div><strong>Amount:</strong> ${item.amount?.toLocaleString()}</div>
+                  <div><strong>Date:</strong> {new Date(item.date).toLocaleDateString()}</div>
+                  {isPrediction && <div><strong>Probability:</strong> {Math.round(item.probability * 100)}%</div>}
+                  {/* Arrow */}
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-px">
+                    <div className="border-8 border-transparent border-t-gray-900"></div>
+                  </div>
                 </div>
               </div>
             );
@@ -1431,21 +1383,8 @@ export function CustomerPurchaseJourney({
         </div>
       </div>
 
-      {/* Hover details */}
-      {hoveredPurchase && (
-        <div className="mt-6 p-4 glass-card rounded-2xl border border-border">
-          <div className="text-sm font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent mb-2">
-            {hoveredPurchase.isPrediction ? 'Predicted Purchase' : 'Historical Purchase'}
-          </div>
-          <div className="text-sm">
-            <strong>Product:</strong> {hoveredPurchase.category} • <strong>Amount:</strong> ${hoveredPurchase.amount?.toLocaleString()} • <strong>Date:</strong> {new Date(hoveredPurchase.date).toLocaleDateString()}
-            {hoveredPurchase.isPrediction && <> • <strong>Probability:</strong> {Math.round(hoveredPurchase.probability * 100)}%</>}
-          </div>
-        </div>
-      )}
-
       {/* Legend */}
-      <div className="mt-6 flex flex-wrap gap-6 text-xs glass-card p-3 rounded-2xl border border-border">
+      <div className="mt-6 flex flex-wrap justify-center gap-6 text-xs">
         <div className="flex items-center gap-2">
           <div className="w-4 h-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded" />
           <span>Historical Purchases</span>
@@ -1471,11 +1410,12 @@ export function CategoryPerformanceOverview({
   series?: any[];
   loading?: boolean;
 }) {
+  const shiftClickManager = getShiftClickManager();
   const [growthMode, setGrowthMode] = React.useState<'percent' | 'absolute'>('percent');
 
   if (loading) {
     return (
-      <div className="glass-card p-6 min-h-[400px]">
+      <div className="glass-card p-6 min-h-[500px]">
         <Skeleton className="h-6 w-56 mb-6" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-40 rounded-2xl" />)}
@@ -1486,17 +1426,15 @@ export function CategoryPerformanceOverview({
 
   if (!data || data.length === 0) {
     return (
-      <div className="glass-card p-6 min-h-[400px] flex items-center justify-center">
+      <div className="glass-card p-6 min-h-[500px] flex items-center justify-center">
         <div className="text-muted-foreground">No category performance data available</div>
       </div>
     );
   }
 
   return (
-    <div className="glass-card p-6 min-h-[400px] relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-cyan-500/5 to-transparent" />
-
-      <div className="relative z-10 flex justify-end items-center mb-6">
+    <div className="glass-card p-6 min-h-[500px]">
+      <div className="flex justify-end items-center mb-6">
         <button
           onClick={() => setGrowthMode(m => m === 'percent' ? 'absolute' : 'percent')}
           className="px-3 py-2 text-xs font-semibold rounded-xl bg-blue-500/15 border border-blue-500/40 text-blue-400 hover:bg-blue-500/25 transition-colors"
@@ -1512,9 +1450,18 @@ export function CategoryPerformanceOverview({
           return (
             <div
               key={idx}
-              className={`p-4 rounded-2xl border backdrop-blur-sm transition-all hover:-translate-y-1 cursor-pointer ${
-                repeatLow ? 'bg-red-500/10 border-red-500/50' : 'bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-border'
+              className={`p-4 rounded-2xl border transition-all hover:-translate-y-1 cursor-pointer ${
+                repeatLow ? 'bg-surface border-destructive/50' : 'bg-surface border-border hover:border-primary/50'
               }`}
+              onClick={(e) => {
+                if (e.shiftKey) {
+                  shiftClickManager.addPoint({
+                    label: `Category: ${cat.category}`,
+                    value: `Revenue: $${cat.revenue.toLocaleString()}, ${cat.orders} orders, ${cat.repeatRate}% repeat`,
+                    source: 'Category Performance'
+                  }, e.nativeEvent);
+                }
+              }}
             >
               <div className="flex justify-between items-center mb-3">
                 <div className="text-sm font-bold">{cat.category}</div>
@@ -1569,7 +1516,7 @@ export function PurchaseTimingPredictor({
 
   if (loading) {
     return (
-      <div className="glass-card p-6 min-h-[420px]">
+      <div className="glass-card p-6 min-h-[500px]">
         <Skeleton className="h-6 w-48 mb-6" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
@@ -1580,14 +1527,14 @@ export function PurchaseTimingPredictor({
 
   if (!data || data.length === 0) {
     return (
-      <div className="glass-card p-6 min-h-[420px] flex items-center justify-center">
+      <div className="glass-card p-6 min-h-[500px] flex items-center justify-center">
         <div className="text-muted-foreground">No timing predictions available</div>
       </div>
     );
   }
 
   return (
-    <div className="glass-card p-6 min-h-[420px] relative overflow-hidden">
+    <div className="glass-card p-6 min-h-[500px] relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-purple-500/5 to-transparent" />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

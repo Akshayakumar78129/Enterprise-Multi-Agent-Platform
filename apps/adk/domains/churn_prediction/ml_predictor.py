@@ -193,10 +193,7 @@ class ChurnMLPredictor:
             if cached:
                 self.model, self.scaler, metadata = cached
                 self.is_trained = True
-                print(f"[ChurnMLPredictor] Using cached model (accuracy: {metadata.get('accuracy', 0):.2f})")
                 return metadata.get('metrics', {'roc_auc': 0.5, 'accuracy': 0})
-
-        print("[ChurnMLPredictor] Training new model...")
 
         # Scale features
         features_scaled = self.scaler.fit_transform(features)
