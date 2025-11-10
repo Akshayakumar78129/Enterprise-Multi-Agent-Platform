@@ -41,6 +41,7 @@ interface BarChartProps {
   stacked?: boolean;
   className?: string;
   onBarClick?: (datasetLabel: string, label: string, value: number, event: any) => void;
+  options?: ChartOptions<'bar'>;
 }
 
 export const BarChart: React.FC<BarChartProps> = ({
@@ -51,7 +52,8 @@ export const BarChart: React.FC<BarChartProps> = ({
   horizontal = false,
   stacked = false,
   className = "",
-  onBarClick
+  onBarClick,
+  options: externalOptions
 }) => {
   const shiftClickManager = getShiftClickManager();
   // Provide fallback data if none is provided
@@ -143,6 +145,26 @@ export const BarChart: React.FC<BarChartProps> = ({
     }
   };
 
+  // Merge external options with default options
+  const mergedOptions: ChartOptions<'bar'> = externalOptions
+    ? {
+        ...options,
+        ...externalOptions,
+        scales: {
+          ...options.scales,
+          ...externalOptions.scales
+        },
+        plugins: {
+          ...options.plugins,
+          ...externalOptions.plugins,
+          tooltip: {
+            ...options.plugins?.tooltip,
+            ...externalOptions.plugins?.tooltip
+          }
+        }
+      }
+    : options;
+
   // Apply default colors if not provided, with proper null/undefined checks
   const safeData = data || defaultData;
   const chartData = {
@@ -159,7 +181,7 @@ export const BarChart: React.FC<BarChartProps> = ({
   return (
     <div className={className}>
       <div style={{ height, width: '100%', position: 'relative' }}>
-        <Bar options={options} data={chartData} />
+        <Bar options={mergedOptions} data={chartData} />
       </div>
     </div>
   );

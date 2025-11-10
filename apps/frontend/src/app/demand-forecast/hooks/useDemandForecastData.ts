@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 async function fetchDemandForecastSummary(filterParams: Record<string, any>) {
@@ -62,6 +62,17 @@ export function useDemandforecastData(filters: Record<string, any>) {
 
   const error = queryError ? (queryError instanceof Error ? queryError.message : 'Failed to fetch data') : null;
 
+  // Debug logging
+  useEffect(() => {
+    if (rawData) {
+      console.log('[DemandForecast] Raw API Response:', rawData);
+      console.log('[DemandForecast] mainData:', rawData.mainData);
+      console.log('[DemandForecast] trends:', rawData.mainData?.trends);
+      console.log('[DemandForecast] distribution:', rawData.mainData?.distribution);
+      console.log('[DemandForecast] performance:', rawData.mainData?.performance);
+    }
+  }, [rawData]);
+
   const hasNoData = useMemo(() => {
     return !rawData || !rawData.mainData;
   }, [rawData]);
@@ -73,11 +84,15 @@ export function useDemandforecastData(filters: Record<string, any>) {
 
     return Object.entries(kpis).map(([key, value]: [string, any]) => ({
       id: key,
-      label: value.label || key,
+      title: value.label || key,  // KPICard expects 'title' prop, not 'label'
       value: value.value || 0,
-      change: value.change || 0,
-      trend: value.trend || 'neutral',
-      status: value.status || 'normal'
+      trend: value.change || 0,
+      trendDirection: value.trend === 'up' ? 'up' : value.trend === 'down' ? 'down' : 'neutral',
+      format: key.includes('accuracy') || key.includes('confidence') ? 'percentage' :
+              key.includes('value') || key.includes('cost') ? 'currency' : 'number',
+      color: value.status === 'good' ? '#10b981' :
+             value.status === 'warning' ? '#f59e0b' :
+             value.status === 'critical' ? '#ef4444' : '#38bdf8'
     }));
   }, [rawData]);
 

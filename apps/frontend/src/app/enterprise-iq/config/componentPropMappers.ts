@@ -1607,6 +1607,30 @@ export const componentPropMappers: Record<string, ComponentPropMapper> = {
       data: summary.mainData?.cohortRetention || [],
       loading: false
     };
+  },
+
+  // =============================
+  // Demand Forecast Components
+  // =============================
+  'demand-forecast.kpis': (summary) => {
+    return {
+      kpis: summary.kpiMetrics || {
+        forecastAccuracy: { value: 0, change: 0, trend: 'neutral', status: 'warning' },
+        demandVariability: { value: 0, change: 0, trend: 'neutral', status: 'warning' },
+        seasonalityIndex: { value: 0, change: 0, trend: 'neutral', status: 'warning' },
+        trendDirection: { value: 0, change: 0, trend: 'neutral', status: 'warning' },
+        confidenceInterval: { value: 0, change: 0, trend: 'neutral', status: 'warning' },
+        leadTimeRequirement: { value: 0, change: 0, trend: 'neutral', status: 'warning' }
+      },
+      loading: false
+    };
+  },
+
+  'demand-forecast.chart': (summary) => {
+    return {
+      data: summary.mainData?.trends || [],
+      loading: false
+    };
   }
 };
 

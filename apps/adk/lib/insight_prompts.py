@@ -35,6 +35,8 @@ def get_prompt_template(dashboard_type: str) -> str:
         'retention_planner': RETENTION_PLANNING_PROMPT,  # Alias
         'revenue_forecast': REVENUE_FORECAST_PROMPT,
         'financial': REVENUE_FORECAST_PROMPT,  # Alias
+        'demand_forecast': DEMAND_FORECAST_PROMPT,
+        'demand-forecast': DEMAND_FORECAST_PROMPT,  # Alias
     }
 
     if dashboard_type not in templates:
@@ -497,3 +499,65 @@ AVOID:
 - Vague financial targets without specific action plans
 
 Generate your financial insights now:"""
+
+
+# ============================================================================
+# DEMAND FORECAST PROMPT
+# ============================================================================
+
+DEMAND_FORECAST_PROMPT = """You are a senior supply chain analyst reviewing demand forecast and inventory planning metrics for operational decision-making.
+
+CONTEXT:
+- Dashboard: Demand Forecast & Planning
+- Forecast Accuracy: {forecastAccuracy}%
+- Demand Variability: {demandVariability}
+- Seasonality Index: {seasonalityIndex}
+- Trend Direction: {trendDirection}
+- Confidence Interval: {confidenceInterval}%
+- Lead Time Requirement: {leadTimeRequirement} days
+
+DEMAND INDICATORS:
+- Forecast Accuracy Status: {"EXCELLENT" if "{forecastAccuracy}" != "" and float(str({forecastAccuracy}).get("value", 0) if isinstance({forecastAccuracy}, dict) else {forecastAccuracy}) >= 90 else "NEEDS IMPROVEMENT"}
+- Demand Stability: {"STABLE" if "{demandVariability}" != "" and float(str({demandVariability}).get("value", 0) if isinstance({demandVariability}, dict) else {demandVariability}) < 0.3 else "VOLATILE"}
+- Seasonality Impact: {"SIGNIFICANT" if "{seasonalityIndex}" != "" and float(str({seasonalityIndex}).get("value", 1.0) if isinstance({seasonalityIndex}, dict) else {seasonalityIndex}) > 1.2 else "MODERATE"}
+
+TREND ANALYSIS:
+{trend_summary}
+
+CATEGORY PERFORMANCE:
+{distribution_summary}
+
+INSTRUCTIONS:
+As a supply chain strategist, generate 3-5 insights that provide actionable intelligence for operations teams. Focus on:
+1. **Forecast Reliability**: How accurate are predictions and where are the gaps?
+2. **Demand Patterns**: Seasonal trends, variability, and planning implications
+3. **Inventory Optimization**: Stock levels, lead times, and service level impacts
+4. **Risk Management**: Demand volatility and supply chain risk mitigation
+5. **Operational Actions**: Specific decisions to optimize fulfillment and reduce costs
+
+PRIORITY LEVELS:
+- CRITICAL: Immediate action required (stockout risk, excess inventory, forecast degradation)
+- HIGH: Operational decision needed within 1 week (affects service levels)
+- MODERATE: Plan tactical adjustment (optimization opportunity)
+- INFO: Context for strategic planning and trend monitoring
+
+FORMAT REQUIREMENTS:
+- One insight per line
+- 2-3 sentences each
+- Start with priority label (CRITICAL:, HIGH:, MODERATE:, INFO:)
+- Include "**Action:**" section with specific operational steps
+- Add expected outcomes (inventory reduction, service level improvement, cost savings)
+- Reference specific categories or items when relevant
+- Include timeframes for action and impact realization
+
+EXAMPLE:
+CRITICAL: Forecast accuracy degraded to 78% (12 points below target) with demand variability of 0.45 indicating significant planning instability. Category A shows 35% forecast error while Category B maintains 92% accuracy, suggesting SKU-level prediction challenges rather than systemic issues. **Action:** Within 48 hours, conduct root cause analysis on Category A forecasting model, implement weekly forecast reviews for top 20 volatile SKUs, and increase safety stock by 15% for high-error items until accuracy improves. Expected: Forecast accuracy recovery to 85%+, 20% reduction in stockouts, maintained 95% service level with 10% inventory increase.
+
+AVOID:
+- Generic supply chain advice like "improve forecasting"
+- Stating metric values without operational interpretation
+- Recommendations without quantified inventory or service level impact
+- Ignoring lead time constraints and supplier reliability
+- Vague timing like "soon" without specific action dates
+
+Generate your demand forecast insights now:"""

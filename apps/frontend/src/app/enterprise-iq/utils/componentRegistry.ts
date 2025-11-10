@@ -132,6 +132,13 @@ export const componentRegistry = {
     cohortRetention: dynamic(() => import('../../revenue-forecast/components').then(mod => mod.CohortRetentionChart).catch(() => null), { ssr: false }),
   },
 
+  // Demand Forecast components
+  'demand-forecast': {
+    dashboard: dynamic(() => import('../../demand-forecast/page').catch(() => null), { ssr: false }),
+    kpis: dynamic(() => import('../../demand-forecast/components').then(mod => mod.DemandforecastKPIs).catch(() => null), { ssr: false }),
+    chart: dynamic(() => import('../../demand-forecast/components').then(mod => mod.DemandforecastChart).catch(() => null), { ssr: false }),
+  },
+
   // Retention Planner components
   'retention-planner': {
     dashboard: dynamic(() => import('../../retention-planner/page').catch(() => null), { ssr: false }),
