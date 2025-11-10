@@ -148,14 +148,29 @@ export const LineChart: React.FC<LineChartProps> = ({
   };
 
   // Merge external options with default options, preserving onClick handler
-  const mergedOptions = externalOptions ? {
-    ...externalOptions,
-    onClick: defaultOptions.onClick
-  } : defaultOptions;
+  const mergedOptions: ChartOptions<'line'> = externalOptions
+    ? {
+        ...defaultOptions,
+        ...externalOptions,
+        onClick: defaultOptions.onClick, // Always preserve our onClick handler
+        scales: {
+          ...defaultOptions.scales,
+          ...externalOptions.scales
+        },
+        plugins: {
+          ...defaultOptions.plugins,
+          ...externalOptions.plugins,
+          tooltip: {
+            ...defaultOptions.plugins?.tooltip,
+            ...externalOptions.plugins?.tooltip
+          }
+        }
+      }
+    : defaultOptions;
 
   return (
     <div className={className}>
-      <div style={{ height }}>
+      <div style={{ height, width: '100%', position: 'relative' }}>
         <Line options={mergedOptions} data={chartData} />
       </div>
     </div>

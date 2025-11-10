@@ -237,12 +237,12 @@ class RevenueForecastDataService:
         WITH monthly_revenue AS (
             SELECT
                 {month_expr} as month,
-                SUM(CASE WHEN {account_prefix} IN ('41', '42')
-                    THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END) as revenue,
-                SUM(CASE WHEN {account_prefix} = '41'
-                    THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END) as product_revenue,
-                SUM(CASE WHEN {account_prefix} = '42'
-                    THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END) as service_revenue
+                COALESCE(SUM(CASE WHEN {account_prefix} IN ('41', '42')
+                    THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END), 0) as revenue,
+                COALESCE(SUM(CASE WHEN {account_prefix} = '41'
+                    THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END), 0) as product_revenue,
+                COALESCE(SUM(CASE WHEN {account_prefix} = '42'
+                    THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END), 0) as service_revenue
             FROM {self.schema.TABLES['gl_transaction']} {self.schema.ALIASES['gl_transaction']}
             WHERE {self.schema.GL_TRANSACTION.refs['txn_date']} BETWEEN ? AND ?
             {"AND " + self.schema.GL_TRANSACTION.refs['company_code'] + " = ?" if company_code and company_code != 'all' else ""}
@@ -254,9 +254,9 @@ class RevenueForecastDataService:
             revenue as total_revenue,
             product_revenue,
             service_revenue,
-            revenue - LAG(revenue, 1, revenue) OVER (ORDER BY month) as revenue_change,
-            ROUND(((revenue - LAG(revenue, 1, revenue) OVER (ORDER BY month)) /
-                   NULLIF(LAG(revenue, 1, revenue) OVER (ORDER BY month), 0)) * 100, 2) as growth_rate
+            COALESCE(revenue - LAG(revenue, 1, revenue) OVER (ORDER BY month), 0) as revenue_change,
+            ROUND(COALESCE(((revenue - LAG(revenue, 1, revenue) OVER (ORDER BY month)) /
+                   NULLIF(LAG(revenue, 1, revenue) OVER (ORDER BY month), 0)) * 100, 0), 2) as growth_rate
         FROM monthly_revenue
         ORDER BY month
         """
@@ -273,7 +273,11 @@ class RevenueForecastDataService:
             raise
 
     async def get_cohort_retention_data(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Get cohort-based revenue retention metrics"""
+        """Get cohort-based revenue retention metrics
+
+        Simplified approach: Calculate month differences using string comparison
+        instead of complex date arithmetic to ensure PostgreSQL/SQLite compatibility
+        """
         date_from = filters.get('dateFrom', '2017-01-01')
         date_to = filters.get('dateTo', '2021-12-31')
 
@@ -282,6 +286,7 @@ class RevenueForecastDataService:
         doc_prefix = self._substring(self.schema.GL_TRANSACTION.refs['document_number'], 1, 6)
         account_prefix = self._substring(self.schema.GL_TRANSACTION.refs['gl_account'], 1, 2)
 
+        # Simplified query without complex date calculations
         query = f"""
         WITH customer_first_purchase AS (
             SELECT
@@ -297,7 +302,7 @@ class RevenueForecastDataService:
             SELECT
                 cfp.cohort_month,
                 {month_expr} as revenue_month,
-                SUM(ABS({self.schema.GL_TRANSACTION.refs['txn_amount']})) as cohort_revenue,
+                COALESCE(SUM(ABS({self.schema.GL_TRANSACTION.refs['txn_amount']})), 0) as cohort_revenue,
                 COUNT(DISTINCT {doc_prefix}) as customer_count
             FROM {self.schema.TABLES['gl_transaction']} {self.schema.ALIASES['gl_transaction']}
             INNER JOIN customer_first_purchase cfp
@@ -305,25 +310,15 @@ class RevenueForecastDataService:
             WHERE {account_prefix} IN ('41', '42')
                 AND {self.schema.GL_TRANSACTION.refs['txn_date']} BETWEEN ? AND ?
             GROUP BY cfp.cohort_month, revenue_month
-        ),
-        cohort_with_months AS (
-            SELECT
-                cohort_month,
-                revenue_month,
-                cohort_revenue,
-                customer_count,
-                {self._months_between('revenue_month', 'cohort_month')} as months_since_cohort
-            FROM cohort_revenue
         )
         SELECT
             cohort_month,
             revenue_month,
             ROUND(cohort_revenue, 2) as cohort_revenue,
-            customer_count,
-            months_since_cohort
-        FROM cohort_with_months
-        WHERE months_since_cohort >= 0 AND months_since_cohort <= 12
-        ORDER BY cohort_month, months_since_cohort
+            customer_count
+        FROM cohort_revenue
+        WHERE cohort_revenue > 0
+        ORDER BY cohort_month, revenue_month
         LIMIT 200
         """
 
@@ -331,7 +326,27 @@ class RevenueForecastDataService:
 
         try:
             result_dict = await self.db.query(query, params)
-            return result_dict.get('rows', [])
+            rows = result_dict.get('rows', [])
+
+            # Calculate months_since_cohort in Python instead of SQL to avoid DB-specific issues
+            for row in rows:
+                if row.get('cohort_month') and row.get('revenue_month'):
+                    try:
+                        # Parse YYYY-MM format strings
+                        cohort_year, cohort_month = map(int, row['cohort_month'].split('-'))
+                        revenue_year, revenue_month = map(int, row['revenue_month'].split('-'))
+
+                        # Calculate months difference
+                        months_diff = (revenue_year - cohort_year) * 12 + (revenue_month - cohort_month)
+                        row['months_since_cohort'] = max(0, months_diff)
+                    except (ValueError, AttributeError, KeyError) as e:
+                        logger.warning(f"Error calculating months_since_cohort: {e}")
+                        row['months_since_cohort'] = 0
+
+            # Filter to only 0-12 months and return
+            filtered_rows = [row for row in rows if 0 <= row.get('months_since_cohort', -1) <= 12]
+            return filtered_rows
+
         except Exception as e:
             logger.error(f"Error fetching cohort retention data: {e}")
             raise
@@ -351,8 +366,8 @@ class RevenueForecastDataService:
             SELECT
                 COALESCE({self.schema.GL_TRANSACTION.refs['company_code']}, 'Unknown') as segment,
                 {month_expr} as month,
-                SUM(CASE WHEN {account_prefix} IN ('41', '42')
-                    THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END) as revenue,
+                COALESCE(SUM(CASE WHEN {account_prefix} IN ('41', '42')
+                    THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END), 0) as revenue,
                 COUNT(DISTINCT {self.schema.GL_TRANSACTION.refs['document_number']}) as transaction_count
             FROM {self.schema.TABLES['gl_transaction']} {self.schema.ALIASES['gl_transaction']}
             WHERE {self.schema.GL_TRANSACTION.refs['txn_date']} BETWEEN ? AND ?
@@ -361,25 +376,25 @@ class RevenueForecastDataService:
         segment_aggregates AS (
             SELECT
                 segment,
-                AVG(revenue) as avg_monthly_revenue,
-                SUM(revenue) as total_revenue,
+                COALESCE(AVG(revenue), 0) as avg_monthly_revenue,
+                COALESCE(SUM(revenue), 0) as total_revenue,
                 COUNT(*) as month_count,
-                MAX(revenue) as max_revenue,
-                MIN(revenue) as min_revenue,
-                SUM(transaction_count) as total_transactions
+                COALESCE(MAX(revenue), 0) as max_revenue,
+                COALESCE(MIN(revenue), 0) as min_revenue,
+                COALESCE(SUM(transaction_count), 0) as total_transactions
             FROM segment_revenue
             GROUP BY segment
         ),
         segment_growth AS (
             SELECT
                 sr1.segment,
-                AVG(
+                COALESCE(AVG(
                     CASE
                         WHEN sr2.revenue > 0 THEN
                             ((sr1.revenue - sr2.revenue) / sr2.revenue) * 100
                         ELSE 0
                     END
-                ) as avg_growth_rate
+                ), 0) as avg_growth_rate
             FROM segment_revenue sr1
             LEFT JOIN segment_revenue sr2
                 ON sr1.segment = sr2.segment
@@ -396,7 +411,7 @@ class RevenueForecastDataService:
             ROUND(sa.min_revenue, 2) as min_revenue,
             sa.total_transactions,
             ROUND(COALESCE(sg.avg_growth_rate, 0), 2) as avg_growth_rate,
-            ROUND(((sa.max_revenue - sa.min_revenue) / NULLIF(sa.min_revenue, 0)) * 100, 2) as volatility_pct
+            ROUND(COALESCE(((sa.max_revenue - sa.min_revenue) / NULLIF(sa.min_revenue, 0)) * 100, 0), 2) as volatility_pct
         FROM segment_aggregates sa
         LEFT JOIN segment_growth sg ON sa.segment = sg.segment
         WHERE sa.segment != 'Unknown'
@@ -424,16 +439,16 @@ class RevenueForecastDataService:
         WITH customer_metrics AS (
             SELECT
                 -- Revenue metrics
-                SUM(CASE WHEN {account_prefix} IN ('41', '42')
-                    THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END) as total_revenue,
+                COALESCE(SUM(CASE WHEN {account_prefix} IN ('41', '42')
+                    THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END), 0) as total_revenue,
 
                 -- Marketing/Sales costs (OpEx accounts 61-63)
-                SUM(CASE WHEN {account_prefix} IN ('61', '62', '63')
-                    THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END) as sales_marketing_cost,
+                COALESCE(SUM(CASE WHEN {account_prefix} IN ('61', '62', '63')
+                    THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END), 0) as sales_marketing_cost,
 
                 -- COGS
-                SUM(CASE WHEN {account_prefix} IN ('51', '52')
-                    THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END) as cogs,
+                COALESCE(SUM(CASE WHEN {account_prefix} IN ('51', '52')
+                    THEN ABS({self.schema.GL_TRANSACTION.refs['txn_amount']}) ELSE 0 END), 0) as cogs,
 
                 -- Unique customers (proxy using cost centers)
                 COUNT(DISTINCT {self.schema.GL_TRANSACTION.refs['cost_center']}) as customer_count
@@ -441,11 +456,11 @@ class RevenueForecastDataService:
             WHERE {self.schema.GL_TRANSACTION.refs['txn_date']} BETWEEN ? AND ?
         )
         SELECT
-            ROUND(sales_marketing_cost / NULLIF(customer_count, 0), 2) as cac,
-            ROUND(total_revenue / NULLIF(customer_count, 0), 2) as ltv,
-            ROUND((total_revenue / NULLIF(customer_count, 0)) /
-                  NULLIF(sales_marketing_cost / NULLIF(customer_count, 0), 0), 2) as ltv_cac_ratio,
-            ROUND(((total_revenue - cogs) / NULLIF(total_revenue, 0)) * 100, 2) as gross_margin,
+            ROUND(COALESCE(sales_marketing_cost / NULLIF(customer_count, 0), 0), 2) as cac,
+            ROUND(COALESCE(total_revenue / NULLIF(customer_count, 0), 0), 2) as ltv,
+            ROUND(COALESCE((total_revenue / NULLIF(customer_count, 0)) /
+                  NULLIF(sales_marketing_cost / NULLIF(customer_count, 0), 0), 0), 2) as ltv_cac_ratio,
+            ROUND(COALESCE(((total_revenue - cogs) / NULLIF(total_revenue, 0)) * 100, 0), 2) as gross_margin,
             customer_count
         FROM customer_metrics
         """

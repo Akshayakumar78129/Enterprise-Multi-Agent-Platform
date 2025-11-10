@@ -141,89 +141,147 @@ class RevenueForecastProcessingService:
 
     def _process_growth_decomposition(self, growth_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Process revenue growth decomposition into waterfall components"""
-        if not growth_data or len(growth_data) < 2:
+        # Robust validation
+        if not growth_data:
+            logger.warning("Growth decomposition: No growth data provided")
             return []
 
-        components = []
-
-        # Get first and last months for comparison
-        first_month = growth_data[0]
-        last_month = growth_data[-1]
-
-        starting_revenue = first_month.get('total_revenue', 0)
-        ending_revenue = last_month.get('total_revenue', 0)
-        total_growth = ending_revenue - starting_revenue
-
-        if total_growth == 0:
+        if not isinstance(growth_data, list):
+            logger.error(f"Growth decomposition: Expected list but got {type(growth_data)}")
             return []
 
-        # Decompose into components
-        # Product revenue change
-        product_change = (last_month.get('product_revenue', 0) - first_month.get('product_revenue', 0))
-        if product_change != 0:
-            components.append({
-                'component_name': 'Product Revenue Growth',
-                'value': round(product_change, 2),
-                'percentage': round((product_change / abs(total_growth)) * 100, 1) if total_growth != 0 else 0,
-                'category': 'organic' if product_change > 0 else 'negative'
-            })
+        if len(growth_data) < 2:
+            logger.warning(f"Growth decomposition: Insufficient data points ({len(growth_data)}), need at least 2")
+            return []
 
-        # Service revenue change
-        service_change = (last_month.get('service_revenue', 0) - first_month.get('service_revenue', 0))
-        if service_change != 0:
-            components.append({
-                'component_name': 'Service Revenue Growth',
-                'value': round(service_change, 2),
-                'percentage': round((service_change / abs(total_growth)) * 100, 1) if total_growth != 0 else 0,
-                'category': 'organic' if service_change > 0 else 'negative'
-            })
+        try:
+            components = []
 
-        return components
+            # Get first and last months for comparison with explicit bounds check
+            first_month = growth_data[0]
+            last_month = growth_data[-1]
+
+            # Validate we got dictionaries
+            if not isinstance(first_month, dict) or not isinstance(last_month, dict):
+                logger.error("Growth decomposition: Data points are not dictionaries")
+                return []
+
+            starting_revenue = first_month.get('total_revenue', 0) or 0
+            ending_revenue = last_month.get('total_revenue', 0) or 0
+            total_growth = ending_revenue - starting_revenue
+
+            if total_growth == 0:
+                logger.info("Growth decomposition: No growth to decompose (total_growth = 0)")
+                return []
+
+            # Decompose into components
+            # Product revenue change
+            product_start = first_month.get('product_revenue', 0) or 0
+            product_end = last_month.get('product_revenue', 0) or 0
+            product_change = product_end - product_start
+
+            if product_change != 0:
+                components.append({
+                    'component_name': 'Product Revenue Growth',
+                    'value': round(product_change, 2),
+                    'percentage': round((product_change / abs(total_growth)) * 100, 1) if total_growth != 0 else 0,
+                    'category': 'organic' if product_change > 0 else 'negative'
+                })
+
+            # Service revenue change
+            service_start = first_month.get('service_revenue', 0) or 0
+            service_end = last_month.get('service_revenue', 0) or 0
+            service_change = service_end - service_start
+
+            if service_change != 0:
+                components.append({
+                    'component_name': 'Service Revenue Growth',
+                    'value': round(service_change, 2),
+                    'percentage': round((service_change / abs(total_growth)) * 100, 1) if total_growth != 0 else 0,
+                    'category': 'organic' if service_change > 0 else 'negative'
+                })
+
+            return components
+
+        except (IndexError, KeyError, TypeError, AttributeError) as e:
+            logger.error(f"Error in growth decomposition processing: {e}", exc_info=True)
+            return []
 
     def _process_cohort_retention(self, cohort_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Process cohort retention data into retention metrics"""
+        # Robust validation
         if not cohort_data:
+            logger.warning("Cohort retention: No cohort data provided")
             return []
 
-        # Group by cohort and calculate retention
-        cohort_groups = {}
-        for row in cohort_data:
-            cohort = row.get('cohort_month')
-            if cohort not in cohort_groups:
-                cohort_groups[cohort] = []
-            cohort_groups[cohort].append(row)
+        if not isinstance(cohort_data, list):
+            logger.error(f"Cohort retention: Expected list but got {type(cohort_data)}")
+            return []
 
-        retention_metrics = []
-        for cohort, data_points in cohort_groups.items():
-            if len(data_points) < 2:
-                continue
+        try:
+            # Group by cohort and calculate retention
+            cohort_groups = {}
+            for row in cohort_data:
+                if not isinstance(row, dict):
+                    logger.warning(f"Cohort retention: Skipping non-dict row: {row}")
+                    continue
 
-            # Sort by months since cohort
-            sorted_points = sorted(data_points, key=lambda x: x.get('months_since_cohort', 0))
+                cohort = row.get('cohort_month')
+                if not cohort:
+                    logger.warning("Cohort retention: Skipping row with no cohort_month")
+                    continue
 
-            # Double-check after sorting (should never happen but safety first)
-            if not sorted_points or len(sorted_points) == 0:
-                continue
+                if cohort not in cohort_groups:
+                    cohort_groups[cohort] = []
+                cohort_groups[cohort].append(row)
 
-            initial_revenue = sorted_points[0].get('cohort_revenue', 0)
-            if initial_revenue == 0:
-                continue
+            retention_metrics = []
+            for cohort, data_points in cohort_groups.items():
+                if not data_points or len(data_points) < 1:
+                    continue
 
-            for point in sorted_points:
-                months = point.get('months_since_cohort', 0)
-                current_revenue = point.get('cohort_revenue', 0)
-                retention_rate = (current_revenue / initial_revenue * 100) if initial_revenue > 0 else 0
+                # Sort by months since cohort
+                try:
+                    sorted_points = sorted(data_points, key=lambda x: x.get('months_since_cohort', 0))
+                except (TypeError, KeyError) as e:
+                    logger.warning(f"Cohort retention: Error sorting cohort {cohort}: {e}")
+                    continue
 
-                retention_metrics.append({
-                    'cohort_month': cohort,
-                    'month_number': int(months),
-                    'retained_revenue': round(current_revenue, 2),
-                    'retention_rate': round(retention_rate, 1),
-                    'expansion_rate': round(max(0, retention_rate - 100), 1),
-                    'churn_rate': round(max(0, 100 - retention_rate), 1)
-                })
+                # Verify we have data after sorting
+                if not sorted_points or len(sorted_points) == 0:
+                    logger.warning(f"Cohort retention: No sorted points for cohort {cohort}")
+                    continue
 
-        return retention_metrics
+                # Get initial revenue safely
+                initial_revenue = sorted_points[0].get('cohort_revenue', 0) or 0
+                if initial_revenue == 0:
+                    logger.info(f"Cohort retention: Skipping cohort {cohort} with zero initial revenue")
+                    continue
+
+                # Process each data point
+                for point in sorted_points:
+                    try:
+                        months = point.get('months_since_cohort', 0) or 0
+                        current_revenue = point.get('cohort_revenue', 0) or 0
+                        retention_rate = (current_revenue / initial_revenue * 100) if initial_revenue > 0 else 0
+
+                        retention_metrics.append({
+                            'cohort_month': cohort,
+                            'month_number': int(months),
+                            'retained_revenue': round(current_revenue, 2),
+                            'retention_rate': round(retention_rate, 1),
+                            'expansion_rate': round(max(0, retention_rate - 100), 1),
+                            'churn_rate': round(max(0, 100 - retention_rate), 1)
+                        })
+                    except (TypeError, ValueError, KeyError) as e:
+                        logger.warning(f"Cohort retention: Error processing point for cohort {cohort}: {e}")
+                        continue
+
+            return retention_metrics
+
+        except Exception as e:
+            logger.error(f"Error in cohort retention processing: {e}", exc_info=True)
+            return []
 
     def _generate_insights(
         self,

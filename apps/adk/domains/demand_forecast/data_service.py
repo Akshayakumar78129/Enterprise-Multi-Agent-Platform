@@ -147,7 +147,8 @@ class DemandForecastDataService:
 
         # Use different SQL for SQLite vs PostgreSQL
         if self.db.db_type == 'postgres':
-            month_expr = "DATE_TRUNC('month', t.\"Posting Date\")"
+            # Cast to date for proper grouping and ordering in PostgreSQL
+            month_expr = "DATE_TRUNC('month', CAST(t.\"Posting Date\" AS DATE))::DATE"
         else:  # SQLite
             month_expr = "strftime('%Y-%m-01', t.\"Posting Date\")"
 
@@ -167,6 +168,10 @@ class DemandForecastDataService:
             query, params = self.filter_engine.apply_filters(sql, filters, self.schema)
             result_dict = await self.db.query(query, params)
             result = result_dict.get('rows', [])
+
+            print(f"[DEBUG] Trend data query returned {len(result)} rows")
+            if len(result) > 0:
+                print(f"[DEBUG] First row: {result[0]}")
 
             return [{
                 'month': row.get('month').isoformat() if hasattr(row.get('month'), 'isoformat') else str(row.get('month', '')),
