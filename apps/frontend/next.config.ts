@@ -38,6 +38,10 @@ const nextConfig = {
         source: '/api/inventory/:path*',
         destination: `${adkUrl}/api/inventory/:path*`,
       },
+      {
+        source: '/api/inventory-level/:path*',
+        destination: `${adkUrl}/api/inventory-level/:path*`,
+      },
       // AI Agent endpoints
       {
         source: '/run_sse',

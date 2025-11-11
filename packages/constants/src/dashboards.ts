@@ -176,14 +176,14 @@ export const DASHBOARDS: Dashboard[] = [
 
   // Inventory Domain Dashboards
   {
-    id: 'inventory-levels',
-    name: 'Inventory Levels',
-    path: '/inventory-levels',
+    id: 'inventory-level',
+    name: 'Inventory Level Analyzer',
+    path: '/inventory-level',
     domain: 'inventory',
-    description: 'Monitor current inventory levels across locations',
+    description: 'Monitor current inventory levels and optimize stock management',
     icon: '📦',
     features: ['kpi', 'filters', 'charts', 'table', 'realtime'],
-    status: 'development',
+    status: 'active',
   },
   {
     id: 'slow-moving-inventory',

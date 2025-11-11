@@ -1,82 +1,119 @@
 "use client";
 
 import React from 'react';
-import {
-  DashboardGrid,
-  DashboardSection,
-  KPIRow,
-  BarChart,
-  LineChart,
-  ChartCard
-} from 'components/index';
+import { DashboardSection, PageLoader } from 'components/index';
 import { useInventorylevelContext } from './context';
 import { useInventorylevelData } from './hooks/useInventorylevelData';
+import {
+  InventoryLevelKPIs,
+  InventoryLevelFilters,
+  StockLevelsTable,
+  InventoryMovementChart,
+  StockStatusChart
+} from './components';
 
-export default function InventorylevelPage() {
-  const { filters } = useInventorylevelContext();
-  const { loading, error, data, kpiMetrics, hasNoData } = useInventorylevelData(filters);
+export default function InventoryLevelPage() {
+  const context = useInventorylevelContext();
+  const [filterKey, setFilterKey] = React.useState(0);
+
+  if (!context) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-muted">Loading Inventory Level...</div>
+      </div>
+    );
+  }
+
+  const { filters, setFilters } = context;
+
+  const {
+    loading,
+    error,
+    kpiMetrics,
+    stockLevels,
+    movements,
+    hasNoData
+  } = useInventorylevelData(filters);
 
   if (error && !loading && hasNoData) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-foreground mb-2">
-            No Data Available
-          </h2>
-          <p className="text-muted-foreground">
-            There's no data to display for the selected filters.
-          </p>
+      <div className="min-h-screen p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="glass-card p-6 border-error/50">
+            <h2 className="text-error text-lg font-semibold mb-2">Error Loading Data</h2>
+            <p className="text-error/80">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-error hover:bg-error/80 text-white rounded-lg transition-colors"
+            >
+              Retry
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* KPIs Section */}
-      <DashboardSection title="Key Metrics">
-        <KPIRow kpis={kpiMetrics} loading={loading} />
-      </DashboardSection>
-
-      {/* Chatbot & BI Panel Section - Following Churn Pattern */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
-        <DashboardSection title="Thought Catalyst">
-          <div className="h-[400px] border border-border rounded-lg p-4">
-            <div className="text-sm text-muted-foreground">
-              AI Chatbot for inventory levels insights will be integrated here
-            </div>
-          </div>
+    <PageLoader
+      isLoading={loading}
+      loaderProps={{
+        title: "Inventory Level Analyzer",
+      }}
+    >
+      <div className="space-y-6">
+        {/* Filters Section */}
+        <DashboardSection>
+          <InventoryLevelFilters
+            key={filterKey}
+            filters={filters}
+            onFiltersChange={setFilters}
+            onReset={() => {
+              // Clear localStorage
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem('inventoryLevelFilters');
+              }
+              // Reset to defaults (full date range 2017-2021)
+              setFilters({
+                dateRange: {
+                  startDate: "2017-01-01",
+                  endDate: "2021-12-31"
+                },
+                warehouse: [],
+                category: [],
+                status: []
+              });
+              // Force re-render of filter component
+              setFilterKey(prev => prev + 1);
+            }}
+          />
         </DashboardSection>
 
-        <DashboardSection title="Decision Intelligence">
-          <div className="h-[400px] border border-border rounded-lg p-4">
-            <div className="text-sm text-muted-foreground">
-              Business Intelligence panel for inventory levels analysis will be integrated here
-            </div>
-          </div>
+        {/* KPIs Section */}
+        <DashboardSection title="Key Metrics">
+          <InventoryLevelKPIs metrics={kpiMetrics} loading={loading} />
+        </DashboardSection>
+
+        {/* Inventory Movement Chart - component has its own DashboardSection */}
+        <InventoryMovementChart
+          data={movements}
+          loading={loading}
+        />
+
+        {/* Stock Status Distribution Chart - component has its own DashboardSection */}
+        <StockStatusChart
+          data={stockLevels}
+          loading={loading}
+        />
+
+        {/* Stock Levels Table */}
+        <DashboardSection title="Current Stock Levels">
+          <StockLevelsTable
+            data={stockLevels}
+            loading={loading}
+          />
         </DashboardSection>
       </div>
-
-      {/* Main Analytics Grid */}
-      <DashboardGrid>
-        <DashboardSection title="Primary Analysis" className="col-span-2">
-          <ChartCard title="Trend Analysis" loading={loading}>
-            <LineChart data={data?.trends || []} />
-          </ChartCard>
-        </DashboardSection>
-
-        <DashboardSection title="Distribution">
-          <ChartCard title="Category Distribution" loading={loading}>
-            <BarChart data={data?.distribution || []} />
-          </ChartCard>
-        </DashboardSection>
-
-        <DashboardSection title="Performance Metrics">
-          <ChartCard title="Performance Overview" loading={loading}>
-            <BarChart data={data?.performance || []} />
-          </ChartCard>
-        </DashboardSection>
-      </DashboardGrid>
-    </div>
+    </PageLoader>
   );
 }

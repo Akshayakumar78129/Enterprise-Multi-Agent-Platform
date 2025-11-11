@@ -1,4 +1,7 @@
-"""Inventory level analysis tool for orchestration agent using sync processing service"""
+"""Inventory level analysis tool for orchestration agent using sync processing service
+
+This tool follows the metadata-only visualization pattern for optimal performance.
+"""
 
 import json
 from typing import Dict, Any, Optional, List
@@ -19,7 +22,10 @@ def analyze_inventory_levels(
     status: Optional[str] = None
 ) -> str:
     """
-    Analyze current inventory levels and stock health.
+    Analyze current inventory levels and stock health with metadata-only visualization output.
+
+    **CRITICAL: NEVER ASK FOR PARAMETERS - USE DEFAULTS**
+    This tool automatically uses sensible defaults for all parameters.
 
     Args:
         time_period: Analysis period - MUST be one of:
@@ -35,7 +41,7 @@ def analyze_inventory_levels(
         status: Optional status filter (low, normal, excess)
 
     Returns:
-        String containing the inventory level analysis report
+        String containing the inventory level analysis report with metadata-only visualization
     """
     # Initialize the sync wrapper for agent framework
     service = SyncInventoryLevelProcessingService()
@@ -121,7 +127,7 @@ def analyze_inventory_levels(
         alerts = data.get('alerts', [])
         insights = data.get('insights', [])
 
-        # Format the results
+        # Format the results as text report for AI
         result = f"""# Inventory Level Analysis Report
 
 ## Analysis Period: {time_period}
@@ -196,11 +202,33 @@ def analyze_inventory_levels(
             for rec in health.get('recommendations', []):
                 result += f"- {rec}\n"
 
-        result += """
+        # Add metadata-only visualization section
+        viz_metadata = {
+            "toolname": "inventory-level",
+            "componentName": "overview",
+            "body": {
+                "dateRange": filters.get('dateRange', {}),
+                "warehouse": filters.get('warehouse', []),
+                "category": filters.get('category', []),
+                "status": filters.get('status', [])
+            }
+        }
+
+        result += f"""
 ## Data Consistency Note
 
 This analysis uses the same data source as the Inventory Level Dashboard,
 ensuring complete consistency between agent responses and dashboard visualizations.
+
+## Visualization Data (Machine-Readable)
+```json
+{json.dumps(viz_metadata, indent=2)}
+```
+
+<output>
+{json.dumps(viz_metadata)}
+</output>
+<is_visualisation>true</is_visualisation>
 """
 
         return result

@@ -1,45 +1,95 @@
-"""Database schema configuration for inventory level domain"""
+"""Inventory level database schema - Aligned with filter engine"""
 
-from typing import Dict, List
+from database.base_schema import TableSchema, BaseSchema
 
 
-class InventoryLevelSchema:
-    """Schema configuration for inventory level queries"""
+class InventoryLevelSchema(BaseSchema):
+    """Schema for inventory level analysis"""
 
-    def __init__(self):
-        # Main table
-        self.sales_table = "dbo_F_Sales_Transaction"
-        self.customer_table = "dbo_D_Customer"
+    # Table definitions
+    TABLES = {
+        'transaction': '"dbo_F_Sales_Transaction"',
+        'customer': '"dbo_D_Customer"',
+    }
 
-        # Column mappings
-        self.columns = {
-            # Sales Transaction columns
-            "transaction_date": '"Txn Date"',
-            "item_number": '"Item Number"',
-            "quantity": '"Net Sales Quantity"',
-            "amount": '"Net Sales Amount"',
-            "product_group": '"Product Posting Group"',
-            "customer_key": '"Customer Key"',
+    # Aliases
+    ALIASES = {
+        'transaction': 't',
+        'customer': 'c',
+    }
 
-            # Customer columns
-            "customer_name": '"Customer Name"',
-            "customer_type": '"Customer Type Desc"',
+    # Transaction schema
+    TRANSACTION = TableSchema(
+        table_name=TABLES['transaction'],
+        alias=ALIASES['transaction'],
+        columns={
+            'customer_id': '"Customer Key"',
+            'txn_id': '"Sales Txn Key"',
+            'date': '"Txn Date"',
+            'txn_date': '"Txn Date"',
+            'net_amount': '"Net Sales Amount"',
+            'gross_amount': '"Sales Amount"',
+            'item_number': '"Item Number"',
+            'product_group': '"Product Posting Group"',
+            'category': '"Product Posting Group"',  # Alias for category filter
+            'quantity': '"Net Sales Quantity"',
+        },
+        refs={
+            'customer_id': 't."Customer Key"',
+            'txn_id': 't."Sales Txn Key"',
+            'date': 't."Txn Date"',
+            'txn_date': 't."Txn Date"',
+            'net_amount': 't."Net Sales Amount"',
+            'gross_amount': 't."Sales Amount"',
+            'item_number': 't."Item Number"',
+            'product_group': 't."Product Posting Group"',
+            'category': 't."Product Posting Group"',  # Alias for category filter
+            'quantity': 't."Net Sales Quantity"',
+        },
+        output_aliases={
+            'customer_id': 'customer_id',
+            'txn_id': 'txn_id',
+            'date': 'txn_date',
+            'txn_date': 'txn_date',
+            'net_amount': 'net_sales_amount',
+            'gross_amount': 'sales_amount',
+            'item_number': 'item_number',
+            'product_group': 'product_group',
+            'category': 'category',
+            'quantity': 'quantity',
         }
+    )
 
-        # Available filter columns
-        self.filter_columns = {
-            "dateRange": {
-                "start": self.columns["transaction_date"],
-                "end": self.columns["transaction_date"]
-            },
-            "category": self.columns["product_group"],
-            "item": self.columns["item_number"],
+    # Customer schema (if needed for filters)
+    CUSTOMER = TableSchema(
+        table_name=TABLES['customer'],
+        alias=ALIASES['customer'],
+        columns={
+            'id': '"Customer Key"',
+            'name': '"Customer Name"',
+            'region': '"Customer State/Prov"',
+            'type': '"Customer Type Desc"',
+        },
+        refs={
+            'id': 'c."Customer Key"',
+            'name': 'c."Customer Name"',
+            'region': 'c."Customer State/Prov"',
+            'type': 'c."Customer Type Desc"',
+        },
+        output_aliases={
+            'id': 'customer_id',
+            'name': 'customer_name',
+            'region': 'region',
+            'type': 'customer_type',
         }
+    )
 
-    def get_column(self, name: str) -> str:
-        """Get the actual database column name"""
-        return self.columns.get(name, name)
+    @classmethod
+    def get_tables(cls):
+        """Return table name mappings"""
+        return cls.TABLES
 
-    def get_filter_column(self, filter_name: str) -> str:
-        """Get the column used for filtering"""
-        return self.filter_columns.get(filter_name, filter_name)
+    @classmethod
+    def get_aliases(cls):
+        """Return table alias mappings"""
+        return cls.ALIASES
