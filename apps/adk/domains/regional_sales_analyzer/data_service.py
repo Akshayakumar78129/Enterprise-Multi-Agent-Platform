@@ -1,10 +1,13 @@
 """Data service for regional sales analyzer - SQL queries only"""
 
+import logging
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
 from database.connection import DatabaseConnection
 from database.filter_engine import FilterEngine
 from .schema import RegionalSalesAnalyzerSchema
+
+logger = logging.getLogger(__name__)
 
 
 class RegionalSalesAnalyzerDataService:
@@ -63,8 +66,27 @@ class RegionalSalesAnalyzerDataService:
         """
 
         query, params = self.filter_engine.apply_filters(sql, filters, self.schema)
+
+        # DIAGNOSTIC: Log actual SQL query
+        logger.info(f"[Regional Sales] Executing get_regional_sales_data query")
+        logger.debug(f"[Regional Sales] SQL: {query[:500]}...")  # First 500 chars
+        logger.debug(f"[Regional Sales] Params: {params}")
+        logger.debug(f"[Regional Sales] DB Type: {self.db.db_type}")
+
         result_dict = await self.db.query(query, params)
         results = result_dict.get('rows', [])
+
+        # DIAGNOSTIC: Log query results
+        logger.info(f"[Regional Sales] get_regional_sales_data returned {len(results)} rows")
+        if len(results) == 0:
+            logger.warning(f"[Regional Sales] ⚠️  Query returned ZERO rows - possible JOIN failure or column name mismatch")
+        elif len(results) > 0:
+            # Log first row to verify data structure
+            logger.debug(f"[Regional Sales] Sample row: {results[0]}")
+            # Check if all values are zero
+            first_row = results[0]
+            if all(first_row.get(k, 0) == 0 for k in ['totalSales', 'netSales', 'totalQuantity', 'grossProfit']):
+                logger.warning(f"[Regional Sales] ⚠️  First row has ALL ZERO values - likely JOIN or column name issue")
 
         # Calculate profit margin for each region
         for row in results:
@@ -98,8 +120,20 @@ class RegionalSalesAnalyzerDataService:
         """
 
         query, params = self.filter_engine.apply_filters(sql, filters, self.schema)
+
+        logger.info(f"[Regional Sales] Executing get_country_level_data query")
+        logger.debug(f"[Regional Sales] DB Type: {self.db.db_type}")
+
         result_dict = await self.db.query(query, params)
-        return result_dict.get('rows', [])
+        results = result_dict.get('rows', [])
+
+        logger.info(f"[Regional Sales] get_country_level_data returned {len(results)} rows")
+        if len(results) == 0:
+            logger.warning(f"[Regional Sales] ⚠️  Country data query returned ZERO rows")
+        elif results and all(results[0].get(k, 0) == 0 for k in ['totalSales', 'netSales'] if k in results[0]):
+            logger.warning(f"[Regional Sales] ⚠️  Country data has ALL ZERO values")
+
+        return results
 
     async def get_time_series_data(self, filters: Dict[str, Any] = {}) -> List[Dict]:
         """Get time series data with configurable aggregation"""
@@ -129,8 +163,17 @@ class RegionalSalesAnalyzerDataService:
         """
 
         query, params = self.filter_engine.apply_filters(sql, filters, self.schema)
+
+        logger.info(f"[Regional Sales] Executing get_time_series_data query (aggregation={aggregation})")
+
         result_dict = await self.db.query(query, params)
-        return result_dict.get('rows', [])
+        results = result_dict.get('rows', [])
+
+        logger.info(f"[Regional Sales] get_time_series_data returned {len(results)} rows")
+        if len(results) == 0:
+            logger.warning(f"[Regional Sales] ⚠️  Time series query returned ZERO rows")
+
+        return results
 
     async def get_regional_summary(self, filters: Dict[str, Any] = {}) -> Dict:
         """Get summary statistics for regional sales"""
@@ -152,11 +195,19 @@ class RegionalSalesAnalyzerDataService:
         """
 
         query, params = self.filter_engine.apply_filters(sql, filters, self.schema)
+
+        logger.info(f"[Regional Sales] Executing get_regional_summary query")
+
         result_dict = await self.db.query(query, params)
         results = result_dict.get('rows', [])
 
+        logger.info(f"[Regional Sales] get_regional_summary returned {len(results)} rows")
+
         if results and len(results) > 0:
             summary = results[0]
+            # Check if summary has all zero values
+            if all(summary.get(k, 0) == 0 for k in ['totalSales', 'netSales', 'grossProfit']):
+                logger.warning(f"[Regional Sales] ⚠️  Summary has ALL ZERO values")
             # Calculate profit margin
             if summary.get('totalSales') != None and summary.get('totalSales', 0) > 0:
                 summary['profitMargin'] = round((summary.get('grossProfit', 0) / summary['totalSales']) * 100, 2)
@@ -164,6 +215,7 @@ class RegionalSalesAnalyzerDataService:
                 summary['profitMargin'] = 0.0
             return summary
 
+        logger.warning(f"[Regional Sales] ⚠️  Summary query returned no results")
         return {
             'totalSales': 0,
             'netSales': 0,
@@ -195,8 +247,17 @@ class RegionalSalesAnalyzerDataService:
         """
 
         query, params = self.filter_engine.apply_filters(sql, filters, self.schema)
+
+        logger.info(f"[Regional Sales] Executing get_top_regions query (limit={limit})")
+
         result_dict = await self.db.query(query, params)
-        return result_dict.get('rows', [])
+        results = result_dict.get('rows', [])
+
+        logger.info(f"[Regional Sales] get_top_regions returned {len(results)} rows")
+        if len(results) == 0:
+            logger.warning(f"[Regional Sales] ⚠️  Top regions query returned ZERO rows")
+
+        return results
 
     async def get_opportunity_analysis(self, filters: Dict[str, Any] = {}) -> List[Dict]:
         """Get opportunity analysis using BCG matrix approach
@@ -234,10 +295,15 @@ class RegionalSalesAnalyzerDataService:
 
         # Get statistics with date filters only (no country/state filters)
         stats_query, stats_params = self.filter_engine.apply_filters(stats_sql, date_only_filters, self.schema)
+
+        logger.info(f"[Regional Sales] Executing get_opportunity_analysis stats query")
+
         stats_result = await self.db.query(stats_query, stats_params)
         stats = stats_result.get('rows', [{}])[0]
         avg_sales = stats.get('avgSales', 0) or 0
         avg_customers = stats.get('avgCustomers', 0) or 0
+
+        logger.debug(f"[Regional Sales] Opportunity stats: avg_sales={avg_sales}, avg_customers={avg_customers}")
 
         # Now get filtered regional data and apply opportunity categorization
         sql = f"""
@@ -258,8 +324,15 @@ class RegionalSalesAnalyzerDataService:
         """
 
         query, params = self.filter_engine.apply_filters(sql, filters, self.schema)
+
+        logger.info(f"[Regional Sales] Executing get_opportunity_analysis regional query")
+
         result_dict = await self.db.query(query, params)
         results = result_dict.get('rows', [])
+
+        logger.info(f"[Regional Sales] get_opportunity_analysis returned {len(results)} rows")
+        if len(results) == 0:
+            logger.warning(f"[Regional Sales] ⚠️  Opportunity analysis query returned ZERO rows")
 
         # Apply opportunity categorization to each result
         for row in results:

@@ -217,11 +217,26 @@ class RevenueForecastDataService:
         params = tuple(params)
 
         try:
+            logger.info(f"[Revenue Forecast] Executing get_kpi_data query")
+            logger.debug(f"[Revenue Forecast] DB Type: {self.db.db_type}")
+            logger.debug(f"[Revenue Forecast] Params: {params}")
+
             result_dict = await self.db.query(query, params)
             rows = result_dict.get('rows', [])
+
+            logger.info(f"[Revenue Forecast] get_kpi_data returned {len(rows)} rows")
+            if len(rows) == 0:
+                logger.warning(f"[Revenue Forecast] ⚠️  KPI query returned ZERO rows - possible column name or table mismatch")
+            elif rows:
+                logger.debug(f"[Revenue Forecast] Sample KPI data: {rows[0]}")
+                # Check if all values are zero
+                first_row = rows[0]
+                if all(first_row.get(k, 0) == 0 for k in ['total_revenue', 'prior_revenue', 'rule_of_40']):
+                    logger.warning(f"[Revenue Forecast] ⚠️  KPI data has ALL ZERO values")
+
             return rows[0] if rows else {}
         except Exception as e:
-            logger.error(f"Error fetching KPI data: {e}")
+            logger.error(f"Error fetching KPI data: {e}", exc_info=True)
             raise
 
     async def get_revenue_growth_decomposition(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -266,10 +281,23 @@ class RevenueForecastDataService:
             params.append(company_code)
 
         try:
+            logger.info(f"[Revenue Forecast] Executing get_revenue_growth_decomposition query")
+            logger.debug(f"[Revenue Forecast] DB Type: {self.db.db_type}")
+
             result_dict = await self.db.query(query, params)
-            return result_dict.get('rows', [])
+            rows = result_dict.get('rows', [])
+
+            logger.info(f"[Revenue Forecast] get_revenue_growth_decomposition returned {len(rows)} rows")
+            if len(rows) == 0:
+                logger.warning(f"[Revenue Forecast] ⚠️  Growth decomposition query returned ZERO rows - this will cause index out of range!")
+            elif len(rows) < 2:
+                logger.warning(f"[Revenue Forecast] ⚠️  Growth decomposition returned only {len(rows)} rows - need at least 2 for processing")
+            else:
+                logger.debug(f"[Revenue Forecast] Sample growth data (first row): {rows[0]}")
+
+            return rows
         except Exception as e:
-            logger.error(f"Error fetching growth decomposition: {e}")
+            logger.error(f"Error fetching growth decomposition: {e}", exc_info=True)
             raise
 
     async def get_cohort_retention_data(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -325,8 +353,15 @@ class RevenueForecastDataService:
         params = [date_from, date_to, date_from, date_to]
 
         try:
+            logger.info(f"[Revenue Forecast] Executing get_cohort_retention_data query")
+            logger.debug(f"[Revenue Forecast] DB Type: {self.db.db_type}")
+
             result_dict = await self.db.query(query, params)
             rows = result_dict.get('rows', [])
+
+            logger.info(f"[Revenue Forecast] get_cohort_retention_data returned {len(rows)} raw rows")
+            if len(rows) == 0:
+                logger.warning(f"[Revenue Forecast] ⚠️  Cohort retention query returned ZERO rows")
 
             # Calculate months_since_cohort in Python instead of SQL to avoid DB-specific issues
             for row in rows:
@@ -345,10 +380,13 @@ class RevenueForecastDataService:
 
             # Filter to only 0-12 months and return
             filtered_rows = [row for row in rows if 0 <= row.get('months_since_cohort', -1) <= 12]
+
+            logger.info(f"[Revenue Forecast] After filtering: {len(filtered_rows)} cohort rows (0-12 months)")
+
             return filtered_rows
 
         except Exception as e:
-            logger.error(f"Error fetching cohort retention data: {e}")
+            logger.error(f"Error fetching cohort retention data: {e}", exc_info=True)
             raise
 
     async def get_segment_forecast_data(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -422,10 +460,18 @@ class RevenueForecastDataService:
         params = [date_from, date_to]
 
         try:
+            logger.info(f"[Revenue Forecast] Executing get_segment_forecast_data query")
+
             result_dict = await self.db.query(query, params)
-            return result_dict.get('rows', [])
+            rows = result_dict.get('rows', [])
+
+            logger.info(f"[Revenue Forecast] get_segment_forecast_data returned {len(rows)} rows")
+            if len(rows) == 0:
+                logger.warning(f"[Revenue Forecast] ⚠️  Segment forecast query returned ZERO rows")
+
+            return rows
         except Exception as e:
-            logger.error(f"Error fetching segment forecast data: {e}")
+            logger.error(f"Error fetching segment forecast data: {e}", exc_info=True)
             raise
 
     async def get_customer_economics_data(self, filters: Dict[str, Any]) -> Dict[str, Any]:
@@ -468,9 +514,18 @@ class RevenueForecastDataService:
         params = [date_from, date_to]
 
         try:
+            logger.info(f"[Revenue Forecast] Executing get_customer_economics_data query")
+
             result_dict = await self.db.query(query, params)
             rows = result_dict.get('rows', [])
+
+            logger.info(f"[Revenue Forecast] get_customer_economics_data returned {len(rows)} rows")
+            if len(rows) == 0:
+                logger.warning(f"[Revenue Forecast] ⚠️  Customer economics query returned ZERO rows")
+            elif rows:
+                logger.debug(f"[Revenue Forecast] Customer economics data: {rows[0]}")
+
             return rows[0] if rows else {}
         except Exception as e:
-            logger.error(f"Error fetching customer economics: {e}")
+            logger.error(f"Error fetching customer economics: {e}", exc_info=True)
             raise
