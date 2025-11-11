@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode, useState } from 'react';
 
-export default function QueryProvider({ children }: { children: ReactNode }) {
+export default function QueryProvider({ children }: { children: ReactNode}) {
   // Create QueryClient instance with stale-while-revalidate strategy
   const [queryClient] = useState(
     () =>
@@ -18,6 +18,12 @@ export default function QueryProvider({ children }: { children: ReactNode }) {
             retry: 1,
             // Don't refetch on window focus (user can manually refresh)
             refetchOnWindowFocus: false,
+            // Don't refetch on mount if data is fresh
+            refetchOnMount: false,
+            // Prefer cached data for faster initial render
+            networkMode: 'offlineFirst',
+            // Keep previous data while fetching new data
+            placeholderData: (previousData) => previousData,
           },
         },
       })

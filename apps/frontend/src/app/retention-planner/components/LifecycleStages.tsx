@@ -1,7 +1,6 @@
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from '@/lib/rechartsSetup';
 import React from 'react';
 import { Card } from 'components/index';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-
 interface LifecycleStagesProps {
   data: Array<{
     stage: string;

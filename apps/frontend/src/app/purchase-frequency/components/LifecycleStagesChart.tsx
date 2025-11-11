@@ -1,10 +1,10 @@
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from '@/lib/rechartsSetup';
 /**
  * Customer Lifecycle Stages Chart
  * Shows customer distribution across lifecycle stages
  */
 
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { ChartCard, getShiftClickManager } from 'components/index';
 
 const CustomTooltip = ({ active, payload }: any) => {

@@ -1,17 +1,5 @@
+import { Scatter, ChartOptions } from '@/lib/chartSetup';
 import React, { useMemo } from 'react';
-import { Scatter } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Tooltip,
-  Legend,
-  ChartOptions,
-} from 'chart.js';
-
-ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend);
-
 interface ProductData {
   productCategory: string;
   transactionCount: number;

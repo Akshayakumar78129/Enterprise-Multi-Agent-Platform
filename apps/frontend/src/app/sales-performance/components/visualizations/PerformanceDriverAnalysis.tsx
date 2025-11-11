@@ -2,10 +2,10 @@
 
 import React, { useState, useMemo } from 'react';
 import { Card, getShiftClickManager } from 'components/index';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatNumber, formatCurrency } from '../../utils/formatNumber';
 import { calculateDrivers, calculateDriverSummary } from '../../utils/dataTransformations';
 
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from '@/lib/rechartsSetup';
 interface PerformanceDriverAnalysisProps {
   data: any[];
   loading?: boolean;

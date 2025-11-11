@@ -2,24 +2,7 @@
 
 import React from 'react';
 import { Card } from 'components/index';
-import { Scatter } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Tooltip,
-  Legend
-} from 'chart.js';
-
-ChartJS.register(
-  LinearScale,
-  PointElement,
-  LineElement,
-  Tooltip,
-  Legend
-);
-
+import { Scatter } from '@/lib/chartSetup';
 interface PredictionAccuracyProps {
   data: any[];
   loading?: boolean;

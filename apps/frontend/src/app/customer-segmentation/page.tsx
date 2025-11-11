@@ -1,6 +1,7 @@
 "use client";
 
-import React from 'react';
+import React, { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import {
   DashboardGrid,
   DashboardSection,
@@ -11,13 +12,24 @@ import {
   BarChart,
   LineChart,
   PageLoader,
+  Skeleton,
   getShiftClickManager
 } from 'components';
 import { Users, TrendingUp, DollarSign, Activity, Layers, Target } from 'lucide-react';
 import { useSegmentationContext } from './context';
-import { SegmentProfileCards, SegmentDistributionMap } from './components';
 import { useSegmentationData } from './hooks/useSegmentationData';
 import { RFM_SEGMENT_OPTIONS, VALUE_CATEGORY_OPTIONS, BEHAVIOR_TYPE_OPTIONS } from '@/lib/constants/filterOptions';
+
+// Dynamic imports for heavy components
+const SegmentProfileCards = dynamic(() => import('./components').then(mod => ({ default: mod.SegmentProfileCards })), {
+  loading: () => <Card className="p-6"><Skeleton height={300} className="animate-pulse" /></Card>,
+  ssr: false
+});
+
+const SegmentDistributionMap = dynamic(() => import('./components').then(mod => ({ default: mod.SegmentDistributionMap })), {
+  loading: () => <Card className="p-6"><Skeleton height={600} className="animate-pulse" /></Card>,
+  ssr: false
+});
 
 export default function CustomerSegmentationPage() {
   const { filters, setFilters, setInsights, setSegments } = useSegmentationContext();
@@ -528,66 +540,70 @@ export default function CustomerSegmentationPage() {
 
       {/* Segment Distribution Map */}
       <DashboardSection className="w-full">
-        <div
-          className="w-full cursor-pointer"
-          style={{ minHeight: '600px' }}
-          onClick={(event) => {
-            if (event.shiftKey) {
-              shiftClickManager.addPoint({
-                label: "Segment Distribution Map",
-                value: `${segmentData.length} customers across ${Object.keys(segmentDistribution || {}).length} segments`,
-                source: 'Segmentation Dashboard - Distribution Map'
-              }, event.nativeEvent);
-            }
-          }}
-        >
-          <SegmentDistributionMap
-            data={segmentData}
-            selectedSegments={filters.customerSegments}
-            onSegmentFilter={(segments) => setFilters({ ...filters, customerSegments: segments })}
-            onCustomerSelect={(customer) => {
-              console.log('Selected customer:', customer);
+        <Suspense fallback={<Card className="p-6"><Skeleton height={600} className="animate-pulse" /></Card>}>
+          <div
+            className="w-full cursor-pointer"
+            style={{ minHeight: '600px' }}
+            onClick={(event) => {
+              if (event.shiftKey) {
+                shiftClickManager.addPoint({
+                  label: "Segment Distribution Map",
+                  value: `${segmentData.length} customers across ${Object.keys(segmentDistribution || {}).length} segments`,
+                  source: 'Segmentation Dashboard - Distribution Map'
+                }, event.nativeEvent);
+              }
             }}
-            width={typeof window !== 'undefined' ? window.innerWidth - 50 : 1400}
-            height={600}
-            performanceMode={segmentData.length > 1000}
-          />
-        </div>
+          >
+            <SegmentDistributionMap
+              data={segmentData}
+              selectedSegments={filters.customerSegments}
+              onSegmentFilter={(segments) => setFilters({ ...filters, customerSegments: segments })}
+              onCustomerSelect={(customer) => {
+                console.log('Selected customer:', customer);
+              }}
+              width={typeof window !== 'undefined' ? window.innerWidth - 50 : 1400}
+              height={600}
+              performanceMode={segmentData.length > 1000}
+            />
+          </div>
+        </Suspense>
       </DashboardSection>
 
       {/* Segment Profiles */}
       <DashboardSection>
-        <SegmentProfileCards
-          segmentDistribution={segmentDistribution}
-          segmentComparison={segmentComparison}
-          loading={false}
-          onSegmentExport={(segmentName) => {
-            // Export functionality
-            const exportData = segmentData.filter((c: any) => c.segment_name === segmentName);
-            const csv = [
-              ['Customer ID', 'Customer Name', 'RFM Score', 'Lifetime Value', 'Avg Order Value', 'Transactions', 'Days Since Last'],
-              ...exportData.map((c: any) => [
-                c.customer_id,
-                c.customer_name,
-                c.rfm_rl_score,
-                c.lifetime_value,
-                c.avg_order_value,
-                c.transaction_count,
-                c.days_since_last_activity
-              ])
-            ].map(row => row.join(',')).join('\n');
+        <Suspense fallback={<Card className="p-6"><Skeleton height={300} className="animate-pulse" /></Card>}>
+          <SegmentProfileCards
+            segmentDistribution={segmentDistribution}
+            segmentComparison={segmentComparison}
+            loading={false}
+            onSegmentExport={(segmentName) => {
+              // Export functionality
+              const exportData = segmentData.filter((c: any) => c.segment_name === segmentName);
+              const csv = [
+                ['Customer ID', 'Customer Name', 'RFM Score', 'Lifetime Value', 'Avg Order Value', 'Transactions', 'Days Since Last'],
+                ...exportData.map((c: any) => [
+                  c.customer_id,
+                  c.customer_name,
+                  c.rfm_rl_score,
+                  c.lifetime_value,
+                  c.avg_order_value,
+                  c.transaction_count,
+                  c.days_since_last_activity
+                ])
+              ].map(row => row.join(',')).join('\n');
 
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `segment_${segmentName}_customers.csv`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-          }}
-        />
+              const blob = new Blob([csv], { type: 'text/csv' });
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `segment_${segmentName}_customers.csv`;
+              document.body.appendChild(a);
+              a.click();
+              window.URL.revokeObjectURL(url);
+              document.body.removeChild(a);
+            }}
+          />
+        </Suspense>
       </DashboardSection>
 
       </div>

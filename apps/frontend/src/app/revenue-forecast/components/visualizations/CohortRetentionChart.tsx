@@ -1,27 +1,8 @@
 "use client";
 
 import React from 'react';
-import { Bar } from 'react-chartjs-2';
 import { ChartCard, getShiftClickManager } from 'components/index';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-} from 'chart.js';
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
-
+import { Bar } from '@/lib/chartSetup';
 interface CohortRetentionChartProps {
   data: any[];
   loading?: boolean;

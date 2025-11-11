@@ -2,22 +2,7 @@
 
 import React from 'react';
 import { ChartCard, getShiftClickManager } from 'components/index';
-import { Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-  ChartOptions
-} from 'chart.js';
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
-
+import { Line, ChartOptions } from '@/lib/chartSetup';
 interface ForecastPoint {
   date: string;
   predictedAmount: number;

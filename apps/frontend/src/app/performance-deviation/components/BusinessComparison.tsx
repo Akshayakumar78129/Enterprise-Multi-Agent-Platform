@@ -1,3 +1,4 @@
+import { Legend, PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer, Tooltip } from '@/lib/rechartsSetup';
 import React from 'react';
 import {
   ChartCard,
@@ -6,17 +7,6 @@ import {
   useChartTooltip,
   getShiftClickManager
 } from 'components';
-import {
-  Radar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  ResponsiveContainer,
-  Legend,
-  Tooltip
-} from 'recharts';
-
 interface BusinessComparisonProps {
   data: any;
   loading?: boolean;

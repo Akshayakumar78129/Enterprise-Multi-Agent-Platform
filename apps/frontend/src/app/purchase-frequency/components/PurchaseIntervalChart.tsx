@@ -1,10 +1,10 @@
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from '@/lib/rechartsSetup';
 /**
  * Purchase Interval Chart
  * Shows distribution of days between customer purchases
  */
 
 import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { ChartCard, getShiftClickManager } from 'components/index';
 
 const CustomTooltip = ({ active, payload }: any) => {

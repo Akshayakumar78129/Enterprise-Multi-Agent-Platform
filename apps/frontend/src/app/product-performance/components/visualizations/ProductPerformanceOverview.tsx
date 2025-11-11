@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Card } from 'components/index';
-import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -16,6 +15,7 @@ import {
 } from 'chart.js';
 import { useProductPerformanceContext } from '../../context';
 
+import { Line } from '@/lib/chartSetup';
 ChartJS.register(
   CategoryScale,
   LinearScale,

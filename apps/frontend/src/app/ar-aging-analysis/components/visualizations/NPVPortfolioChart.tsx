@@ -2,20 +2,7 @@
 
 import React from 'react';
 import { ChartCard, getShiftClickManager } from 'components/index';
-import { Bar } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ChartOptions
-} from 'chart.js';
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
-
+import { Bar, ChartOptions } from '@/lib/chartSetup';
 interface AgingBucket {
   range: string;
   amount: number;

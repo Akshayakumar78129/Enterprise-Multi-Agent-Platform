@@ -1,3 +1,4 @@
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from '@/lib/rechartsSetup';
 import React, { useMemo } from 'react';
 import {
   ChartCard,
@@ -5,8 +6,6 @@ import {
   Badge,
   getShiftClickManager
 } from 'components';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-
 interface VarianceDecompositionProps {
   data: any;
   loading?: boolean;

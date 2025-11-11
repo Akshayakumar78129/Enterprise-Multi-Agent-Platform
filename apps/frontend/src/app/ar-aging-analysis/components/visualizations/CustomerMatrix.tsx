@@ -2,19 +2,7 @@
 
 import React from 'react';
 import { ChartCard, getShiftClickManager } from 'components/index';
-import { Scatter } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Tooltip,
-  Legend,
-  ChartOptions
-} from 'chart.js';
-
-ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend);
-
+import { Scatter, ChartOptions } from '@/lib/chartSetup';
 interface CustomerInsight {
   customerId: string;
   customerName: string;

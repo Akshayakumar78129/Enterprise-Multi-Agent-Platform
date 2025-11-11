@@ -2,10 +2,10 @@
 
 import React, { useState, useMemo } from 'react';
 import { Card, getShiftClickManager } from 'components/index';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { formatCurrency, formatNumber } from '../../utils/formatNumber';
 import { aggregateByGranularity, type Granularity } from '../../utils/dataTransformations';
 
+import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from '@/lib/rechartsSetup';
 interface TimeSeriesExplorerProps {
   data: any[];
   loading?: boolean;

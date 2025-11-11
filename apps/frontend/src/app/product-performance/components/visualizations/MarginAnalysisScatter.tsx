@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Card } from 'components/index';
-import { Scatter } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   LinearScale,
@@ -13,6 +12,7 @@ import {
 } from 'chart.js';
 import { useProductPerformanceContext } from '../../context';
 
+import { Scatter } from '@/lib/chartSetup';
 ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend);
 
 interface MarginData {

@@ -1,29 +1,8 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  ChartOptions,
-} from 'chart.js';
+import { Line, ChartOptions } from '@/lib/chartSetup';
 import { Skeleton } from 'components/index';
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
 
 interface TimeSeriesData {
   period: string;

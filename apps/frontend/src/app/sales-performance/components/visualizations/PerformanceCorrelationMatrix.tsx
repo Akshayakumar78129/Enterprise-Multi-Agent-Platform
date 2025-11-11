@@ -2,10 +2,10 @@
 
 import React, { useState, useMemo } from 'react';
 import { Card, getShiftClickManager } from 'components/index';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ZAxis, Line } from 'recharts';
 import { formatCurrency, formatNumber } from '../../utils/formatNumber';
 import { calculateCorrelation, getMetricValue } from '../../utils/dataTransformations';
 
+import { CartesianGrid, Line, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from '@/lib/rechartsSetup';
 interface PerformanceCorrelationMatrixProps {
   data: any[];
   loading?: boolean;

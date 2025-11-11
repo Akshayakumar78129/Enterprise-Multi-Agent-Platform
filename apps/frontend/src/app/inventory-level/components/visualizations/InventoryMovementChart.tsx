@@ -1,23 +1,8 @@
 "use client";
 
 import React from 'react';
-import { Line } from 'react-chartjs-2';
 import { DashboardSection, getShiftClickManager } from 'components/index';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-  ChartOptions
-} from 'chart.js';
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
-
+import { Line, ChartOptions } from '@/lib/chartSetup';
 interface Movement {
   period: string;
   inbound: number;

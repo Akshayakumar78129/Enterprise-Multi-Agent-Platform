@@ -1,7 +1,6 @@
+import { Bar, BarChart, CartesianGrid, Label, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from '@/lib/rechartsSetup';
 import React from 'react';
 import { Card } from 'components/index';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label } from 'recharts';
-
 interface InterventionROIProps {
   data: Array<{
     strategy: string;

@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { Card } from 'components/index';
-import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { useProductPerformanceContext } from '../../context';
 
+import { Pie } from '@/lib/chartSetup';
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 interface PriceBandData {

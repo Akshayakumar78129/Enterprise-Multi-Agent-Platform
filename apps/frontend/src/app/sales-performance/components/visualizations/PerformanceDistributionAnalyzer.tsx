@@ -2,10 +2,10 @@
 
 import React, { useState, useMemo } from 'react';
 import { Card, getShiftClickManager } from 'components/index';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { formatCurrency, formatNumber } from '../../utils/formatNumber';
 import { filterByLimit } from '../../utils/dataTransformations';
 
+import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from '@/lib/rechartsSetup';
 interface PerformanceDistributionAnalyzerProps {
   data: any[];
   loading?: boolean;

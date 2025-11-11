@@ -1,7 +1,6 @@
+import { Bar, BarChart, CartesianGrid, Cell, Label, ResponsiveContainer, Tooltip, XAxis, YAxis } from '@/lib/rechartsSetup';
 import React from 'react';
 import { Card } from 'components/index';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Label } from 'recharts';
-
 interface ChurnRiskGaugeProps {
   data: Array<{
     riskLevel: string;

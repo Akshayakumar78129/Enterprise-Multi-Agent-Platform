@@ -1,7 +1,6 @@
+import { CartesianGrid, Cell, Label, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from '@/lib/rechartsSetup';
 import React from 'react';
 import { Card } from 'components/index';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ZAxis, Label } from 'recharts';
-
 interface ValueRiskMatrixProps {
   data: Array<{
     valueSegment: string;

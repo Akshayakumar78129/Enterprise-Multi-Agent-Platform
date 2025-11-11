@@ -1,18 +1,8 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { Doughnut } from 'react-chartjs-2';
 import { DashboardSection, getShiftClickManager } from 'components/index';
-import {
-  Chart as ChartJS,
-  ArcElement,
-  Tooltip,
-  Legend,
-  ChartOptions
-} from 'chart.js';
-
-ChartJS.register(ArcElement, Tooltip, Legend);
-
+import { Doughnut, ChartOptions } from '@/lib/chartSetup';
 interface StockLevel {
   itemName: string;
   category: string;

@@ -13,7 +13,8 @@ const nextConfig = {
     externalDir: true,
     // Disabled optimizeCss to avoid critters dependency issues
     // optimizeCss: true,
-    optimizePackageImports: ['plotly.js', 'react-plotly.js', 'd3', 'chart.js'],
+    // Removed optimizePackageImports - causes slow compilation in Next.js 15
+    // optimizePackageImports: ['plotly.js', 'react-plotly.js', 'd3', 'chart.js'],
   },
 
   // API Proxy Configuration - Direct to ADK
@@ -71,35 +72,38 @@ const nextConfig = {
 
   // Webpack optimization
   webpack: (config: any, { isServer, dev }: any) => {
-    // Memory optimization
-    config.optimization = {
-      ...config.optimization,
-      splitChunks: {
-        chunks: 'all',
-        cacheGroups: {
-          plotly: {
-            name: 'plotly',
-            test: /[\\/]node_modules[\\/](plotly\.js|react-plotly\.js)[\\/]/,
-            chunks: 'all',
-            priority: 30,
-          },
-          charts: {
-            name: 'charts',
-            test: /[\\/]node_modules[\\/](chart\.js|react-chartjs-2|d3|recharts)[\\/]/,
-            chunks: 'all',
-            priority: 25,
-          },
-          vendor: {
-            name: 'vendor',
-            test: /[\\/]node_modules[\\/]/,
-            chunks: 'all',
-            priority: 10,
+    // Only apply complex optimizations in production to avoid slow dev compilation
+    if (!dev) {
+      // Memory optimization for production builds
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            plotly: {
+              name: 'plotly',
+              test: /[\\/]node_modules[\\/](plotly\.js|react-plotly\.js)[\\/]/,
+              chunks: 'all',
+              priority: 30,
+            },
+            charts: {
+              name: 'charts',
+              test: /[\\/]node_modules[\\/](chart\.js|react-chartjs-2|d3|recharts)[\\/]/,
+              chunks: 'all',
+              priority: 25,
+            },
+            vendor: {
+              name: 'vendor',
+              test: /[\\/]node_modules[\\/]/,
+              chunks: 'all',
+              priority: 10,
+            },
           },
         },
-      },
-    };
+      };
+    }
 
-    // Fix for Plotly.js
+    // Fix for Plotly.js - server-side only
     if (isServer) {
       config.externals = [...(config.externals || []), 'plotly.js', 'react-plotly.js'];
     }

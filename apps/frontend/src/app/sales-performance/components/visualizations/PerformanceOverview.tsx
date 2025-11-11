@@ -2,10 +2,10 @@
 
 import React, { useState, useMemo } from 'react';
 import { Card, getShiftClickManager } from 'components/index';
-import { BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 import { formatCurrency, formatNumber } from '../../utils/formatNumber';
 import { transformForHorizontalBar, getPerformanceColor } from '../../utils/dataTransformations';
 
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from '@/lib/rechartsSetup';
 interface PerformanceOverviewProps {
   data: any[];
   loading?: boolean;

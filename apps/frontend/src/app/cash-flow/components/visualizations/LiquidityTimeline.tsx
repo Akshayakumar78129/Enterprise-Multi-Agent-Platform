@@ -2,18 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Card, Skeleton, getShiftClickManager } from 'components/index';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  ReferenceLine,
-} from 'recharts';
-
+import { CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from '@/lib/rechartsSetup';
 interface LiquidityTimelineData {
   date: string;
   cash_balance: number;

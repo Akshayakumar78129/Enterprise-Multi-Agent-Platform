@@ -1,31 +1,8 @@
 "use client";
 
 import React from 'react';
-import { Line } from 'react-chartjs-2';
 import { ChartCard, getShiftClickManager } from 'components/index';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-} from 'chart.js';
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
-
+import { Line } from '@/lib/chartSetup';
 interface MonthlyTrendChartProps {
   data: any[];
   loading?: boolean;

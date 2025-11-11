@@ -1,20 +1,10 @@
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from '@/lib/rechartsSetup';
 import React, { useMemo } from 'react';
 import {
   ChartCard,
   Skeleton,
   getShiftClickManager
 } from 'components';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer
-} from 'recharts';
-
 interface ExternalFactorCorrelationProps {
   data: any;
   loading?: boolean;

@@ -1,21 +1,41 @@
 "use client";
-import React from 'react';
+import React, { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import {
   DashboardSection,
-  PageLoader
+  PageLoader,
+  Skeleton,
+  Card
 } from 'components/index';
 import {
   PredictionKPIs,
   NextPurchaseFilters,
   NextPurchasePredictions,
-  RecommendedProducts,
-  ProductAffinityNetwork,
-  PredictionConfidenceMatrix,
-  CustomerPurchaseJourney,
-  CategoryPerformanceOverview
+  RecommendedProducts
 } from './components';
 import { useNextPurchaseContext } from './context';
 import { useNextPurchaseData } from './hooks/useNextPurchaseData';
+
+// Dynamic imports for heavy visualization components
+const ProductAffinityNetwork = dynamic(() => import('./components').then(mod => ({ default: mod.ProductAffinityNetwork })), {
+  loading: () => <Card className="p-6"><Skeleton height={400} className="animate-pulse" /></Card>,
+  ssr: false
+});
+
+const PredictionConfidenceMatrix = dynamic(() => import('./components').then(mod => ({ default: mod.PredictionConfidenceMatrix })), {
+  loading: () => <Card className="p-6"><Skeleton height={400} className="animate-pulse" /></Card>,
+  ssr: false
+});
+
+const CustomerPurchaseJourney = dynamic(() => import('./components').then(mod => ({ default: mod.CustomerPurchaseJourney })), {
+  loading: () => <Card className="p-6"><Skeleton height={500} className="animate-pulse" /></Card>,
+  ssr: false
+});
+
+const CategoryPerformanceOverview = dynamic(() => import('./components').then(mod => ({ default: mod.CategoryPerformanceOverview })), {
+  loading: () => <Card className="p-6"><Skeleton height={400} className="animate-pulse" /></Card>,
+  ssr: false
+});
 
 export default function NextPurchasePage() {
   const { filters, setFilters } = useNextPurchaseContext();
@@ -71,48 +91,56 @@ export default function NextPurchasePage() {
         {/* 3. Customer Purchase Journey (standalone) */}
         <DashboardSection>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Customer Purchase Journey</h3>
-          <CustomerPurchaseJourney
-            data={customerJourneys ? Object.entries(customerJourneys).map(([customerId, customerData]) => {
-              const custId = parseInt(customerId);
-              // Handle both old format (array) and new format (object with customer_name and purchases)
-              const purchases = Array.isArray(customerData) ? customerData : customerData.purchases;
-              const customerName = !Array.isArray(customerData) && customerData.customer_name
-                ? customerData.customer_name
-                : `Customer ${custId}`;
+          <Suspense fallback={<Card className="p-6"><Skeleton height={500} className="animate-pulse" /></Card>}>
+            <CustomerPurchaseJourney
+              data={customerJourneys ? Object.entries(customerJourneys).map(([customerId, customerData]) => {
+                const custId = parseInt(customerId);
+                // Handle both old format (array) and new format (object with customer_name and purchases)
+                const purchases = Array.isArray(customerData) ? customerData : customerData.purchases;
+                const customerName = !Array.isArray(customerData) && customerData.customer_name
+                  ? customerData.customer_name
+                  : `Customer ${custId}`;
 
-              return {
-                customerId: custId,
-                customerName: customerName,
-                purchases: purchases
-              };
-            }) : []}
-            loading={loading}
-            predictionRow={nextPurchasePredictions?.[0]}
-            selectedCustomer={selectedCustomerId}
-            onCustomerChange={setSelectedCustomerId}
-          />
+                return {
+                  customerId: custId,
+                  customerName: customerName,
+                  purchases: purchases
+                };
+              }) : []}
+              loading={loading}
+              predictionRow={nextPurchasePredictions?.[0]}
+              selectedCustomer={selectedCustomerId}
+              onCustomerChange={setSelectedCustomerId}
+            />
+          </Suspense>
         </DashboardSection>
 
         {/* 6. Product Affinity Network */}
         <DashboardSection>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Product Affinity Network</h3>
-          <ProductAffinityNetwork data={productAffinityNetwork} loading={loading} />
+          <Suspense fallback={<Card className="p-6"><Skeleton height={400} className="animate-pulse" /></Card>}>
+            <ProductAffinityNetwork data={productAffinityNetwork} loading={loading} />
+          </Suspense>
         </DashboardSection>
 
         {/* 7. Category Performance */}
         <DashboardSection>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Category Performance</h3>
-          <CategoryPerformanceOverview
-            data={categoryPerformance}
-            series={categorySeries}
-            loading={loading}
-          />
+          <Suspense fallback={<Card className="p-6"><Skeleton height={400} className="animate-pulse" /></Card>}>
+            <CategoryPerformanceOverview
+              data={categoryPerformance}
+              series={categorySeries}
+              loading={loading}
+            />
+          </Suspense>
         </DashboardSection>
 
         {/* 7. Prediction Confidence Matrix */}
         <DashboardSection>
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Prediction Confidence Matrix</h3>
-          <PredictionConfidenceMatrix data={confidenceMatrix} loading={loading} />
+          <Suspense fallback={<Card className="p-6"><Skeleton height={400} className="animate-pulse" /></Card>}>
+            <PredictionConfidenceMatrix data={confidenceMatrix} loading={loading} />
+          </Suspense>
         </DashboardSection>
 
         {/* 8. Recommended Products */}

@@ -2,8 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Card, Skeleton, getShiftClickManager } from 'components/index';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from '@/lib/rechartsSetup';
 interface CapitalAllocationData {
   category: string;
   amount: number;

@@ -1,3 +1,4 @@
+import { CartesianGrid, Cell, Legend, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from '@/lib/rechartsSetup';
 import React, { useMemo, useState } from 'react';
 import {
   ChartCard,
@@ -5,18 +6,6 @@ import {
   Badge,
   getShiftClickManager
 } from 'components';
-import {
-  ScatterChart,
-  Scatter,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Cell
-} from 'recharts';
-
 interface DeviationPatternExplorerProps {
   data: any;
   loading?: boolean;

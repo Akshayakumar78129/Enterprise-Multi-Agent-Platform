@@ -2,16 +2,7 @@
 
 import React from 'react';
 import { Card, getShiftClickManager } from 'components/index';
-import { Doughnut } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  ArcElement,
-  Tooltip,
-  Legend
-} from 'chart.js';
-
-ChartJS.register(ArcElement, Tooltip, Legend);
-
+import { Doughnut } from '@/lib/chartSetup';
 interface SegmentAnalysisProps {
   data: any[];
   loading?: boolean;
