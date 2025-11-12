@@ -81,8 +81,9 @@ from api.routers.sales.product_performance_router import router as product_perfo
 from api.routers.sales.regional_sales_analyzer_router import router as regional_sales_analyzer_router
 from api.routers.sales.sales_trends_router import router as sales_trends_router
 
-# Import inventory API router
+# Import inventory API routers
 from api.routers.inventory.inventory_level_router import router as inventory_level_router
+from api.routers.slow_moving_stock_router import router as slow_moving_stock_router
 from api.routers.inventory.holding_cost_router import router as holding_cost_router
 from api.routers.inventory.stock_optimization_router import router as stock_optimization_router
 
@@ -180,6 +181,7 @@ app.include_router(product_performance_router)
 app.include_router(regional_sales_analyzer_router)
 app.include_router(sales_trends_router)
 app.include_router(inventory_level_router)
+app.include_router(slow_moving_stock_router)
 app.include_router(holding_cost_router)
 app.include_router(stock_optimization_router)
 app.include_router(cash_flow_router)
