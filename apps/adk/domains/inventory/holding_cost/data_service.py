@@ -25,6 +25,45 @@ class HoldingCostDataService:
         self.default_annual_holding_rate = 0.25  # 25% annual holding cost
         self.default_opportunity_rate = 0.08  # 8% opportunity cost
 
+    def _date_format_month(self, date_ref: str) -> str:
+        """Generate database-specific month formatting expression
+
+        Args:
+            date_ref: The date column reference (e.g., 't."Txn Date"')
+
+        Returns:
+            Database-specific SQL expression for YYYY-MM format
+        """
+        if self.db.db_type == 'postgres':
+            return f"TO_CHAR({date_ref}::date, 'YYYY-MM')"
+        else:  # sqlite
+            return f"STRFTIME('%Y-%m', {date_ref})"
+
+    def _convert_decimals_to_float(self, data: Any) -> Any:
+        """Convert Decimal objects to float for JSON serialization
+
+        PostgreSQL returns numeric values as Decimal objects which don't
+        serialize well to JSON. This method recursively converts them to float.
+
+        Args:
+            data: Data to convert (dict, list, or primitive)
+
+        Returns:
+            Data with Decimals converted to float
+        """
+        from decimal import Decimal
+
+        if isinstance(data, dict):
+            return {key: self._convert_decimals_to_float(value) for key, value in data.items()}
+        elif isinstance(data, list):
+            return [self._convert_decimals_to_float(item) for item in data]
+        elif isinstance(data, Decimal):
+            return float(data)
+        elif isinstance(data, int) and not isinstance(data, bool):
+            return float(data) if abs(data) > 1e10 else data  # Keep small ints as ints
+        else:
+            return data
+
     async def get_holding_cost_kpis(self, filters: Dict[str, Any] = {}) -> Dict:
         """Calculate KPIs for holding cost from sales transaction data
 
@@ -67,7 +106,7 @@ class HoldingCostDataService:
             opportunity_cost = annual_holding_cost * 0.35  # 35% for opportunity
             risk_cost = annual_holding_cost * 0.15  # 15% for risk
 
-            return {
+            result_data = {
                 'total_inventory_value': total_value,
                 'total_annual_holding_cost': annual_holding_cost,
                 'avg_holding_cost_pct': self.default_annual_holding_rate * 100,
@@ -76,6 +115,7 @@ class HoldingCostDataService:
                 'total_opportunity_cost': opportunity_cost,
                 'total_risk_cost': risk_cost
             }
+            return self._convert_decimals_to_float(result_data)
 
         return {
             'total_inventory_value': 0,
@@ -111,7 +151,8 @@ class HoldingCostDataService:
 
         query, params = self.filter_engine.apply_filters(sql, filters, self.schema)
         result_dict = await self.db.query(query, params)
-        return result_dict.get('rows', [])
+        rows = result_dict.get('rows', [])
+        return self._convert_decimals_to_float(rows)
 
     async def get_warehouse_summary(self, filters: Dict[str, Any] = {}) -> List[Dict]:
         """Get aggregated holding cost data by warehouse
@@ -159,7 +200,8 @@ class HoldingCostDataService:
 
         query, params = self.filter_engine.apply_filters(sql, filters, self.schema)
         result_dict = await self.db.query(query, params)
-        return result_dict.get('rows', [])
+        rows = result_dict.get('rows', [])
+        return self._convert_decimals_to_float(rows)
 
     async def get_inventory_data(self, filters: Dict[str, Any] = {}) -> List[Dict]:
         """Get detailed inventory data from sales transactions with estimated cost components
@@ -170,11 +212,14 @@ class HoldingCostDataService:
         Returns:
             List of inventory records with estimated cost data (one row per item per month)
         """
-        sql = """
+        # Use database-agnostic date formatting
+        month_expr = self._date_format_month('t."Txn Date"')
+
+        sql = f"""
         SELECT
             t."Item Number" AS item_number,
             t."Product Posting Group" AS category,
-            STRFTIME('%Y-%m', t."Txn Date") AS order_date,
+            {month_expr} AS order_date,
             SUM(t."Net Sales Amount") AS total_value,
             SUM(t."Net Sales Quantity") AS total_quantity,
             AVG(t."Net Sales Quantity") AS avg_quantity,
@@ -182,7 +227,7 @@ class HoldingCostDataService:
             COUNT(*) AS transactions
         FROM "dbo_F_Sales_Transaction" t
         WHERE 1=1
-        GROUP BY t."Item Number", t."Product Posting Group", STRFTIME('%Y-%m', t."Txn Date")
+        GROUP BY t."Item Number", t."Product Posting Group", {month_expr}
         """
 
         query, params = self.filter_engine.apply_filters(sql, filters, self.schema)
@@ -210,7 +255,7 @@ class HoldingCostDataService:
                 'unit_cost': unit_cost,
                 'average_stock_level': average_stock_level,
                 'current_stock': total_quantity,
-                'storage_cost_per_unit': 0.10,  # Default: $0.10 per unit per day
+                'storage_cost_per_unit': 1.50,  # Default: $1.50 per unit per year (annual cost)
                 'obsolescence_risk': 0.05,  # Default: 5% risk
                 'lead_time_days': 7,  # Default: 7 days
                 'warehouse_name': 'Main Warehouse',  # Default warehouse
@@ -218,4 +263,4 @@ class HoldingCostDataService:
                 'active_days': row.get('active_days', 0)
             })
 
-        return enriched_data
+        return self._convert_decimals_to_float(enriched_data)

@@ -204,7 +204,8 @@ class HoldingCostProcessingService:
             # Calculate cost components
             annual_holding_cost = inventory_value * annual_holding_rate
             annual_opportunity_cost = inventory_value * opportunity_rate
-            annual_storage_cost = avg_stock * float(item.get('storage_cost_per_unit', 0)) * 365
+            # storage_cost_per_unit is already annual cost, no need to multiply by 365
+            annual_storage_cost = avg_stock * float(item.get('storage_cost_per_unit', 0))
             annual_risk_cost = inventory_value * float(item.get('obsolescence_risk', 0))
 
             # Total holding cost
@@ -681,42 +682,87 @@ class HoldingCostProcessingService:
         """Get items with excessive holding costs for treemap visualization
 
         Filters and formats items that exceed the excessive cost threshold.
+        Deduplicates items by item_number + warehouse_id to avoid duplicate keys.
         """
-        excessive_items = []
+        # Use dictionary to deduplicate and aggregate by item+warehouse
+        item_aggregation = {}
 
         for item in inventory_with_costs:
             if not item.get('excessive_holding_cost', False):
                 continue
 
-            holding_pct = item.get('holding_cost_pct', 0)
+            # Create unique key for item + warehouse combination
+            item_number = item.get('item_number', 'Unknown')
+            warehouse_id = item.get('warehouse_id', 'default')
+            unique_key = f"{item_number}-{warehouse_id}"
 
-            # Determine severity
-            if holding_pct >= 0.40:
-                severity = 'Excessive'
-            elif holding_pct >= 0.35:
-                severity = 'High'
-            elif holding_pct >= 0.30:
-                severity = 'Moderate'
+            # If item already exists, aggregate the costs
+            if unique_key in item_aggregation:
+                existing = item_aggregation[unique_key]
+                existing['total_holding_cost'] += item.get('total_holding_cost', 0)
+                existing['average_inventory_value'] += item.get('inventory_value', 0)
+                existing['potential_savings'] += item.get('potential_savings', 0)
+                existing['annual_holding_cost'] += item.get('annual_holding_cost', 0)
+                existing['annual_opportunity_cost'] += item.get('annual_opportunity_cost', 0)
+                existing['annual_storage_cost'] += item.get('annual_storage_cost', 0)
+                existing['annual_risk_cost'] += item.get('annual_risk_cost', 0)
+                existing['count'] += 1
             else:
-                severity = 'Normal'
+                holding_pct = item.get('holding_cost_pct', 0)
 
-            excessive_items.append({
-                'item_key': item.get('item_key', item.get('item_number', '')),
-                'item_name': item.get('item_name', 'Unknown'),
-                'item_number': item.get('item_number', 'Unknown'),
-                'item_category': item.get('category', 'Unknown'),
-                'warehouse_name': item.get('warehouse_name', 'Unknown'),
-                'warehouse_id': item.get('warehouse_id', 'Unknown'),
-                'total_holding_cost': round(item.get('total_holding_cost', 0), 2),
-                'holding_cost_percentage': round(item.get('holding_cost_pct', 0), 4),
-                'average_inventory_value': round(item.get('inventory_value', 0), 2),
-                'potential_savings': round(item.get('potential_savings', 0), 2),
-                'annual_holding_cost': round(item.get('annual_holding_cost', 0), 2),
-                'annual_opportunity_cost': round(item.get('annual_opportunity_cost', 0), 2),
-                'annual_storage_cost': round(item.get('annual_storage_cost', 0), 2),
-                'annual_risk_cost': round(item.get('annual_risk_cost', 0), 2),
-                'severity': severity
-            })
+                # Determine severity
+                if holding_pct >= 0.40:
+                    severity = 'Excessive'
+                elif holding_pct >= 0.35:
+                    severity = 'High'
+                elif holding_pct >= 0.30:
+                    severity = 'Moderate'
+                else:
+                    severity = 'Normal'
+
+                item_aggregation[unique_key] = {
+                    'item_key': item.get('item_key', item_number),
+                    'item_name': item.get('item_name', 'Unknown'),
+                    'item_number': item_number,
+                    'item_category': item.get('category', 'Unknown'),
+                    'warehouse_name': item.get('warehouse_name', 'Unknown'),
+                    'warehouse_id': warehouse_id,
+                    'total_holding_cost': item.get('total_holding_cost', 0),
+                    'holding_cost_percentage': holding_pct,
+                    'average_inventory_value': item.get('inventory_value', 0),
+                    'potential_savings': item.get('potential_savings', 0),
+                    'annual_holding_cost': item.get('annual_holding_cost', 0),
+                    'annual_opportunity_cost': item.get('annual_opportunity_cost', 0),
+                    'annual_storage_cost': item.get('annual_storage_cost', 0),
+                    'annual_risk_cost': item.get('annual_risk_cost', 0),
+                    'severity': severity,
+                    'count': 1  # Track how many months were aggregated
+                }
+
+        # Convert to list and round aggregated values
+        excessive_items = []
+        for item_data in item_aggregation.values():
+            count = item_data.pop('count')  # Remove count before returning
+            # Average the values if multiple months were aggregated
+            if count > 1:
+                item_data['total_holding_cost'] = round(item_data['total_holding_cost'] / count, 2)
+                item_data['average_inventory_value'] = round(item_data['average_inventory_value'] / count, 2)
+                item_data['potential_savings'] = round(item_data['potential_savings'] / count, 2)
+                item_data['annual_holding_cost'] = round(item_data['annual_holding_cost'] / count, 2)
+                item_data['annual_opportunity_cost'] = round(item_data['annual_opportunity_cost'] / count, 2)
+                item_data['annual_storage_cost'] = round(item_data['annual_storage_cost'] / count, 2)
+                item_data['annual_risk_cost'] = round(item_data['annual_risk_cost'] / count, 2)
+            else:
+                item_data['total_holding_cost'] = round(item_data['total_holding_cost'], 2)
+                item_data['average_inventory_value'] = round(item_data['average_inventory_value'], 2)
+                item_data['potential_savings'] = round(item_data['potential_savings'], 2)
+                item_data['annual_holding_cost'] = round(item_data['annual_holding_cost'], 2)
+                item_data['annual_opportunity_cost'] = round(item_data['annual_opportunity_cost'], 2)
+                item_data['annual_storage_cost'] = round(item_data['annual_storage_cost'], 2)
+                item_data['annual_risk_cost'] = round(item_data['annual_risk_cost'], 2)
+
+            item_data['holding_cost_percentage'] = round(item_data['holding_cost_percentage'], 4)
+            excessive_items.append(item_data)
 
         # Sort by holding cost percentage descending
         excessive_items.sort(key=lambda x: x['holding_cost_percentage'], reverse=True)

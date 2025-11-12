@@ -41,6 +41,31 @@ class RegionalSalesAnalyzerDataService:
             else:  # month
                 return f"strftime('%Y-%m', {date_ref})"
 
+    def _convert_decimals_to_float(self, data: Any) -> Any:
+        """Convert Decimal objects to float for JSON serialization
+
+        PostgreSQL returns numeric values as Decimal objects which don't
+        serialize well to JSON. This method recursively converts them to float.
+
+        Args:
+            data: Data to convert (dict, list, or primitive)
+
+        Returns:
+            Data with Decimals converted to float
+        """
+        from decimal import Decimal
+
+        if isinstance(data, dict):
+            return {key: self._convert_decimals_to_float(value) for key, value in data.items()}
+        elif isinstance(data, list):
+            return [self._convert_decimals_to_float(item) for item in data]
+        elif isinstance(data, Decimal):
+            return float(data)
+        elif isinstance(data, int) and not isinstance(data, bool):
+            return float(data) if abs(data) > 1e10 else data  # Keep small ints as ints
+        else:
+            return data
+
     async def get_regional_sales_data(self, filters: Dict[str, Any] = {}) -> List[Dict]:
         """Get regional sales data grouped by country and state"""
 
@@ -95,7 +120,7 @@ class RegionalSalesAnalyzerDataService:
             else:
                 row['profitMargin'] = 0.0
 
-        return results
+        return self._convert_decimals_to_float(results)
 
     async def get_country_level_data(self, filters: Dict[str, Any] = {}) -> List[Dict]:
         """Get country-level aggregated data"""
@@ -133,7 +158,7 @@ class RegionalSalesAnalyzerDataService:
         elif results and all(results[0].get(k, 0) == 0 for k in ['totalSales', 'netSales'] if k in results[0]):
             logger.warning(f"[Regional Sales] ⚠️  Country data has ALL ZERO values")
 
-        return results
+        return self._convert_decimals_to_float(results)
 
     async def get_time_series_data(self, filters: Dict[str, Any] = {}) -> List[Dict]:
         """Get time series data with configurable aggregation"""
@@ -173,7 +198,7 @@ class RegionalSalesAnalyzerDataService:
         if len(results) == 0:
             logger.warning(f"[Regional Sales] ⚠️  Time series query returned ZERO rows")
 
-        return results
+        return self._convert_decimals_to_float(results)
 
     async def get_regional_summary(self, filters: Dict[str, Any] = {}) -> Dict:
         """Get summary statistics for regional sales"""
@@ -257,7 +282,7 @@ class RegionalSalesAnalyzerDataService:
         if len(results) == 0:
             logger.warning(f"[Regional Sales] ⚠️  Top regions query returned ZERO rows")
 
-        return results
+        return self._convert_decimals_to_float(results)
 
     async def get_opportunity_analysis(self, filters: Dict[str, Any] = {}) -> List[Dict]:
         """Get opportunity analysis using BCG matrix approach
@@ -367,7 +392,7 @@ class RegionalSalesAnalyzerDataService:
             else:
                 row['profitMargin'] = 0
 
-        return results
+        return self._convert_decimals_to_float(results)
 
     async def get_available_regions(self) -> Dict[str, Any]:
         """Get available countries and states for filters"""

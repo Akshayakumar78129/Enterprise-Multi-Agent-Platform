@@ -270,15 +270,18 @@ export function ExcessiveCostGrid({
                   </h4>
 
                   <div className="grid grid-cols-[repeat(auto-fill,minmax(90px,1fr))] gap-1">
-                    {items.map((item) => {
+                    {items.map((item, itemIndex) => {
                       const size = getItemSize(item.average_inventory_value, maxValue);
                       const color = getItemColor(item.holding_cost_percentage);
-                      const isSelected = selectedItem?.item_key === item.item_key;
-                      const isHovered = hoveredItem?.item_key === item.item_key;
+                      const isSelected = selectedItem?.item_key === item.item_key && selectedItem?.warehouse_id === item.warehouse_id;
+                      const isHovered = hoveredItem?.item_key === item.item_key && hoveredItem?.warehouse_id === item.warehouse_id;
+
+                      // Create unique key combining item, warehouse, and index to handle duplicates
+                      const uniqueKey = `${item.item_number}-${item.warehouse_id || 'default'}-${itemIndex}`;
 
                       return (
                         <div
-                          key={item.item_key}
+                          key={uniqueKey}
                           onClick={(e) => handleItemClick(item, e)}
                           onMouseEnter={() => setHoveredItem(item)}
                           onMouseLeave={() => setHoveredItem(null)}

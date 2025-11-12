@@ -70,6 +70,31 @@ class RevenueForecastDataService:
         else:  # sqlite
             return f"date({date_ref}, '-{years} year')"
 
+    def _convert_decimals_to_float(self, data: Any) -> Any:
+        """Convert Decimal objects to float for JSON serialization
+
+        PostgreSQL returns numeric values as Decimal objects which don't
+        serialize well to JSON. This method recursively converts them to float.
+
+        Args:
+            data: Data to convert (dict, list, or primitive)
+
+        Returns:
+            Data with Decimals converted to float
+        """
+        from decimal import Decimal
+
+        if isinstance(data, dict):
+            return {key: self._convert_decimals_to_float(value) for key, value in data.items()}
+        elif isinstance(data, list):
+            return [self._convert_decimals_to_float(item) for item in data]
+        elif isinstance(data, Decimal):
+            return float(data)
+        elif isinstance(data, int) and not isinstance(data, bool):
+            return float(data) if abs(data) > 1e10 else data  # Keep small ints as ints
+        else:
+            return data
+
     async def get_kpi_data(self, filters: Dict[str, Any]) -> Dict[str, Any]:
         """
         Get KPI metrics for revenue forecast
@@ -234,7 +259,8 @@ class RevenueForecastDataService:
                 if all(first_row.get(k, 0) == 0 for k in ['total_revenue', 'prior_revenue', 'rule_of_40']):
                     logger.warning(f"[Revenue Forecast] ⚠️  KPI data has ALL ZERO values")
 
-            return rows[0] if rows else {}
+            result = rows[0] if rows else {}
+            return self._convert_decimals_to_float(result)
         except Exception as e:
             logger.error(f"Error fetching KPI data: {e}", exc_info=True)
             raise
@@ -295,7 +321,7 @@ class RevenueForecastDataService:
             else:
                 logger.debug(f"[Revenue Forecast] Sample growth data (first row): {rows[0]}")
 
-            return rows
+            return self._convert_decimals_to_float(rows)
         except Exception as e:
             logger.error(f"Error fetching growth decomposition: {e}", exc_info=True)
             raise
@@ -383,7 +409,7 @@ class RevenueForecastDataService:
 
             logger.info(f"[Revenue Forecast] After filtering: {len(filtered_rows)} cohort rows (0-12 months)")
 
-            return filtered_rows
+            return self._convert_decimals_to_float(filtered_rows)
 
         except Exception as e:
             logger.error(f"Error fetching cohort retention data: {e}", exc_info=True)
@@ -469,7 +495,7 @@ class RevenueForecastDataService:
             if len(rows) == 0:
                 logger.warning(f"[Revenue Forecast] ⚠️  Segment forecast query returned ZERO rows")
 
-            return rows
+            return self._convert_decimals_to_float(rows)
         except Exception as e:
             logger.error(f"Error fetching segment forecast data: {e}", exc_info=True)
             raise
@@ -525,7 +551,8 @@ class RevenueForecastDataService:
             elif rows:
                 logger.debug(f"[Revenue Forecast] Customer economics data: {rows[0]}")
 
-            return rows[0] if rows else {}
+            result = rows[0] if rows else {}
+            return self._convert_decimals_to_float(result)
         except Exception as e:
             logger.error(f"Error fetching customer economics: {e}", exc_info=True)
             raise
