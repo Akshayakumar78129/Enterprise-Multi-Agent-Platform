@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
-import { TrendingDown, TrendingUp } from 'lucide-react';
+import { getShiftClickManager } from 'components/index';
 
 interface Metric {
   metric: string;
@@ -17,6 +17,7 @@ interface MetricsComparisonProps {
 }
 
 export function MetricsComparison({ data, loading = false }: MetricsComparisonProps) {
+  const shiftClickManager = getShiftClickManager();
   if (loading) {
     return (
       <div className="bg-surface border border-border rounded-lg p-6">
@@ -31,7 +32,6 @@ export function MetricsComparison({ data, loading = false }: MetricsComparisonPr
   if (!data || data.length === 0) {
     return (
       <div className="bg-surface border border-border rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-foreground mb-4">Current vs Optimized Metrics</h3>
         <div className="h-64 flex items-center justify-center text-muted-foreground">
           No metrics comparison data available
         </div>
@@ -75,10 +75,23 @@ export function MetricsComparison({ data, loading = false }: MetricsComparisonPr
 
   return (
     <div className="bg-surface border border-border rounded-lg p-6">
-      <h3 className="text-lg font-semibold text-foreground mb-4">Current vs Optimized Metrics</h3>
-
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+        <BarChart
+          data={data}
+          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+          onClick={(e: any) => {
+            if (e && e.activePayload && e.activePayload[0]) {
+              const metric = e.activePayload[0].payload;
+              if (e.nativeEvent && e.nativeEvent.shiftKey) {
+                shiftClickManager.addPoint({
+                  label: `${metric.metric}`,
+                  value: `Current: ${formatNumber(metric.current)}, Optimized: ${formatNumber(metric.optimized)}, Improvement: ${metric.improvement.toFixed(1)}%`,
+                  source: 'Metrics Comparison Chart'
+                }, e.nativeEvent);
+              }
+            }
+          }}
+        >
           <CartesianGrid strokeDasharray="3 3" stroke="#3a4459" />
           <XAxis
             dataKey="metric"
@@ -102,20 +115,25 @@ export function MetricsComparison({ data, loading = false }: MetricsComparisonPr
 
       <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         {data.map((item, index) => (
-          <div key={index} className="p-4 bg-muted/30 rounded-lg">
+          <div
+            key={index}
+            className="p-4 bg-muted/30 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={(e) => {
+              if (e.shiftKey) {
+                shiftClickManager.addPoint({
+                  label: `${item.metric}`,
+                  value: `Improvement: ${item.improvement > 0 ? '+' : ''}${item.improvement.toFixed(1)}%, Current: ${formatNumber(item.current)}, Optimized: ${formatNumber(item.optimized)}`,
+                  source: 'Metrics Comparison Card'
+                }, e.nativeEvent);
+              }
+            }}
+          >
             <p className="text-sm font-medium text-foreground mb-2">{item.metric}</p>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Improvement</p>
-                <p className={`text-lg font-semibold ${item.improvement > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {item.improvement > 0 ? '+' : ''}{item.improvement.toFixed(1)}%
-                </p>
-              </div>
-              {item.improvement > 0 ? (
-                <TrendingUp className="h-6 w-6 text-green-500" />
-              ) : (
-                <TrendingDown className="h-6 w-6 text-red-500" />
-              )}
+            <div>
+              <p className="text-xs text-muted-foreground">Improvement</p>
+              <p className={`text-lg font-semibold ${item.improvement > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {item.improvement > 0 ? '+' : ''}{item.improvement.toFixed(1)}%
+              </p>
             </div>
           </div>
         ))}

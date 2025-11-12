@@ -28,9 +28,17 @@ class StockOptimizationProcessingService:
     async def get_dashboard_summary(self, filters: Dict[str, Any] = {}) -> Dict:
         """Get complete dashboard summary with all components"""
         try:
-            # Set default date range
+            # Set default date range if not provided
             filters.setdefault('dateFrom', '2017-01-01')
             filters.setdefault('dateTo', '2021-12-31')
+
+            # Calculate actual date range for period calculations
+            date_from = datetime.strptime(filters['dateFrom'], '%Y-%m-%d')
+            date_to = datetime.strptime(filters['dateTo'], '%Y-%m-%d')
+            days_in_period = (date_to - date_from).days + 1
+
+            # Store calculated period in filters for use by other methods
+            filters['_calculated_days'] = days_in_period
 
             # Get detailed sales data for calculations
             detailed_data = await self.data_service.get_detailed_data(filters, limit=1000)
@@ -46,12 +54,35 @@ class StockOptimizationProcessingService:
             ai_insights = await self._get_cached_ai_insights(kpis, recommendations, filters)
             combined_insights = rule_based_insights + ai_insights
 
+            # Calculate new visualizations
+            logger.info(f"Calculating new visualizations with {len(recommendations)} recommendations")
+
+            heatmap_data = self._calculate_inventory_health_heatmap(recommendations, detailed_data)
+            logger.info(f"Heatmap data: {len(heatmap_data.get('cells', []))} cells")
+
+            optimization_matrix = self._calculate_optimization_matrix(recommendations)
+            logger.info(f"Optimization matrix: {len(optimization_matrix)} items")
+
+            service_level_impact = self._calculate_service_level_impact(recommendations, detailed_data, filters)
+            logger.info(f"Service level impact: {len(service_level_impact.get('impactData', []))} data points")
+
+            value_treemap = self._calculate_value_treemap(recommendations)
+            logger.info(f"Value treemap: {len(value_treemap)} categories")
+
+            performance_gauge = self._calculate_performance_gauge(kpis, recommendations)
+            logger.info(f"Performance gauge: score={performance_gauge.get('score', 0)}")
+
             return {
                 'kpiMetrics': kpis,
                 'recommendations': recommendations[:50],  # Top 50 items
                 'metrics': metrics,
                 'reorderAnalysis': reorder_analysis,
                 'insights': combined_insights,
+                'heatmapData': heatmap_data,
+                'optimizationMatrix': optimization_matrix,
+                'serviceLevelImpact': service_level_impact,
+                'valueTreemap': value_treemap,
+                'performanceGauge': performance_gauge,
                 'filters': filters
             }
 
@@ -63,6 +94,11 @@ class StockOptimizationProcessingService:
                 'metrics': [],
                 'reorderAnalysis': [],
                 'insights': ["Unable to load stock optimization data. Please try again."],
+                'heatmapData': {'cells': [], 'categories': [], 'warehouses': []},
+                'optimizationMatrix': [],
+                'serviceLevelImpact': {'impactData': [], 'currentServiceLevel': 95, 'optimalServiceLevel': 95},
+                'valueTreemap': [],
+                'performanceGauge': {'score': 0, 'status': 'unknown', 'serviceScore': 0, 'stockScore': 0, 'costScore': 0, 'breakdown': {}},
                 'filters': filters
             }
 
@@ -86,10 +122,9 @@ class StockOptimizationProcessingService:
                 if total_quantity <= 0:
                     continue
 
-                # Calculate demand metrics
-                # Assume date range is approximately 5 years (2017-2021)
-                days_in_period = 365 * 5
-                daily_demand = total_quantity / days_in_period
+                # Calculate demand metrics using actual date range
+                days_in_period = filters.get('_calculated_days', 365 * 5)  # Fallback to 5 years if not calculated
+                daily_demand = total_quantity / days_in_period if days_in_period > 0 else 0
                 annual_demand = daily_demand * 365
 
                 # Calculate demand variability (coefficient of variation estimate)
@@ -106,10 +141,22 @@ class StockOptimizationProcessingService:
                 else:
                     eoq = 100  # Default EOQ
 
+                # Apply optimization level to adjust safety stock
+                optimization_level = filters.get('optimizationLevel', 'balanced')
+                if optimization_level == 'conservative':
+                    z_score = 2.33  # 99% service level (higher safety stock)
+                    service_level = 0.99
+                elif optimization_level == 'aggressive':
+                    z_score = 1.28  # 90% service level (lower safety stock)
+                    service_level = 0.90
+                else:  # balanced
+                    z_score = self.z_score_95  # 95% service level
+                    service_level = self.default_service_level
+
                 # Calculate safety stock
                 lead_time_demand = daily_demand * self.default_lead_time_days
                 lead_time_demand_std = demand_variability * math.sqrt(self.default_lead_time_days)
-                safety_stock = self.z_score_95 * lead_time_demand_std
+                safety_stock = z_score * lead_time_demand_std
 
                 # Calculate reorder point
                 reorder_point = lead_time_demand + safety_stock
@@ -141,7 +188,7 @@ class StockOptimizationProcessingService:
                     'annualDemand': round(annual_demand, 2),
                     'leadTime': self.default_lead_time_days,
                     'demandVariability': round(demand_variability, 2),
-                    'serviceLevel': self.default_service_level,
+                    'serviceLevel': service_level,
                     'orderFrequency': round(order_frequency, 2),
                     'unitCost': round(unit_cost, 2),
                     'stockDifference': int(recommended_level - current_level)
@@ -399,3 +446,413 @@ Keep each insight to 1-2 sentences. Be specific and actionable."""
         except Exception as e:
             logger.error(f"Error generating AI insights: {e}", exc_info=True)
             return []
+
+    def _calculate_inventory_health_heatmap(
+        self,
+        recommendations: List[Dict],
+        sales_data: List[Dict]
+    ) -> Dict:
+        """Calculate inventory health heatmap data (Category x Warehouse)"""
+        try:
+            if not recommendations or len(recommendations) == 0:
+                logger.warning("No recommendations for heatmap calculation")
+                return {'cells': [], 'categories': [], 'warehouses': []}
+
+            # Group recommendations by category and warehouse
+            # Since we don't have warehouse data, create multiple virtual warehouses based on categories
+            heatmap_cells = {}
+
+            # Create warehouse assignments (distribute categories across warehouses)
+            warehouses = ['Warehouse A', 'Warehouse B', 'Warehouse C']
+
+            for rec in recommendations:
+                category = rec.get('category', 'Unknown')
+                # Assign warehouse based on category hash for consistent distribution
+                warehouse_idx = hash(category) % len(warehouses)
+                warehouse = warehouses[warehouse_idx]
+
+                # Create unique key for category-warehouse combination
+                key = f"{category}|{warehouse}"
+
+                if key not in heatmap_cells:
+                    heatmap_cells[key] = {
+                        'category': category,
+                        'warehouse': warehouse,
+                        'items': [],
+                        'total_current': 0,
+                        'total_recommended': 0,
+                        'total_savings': 0,
+                        'avg_service_level': 0
+                    }
+
+                heatmap_cells[key]['items'].append(rec)
+                heatmap_cells[key]['total_current'] += rec.get('currentLevel', 0)
+                heatmap_cells[key]['total_recommended'] += rec.get('recommendedLevel', 0)
+                heatmap_cells[key]['total_savings'] += rec.get('savings', 0)
+                heatmap_cells[key]['avg_service_level'] += rec.get('serviceLevel', 0.95)
+
+            # Calculate health scores for each cell
+            heatmap_data = []
+            for key, cell in heatmap_cells.items():
+                item_count = len(cell['items'])
+
+                # Calculate health score (0-100)
+                # Based on: service level achievement, stock optimization ratio, savings potential
+                current = cell['total_current']
+                recommended = cell['total_recommended']
+
+                # Stock optimization ratio (closer to 1.0 is better)
+                if recommended > 0:
+                    stock_ratio = current / recommended
+                    # Score: 100 when ratio is 0.9-1.1 (optimal range)
+                    if 0.9 <= stock_ratio <= 1.1:
+                        stock_score = 100
+                    elif stock_ratio < 0.9:
+                        # Understocked: score decreases
+                        stock_score = max(0, 100 - (0.9 - stock_ratio) * 200)
+                    else:
+                        # Overstocked: score decreases
+                        stock_score = max(0, 100 - (stock_ratio - 1.1) * 100)
+                else:
+                    stock_score = 50
+
+                # Service level score
+                avg_service = (cell['avg_service_level'] / item_count) if item_count > 0 else 0.95
+                service_score = avg_service * 100
+
+                # Savings opportunity score (inverted - lower savings is better health)
+                avg_savings = cell['total_savings'] / item_count if item_count > 0 else 0
+                if avg_savings > 1000:
+                    savings_score = max(0, 100 - (avg_savings / 100))
+                else:
+                    savings_score = 100 - (avg_savings / 10)
+                savings_score = max(0, min(100, savings_score))
+
+                # Overall health score (weighted average)
+                health_score = (stock_score * 0.4 + service_score * 0.3 + savings_score * 0.3)
+
+                heatmap_data.append({
+                    'category': cell['category'],
+                    'warehouse': cell['warehouse'],
+                    'healthScore': round(health_score, 1),
+                    'itemCount': item_count,
+                    'totalCurrent': round(cell['total_current'], 2),
+                    'totalRecommended': round(cell['total_recommended'], 2),
+                    'totalSavings': round(cell['total_savings'], 2),
+                    'avgServiceLevel': round(avg_service * 100, 1)
+                })
+
+            # Get unique categories and warehouses for axes
+            categories = sorted(list(set([cell['category'] for cell in heatmap_data])))
+            warehouses = sorted(list(set([cell['warehouse'] for cell in heatmap_data])))
+
+            return {
+                'cells': heatmap_data,
+                'categories': categories,
+                'warehouses': warehouses
+            }
+
+        except Exception as e:
+            logger.error(f"Error calculating heatmap: {e}")
+            return {'cells': [], 'categories': [], 'warehouses': []}
+
+    def _calculate_optimization_matrix(self, recommendations: List[Dict]) -> List[Dict]:
+        """Calculate optimization matrix data (Effort vs Impact quadrants)"""
+        try:
+            if not recommendations or len(recommendations) == 0:
+                logger.warning("No recommendations for optimization matrix")
+                return []
+
+            matrix_data = []
+
+            for rec in recommendations:
+                # Calculate implementation effort (0-100)
+                # Based on: stock difference magnitude, order quantity changes
+                stock_diff = abs(rec.get('stockDifference', 0))
+                order_qty = rec.get('orderQuantity', 0)
+
+                # Effort increases with larger stock adjustments
+                if stock_diff > 100:
+                    effort = min(100, 50 + (stock_diff - 100) / 10)
+                else:
+                    effort = stock_diff / 2
+
+                # Calculate financial impact (0-100)
+                # Based on: savings potential, inventory value
+                savings = rec.get('savings', 0)
+                current_value = rec.get('currentLevel', 0) * rec.get('unitCost', 0)
+
+                # Impact based on savings amount
+                if savings > 1000:
+                    impact = min(100, 50 + savings / 100)
+                else:
+                    impact = savings / 20
+
+                # Determine quadrant
+                if impact >= 50 and effort < 50:
+                    quadrant = 'Quick Wins'
+                    priority = 1
+                elif impact >= 50 and effort >= 50:
+                    quadrant = 'Major Projects'
+                    priority = 2
+                elif impact < 50 and effort < 50:
+                    quadrant = 'Fill-Ins'
+                    priority = 3
+                else:
+                    quadrant = 'Avoid'
+                    priority = 4
+
+                matrix_data.append({
+                    'itemName': rec.get('itemName'),
+                    'category': rec.get('category'),
+                    'effort': round(effort, 1),
+                    'impact': round(impact, 1),
+                    'savings': round(savings, 2),
+                    'itemCount': 1,
+                    'quadrant': quadrant,
+                    'priority': priority
+                })
+
+            # Sort by priority then impact
+            matrix_data.sort(key=lambda x: (x['priority'], -x['impact']))
+
+            return matrix_data[:50]  # Top 50 opportunities
+
+        except Exception as e:
+            logger.error(f"Error calculating optimization matrix: {e}")
+            return []
+
+    def _calculate_service_level_impact(
+        self,
+        recommendations: List[Dict],
+        sales_data: List[Dict],
+        filters: Dict
+    ) -> Dict:
+        """Calculate service level impact simulation data"""
+        try:
+            if not recommendations or len(recommendations) == 0:
+                logger.warning("No recommendations for service level impact")
+                return {'impactData': [], 'currentServiceLevel': 95, 'optimalServiceLevel': 95}
+
+            # Service level range: 80% to 99.9%
+            service_levels = [0.80, 0.85, 0.90, 0.95, 0.97, 0.99, 0.999]
+            z_scores = {
+                0.80: 0.84,
+                0.85: 1.04,
+                0.90: 1.28,
+                0.95: 1.65,
+                0.97: 1.88,
+                0.99: 2.33,
+                0.999: 3.09
+            }
+
+            impact_data = []
+
+            for sl in service_levels:
+                z_score = z_scores[sl]
+
+                # Calculate total inventory value at this service level
+                total_inventory = 0
+                total_holding_cost = 0
+                stockout_probability = (1 - sl) * 100
+
+                for rec in recommendations:
+                    # Recalculate safety stock with new service level
+                    demand_var = rec.get('demandVariability', 1)
+                    lead_time = rec.get('leadTime', 7)
+                    safety_stock = z_score * demand_var * math.sqrt(lead_time)
+
+                    # Recalculate recommended level
+                    eoq = rec.get('orderQuantity', 100)
+                    recommended_level = safety_stock + (eoq / 2)
+
+                    # Calculate inventory value
+                    unit_cost = rec.get('unitCost', 10)
+                    inventory_value = recommended_level * unit_cost
+                    holding_cost = inventory_value * self.default_holding_cost_rate
+
+                    total_inventory += inventory_value
+                    total_holding_cost += holding_cost
+
+                impact_data.append({
+                    'serviceLevel': sl * 100,
+                    'inventoryValue': round(total_inventory, 2),
+                    'holdingCost': round(total_holding_cost, 2),
+                    'stockoutProbability': round(stockout_probability, 2)
+                })
+
+            # Current service level from filters
+            current_sl = filters.get('optimizationLevel', 'balanced')
+            if current_sl == 'conservative':
+                current_service_level = 99
+            elif current_sl == 'aggressive':
+                current_service_level = 90
+            else:
+                current_service_level = 95
+
+            return {
+                'impactData': impact_data,
+                'currentServiceLevel': current_service_level,
+                'optimalServiceLevel': 95  # Recommended optimal
+            }
+
+        except Exception as e:
+            logger.error(f"Error calculating service level impact: {e}")
+            return {'impactData': [], 'currentServiceLevel': 95, 'optimalServiceLevel': 95}
+
+    def _calculate_value_treemap(self, recommendations: List[Dict]) -> List[Dict]:
+        """Calculate inventory value treemap data (hierarchical by category)"""
+        try:
+            if not recommendations or len(recommendations) == 0:
+                logger.warning("No recommendations for value treemap")
+                return []
+
+            # Group by category
+            category_groups = {}
+
+            for rec in recommendations:
+                category = rec.get('category', 'Unknown')
+
+                if category not in category_groups:
+                    category_groups[category] = {
+                        'name': category,
+                        'children': [],
+                        'value': 0,
+                        'savings': 0
+                    }
+
+                # Calculate item value
+                item_value = rec.get('currentLevel', 0) * rec.get('unitCost', 0)
+                savings = rec.get('savings', 0)
+
+                # Determine optimization status
+                stock_diff = rec.get('stockDifference', 0)
+                if stock_diff > 10:
+                    status = 'understock'
+                elif stock_diff < -10:
+                    status = 'overstock'
+                else:
+                    status = 'optimal'
+
+                category_groups[category]['children'].append({
+                    'name': rec.get('itemName'),
+                    'value': round(item_value, 2),
+                    'savings': round(savings, 2),
+                    'status': status
+                })
+
+                category_groups[category]['value'] += item_value
+                category_groups[category]['savings'] += savings
+
+            # Convert to treemap format
+            treemap_data = []
+            for category, data in category_groups.items():
+                # Determine category color based on overall optimization opportunity
+                avg_savings = data['savings'] / len(data['children']) if len(data['children']) > 0 else 0
+
+                if avg_savings > 500:
+                    color = 'high'
+                elif avg_savings > 200:
+                    color = 'medium'
+                else:
+                    color = 'low'
+
+                treemap_data.append({
+                    'name': category,
+                    'value': round(data['value'], 2),
+                    'savings': round(data['savings'], 2),
+                    'itemCount': len(data['children']),
+                    'color': color,
+                    'children': data['children'][:20]  # Limit to top 20 items per category
+                })
+
+            # Sort by value descending
+            treemap_data.sort(key=lambda x: x['value'], reverse=True)
+
+            return treemap_data
+
+        except Exception as e:
+            logger.error(f"Error calculating value treemap: {e}")
+            return []
+
+    def _calculate_performance_gauge(
+        self,
+        kpis: Dict,
+        recommendations: List[Dict]
+    ) -> Dict:
+        """Calculate overall inventory efficiency performance gauge (0-100)"""
+        try:
+            # Calculate efficiency score based on multiple factors
+
+            # 1. Service level score (30% weight)
+            service_level = kpis.get('service_level', 95)
+            service_score = service_level  # Already 0-100
+
+            # 2. Stock optimization score (40% weight)
+            # Based on items needing reorder vs total items
+            total_items = kpis.get('total_items', 1)
+            items_needing_reorder = kpis.get('items_needing_reorder', 0)
+            items_overstock = kpis.get('items_overstock', 0)
+            items_understock = kpis.get('items_understock', 0)
+
+            # Penalty for items needing attention
+            items_optimal = total_items - items_needing_reorder - items_overstock - items_understock
+            stock_score = (items_optimal / total_items * 100) if total_items > 0 else 50
+
+            # 3. Cost efficiency score (30% weight)
+            # Based on savings potential vs current value
+            total_savings = kpis.get('total_cost_savings', 0)
+            total_value = kpis.get('total_optimized_value', 1)
+
+            # Lower savings opportunity = higher efficiency
+            savings_ratio = total_savings / total_value if total_value > 0 else 0
+            if savings_ratio < 0.05:  # Less than 5% savings opportunity
+                cost_score = 100
+            elif savings_ratio < 0.10:
+                cost_score = 90
+            elif savings_ratio < 0.20:
+                cost_score = 70
+            else:
+                cost_score = max(40, 100 - (savings_ratio * 200))
+
+            # Overall efficiency score (weighted average)
+            efficiency_score = (
+                service_score * 0.30 +
+                stock_score * 0.40 +
+                cost_score * 0.30
+            )
+
+            # Determine status
+            if efficiency_score >= 80:
+                status = 'excellent'
+            elif efficiency_score >= 60:
+                status = 'good'
+            elif efficiency_score >= 40:
+                status = 'fair'
+            else:
+                status = 'poor'
+
+            return {
+                'score': round(efficiency_score, 1),
+                'status': status,
+                'serviceScore': round(service_score, 1),
+                'stockScore': round(stock_score, 1),
+                'costScore': round(cost_score, 1),
+                'breakdown': {
+                    'optimal_items': items_optimal,
+                    'attention_needed': items_needing_reorder + items_overstock + items_understock,
+                    'service_level': service_level,
+                    'savings_opportunity': round(total_savings, 2)
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"Error calculating performance gauge: {e}")
+            return {
+                'score': 0,
+                'status': 'unknown',
+                'serviceScore': 0,
+                'stockScore': 0,
+                'costScore': 0,
+                'breakdown': {}
+            }

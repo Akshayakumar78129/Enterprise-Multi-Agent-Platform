@@ -5,7 +5,12 @@ import { PageLoader, FilterBar } from 'components/index';
 import {
   StockOptimizationKPIs,
   RecommendationsTable,
-  MetricsComparison
+  MetricsComparison,
+  InventoryHealthHeatmap,
+  OptimizationMatrix,
+  ServiceLevelSimulator,
+  ValueTreemap,
+  PerformanceGauge
 } from './components';
 import { useStockoptimizationContext } from './context';
 import { useStockoptimizationData } from './hooks/useStockoptimizationData';
@@ -24,6 +29,11 @@ export default function StockOptimizationPage() {
     recommendations,
     metrics,
     insights,
+    heatmapData,
+    optimizationMatrix,
+    serviceLevelImpact,
+    valueTreemap,
+    performanceGauge,
     hasNoData
   } = useStockoptimizationData(filters);
 
@@ -35,12 +45,17 @@ export default function StockOptimizationPage() {
   }, [recommendations, insights, kpiMetrics, setRecommendations, setInsights, setKpiMetrics]);
 
   const handleReset = () => {
-    setFilters({
+    const resetFilters = {
       dateRange: DEFAULT_DATE_RANGE,
       categories: [],
       warehouseIds: [],
-      optimizationLevel: 'balanced'
-    });
+      optimizationLevel: 'balanced' as const
+    };
+    setFilters(resetFilters);
+    // Force re-render by clearing localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('stockOptimizationFilters');
+    }
   };
 
   // Error state
@@ -84,6 +99,23 @@ export default function StockOptimizationPage() {
               }
             }
           },
+          singleSelect: [
+            {
+              id: 'optimizationLevel',
+              label: 'Optimization Level',
+              options: [
+                { value: 'conservative', label: 'Conservative' },
+                { value: 'balanced', label: 'Balanced' },
+                { value: 'aggressive', label: 'Aggressive' }
+              ],
+              value: filters?.optimizationLevel || 'balanced',
+              onChange: (value) => setFilters(prev => ({
+                ...prev,
+                optimizationLevel: value as 'conservative' | 'balanced' | 'aggressive'
+              })),
+              placeholder: 'Select optimization level'
+            }
+          ],
           multiSelect: [
             {
               id: 'categories',
@@ -101,26 +133,7 @@ export default function StockOptimizationPage() {
               onChange: (values) => setFilters(prev => ({ ...prev, warehouseIds: values })),
               placeholder: 'All warehouses'
             }
-          ],
-          customFilters: (
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium text-muted-foreground">
-                Optimization Level:
-              </label>
-              <select
-                value={filters?.optimizationLevel || 'balanced'}
-                onChange={(e) => setFilters(prev => ({
-                  ...prev,
-                  optimizationLevel: e.target.value as 'conservative' | 'balanced' | 'aggressive'
-                }))}
-                className="px-3 py-2 bg-surface border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-              >
-                <option value="conservative">Conservative</option>
-                <option value="balanced">Balanced</option>
-                <option value="aggressive">Aggressive</option>
-              </select>
-            </div>
-          )
+          ]
         }}
         onReset={handleReset}
         showResetButton={true}
@@ -132,13 +145,41 @@ export default function StockOptimizationPage() {
           <StockOptimizationKPIs data={kpiMetrics} loading={loading} />
         </div>
 
+        {/* Performance Gauge */}
+        <div className="space-y-4">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground">Overall Performance</h3>
+          <PerformanceGauge data={performanceGauge} loading={loading} />
+        </div>
+
+        {/* Optimization Priority Matrix */}
+        <div className="space-y-4">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground">Priority Matrix</h3>
+          <OptimizationMatrix data={optimizationMatrix} loading={loading} />
+        </div>
+
+        {/* Inventory Health Heatmap */}
+        <div className="space-y-4">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground">Inventory Health</h3>
+          <InventoryHealthHeatmap data={heatmapData} loading={loading} />
+        </div>
+
         {/* Metrics Comparison Visualization */}
-        {metrics && metrics.length > 0 && (
-          <div className="space-y-4">
-            <h3 className="text-base sm:text-lg font-semibold text-foreground">Optimization Metrics Comparison</h3>
-            <MetricsComparison data={metrics} loading={loading} />
-          </div>
-        )}
+        <div className="space-y-4">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground">Optimization Metrics Comparison</h3>
+          <MetricsComparison data={metrics} loading={loading} />
+        </div>
+
+        {/* Service Level Impact Simulator */}
+        <div className="space-y-4">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground">Service Level Impact</h3>
+          <ServiceLevelSimulator data={serviceLevelImpact} loading={loading} />
+        </div>
+
+        {/* Value Treemap */}
+        <div className="space-y-4">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground">Value Distribution</h3>
+          <ValueTreemap data={valueTreemap} loading={loading} />
+        </div>
 
         {/* Stock Recommendations */}
         <div className="space-y-4">

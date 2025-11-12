@@ -208,18 +208,18 @@ def generate_sample_data() -> tuple:
     """Generate sample inventory and sales data for demonstration"""
     # Create a list of sample products
     products = [
-        {"Item Key": 1, "Item Number": "P1001", "Item Name": "Premium Widget", "Item Category": "Widgets", "Unit Cost": 45.00},
-        {"Item Key": 2, "Item Number": "P1002", "Item Name": "Standard Widget", "Item Category": "Widgets", "Unit Cost": 25.00},
-        {"Item Key": 3, "Item Number": "P2001", "Item Name": "Deluxe Gadget", "Item Category": "Gadgets", "Unit Cost": 65.00},
-        {"Item Key": 4, "Item Number": "P2002", "Item Name": "Basic Gadget", "Item Category": "Gadgets", "Unit Cost": 35.00},
-        {"Item Key": 5, "Item Number": "P3001", "Item Name": "Professional Tool", "Item Category": "Tools", "Unit Cost": 85.00}
+        {"Item_Key": 1, "Item_Number": "P1001", "Item_Name": "Premium Widget", "Item_Category": "Widgets", "Unit_Cost": 45.00},
+        {"Item_Key": 2, "Item_Number": "P1002", "Item_Name": "Standard Widget", "Item_Category": "Widgets", "Unit_Cost": 25.00},
+        {"Item_Key": 3, "Item_Number": "P2001", "Item_Name": "Deluxe Gadget", "Item_Category": "Gadgets", "Unit_Cost": 65.00},
+        {"Item_Key": 4, "Item_Number": "P2002", "Item_Name": "Basic Gadget", "Item_Category": "Gadgets", "Unit_Cost": 35.00},
+        {"Item_Key": 5, "Item_Number": "P3001", "Item_Name": "Professional Tool", "Item_Category": "Tools", "Unit_Cost": 85.00}
     ]
-    
+
     # Create a list of sample warehouses
     warehouses = [
-        {"Warehouse Key": 1, "Warehouse ID": "WH001", "Warehouse Name": "Main Distribution Center"},
-        {"Warehouse Key": 2, "Warehouse ID": "WH002", "Warehouse Name": "East Coast Facility"},
-        {"Warehouse Key": 3, "Warehouse ID": "WH003", "Warehouse Name": "West Coast Facility"}
+        {"Warehouse_Key": 1, "Warehouse_ID": "WH001", "Warehouse_Name": "Main Distribution Center"},
+        {"Warehouse_Key": 2, "Warehouse_ID": "WH002", "Warehouse_Name": "East Coast Facility"},
+        {"Warehouse_Key": 3, "Warehouse_ID": "WH003", "Warehouse_Name": "West Coast Facility"}
     ]
     
     # Generate sample inventory data
@@ -238,10 +238,10 @@ def generate_sample_data() -> tuple:
             inventory_data.append({
                 **product,
                 **warehouse,
-                "Current Stock": current_stock,
-                "Safety Stock": safety_stock,
-                "Reorder Point": reorder_point,
-                "Snapshot Date": today.strftime("%Y-%m-%d")
+                "Current_Stock": current_stock,
+                "Safety_Stock": safety_stock,
+                "Reorder_Point": reorder_point,
+                "Snapshot_Date": today.strftime("%Y-%m-%d")
             })
     
     # Generate sample sales data for the analyzed period
@@ -256,7 +256,7 @@ def generate_sample_data() -> tuple:
             # Generate random sales data for each day
             for date in date_range:
                 # More frequent sales for some products
-                if product["Item Key"] in [1, 3]:  # Popular items
+                if product["Item_Key"] in [1, 3]:  # Popular items
                     if np.random.random() < 0.7:  # 70% chance of sale
                         quantity = np.random.randint(1, 10)
                 else:  # Less popular items
@@ -264,7 +264,7 @@ def generate_sample_data() -> tuple:
                         quantity = np.random.randint(1, 5)
                     else:
                         continue
-                
+
                 sales_data.append({
                     **product,
                     **warehouse,

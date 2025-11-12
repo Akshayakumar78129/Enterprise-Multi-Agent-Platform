@@ -52,7 +52,7 @@ class StockOptimizationDataService:
 
         return {kpi: 0 for kpi in ['optimizedStockValue', 'reorderPoints', 'safetyStockLevel', 'orderFrequency', 'costSavings', 'serviceLevel']}
 
-    async def get_detailed_data(self, filters: Dict[str, Any] = {}, limit: int = 20) -> List[Dict]:
+    async def get_detailed_data(self, filters: Dict[str, Any] = {}, limit: int = 1000) -> List[Dict]:
         """Get detailed stock optimization data"""
 
         sql = f"""

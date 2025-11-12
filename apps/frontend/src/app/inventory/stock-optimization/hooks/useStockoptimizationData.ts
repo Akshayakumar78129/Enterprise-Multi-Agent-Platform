@@ -29,7 +29,7 @@ async function fetchStockOptimizationSummary(filters: StockOptimizationFilters) 
 }
 
 export function useStockoptimizationData(filters: StockOptimizationFilters = {}) {
-  const { data, isLoading, error} = useQuery({
+  const { data, isLoading, isFetching, error} = useQuery({
     queryKey: ['stock-optimization', filters],
     queryFn: () => fetchStockOptimizationSummary(filters),
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -38,32 +38,33 @@ export function useStockoptimizationData(filters: StockOptimizationFilters = {})
   });
 
   const kpiMetrics = useMemo(() => {
+    // Return the raw backend data object directly for the KPIs component
     if (!data?.kpiMetrics) {
-      return [
-        { id: 'optimized-value', title: 'Optimized Stock Value', value: 0, format: 'currency' as const, color: '#3b82f6' },
-        { id: 'reorder-items', title: 'Items Needing Reorder', value: 0, format: 'number' as const, color: '#ef4444' },
-        { id: 'safety-coverage', title: 'Safety Stock Coverage', value: 0, format: 'percentage' as const, color: '#10b981' },
-        { id: 'order-frequency', title: 'Avg Order Frequency', value: 0, format: 'decimal' as const, suffix: '/year', color: '#f59e0b' },
-        { id: 'cost-savings', title: 'Projected Cost Savings', value: 0, format: 'currency' as const, color: '#8b5cf6' },
-        { id: 'service-level', title: 'Service Level', value: 0, format: 'percentage' as const, color: '#06b6d4' },
-      ];
+      return {
+        total_optimized_value: 0,
+        items_needing_reorder: 0,
+        safety_stock_coverage: 0,
+        avg_order_frequency: 0,
+        total_cost_savings: 0,
+        service_level: 0,
+        total_items: 0,
+        items_overstock: 0,
+        items_understock: 0
+      };
     }
 
-    const kpis = data.kpiMetrics;
-    return [
-      { id: 'optimized-value', title: 'Optimized Stock Value', value: kpis.total_optimized_value || 0, format: 'currency' as const, color: '#3b82f6' },
-      { id: 'reorder-items', title: 'Items Needing Reorder', value: kpis.items_needing_reorder || 0, format: 'number' as const, color: '#ef4444' },
-      { id: 'safety-coverage', title: 'Safety Stock Coverage', value: kpis.safety_stock_coverage || 0, format: 'percentage' as const, color: '#10b981' },
-      { id: 'order-frequency', title: 'Avg Order Frequency', value: kpis.avg_order_frequency || 0, format: 'decimal' as const, suffix: '/year', color: '#f59e0b' },
-      { id: 'cost-savings', title: 'Projected Cost Savings', value: kpis.total_cost_savings || 0, format: 'currency' as const, color: '#8b5cf6' },
-      { id: 'service-level', title: 'Service Level', value: kpis.service_level || 0, format: 'percentage' as const, color: '#06b6d4' },
-    ];
+    return data.kpiMetrics;
   }, [data]);
 
   const recommendations = useMemo(() => data?.recommendations || [], [data]);
   const metrics = useMemo(() => data?.metrics || [], [data]);
   const reorderAnalysis = useMemo(() => data?.reorderAnalysis || [], [data]);
   const insights = useMemo(() => data?.insights || [], [data]);
+  const heatmapData = useMemo(() => data?.heatmapData || { cells: [], categories: [], warehouses: [] }, [data]);
+  const optimizationMatrix = useMemo(() => data?.optimizationMatrix || [], [data]);
+  const serviceLevelImpact = useMemo(() => data?.serviceLevelImpact || { impactData: [], currentServiceLevel: 95, optimalServiceLevel: 95 }, [data]);
+  const valueTreemap = useMemo(() => data?.valueTreemap || [], [data]);
+  const performanceGauge = useMemo(() => data?.performanceGauge || { score: 0, status: 'unknown', serviceScore: 0, stockScore: 0, costScore: 0, breakdown: {} }, [data]);
 
   const hasNoData = !data || (
     (!data.kpiMetrics || data.kpiMetrics.total_items === 0) &&
@@ -71,7 +72,7 @@ export function useStockoptimizationData(filters: StockOptimizationFilters = {})
   );
 
   return {
-    loading: isLoading,
+    loading: isLoading || isFetching,
     error: error?.message,
     data: data || {},
     kpiMetrics,
@@ -79,6 +80,11 @@ export function useStockoptimizationData(filters: StockOptimizationFilters = {})
     metrics,
     reorderAnalysis,
     insights,
+    heatmapData,
+    optimizationMatrix,
+    serviceLevelImpact,
+    valueTreemap,
+    performanceGauge,
     hasNoData,
   };
 }

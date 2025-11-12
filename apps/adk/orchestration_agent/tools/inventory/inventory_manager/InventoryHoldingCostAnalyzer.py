@@ -177,18 +177,18 @@ def generate_sample_data() -> pd.DataFrame:
     """Generate sample inventory data for demonstration"""
     # Create a list of sample products
     products = [
-        {"Item Key": 1, "Item Number": "P1001", "Item Name": "Premium Widget", "Item Category": "Widgets", "Unit Cost": 45.00, "Lead Time Days": 7, "Obsolescence Risk": 0.1, "Storage Requirements": "Standard"},
-        {"Item Key": 2, "Item Number": "P1002", "Item Name": "Standard Widget", "Item Category": "Widgets", "Unit Cost": 25.00, "Lead Time Days": 5, "Obsolescence Risk": 0.05, "Storage Requirements": "Standard"},
-        {"Item Key": 3, "Item Number": "P2001", "Item Name": "Deluxe Gadget", "Item Category": "Gadgets", "Unit Cost": 65.00, "Lead Time Days": 10, "Obsolescence Risk": 0.15, "Storage Requirements": "Special"},
-        {"Item Key": 4, "Item Number": "P2002", "Item Name": "Basic Gadget", "Item Category": "Gadgets", "Unit Cost": 35.00, "Lead Time Days": 7, "Obsolescence Risk": 0.08, "Storage Requirements": "Standard"},
-        {"Item Key": 5, "Item Number": "P3001", "Item Name": "Professional Tool", "Item Category": "Tools", "Unit Cost": 85.00, "Lead Time Days": 14, "Obsolescence Risk": 0.2, "Storage Requirements": "Special"}
+        {"Item_Key": 1, "Item_Number": "P1001", "Item_Name": "Premium Widget", "Item_Category": "Widgets", "Unit_Cost": 45.00, "Lead_Time_Days": 7, "Obsolescence_Risk": 0.1, "Storage_Requirements": "Standard"},
+        {"Item_Key": 2, "Item_Number": "P1002", "Item_Name": "Standard Widget", "Item_Category": "Widgets", "Unit_Cost": 25.00, "Lead_Time_Days": 5, "Obsolescence_Risk": 0.05, "Storage_Requirements": "Standard"},
+        {"Item_Key": 3, "Item_Number": "P2001", "Item_Name": "Deluxe Gadget", "Item_Category": "Gadgets", "Unit_Cost": 65.00, "Lead_Time_Days": 10, "Obsolescence_Risk": 0.15, "Storage_Requirements": "Special"},
+        {"Item_Key": 4, "Item_Number": "P2002", "Item_Name": "Basic Gadget", "Item_Category": "Gadgets", "Unit_Cost": 35.00, "Lead_Time_Days": 7, "Obsolescence_Risk": 0.08, "Storage_Requirements": "Standard"},
+        {"Item_Key": 5, "Item_Number": "P3001", "Item_Name": "Professional Tool", "Item_Category": "Tools", "Unit_Cost": 85.00, "Lead_Time_Days": 14, "Obsolescence_Risk": 0.2, "Storage_Requirements": "Special"}
     ]
-    
+
     # Create a list of sample warehouses
     warehouses = [
-        {"Warehouse Key": 1, "Warehouse ID": "WH001", "Warehouse Name": "Main Distribution Center", "Storage Cost Per Unit": 0.5, "Warehouse Type": "Standard"},
-        {"Warehouse Key": 2, "Warehouse ID": "WH002", "Warehouse Name": "East Coast Facility", "Storage Cost Per Unit": 0.6, "Warehouse Type": "Standard"},
-        {"Warehouse Key": 3, "Warehouse ID": "WH003", "Warehouse Name": "West Coast Facility", "Storage Cost Per Unit": 0.7, "Warehouse Type": "Special"}
+        {"Warehouse_Key": 1, "Warehouse_ID": "WH001", "Warehouse_Name": "Main Distribution Center", "Storage_Cost_Per_Unit": 0.5, "Warehouse_Type": "Standard"},
+        {"Warehouse_Key": 2, "Warehouse_ID": "WH002", "Warehouse_Name": "East Coast Facility", "Storage_Cost_Per_Unit": 0.6, "Warehouse_Type": "Standard"},
+        {"Warehouse_Key": 3, "Warehouse_ID": "WH003", "Warehouse_Name": "West Coast Facility", "Storage_Cost_Per_Unit": 0.7, "Warehouse_Type": "Special"}
     ]
     
     # Generate sample inventory data
@@ -206,9 +206,9 @@ def generate_sample_data() -> pd.DataFrame:
             inventory_data.append({
                 **product,
                 **warehouse,
-                "Current Stock": current_stock,
-                "Average Stock Level": average_stock,
-                "Snapshot Date": today.strftime("%Y-%m-%d")
+                "Current_Stock": current_stock,
+                "Average_Stock_Level": average_stock,
+                "Snapshot_Date": today.strftime("%Y-%m-%d")
             })
     
     # Convert to DataFrame
