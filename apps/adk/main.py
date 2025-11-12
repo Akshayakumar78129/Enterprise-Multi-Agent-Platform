@@ -24,35 +24,37 @@ from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.genai.types import Content
 
 # Import Processing Services for ML models
-from domains.churn_prediction.processing_service import ChurnProcessingService
-from domains.performance_deviation.processing_service import PerformanceProcessingService
+from domains.customer.churn_prediction.processing_service import ChurnProcessingService
+from domains.customer.performance_deviation.processing_service import PerformanceProcessingService
 # Import AnomalyProcessingService for ML model
-from domains.anomaly_detection.processing_service import AnomalyProcessingService
+from domains.customer.anomaly_detection.processing_service import AnomalyProcessingService
 # Import CustomerBehaviorProcessingService for behavior analysis
-from domains.customer_behavior.processing_service import CustomerBehaviorProcessingService
+from domains.customer.customer_behavior.processing_service import CustomerBehaviorProcessingService
 # Import CustomerSegmentationService for segmentation analysis
-from domains.customer_segmentation.processing_service import CustomerSegmentationService
+from domains.customer.customer_segmentation.processing_service import CustomerSegmentationService
 # Import additional customer dashboard services
-from domains.customer_ltv.processing_service import CustomerLtvService
-from domains.transaction_patterns.processing_service import TransactionPatternsService
-from domains.engagement_classifier.processing_service import EngagementClassifierService
-from domains.next_purchase.processing_service import NextPurchaseService
-from domains.retention_planner.processing_service import RetentionPlannerService
-from domains.purchase_frequency.processing_service import PurchaseFrequencyProcessingService
-from domains.customer_insights.processing_service import CustomerInsightsService
+from domains.customer.customer_ltv.processing_service import CustomerLtvService
+from domains.customer.transaction_patterns.processing_service import TransactionPatternsService
+from domains.customer.engagement_classifier.processing_service import EngagementClassifierService
+from domains.customer.next_purchase.processing_service import NextPurchaseService
+from domains.customer.retention_planner.processing_service import RetentionPlannerService
+from domains.customer.purchase_frequency.processing_service import PurchaseFrequencyProcessingService
+from domains.customer.customer_insights.processing_service import CustomerInsightsService
 
 # Import sales domain services
-from domains.sales_performance.processing_service import SalesPerformanceProcessingService
-from domains.product_performance.processing_service import ProductPerformanceProcessingService
+from domains.sales.sales_performance.processing_service import SalesPerformanceProcessingService
+from domains.sales.product_performance.processing_service import ProductPerformanceProcessingService
 
 # Import inventory domain services
-from domains.inventory_level.processing_service import InventoryLevelProcessingService
+from domains.inventory.inventory_level.processing_service import InventoryLevelProcessingService
+from domains.inventory.holding_cost.processing_service import HoldingCostProcessingService
+from domains.inventory.stock_optimization.processing_service import StockOptimizationProcessingService
 
 # Import finance domain services
-from domains.cash_flow.processing_service import CashFlowProcessingService
-from domains.ar_aging_analysis.processing_service import ARAgingProcessingService
-from domains.revenue_forecast.processing_service import RevenueForecastProcessingService
-from domains.demand_forecast.processing_service import DemandForecastProcessingService
+from domains.finance.cash_flow.processing_service import CashFlowProcessingService
+from domains.finance.ar_aging_analysis.processing_service import ARAgingProcessingService
+from domains.finance.revenue_forecast.processing_service import RevenueForecastProcessingService
+from domains.sales.demand_forecast.processing_service import DemandForecastProcessingService
 
 from customer.agent import root_agent as customer_agent
 from finance.agent import root_agent as finance_agent
@@ -60,33 +62,35 @@ from inventory.agent import root_agent as inventory_agent
 from sales.agent import root_agent as sales_agent
 
 # Import dashboard API routers
-from api.routers.churn_router import router as churn_router
-from api.routers.performance_router import router as performance_router
-from api.routers.anomaly_router import router as anomaly_router
-from api.routers.customer_behavior_router import router as customer_behavior_router
-from api.routers.segmentation_router import router as segmentation_router
-from api.routers.customer_ltv_router import router as customer_ltv_router
-from api.routers.transaction_patterns_router import router as transaction_patterns_router
-from api.routers.engagement_classifier_router import router as engagement_classifier_router
-from api.routers.next_purchase_router import router as next_purchase_router
-from api.routers.retention_planner_router import router as retention_planner_router
-from api.routers.purchase_frequency_router import router as purchase_frequency_router
-from api.routers.customer_insights_router import router as customer_insights_router
+from api.routers.customer.churn_router import router as churn_router
+from api.routers.customer.performance_router import router as performance_router
+from api.routers.customer.anomaly_router import router as anomaly_router
+from api.routers.customer.customer_behavior_router import router as customer_behavior_router
+from api.routers.customer.segmentation_router import router as segmentation_router
+from api.routers.customer.customer_ltv_router import router as customer_ltv_router
+from api.routers.customer.transaction_patterns_router import router as transaction_patterns_router
+from api.routers.customer.engagement_classifier_router import router as engagement_classifier_router
+from api.routers.customer.next_purchase_router import router as next_purchase_router
+from api.routers.customer.retention_planner_router import router as retention_planner_router
+from api.routers.customer.purchase_frequency_router import router as purchase_frequency_router
+from api.routers.customer.customer_insights_router import router as customer_insights_router
 
 # Import sales API router
-from api.routers.sales_performance_router import router as sales_performance_router
-from api.routers.product_performance_router import router as product_performance_router
-from api.routers.regional_sales_analyzer_router import router as regional_sales_analyzer_router
-from api.routers.sales_trends_router import router as sales_trends_router
+from api.routers.sales.sales_performance_router import router as sales_performance_router
+from api.routers.sales.product_performance_router import router as product_performance_router
+from api.routers.sales.regional_sales_analyzer_router import router as regional_sales_analyzer_router
+from api.routers.sales.sales_trends_router import router as sales_trends_router
 
 # Import inventory API router
-from api.routers.inventory_level_router import router as inventory_level_router
+from api.routers.inventory.inventory_level_router import router as inventory_level_router
+from api.routers.inventory.holding_cost_router import router as holding_cost_router
+from api.routers.inventory.stock_optimization_router import router as stock_optimization_router
 
 # Import cash flow API router
-from api.routers.cash_flow_router import router as cash_flow_router
-from api.routers.ar_aging_router import router as ar_aging_router
-from api.routers.revenue_forecast_router import router as revenue_forecast_router
-from api.routers.demand_forecast_router import router as demand_forecast_router
+from api.routers.finance.cash_flow_router import router as cash_flow_router
+from api.routers.finance.ar_aging_router import router as ar_aging_router
+from api.routers.finance.revenue_forecast_router import router as revenue_forecast_router
+from api.routers.sales.demand_forecast_router import router as demand_forecast_router
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +138,8 @@ customer_insights_service = CustomerInsightsService()
 sales_performance_service = SalesPerformanceProcessingService()
 product_performance_service = ProductPerformanceProcessingService()
 inventory_level_service = InventoryLevelProcessingService()
+holding_cost_service = HoldingCostProcessingService()
+stock_optimization_service = StockOptimizationProcessingService()
 cash_flow_service = CashFlowProcessingService()
 ar_aging_service = ARAgingProcessingService()
 revenue_forecast_service = RevenueForecastProcessingService()
@@ -174,6 +180,8 @@ app.include_router(product_performance_router)
 app.include_router(regional_sales_analyzer_router)
 app.include_router(sales_trends_router)
 app.include_router(inventory_level_router)
+app.include_router(holding_cost_router)
+app.include_router(stock_optimization_router)
 app.include_router(cash_flow_router)
 app.include_router(ar_aging_router)
 app.include_router(revenue_forecast_router)
@@ -213,6 +221,10 @@ async def startup_event():
     app.state.customer_insights_service = customer_insights_service
     app.state.sales_performance_service = sales_performance_service
     app.state.product_performance_service = product_performance_service
+    app.state.inventory_level_service = inventory_level_service
+    app.state.holding_cost_service = holding_cost_service
+    app.state.stock_optimization_service = stock_optimization_service
+    app.state.cash_flow_service = cash_flow_service
     app.state.ar_aging_service = ar_aging_service
     app.state.revenue_forecast_service = revenue_forecast_service
     app.state.demand_forecast_service = demand_forecast_service

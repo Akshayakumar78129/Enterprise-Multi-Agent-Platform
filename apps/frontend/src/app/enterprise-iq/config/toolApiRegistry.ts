@@ -59,9 +59,23 @@ export const toolApiRegistry: Record<string, ToolApiConfig> = {
 
   // Inventory Holding Cost Analyzer
   'inventory-holding-cost-analyzer': {
-    endpoint: '/api/inventory/costs/summary',
+    endpoint: '/api/inventory/holding-cost/summary',
     method: 'POST',
     description: 'Inventory holding costs and optimization'
+  },
+
+  // Inventory Holding Cost (alternate name)
+  'inventory-holding-cost': {
+    endpoint: '/api/inventory/holding-cost/summary',
+    method: 'POST',
+    description: 'Inventory holding costs and optimization'
+  },
+
+  // Stock Optimization
+  'stock-optimization': {
+    endpoint: '/api/inventory/stock-optimization/summary',
+    method: 'POST',
+    description: 'Stock optimization with EOQ, reorder points, and safety stock recommendations'
   },
 
   // Transaction Patterns Dashboard

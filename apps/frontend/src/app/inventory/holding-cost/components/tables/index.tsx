@@ -1,0 +1,1 @@
+export { HighCostItemsTable } from './HighCostItemsTable';

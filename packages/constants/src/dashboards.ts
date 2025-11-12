@@ -13,7 +13,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'churn-prediction',
     name: 'Churn Prediction',
-    path: '/churn-prediction',
+    path: '/customer/churn-prediction',
     domain: 'customer',
     description: 'Predict and analyze customer churn patterns',
     icon: '📊',
@@ -24,7 +24,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'customer-segmentation',
     name: 'Customer Segmentation',
-    path: '/customer-segmentation',
+    path: '/customer/customer-segmentation',
     domain: 'customer',
     description: 'Segment customers based on behavior and value',
     icon: '👥',
@@ -34,7 +34,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'customer-lifetime-value',
     name: 'Customer Lifetime Value',
-    path: '/customer-lifetime-value',
+    path: '/customer/customer-lifetime-value',
     domain: 'customer',
     description: 'Calculate and track customer lifetime value metrics',
     icon: '💰',
@@ -44,7 +44,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'engagement-classifier',
     name: 'Engagement Classifier',
-    path: '/engagement-classifier',
+    path: '/customer/engagement-classifier',
     domain: 'customer',
     description: 'Classify and analyze customer engagement levels',
     icon: '📈',
@@ -54,7 +54,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'next-purchase-predictor',
     name: 'Next Purchase Predictor',
-    path: '/next-purchase',
+    path: '/customer/next-purchase',
     domain: 'customer',
     description: 'Predict when customers will make their next purchase',
     icon: '🛒',
@@ -64,7 +64,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'transaction-patterns',
     name: 'Transaction Patterns',
-    path: '/transaction-patterns',
+    path: '/customer/transaction-patterns',
     domain: 'customer',
     description: 'Analyze customer transaction patterns and trends',
     icon: '📊',
@@ -74,7 +74,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'customer-behavior',
     name: 'Customer Behavior Analytics',
-    path: '/customer-behavior',
+    path: '/customer/customer-behavior',
     domain: 'customer',
     description: 'Deep dive into customer behavior analytics',
     icon: '🔍',
@@ -84,7 +84,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'anomaly-detection',
     name: 'Anomaly Detection',
-    path: '/anomaly-detection',
+    path: '/customer/anomaly-detection',
     domain: 'customer',
     description: 'Detect anomalies in customer behavior',
     icon: '⚠️',
@@ -94,7 +94,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'performance-deviation',
     name: 'Performance Deviation',
-    path: '/performance-deviation',
+    path: '/customer/performance-deviation',
     domain: 'customer',
     description: 'Analyze and detect performance deviations in customer metrics',
     icon: '📊',
@@ -104,7 +104,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'retention-planning',
     name: 'Retention Planning',
-    path: '/retention-planner',
+    path: '/customer/retention-planner',
     domain: 'customer',
     description: 'Plan and execute customer retention strategies',
     icon: '🎯',
@@ -114,7 +114,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'purchase-frequency',
     name: 'Purchase Frequency',
-    path: '/purchase-frequency',
+    path: '/customer/purchase-frequency',
     domain: 'customer',
     description: 'Analyze customer purchase frequency patterns and intervals',
     icon: '🔄',
@@ -126,7 +126,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'sales-performance',
     name: 'Revenue Analysis',
-    path: '/sales-performance',
+    path: '/sales/sales-performance',
     domain: 'sales',
     description: 'Track and analyze revenue performance metrics',
     icon: '💼',
@@ -136,7 +136,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'product-performance',
     name: 'Product Performance',
-    path: '/product-performance',
+    path: '/sales/product-performance',
     domain: 'sales',
     description: 'Analyze product performance and trends',
     icon: '📦',
@@ -146,7 +146,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'sales-trends',
     name: 'Sales Trends',
-    path: '/sales-trends',
+    path: '/sales/sales-trends',
     domain: 'sales',
     description: 'Identify and track sales trends over time',
     icon: '📈',
@@ -156,7 +156,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'regional-sales',
     name: 'Regional Sales',
-    path: '/regional-sales',
+    path: '/sales/regional-sales',
     domain: 'sales',
     description: 'Regional sales analysis and comparison',
     icon: '🗺️',
@@ -166,7 +166,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'demand-forecast',
     name: 'Demand Forecast',
-    path: '/demand-forecast',
+    path: '/sales/demand-forecast',
     domain: 'sales',
     description: 'Forecast product demand using predictive analytics',
     icon: '🔮',
@@ -178,7 +178,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'inventory-level',
     name: 'Inventory Level Analyzer',
-    path: '/inventory-level',
+    path: '/inventory/inventory-level',
     domain: 'inventory',
     description: 'Monitor current inventory levels and optimize stock management',
     icon: '📦',
@@ -198,39 +198,39 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'stock-optimization',
     name: 'Stock Optimization',
-    path: '/stock-optimization',
+    path: '/inventory/stock-optimization',
     domain: 'inventory',
     description: 'Optimize stock levels and reorder points',
     icon: '⚡',
     features: ['kpi', 'filters', 'charts', 'table'],
-    status: 'development',
+    status: 'active',
   },
   {
     id: 'inventory-holding-costs',
     name: 'Inventory Holding Costs',
-    path: '/inventory-holding-costs',
+    path: '/inventory/holding-cost',
     domain: 'inventory',
     description: 'Analyze inventory holding costs and optimization',
     icon: '💵',
     features: ['kpi', 'filters', 'charts', 'table'],
-    status: 'development',
+    status: 'active',
   },
   {
     id: 'inventory-optimization',
     name: 'Inventory Optimization',
-    path: '/inventory-optimization',
+    path: '/inventory/inventory-optimization',
     domain: 'inventory',
     description: 'Comprehensive inventory optimization analytics',
     icon: '🎯',
     features: ['kpi', 'filters', 'charts', 'table'],
-    status: 'development',
+    status: 'active',
   },
 
   // Finance Domain Dashboards
   {
     id: 'cash-flow',
     name: 'Cash Flow Analysis',
-    path: '/cash-flow',
+    path: '/finance/cash-flow',
     domain: 'finance',
     description: 'Analyze cash flow patterns and projections',
     icon: '💸',
@@ -240,7 +240,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'ar-aging-analysis',
     name: 'AR Aging Analysis',
-    path: '/ar-aging-analysis',
+    path: '/finance/ar-aging-analysis',
     domain: 'finance',
     description: 'Accounts receivable aging and collection analysis',
     icon: '📊',
@@ -250,7 +250,7 @@ export const DASHBOARDS: Dashboard[] = [
   {
     id: 'revenue-forecast',
     name: 'Revenue Forecast',
-    path: '/revenue-forecast',
+    path: '/finance/revenue-forecast',
     domain: 'finance',
     description: 'Strategic revenue forecasting with growth decomposition and cohort analysis',
     icon: '📈',

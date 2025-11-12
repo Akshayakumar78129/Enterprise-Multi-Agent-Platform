@@ -7,9 +7,9 @@ import { Search, ChevronRight, ChevronDown, Package } from 'lucide-react';
 // Component Registry with dynamic imports - using available components
 const componentRegistry: Record<string, Record<string, () => Promise<any>>> = {
   'customer-segmentation': {
-    distributionMap: () => import('../../../customer-segmentation/components').then(mod => ({ default: mod.SegmentDistributionMap })),
-    profileCards: () => import('../../../customer-segmentation/components').then(mod => ({ default: mod.SegmentProfileCards })),
-    metricComparison: () => import('../../../customer-segmentation/components').then(mod => ({ default: mod.SegmentMetricComparison })),
+    distributionMap: () => import('../../../customer/customer-segmentation/components').then(mod => ({ default: mod.SegmentDistributionMap })),
+    profileCards: () => import('../../../customer/customer-segmentation/components').then(mod => ({ default: mod.SegmentProfileCards })),
+    metricComparison: () => import('../../../customer/customer-segmentation/components').then(mod => ({ default: mod.SegmentMetricComparison })),
     kpiTiles: () => import('components/index').then(mod => ({ default: mod.KPITiles })),
     distribution: () => import('../Visualizations/FrequencyHistogram'),
     matrix: () => import('../Visualizations/IntervalHeatmap'),
@@ -18,21 +18,21 @@ const componentRegistry: Record<string, Record<string, () => Promise<any>>> = {
   },
   'customer-lifetime-value': {
     // Full names
-    kpiTiles: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.LtvKPIs })),
-    ltvDistribution: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.LtvDistribution })),
-    customerExplorer: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.TopCustomers })),
-    predictionAccuracy: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.PredictionAccuracy })),
-    segmentAnalysis: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.SegmentAnalysis })),
-    ltvTrends: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.LtvTrends })),
-    valueContribution: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.ValueContributionAnalysis })),
+    kpiTiles: () => import('../../../customer/customer-lifetime-value/components').then(mod => ({ default: mod.LtvKPIs })),
+    ltvDistribution: () => import('../../../customer/customer-lifetime-value/components').then(mod => ({ default: mod.LtvDistribution })),
+    customerExplorer: () => import('../../../customer/customer-lifetime-value/components').then(mod => ({ default: mod.TopCustomers })),
+    predictionAccuracy: () => import('../../../customer/customer-lifetime-value/components').then(mod => ({ default: mod.PredictionAccuracy })),
+    segmentAnalysis: () => import('../../../customer/customer-lifetime-value/components').then(mod => ({ default: mod.SegmentAnalysis })),
+    ltvTrends: () => import('../../../customer/customer-lifetime-value/components').then(mod => ({ default: mod.LtvTrends })),
+    valueContribution: () => import('../../../customer/customer-lifetime-value/components').then(mod => ({ default: mod.ValueContributionAnalysis })),
     // Short aliases for agent compatibility
-    kpis: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.LtvKPIs })),
-    distribution: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.LtvDistribution })),
-    customers: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.TopCustomers })),
-    accuracy: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.PredictionAccuracy })),
-    segments: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.SegmentAnalysis })),
-    trends: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.LtvTrends })),
-    contribution: () => import('../../../customer-lifetime-value/components').then(mod => ({ default: mod.ValueContributionAnalysis }))
+    kpis: () => import('../../../customer/customer-lifetime-value/components').then(mod => ({ default: mod.LtvKPIs })),
+    distribution: () => import('../../../customer/customer-lifetime-value/components').then(mod => ({ default: mod.LtvDistribution })),
+    customers: () => import('../../../customer/customer-lifetime-value/components').then(mod => ({ default: mod.TopCustomers })),
+    accuracy: () => import('../../../customer/customer-lifetime-value/components').then(mod => ({ default: mod.PredictionAccuracy })),
+    segments: () => import('../../../customer/customer-lifetime-value/components').then(mod => ({ default: mod.SegmentAnalysis })),
+    trends: () => import('../../../customer/customer-lifetime-value/components').then(mod => ({ default: mod.LtvTrends })),
+    contribution: () => import('../../../customer/customer-lifetime-value/components').then(mod => ({ default: mod.ValueContributionAnalysis }))
   },
   'churn-prediction': {
     riskPyramid: () => import('components/index').then(mod => ({ default: mod.RiskPyramid })),
@@ -41,35 +41,35 @@ const componentRegistry: Record<string, Record<string, () => Promise<any>>> = {
     temporalRisk: () => import('components/index').then(mod => ({ default: mod.LineChart })),
     segmentMatrix: () => import('components/index').then(mod => ({ default: mod.SegmentComparisonMatrix })),
     kpiTiles: () => import('components/index').then(mod => ({ default: mod.KPITiles })),
-    churnAnalysis: () => import('../../../churn-prediction/components/ChurnRiskAnalysis').then(mod => ({
+    churnAnalysis: () => import('../../../customer/churn-prediction/components/ChurnRiskAnalysis').then(mod => ({
       default: mod.ChurnRiskAnalysis
     }))
   },
   'engagement-classifier': {
     // Full names
-    kpiTiles: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementKPIs })),
-    engagementPyramid: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementPyramid })),
-    engagementTimeline: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementTimeline })),
-    opportunityFinder: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.OpportunityFinder })),
-    customerClassification: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.CustomerClassification })),
-    engagementDistribution: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementDistribution })),
-    engagementScore: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementScore })),
-    actionableInsights: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.ActionableInsights })),
-    engagementTrends: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementTrends })),
-    customerSearchAnalytics: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.CustomerSearchAnalytics })),
-    customerDetailModal: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.CustomerDetailModal })),
+    kpiTiles: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.EngagementKPIs })),
+    engagementPyramid: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.EngagementPyramid })),
+    engagementTimeline: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.EngagementTimeline })),
+    opportunityFinder: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.OpportunityFinder })),
+    customerClassification: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.CustomerClassification })),
+    engagementDistribution: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.EngagementDistribution })),
+    engagementScore: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.EngagementScore })),
+    actionableInsights: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.ActionableInsights })),
+    engagementTrends: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.EngagementTrends })),
+    customerSearchAnalytics: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.CustomerSearchAnalytics })),
+    customerDetailModal: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.CustomerDetailModal })),
     // Short aliases for agent compatibility
-    kpis: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementKPIs })),
-    pyramid: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementPyramid })),
-    timeline: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementTimeline })),
-    opportunities: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.OpportunityFinder })),
-    classification: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.CustomerClassification })),
-    distribution: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementDistribution })),
-    score: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementScore })),
-    insights: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.ActionableInsights })),
-    trends: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.EngagementTrends })),
-    search: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.CustomerSearchAnalytics })),
-    detailModal: () => import('../../../engagement-classifier/components').then(mod => ({ default: mod.CustomerDetailModal }))
+    kpis: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.EngagementKPIs })),
+    pyramid: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.EngagementPyramid })),
+    timeline: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.EngagementTimeline })),
+    opportunities: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.OpportunityFinder })),
+    classification: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.CustomerClassification })),
+    distribution: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.EngagementDistribution })),
+    score: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.EngagementScore })),
+    insights: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.ActionableInsights })),
+    trends: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.EngagementTrends })),
+    search: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.CustomerSearchAnalytics })),
+    detailModal: () => import('../../../customer/engagement-classifier/components').then(mod => ({ default: mod.CustomerDetailModal }))
   },
   'visualization': {
     barchart: () => import('components/index').then(mod => ({ default: mod.BarChart })),
@@ -83,42 +83,77 @@ const componentRegistry: Record<string, Record<string, () => Promise<any>>> = {
     forecast: () => import('../Visualizations/FrequencyHistogram'),
     alerts: () => import('../Visualizations/IntervalHeatmap')
   },
-  'sales-performance': {
-    kpis: () => import('../../../sales-performance/components/SalesKPIs'),
+  'inventory-holding-cost': {
     // Full names
-    performanceOverview: () => import('../../../sales-performance/components').then(mod => ({ default: mod.PerformanceOverview })),
-    timeSeriesExplorer: () => import('../../../sales-performance/components').then(mod => ({ default: mod.TimeSeriesExplorer })),
-    distributionAnalyzer: () => import('../../../sales-performance/components').then(mod => ({ default: mod.PerformanceDistributionAnalyzer })),
-    comparativeGrid: () => import('../../../sales-performance/components').then(mod => ({ default: mod.ComparativePerformanceGrid })),
-    correlationMatrix: () => import('../../../sales-performance/components').then(mod => ({ default: mod.PerformanceCorrelationMatrix })),
-    driverAnalysis: () => import('../../../sales-performance/components').then(mod => ({ default: mod.PerformanceDriverAnalysis })),
+    kpiTiles: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HoldingCostKPIs })),
+    holdingCostAnalysis: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HoldingCostAnalysis })),
+    holdingCostInsights: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HoldingCostInsights })),
+    highCostItemsTable: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HighCostItemsTable })),
     // Short aliases for agent compatibility
-    overview: () => import('../../../sales-performance/components').then(mod => ({ default: mod.PerformanceOverview })),
-    timeSeries: () => import('../../../sales-performance/components').then(mod => ({ default: mod.TimeSeriesExplorer })),
-    distribution: () => import('../../../sales-performance/components').then(mod => ({ default: mod.PerformanceDistributionAnalyzer })),
-    comparative: () => import('../../../sales-performance/components').then(mod => ({ default: mod.ComparativePerformanceGrid })),
-    correlation: () => import('../../../sales-performance/components').then(mod => ({ default: mod.PerformanceCorrelationMatrix })),
-    drivers: () => import('../../../sales-performance/components').then(mod => ({ default: mod.PerformanceDriverAnalysis }))
+    kpis: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HoldingCostKPIs })),
+    overview: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HoldingCostAnalysis })),
+    analysis: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HoldingCostAnalysis })),
+    insights: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HoldingCostInsights })),
+    items: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HighCostItemsTable })),
+    table: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HighCostItemsTable }))
+  },
+  'inventory-holding-cost-analyzer': {
+    // Full names
+    kpiTiles: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HoldingCostKPIs })),
+    holdingCostAnalysis: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HoldingCostAnalysis })),
+    holdingCostInsights: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HoldingCostInsights })),
+    highCostItemsTable: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HighCostItemsTable })),
+    // Short aliases for agent compatibility
+    kpis: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HoldingCostKPIs })),
+    overview: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HoldingCostAnalysis })),
+    analysis: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HoldingCostAnalysis })),
+    insights: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HoldingCostInsights })),
+    items: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HighCostItemsTable })),
+    table: () => import('../../../inventory/holding-cost/components').then(mod => ({ default: mod.HighCostItemsTable }))
+  },
+  'stock-optimization': {
+    // Stock optimization uses KPIRow and table-based layout
+    kpis: () => import('components/index').then(mod => ({ default: mod.KPIRow })),
+    overview: () => import('components/index').then(mod => ({ default: mod.KPIRow })),
+    recommendations: () => import('components/index').then(mod => ({ default: mod.KPIRow })),
+    metrics: () => import('components/index').then(mod => ({ default: mod.KPIRow }))
+  },
+  'sales-performance': {
+    kpis: () => import('../../../sales/sales-performance/components/SalesKPIs'),
+    // Full names
+    performanceOverview: () => import('../../../sales/sales-performance/components').then(mod => ({ default: mod.PerformanceOverview })),
+    timeSeriesExplorer: () => import('../../../sales/sales-performance/components').then(mod => ({ default: mod.TimeSeriesExplorer })),
+    distributionAnalyzer: () => import('../../../sales/sales-performance/components').then(mod => ({ default: mod.PerformanceDistributionAnalyzer })),
+    comparativeGrid: () => import('../../../sales/sales-performance/components').then(mod => ({ default: mod.ComparativePerformanceGrid })),
+    correlationMatrix: () => import('../../../sales/sales-performance/components').then(mod => ({ default: mod.PerformanceCorrelationMatrix })),
+    driverAnalysis: () => import('../../../sales/sales-performance/components').then(mod => ({ default: mod.PerformanceDriverAnalysis })),
+    // Short aliases for agent compatibility
+    overview: () => import('../../../sales/sales-performance/components').then(mod => ({ default: mod.PerformanceOverview })),
+    timeSeries: () => import('../../../sales/sales-performance/components').then(mod => ({ default: mod.TimeSeriesExplorer })),
+    distribution: () => import('../../../sales/sales-performance/components').then(mod => ({ default: mod.PerformanceDistributionAnalyzer })),
+    comparative: () => import('../../../sales/sales-performance/components').then(mod => ({ default: mod.ComparativePerformanceGrid })),
+    correlation: () => import('../../../sales/sales-performance/components').then(mod => ({ default: mod.PerformanceCorrelationMatrix })),
+    drivers: () => import('../../../sales/sales-performance/components').then(mod => ({ default: mod.PerformanceDriverAnalysis }))
   },
   'product-performance': {
-    kpis: () => import('../../../product-performance/components').then(mod => ({ default: mod.ProductKPIs })),
-    overview: () => import('../../../product-performance/components').then(mod => ({ default: mod.ProductPerformanceOverview })),
-    topProducts: () => import('../../../product-performance/components').then(mod => ({ default: mod.TopProductsTable })),
-    categoryAnalysis: () => import('../../../product-performance/components').then(mod => ({ default: mod.CategoryPerformanceChart })),
-    marginAnalysis: () => import('../../../product-performance/components').then(mod => ({ default: mod.MarginAnalysisScatter })),
-    priceBands: () => import('../../../product-performance/components').then(mod => ({ default: mod.PriceBandDistribution }))
+    kpis: () => import('../../../sales/product-performance/components').then(mod => ({ default: mod.ProductKPIs })),
+    overview: () => import('../../../sales/product-performance/components').then(mod => ({ default: mod.ProductPerformanceOverview })),
+    topProducts: () => import('../../../sales/product-performance/components').then(mod => ({ default: mod.TopProductsTable })),
+    categoryAnalysis: () => import('../../../sales/product-performance/components').then(mod => ({ default: mod.CategoryPerformanceChart })),
+    marginAnalysis: () => import('../../../sales/product-performance/components').then(mod => ({ default: mod.MarginAnalysisScatter })),
+    priceBands: () => import('../../../sales/product-performance/components').then(mod => ({ default: mod.PriceBandDistribution }))
   },
   'cash-flow': {
-    kpis: () => import('../../../cash-flow/components').then(mod => ({ default: mod.CashFlowKPIs })),
-    trends: () => import('../../../cash-flow/components').then(mod => ({ default: mod.CashFlowTrends })),
-    operating: () => import('../../../cash-flow/components').then(mod => ({ default: mod.OperatingCashFlow })),
-    investing: () => import('../../../cash-flow/components').then(mod => ({ default: mod.InvestmentCashFlow })),
-    financing: () => import('../../../cash-flow/components').then(mod => ({ default: mod.FinancingCashFlow })),
-    projection: () => import('../../../cash-flow/components').then(mod => ({ default: mod.CashFlowProjection })),
-    table: () => import('../../../cash-flow/components').then(mod => ({ default: mod.CashFlowTable })),
-    'fcf-bridge': () => import('../../../cash-flow/components').then(mod => ({ default: mod.FCFValueBridge })),
-    'liquidity-timeline': () => import('../../../cash-flow/components').then(mod => ({ default: mod.LiquidityTimeline })),
-    'capital-allocation': () => import('../../../cash-flow/components').then(mod => ({ default: mod.CapitalAllocationMatrix }))
+    kpis: () => import('../../../finance/cash-flow/components').then(mod => ({ default: mod.CashFlowKPIs })),
+    trends: () => import('../../../finance/cash-flow/components').then(mod => ({ default: mod.CashFlowTrends })),
+    operating: () => import('../../../finance/cash-flow/components').then(mod => ({ default: mod.OperatingCashFlow })),
+    investing: () => import('../../../finance/cash-flow/components').then(mod => ({ default: mod.InvestmentCashFlow })),
+    financing: () => import('../../../finance/cash-flow/components').then(mod => ({ default: mod.FinancingCashFlow })),
+    projection: () => import('../../../finance/cash-flow/components').then(mod => ({ default: mod.CashFlowProjection })),
+    table: () => import('../../../finance/cash-flow/components').then(mod => ({ default: mod.CashFlowTable })),
+    'fcf-bridge': () => import('../../../finance/cash-flow/components').then(mod => ({ default: mod.FCFValueBridge })),
+    'liquidity-timeline': () => import('../../../finance/cash-flow/components').then(mod => ({ default: mod.LiquidityTimeline })),
+    'capital-allocation': () => import('../../../finance/cash-flow/components').then(mod => ({ default: mod.CapitalAllocationMatrix }))
   },
   'product-analytics': {
     performance: () => import('../Visualizations/FrequencyHistogram'),

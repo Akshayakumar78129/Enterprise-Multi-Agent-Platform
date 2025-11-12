@@ -92,6 +92,28 @@ export const LOYALTY_STATUS_OPTIONS = [
   { value: 'Lost', label: 'Lost' }
 ] as const;
 
+// ===== PRODUCT CATEGORY OPTIONS =====
+// Product categories for inventory and sales analysis
+export const PRODUCT_CATEGORY_OPTIONS = [
+  { value: 'FURNITURE', label: 'Furniture' },
+  { value: 'OFFICE SUPPLIES', label: 'Office Supplies' },
+  { value: 'TECHNOLOGY', label: 'Technology' },
+  { value: 'ELECTRONICS', label: 'Electronics' },
+  { value: 'APPLIANCES', label: 'Appliances' },
+  { value: 'ACCESSORIES', label: 'Accessories' },
+  { value: 'CONSUMABLES', label: 'Consumables' }
+] as const;
+
+// ===== WAREHOUSE OPTIONS =====
+// Warehouse locations for inventory management
+export const WAREHOUSE_OPTIONS = [
+  { value: 'WH-001', label: 'Warehouse North' },
+  { value: 'WH-002', label: 'Warehouse South' },
+  { value: 'WH-003', label: 'Warehouse East' },
+  { value: 'WH-004', label: 'Warehouse West' },
+  { value: 'WH-005', label: 'Warehouse Central' }
+] as const;
+
 // ===== DEFAULT DATE RANGE =====
 // Standardized default date range matching dataset timeframe
 export const DEFAULT_DATE_RANGE = {
@@ -108,3 +130,5 @@ export type RiskLevelValue = typeof RISK_LEVEL_OPTIONS[number]['value'];
 export type BehaviorTypeValue = typeof BEHAVIOR_TYPE_OPTIONS[number]['value'];
 export type EngagementLevelValue = typeof ENGAGEMENT_LEVEL_OPTIONS[number]['value'];
 export type LoyaltyStatusValue = typeof LOYALTY_STATUS_OPTIONS[number]['value'];
+export type ProductCategoryValue = typeof PRODUCT_CATEGORY_OPTIONS[number]['value'];
+export type WarehouseValue = typeof WAREHOUSE_OPTIONS[number]['value'];

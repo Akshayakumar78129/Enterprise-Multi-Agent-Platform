@@ -1,5 +1,8 @@
-"""API routers module"""
+"""API routers module
 
-from .churn_router import router as churn_router
-
-__all__ = ['churn_router']
+All routers are organized into category folders:
+- customer/: Customer analytics routers
+- sales/: Sales analytics routers
+- inventory/: Inventory management routers
+- finance/: Financial analytics routers
+"""

@@ -20,7 +20,7 @@ class DashboardCacheConfig:
     """Configuration for dashboard-specific caching"""
 
     # CACHE VERSION - increment to invalidate all caches
-    CACHE_VERSION = "v3_20251102_2200"
+    CACHE_VERSION = "v4_20251112_with_new_visualizations"
 
     # Default TTLs for different dashboard types (in seconds)
     DEFAULT_TTL = 300  # 5 minutes default

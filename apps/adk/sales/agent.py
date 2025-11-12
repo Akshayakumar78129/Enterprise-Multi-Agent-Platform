@@ -1,6 +1,6 @@
 from google.adk.agents import Agent
 
-from orchestration_agent.tools.sales_analyst import register_tools
+from orchestration_agent.tools.sales.sales_analyst import register_tools
 from sales.prompt import PROMPT
 
 from orchestration_agent.agent import model
