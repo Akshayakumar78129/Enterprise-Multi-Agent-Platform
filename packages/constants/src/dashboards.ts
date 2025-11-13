@@ -215,16 +215,17 @@ export const DASHBOARDS: Dashboard[] = [
     features: ['kpi', 'filters', 'charts', 'table'],
     status: 'active',
   },
-  {
-    id: 'inventory-optimization',
-    name: 'Inventory Optimization',
-    path: '/inventory/inventory-optimization',
-    domain: 'inventory',
-    description: 'Comprehensive inventory optimization analytics',
-    icon: '🎯',
-    features: ['kpi', 'filters', 'charts', 'table'],
-    status: 'active',
-  },
+  // Temporarily removed - under development
+  // {
+  //   id: 'inventory-optimization',
+  //   name: 'Inventory Optimization',
+  //   path: '/inventory/inventory-optimization',
+  //   domain: 'inventory',
+  //   description: 'Comprehensive inventory optimization analytics',
+  //   icon: '🎯',
+  //   features: ['kpi', 'filters', 'charts', 'table'],
+  //   status: 'active',
+  // },
 
   // Finance Domain Dashboards
   {

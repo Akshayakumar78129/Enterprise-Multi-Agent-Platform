@@ -197,14 +197,15 @@ export const DASHBOARDS: Dashboard[] = [
     description: 'Analyze inventory holding costs',
     icon: '💵'
   },
-  {
-    id: 'inventory-optimization',
-    name: 'Inventory Optimization',
-    path: '/inventory-optimization',
-    domain: 'inventory',
-    description: 'Optimize inventory levels',
-    icon: '⚙️'
-  },
+  // Temporarily removed - under development
+  // {
+  //   id: 'inventory-optimization',
+  //   name: 'Inventory Optimization',
+  //   path: '/inventory-optimization',
+  //   domain: 'inventory',
+  //   description: 'Optimize inventory levels',
+  //   icon: '⚙️'
+  // },
   {
     id: 'slow-moving',
     name: 'Slow Moving Stock',

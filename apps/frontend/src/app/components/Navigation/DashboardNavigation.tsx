@@ -195,13 +195,14 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({ isOpen, onClo
           description: 'Optimize reorder points',
           isNew: true,
         },
-        {
-          name: 'Inventory Optimization',
-          href: '/inventory/inventory-optimization',
-          icon: Rocket,
-          description: 'Comprehensive inventory optimization',
-          isNew: true,
-        },
+        // Temporarily removed - under development
+        // {
+        //   name: 'Inventory Optimization',
+        //   href: '/inventory/inventory-optimization',
+        //   icon: Rocket,
+        //   description: 'Comprehensive inventory optimization',
+        //   isNew: true,
+        // },
       ],
     },
     {
