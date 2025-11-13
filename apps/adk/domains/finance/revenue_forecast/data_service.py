@@ -33,13 +33,20 @@ class RevenueForecastDataService:
             return format_map.get(format_type, f"strftime('%Y-%m', {date_ref})")
 
     def _substring(self, string_ref: str, start: int, length: int = None) -> str:
-        """Generate database-specific substring SQL"""
+        """Generate database-specific substring SQL
+
+        For PostgreSQL, casts the input to text to handle integer columns
+        like GL Account Number which need SUBSTRING operations.
+        """
         if self.db.db_type == 'postgres':
+            # Cast to text to handle integer columns (e.g., GL Account Number)
+            text_ref = f"CAST({string_ref} AS TEXT)"
             if length:
-                return f"SUBSTRING({string_ref}, {start}, {length})"
+                return f"SUBSTRING({text_ref}, {start}, {length})"
             else:
-                return f"SUBSTRING({string_ref}, {start})"
+                return f"SUBSTRING({text_ref}, {start})"
         else:  # sqlite
+            # SQLite's substr() handles integers automatically
             if length:
                 return f"substr({string_ref}, {start}, {length})"
             else:
