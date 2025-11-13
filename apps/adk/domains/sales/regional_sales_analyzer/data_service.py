@@ -92,11 +92,11 @@ class RegionalSalesAnalyzerDataService:
 
         query, params = self.filter_engine.apply_filters(sql, filters, self.schema)
 
-        # DIAGNOSTIC: Log actual SQL query
+        # DIAGNOSTIC: Log actual SQL query (using INFO to ensure it appears in Azure logs)
         logger.info(f"[Regional Sales] Executing get_regional_sales_data query")
-        logger.debug(f"[Regional Sales] SQL: {query[:500]}...")  # First 500 chars
-        logger.debug(f"[Regional Sales] Params: {params}")
-        logger.debug(f"[Regional Sales] DB Type: {self.db.db_type}")
+        logger.info(f"[Regional Sales] SQL: {query[:800]}...")  # First 800 chars to see full SELECT
+        logger.info(f"[Regional Sales] Params: {params}")
+        logger.info(f"[Regional Sales] DB Type: {self.db.db_type}")
 
         result_dict = await self.db.query(query, params)
         results = result_dict.get('rows', [])
@@ -106,8 +106,8 @@ class RegionalSalesAnalyzerDataService:
         if len(results) == 0:
             logger.warning(f"[Regional Sales] ⚠️  Query returned ZERO rows - possible JOIN failure or column name mismatch")
         elif len(results) > 0:
-            # Log first row to verify data structure
-            logger.debug(f"[Regional Sales] Sample row: {results[0]}")
+            # Log first row to verify data structure (using INFO to see in Azure logs)
+            logger.info(f"[Regional Sales] Sample row: {results[0]}")
             # Check if all values are zero
             first_row = results[0]
             if all(first_row.get(k, 0) == 0 for k in ['totalSales', 'netSales', 'totalQuantity', 'grossProfit']):
