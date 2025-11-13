@@ -1,0 +1,1 @@
+"""Slow moving stock domain"""
