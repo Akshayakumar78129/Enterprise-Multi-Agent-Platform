@@ -245,13 +245,15 @@ class RevenueForecastDataService:
             logger.info(f"[Revenue Forecast] Executing get_kpi_data query")
             logger.debug(f"[Revenue Forecast] DB Type: {self.db.db_type}")
             logger.debug(f"[Revenue Forecast] Params: {params}")
+            logger.debug(f"[Revenue Forecast] Params count: {len(params)}")
+            logger.debug(f"[Revenue Forecast] Query placeholders: {query.count('?')}")
 
             result_dict = await self.db.query(query, params)
             rows = result_dict.get('rows', [])
 
             logger.info(f"[Revenue Forecast] get_kpi_data returned {len(rows)} rows")
             if len(rows) == 0:
-                logger.warning(f"[Revenue Forecast] ⚠️  KPI query returned ZERO rows - possible column name or table mismatch")
+                logger.warning(f"[Revenue Forecast] ⚠️  KPI query returned ZERO rows - table may not exist or have data")
             elif rows:
                 logger.debug(f"[Revenue Forecast] Sample KPI data: {rows[0]}")
                 # Check if all values are zero
@@ -261,9 +263,17 @@ class RevenueForecastDataService:
 
             result = rows[0] if rows else {}
             return self._convert_decimals_to_float(result)
+        except IndexError as e:
+            logger.error(f"[Revenue Forecast] IndexError - Params/placeholder mismatch: {e}")
+            logger.error(f"[Revenue Forecast] Params: {params} (count: {len(params)})")
+            logger.error(f"[Revenue Forecast] Query: {query[:500]}")
+            # Return empty result instead of crashing
+            return {}
         except Exception as e:
-            logger.error(f"Error fetching KPI data: {e}", exc_info=True)
-            raise
+            logger.error(f"[Revenue Forecast] Error fetching KPI data: {e}", exc_info=True)
+            logger.error(f"[Revenue Forecast] Table might not exist: {self.schema.TABLES['gl_transaction']}")
+            # Return empty result instead of crashing
+            return {}
 
     async def get_revenue_growth_decomposition(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Get revenue growth decomposition into organic and inorganic components"""
