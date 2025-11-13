@@ -164,57 +164,57 @@ class RevenueForecastDataService:
             ROUND((rm.total_revenue - rm.cogs - rm.opex), 2) as ebitda,
 
             -- Growth metrics
-            ROUND(
+            ROUND(CAST(
                 CASE
                     WHEN COALESCE(ppm.prior_revenue, 0) > 0 THEN
                         ((rm.total_revenue - COALESCE(ppm.prior_revenue, 0)) / COALESCE(ppm.prior_revenue, 1)) * 100
                     ELSE 0
-                END, 2
+                END AS numeric), 2
             ) as revenue_growth_rate,
 
             -- Profitability margins
-            ROUND(
+            ROUND(CAST(
                 CASE
                     WHEN rm.total_revenue > 0 THEN
                         ((rm.total_revenue - rm.cogs) / rm.total_revenue) * 100
                     ELSE 0
-                END, 2
+                END AS numeric), 2
             ) as gross_margin,
 
-            ROUND(
+            ROUND(CAST(
                 CASE
                     WHEN rm.total_revenue > 0 THEN
                         ((rm.total_revenue - rm.cogs - rm.opex) / rm.total_revenue) * 100
                     ELSE 0
-                END, 2
+                END AS numeric), 2
             ) as ebitda_margin,
 
             -- Rule of 40 (Growth Rate + EBITDA Margin)
-            ROUND(
+            ROUND(CAST(
                 CASE
                     WHEN COALESCE(ppm.prior_revenue, 0) > 0 AND rm.total_revenue > 0 THEN
                         (((rm.total_revenue - COALESCE(ppm.prior_revenue, 0)) / COALESCE(ppm.prior_revenue, 1)) * 100) +
                         (((rm.total_revenue - rm.cogs - rm.opex) / rm.total_revenue) * 100)
                     ELSE 0
-                END, 2
+                END AS numeric), 2
             ) as rule_of_40,
 
             -- Simulated NRR (Net Revenue Retention) - based on recurring patterns
-            ROUND(
+            ROUND(CAST(
                 CASE
                     WHEN rm.service_revenue > 0 AND rm.total_revenue > 0 THEN
                         100 + ((rm.service_revenue / rm.total_revenue) * 20) -- Assume services have 20% expansion
                     ELSE 100
-                END, 2
+                END AS numeric), 2
             ) as net_revenue_retention,
 
             -- Simulated LTV/CAC (using revenue per transaction as proxy)
-            ROUND(
+            ROUND(CAST(
                 CASE
                     WHEN rm.revenue_transactions > 0 THEN
                         (rm.total_revenue / rm.revenue_transactions) / 5000 -- Assume $5000 CAC
                     ELSE 0
-                END, 2
+                END AS numeric), 2
             ) as ltv_cac_ratio,
 
             -- Revenue Quality Score (0-100 based on diversification and growth)
@@ -227,12 +227,12 @@ class RevenueForecastDataService:
             ) as revenue_quality_score,
 
             -- Market Share Momentum (simulated)
-            ROUND(
+            ROUND(CAST(
                 CASE
                     WHEN COALESCE(ppm.prior_revenue, 0) > 0 THEN
                         ((rm.total_revenue - COALESCE(ppm.prior_revenue, 0)) / COALESCE(ppm.prior_revenue, 1)) * 10 -- Simplified momentum
                     ELSE 0
-                END, 2
+                END AS numeric), 2
             ) as market_share_momentum
 
         FROM revenue_metrics rm
@@ -313,8 +313,8 @@ class RevenueForecastDataService:
             product_revenue,
             service_revenue,
             COALESCE(revenue - LAG(revenue, 1, revenue) OVER (ORDER BY month), 0) as revenue_change,
-            ROUND(COALESCE(((revenue - LAG(revenue, 1, revenue) OVER (ORDER BY month)) /
-                   NULLIF(LAG(revenue, 1, revenue) OVER (ORDER BY month), 0)) * 100, 0), 2) as growth_rate
+            ROUND(CAST(COALESCE(((revenue - LAG(revenue, 1, revenue) OVER (ORDER BY month)) /
+                   NULLIF(LAG(revenue, 1, revenue) OVER (ORDER BY month), 0)) * 100, 0) AS numeric), 2) as growth_rate
         FROM monthly_revenue
         ORDER BY month
         """
@@ -492,7 +492,7 @@ class RevenueForecastDataService:
             ROUND(sa.min_revenue, 2) as min_revenue,
             sa.total_transactions,
             ROUND(COALESCE(sg.avg_growth_rate, 0), 2) as avg_growth_rate,
-            ROUND(COALESCE(((sa.max_revenue - sa.min_revenue) / NULLIF(sa.min_revenue, 0)) * 100, 0), 2) as volatility_pct
+            ROUND(CAST(COALESCE(((sa.max_revenue - sa.min_revenue) / NULLIF(sa.min_revenue, 0)) * 100, 0) AS numeric), 2) as volatility_pct
         FROM segment_aggregates sa
         LEFT JOIN segment_growth sg ON sa.segment = sg.segment
         WHERE sa.segment != 'Unknown'
@@ -545,11 +545,11 @@ class RevenueForecastDataService:
             WHERE {self.schema.GL_TRANSACTION.refs['txn_date']} BETWEEN ? AND ?
         )
         SELECT
-            ROUND(COALESCE(sales_marketing_cost / NULLIF(customer_count, 0), 0), 2) as cac,
-            ROUND(COALESCE(total_revenue / NULLIF(customer_count, 0), 0), 2) as ltv,
-            ROUND(COALESCE((total_revenue / NULLIF(customer_count, 0)) /
-                  NULLIF(sales_marketing_cost / NULLIF(customer_count, 0), 0), 0), 2) as ltv_cac_ratio,
-            ROUND(COALESCE(((total_revenue - cogs) / NULLIF(total_revenue, 0)) * 100, 0), 2) as gross_margin,
+            ROUND(CAST(COALESCE(sales_marketing_cost / NULLIF(customer_count, 0), 0) AS numeric), 2) as cac,
+            ROUND(CAST(COALESCE(total_revenue / NULLIF(customer_count, 0), 0) AS numeric), 2) as ltv,
+            ROUND(CAST(COALESCE((total_revenue / NULLIF(customer_count, 0)) /
+                  NULLIF(sales_marketing_cost / NULLIF(customer_count, 0), 0), 0) AS numeric), 2) as ltv_cac_ratio,
+            ROUND(CAST(COALESCE(((total_revenue - cogs) / NULLIF(total_revenue, 0)) * 100, 0) AS numeric), 2) as gross_margin,
             customer_count
         FROM customer_metrics
         """
